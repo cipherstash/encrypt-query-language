@@ -77,9 +77,9 @@ INSERT INTO v3_json_smoke VALUES
 SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
 SELECT e ->> 'sel'::text FROM v3_json_smoke WHERE id = 1;
 SELECT count(*) FROM v3_json_smoke
-WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::public.jsonb_query;
+WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::public.query_jsonb;
 SELECT count(*) FROM v3_json_smoke
-WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::public.jsonb_query <@ e;
+WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::public.query_jsonb <@ e;
 
 -- Documented GIN expression installs cleanly in a v3-only database.
 CREATE INDEX v3_json_smoke_gin

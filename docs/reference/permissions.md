@@ -73,7 +73,7 @@ Why the internal grant is needed even though you only call public objects:
 - The **ORE comparison** behind ordering and `MIN`/`MAX` calls pgcrypto
   `encrypt()`, which the installer places in the `extensions` schema — hence the
   `USAGE` there.
-- **Casting raw jsonb to `public.json` or `public.jsonb_query`** fires a
+- **Casting raw jsonb to `public.json` or `public.query_jsonb`** fires a
   domain `CHECK` that calls an `eql_v3_internal.is_valid_*` validator. (Scalar
   domain CHECKs — and, since issue #354, the `public.jsonb_entry` CHECK — are
   pure structural jsonb tests, so casting to those domains needs no internal

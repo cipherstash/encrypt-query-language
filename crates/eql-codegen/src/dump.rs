@@ -14,7 +14,7 @@ use serde::Serialize;
 pub struct CatalogDump {
     pub types: Vec<TypeEntry>,
     /// The `jsonb` (SteVec) family — `public.json` / `public.jsonb_entry` /
-    /// `public.jsonb_query`. Their SQL is hand-written under `src/v3/jsonb/`; the
+    /// `public.query_jsonb`. Their SQL is hand-written under `src/v3/jsonb/`; the
     /// catalog owns only their inventory (scalar-only consumers ignore this field).
     pub stevec: Vec<SteVecEntry>,
 }
@@ -64,12 +64,12 @@ pub struct TermInfo {
 #[derive(Serialize)]
 pub struct SteVecEntry {
     /// The bare domain name (resolved under the `public` schema, like a scalar's
-    /// `integer_eq`): `json` / `jsonb_entry` / `jsonb_query`.
+    /// `integer_eq`): `json` / `jsonb_entry` / `query_jsonb`.
     pub full_name: String,
     /// The catalog domain name: `json` / `entry` / `query`.
     pub name: &'static str,
     /// Index terms for this SteVec domain. Non-empty only for `jsonb_entry`
-    /// (the sv element type); the `json` container and `jsonb_query` domains
+    /// (the sv element type); the `json` container and `query_jsonb` domains
     /// carry no term extractors — see `stevec_terms`.
     pub terms: Vec<TermInfo>,
 }
@@ -95,7 +95,7 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
 ///
 /// Terms live on `jsonb_entry` — the sv *element* type — ONLY: `eql_v3.eq_term`
 /// reads `coalesce(hm, oc)` for `=`/`<>`, and `eql_v3.ore_cllw` reads `oc` for
-/// `<`/`<=`/`>`/`>=`. The `json` container and `jsonb_query` domains carry no
+/// `<`/`<=`/`>`/`>=`. The `json` container and `query_jsonb` domains carry no
 /// term extractors (their surface is containment `@>`/`<@` and path navigation),
 /// so they return no terms. Keyed on the catalog domain name (`json`/`entry`/
 /// `query`).
@@ -220,7 +220,7 @@ mod tests {
     fn stevec_jsonb_family_is_dumped() {
         let dump = dump_catalog();
         let names: Vec<&str> = dump.stevec.iter().map(|e| e.full_name.as_str()).collect();
-        assert_eq!(names, ["json", "jsonb_entry", "jsonb_query"]);
+        assert_eq!(names, ["json", "jsonb_entry", "query_jsonb"]);
 
         let by_name = |n: &str| {
             dump.stevec
@@ -238,10 +238,10 @@ mod tests {
             .collect();
         assert_eq!(entry_extractors, ["eq_term", "ore_cllw"]);
 
-        // The `json` container and `jsonb_query` domains carry no term
+        // The `json` container and `query_jsonb` domains carry no term
         // extractors — their surface is containment (@>, <@) and path nav.
         assert!(by_name("json").terms.is_empty());
-        assert!(by_name("jsonb_query").terms.is_empty());
+        assert!(by_name("query_jsonb").terms.is_empty());
     }
 
     /// Pins the hand-re-derived `suffix` wire field — the one channel with no
@@ -288,7 +288,7 @@ mod tests {
         // `list-types` / `dump-catalog` output the scalar-matrix tooling consumes)
         // must NOT surface the SteVec `jsonb` family: it has no `scalars::jsonb::*`
         // matrix and no generated SQL surface, even though two of its three
-        // domain names (`public.jsonb_entry` / `public.jsonb_query`) now follow
+        // domain names (`public.jsonb_entry` / `public.query_jsonb`) now follow
         // the family+suffix string convention — the payload shape is still not
         // flat. This pins the exclusion directly at the codegen surface rather
         // than relying only on the transitive `scalar_families()` guard in

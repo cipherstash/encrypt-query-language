@@ -2,6 +2,6 @@
 import type { SteVecQueryEntry } from "./SteVecQueryEntry";
 
 /**
- * `public.jsonb_query` — a containment needle (`{sv:[query-entry]}`). Strict.
+ * `public.query_jsonb` — a containment needle (`{sv:[query-entry]}`). Strict.
  */
 export type SteVecQuery = { sv: Array<SteVecQueryEntry>, };

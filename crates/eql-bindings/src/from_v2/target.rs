@@ -50,7 +50,7 @@ impl TargetDomain {
     /// Shape-aware: scalar domains resolve to [`TargetDomain::Scalar`] with
     /// their catalog term keys; the SteVec document domain `json` resolves to
     /// [`TargetDomain::Json`]; the remaining SteVec shapes (`jsonb_entry`,
-    /// `jsonb_query`) are inventory members but not conversion targets, so
+    /// `query_jsonb`) are inventory members but not conversion targets, so
     /// they — like any unknown name — return
     /// [`FromV2Error::UnknownDomain`].
     pub fn parse(name: &str) -> Result<Self, FromV2Error> {

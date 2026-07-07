@@ -1244,6 +1244,14 @@ mod invariant_tests {
                 if s.name == "jsonb" && d.name == "json" {
                     continue;
                 }
+                // The jsonb containment needle follows the query-operand
+                // PREFIX convention (CIP-3442) instead: `query_<family>`,
+                // matching the scalar `query_<name>` twins — see
+                // `Domain::full_name`.
+                if s.name == "jsonb" && d.name == "query" {
+                    assert_eq!(s.domain_name(d), format!("query_{}", s.name));
+                    continue;
+                }
                 let name = s.domain_name(d);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),

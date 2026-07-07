@@ -8,7 +8,7 @@
 //! wire) — plus failure parity: both entry points reject the same inputs with
 //! the same errors, including [`FromV2Error::UnsupportedQueryTarget`] for
 //! STORAGE-ONLY scalar targets (term-bearing scalars now hoist to their
-//! `<name>_query` operand — CIP-3432).
+//! `query_<name>` operand — CIP-3432, prefix naming CIP-3442).
 
 use eql_bindings::from_v2::{from_v2_query, from_v2_query_typed, FromV2Error, TargetDomain};
 use eql_bindings::v3::{DomainType, QueryPayload};
@@ -67,12 +67,12 @@ fn typed_needle_yields_the_ste_vec_variant() {
         ]
     });
     let typed = assert_serialization_pin(&v2);
-    assert_eq!(typed.domain(), "jsonb_query");
-    assert_eq!(typed.sql_domain(), "public.jsonb_query");
+    assert_eq!(typed.domain(), "query_jsonb");
+    assert_eq!(typed.sql_domain(), "public.query_jsonb");
     match &typed {
         QueryPayload::SteVec(q) => {
             assert_eq!(q.sv.len(), 2, "entry order/count preserved");
-            assert_eq!(q.sql_domain(), "public.jsonb_query");
+            assert_eq!(q.sql_domain(), "public.query_jsonb");
         }
         other => panic!("a jsonb target must yield the SteVec needle, got {other:?}"),
     }
@@ -122,7 +122,7 @@ fn v2_scalar_query(term_keys: &[&str]) -> Value {
 fn scalar_query_hoist_and_storage_only_unsupported() {
     // CIP-3432: a term-bearing scalar target hoists the v2 payload's required
     // terms into the enveloped term-only operand `{v:3, i, <terms>}` for its
-    // `<name>_query` domain (dropping `c`/`k`); a storage-only scalar target
+    // `query_<name>` domain (dropping `c`/`k`); a storage-only scalar target
     // (no operators) still fails closed with UnsupportedQueryTarget. Exhaustive
     // over the catalog, both entry points, with the typed==untyped pin.
     for family in eql_domains::scalar_families() {
@@ -165,8 +165,8 @@ fn scalar_query_hoist_and_storage_only_unsupported() {
 
             let typed =
                 from_v2_query_typed(&v2, t).unwrap_or_else(|e| panic!("{name} typed hoist: {e:?}"));
-            assert_eq!(typed.domain(), format!("{name}_query"), "{name} domain");
-            assert_eq!(typed.sql_domain(), format!("public.{name}_query"));
+            assert_eq!(typed.domain(), format!("query_{name}"), "{name} domain");
+            assert_eq!(typed.sql_domain(), format!("public.query_{name}"));
             assert_eq!(
                 serde_json::to_value(&typed).unwrap(),
                 out,
@@ -186,7 +186,7 @@ fn typed_entry_term_errors_match_from_v2_query() {
     let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
     match from_v2_query_typed(&neither, TargetDomain::Json).unwrap_err() {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "jsonb_query");
+            assert_eq!(domain, "query_jsonb");
             assert_eq!(key, "hm|oc");
             assert_eq!(entry, Some(1));
         }
@@ -224,10 +224,10 @@ fn typed_rejects_the_same_envelopes_as_from_v2_query() {
 #[test]
 fn parse_constructs_the_needle_from_its_domain_name() {
     let needle = json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] });
-    let parsed = QueryPayload::parse("jsonb_query", &needle)
-        .expect("jsonb_query must be a QueryPayload domain")
+    let parsed = QueryPayload::parse("query_jsonb", &needle)
+        .expect("query_jsonb must be a QueryPayload domain")
         .expect("strict parse must succeed");
-    assert_eq!(parsed.domain(), "jsonb_query");
+    assert_eq!(parsed.domain(), "query_jsonb");
     assert_eq!(serde_json::to_value(&parsed).unwrap(), needle);
 }
 
@@ -237,7 +237,7 @@ fn parse_is_strict_exactly_like_the_binding_struct() {
     // fails, exactly as the untyped path's validate_as does.
     let stray = json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ], "extra": 1 });
     assert!(
-        QueryPayload::parse("jsonb_query", &stray).unwrap().is_err(),
+        QueryPayload::parse("query_jsonb", &stray).unwrap().is_err(),
         "deny_unknown_fields must reject a stray root key"
     );
 }
@@ -250,7 +250,7 @@ fn parse_returns_none_for_non_query_domains() {
         "json",
         "jsonb_entry",
         "integer_eq",
-        "public.jsonb_query",
+        "public.query_jsonb",
         "",
     ] {
         assert!(

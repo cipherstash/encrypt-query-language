@@ -4,7 +4,7 @@ import type { OpeCllw } from "./OpeCllw";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.integer_ord_ope_query` — ordering domain query operand.
+ * `public.query_integer_ord_ope` — ordering domain query operand.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
  */

@@ -157,12 +157,12 @@ pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
     }
 }
 
-/// The query-operand twin block for a term-bearing domain: `public.<name>_query`,
+/// The query-operand twin block for a term-bearing domain: `public.query_<name>`,
 /// keys = envelope-minus-`c` (`v`/`i`) + the domain's terms, with `c` FORBIDDEN
 /// (a query operand carries no ciphertext — CIP-3432). Same non-empty-array term
 /// rule as the storage block.
 pub fn query_domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
-    let name = format!("{}_query", domain.full_name(family_name));
+    let name = domain.query_name(family_name);
 
     // Envelope minus the ciphertext `c`, then the domain's terms.
     let mut keys: Vec<String> = ENVELOPE_KEYS

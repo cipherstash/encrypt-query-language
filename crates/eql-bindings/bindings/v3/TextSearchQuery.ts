@@ -6,7 +6,7 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.text_search_query` — search domain query operand.
+ * `public.query_text_search` — search domain query operand.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `ob` `bf`.
  */

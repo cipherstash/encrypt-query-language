@@ -1,11 +1,11 @@
 -- AUTOMATICALLY GENERATED FILE.
 -- REQUIRE: src/v3/schema.sql
 
---! @file v3/scalars/{{ family_name }}/{{ family_name }}_query_types.sql
+--! @file v3/scalars/{{ family_name }}/query_{{ family_name }}_types.sql
 --! @brief Query-operand domains for {{ family_name }} (index-terms-only, no ciphertext).
---! @note Cast a query operand explicitly to its `_query` domain in a predicate
---!       (e.g. `WHERE col = $1::public.{{ family_name }}_eq_query`). A bare,
---!       uncast literal RHS is ambiguous between the `_query` and `jsonb`
+--! @note Cast a query operand explicitly to its `query_` domain in a predicate
+--!       (e.g. `WHERE col = $1::public.query_{{ family_name }}_eq`). A bare,
+--!       uncast literal RHS is ambiguous between the `query_` and `jsonb`
 --!       operator overloads and will not resolve.
 
 DO $$

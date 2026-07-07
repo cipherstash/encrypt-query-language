@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.numeric_eq_query` — equality domain query operand.
+ * `public.query_numeric_eq` — equality domain query operand.
  *
  * Operators: `=` `<>`. Required keys: `v` `i` `hm`.
  */

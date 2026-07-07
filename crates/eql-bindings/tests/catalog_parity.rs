@@ -155,8 +155,8 @@ fn parse_value_validates_through_the_inventory() {
         "sv": [ { "s": "sel", "c": "ct", "hm": "deadbeef" } ]
     });
     assert!(entry("json").parse_value(&doc).is_ok());
-    assert!(entry("jsonb_query").parse_value(&doc).is_err());
-    assert!(entry("jsonb_query")
+    assert!(entry("query_jsonb").parse_value(&doc).is_err());
+    assert!(entry("query_jsonb")
         .parse_value(&json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] }))
         .is_ok());
 }
@@ -264,7 +264,7 @@ fn schemas_are_strict() {
 ///   every real payload — the SQL CHECK is laxer and only mandates `v`/`i`/`sv`,
 ///   but the binding models the real wire, which always carries `k`)
 /// - `public.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
-/// - `public.jsonb_query`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
+/// - `public.query_jsonb`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
 #[test]
 fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     let entries = v3::all();
@@ -326,24 +326,24 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
 
     // Query: {sv}. The element (SteVecQueryEntry) requires `s` + hm XOR oc and
     // carries NO ciphertext `c` — the "queries never carry ciphertext" rule.
-    let query = schema_of("jsonb_query");
+    let query = schema_of("query_jsonb");
     assert_eq!(
-        required(&query, "/required", "jsonb_query"),
+        required(&query, "/required", "query_jsonb"),
         set(&["sv"]),
-        "public.jsonb_query required keys must be sv"
+        "public.query_jsonb required keys must be sv"
     );
     let elem_required = required(
         &query,
         "/$defs/SteVecQueryEntry/required",
-        "jsonb_query element",
+        "query_jsonb element",
     );
     assert!(
         elem_required.contains("s"),
-        "jsonb_query element must require a selector s, got {elem_required:?}"
+        "query_jsonb element must require a selector s, got {elem_required:?}"
     );
     assert!(
         !elem_required.contains("c"),
-        "jsonb_query element must NOT require a ciphertext c \
+        "query_jsonb element must NOT require a ciphertext c \
          (is_valid_ste_vec_query_payload forbids it), got {elem_required:?}"
     );
     // Same arm-wise check as jsonb_entry: the query element's hm XOR oc union must
@@ -351,16 +351,16 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     let query_alts = query
         .pointer("/$defs/SteVecQueryEntry/anyOf")
         .and_then(|v| v.as_array())
-        .expect("jsonb_query element schema must carry an anyOf term union");
+        .expect("query_jsonb element schema must carry an anyOf term union");
     let query_alt_required: Vec<BTreeSet<String>> = query_alts
         .iter()
-        .map(|alt| required(alt, "/required", "jsonb_query element anyOf"))
+        .map(|alt| required(alt, "/required", "query_jsonb element anyOf"))
         .collect();
     assert!(
         query_alt_required.len() == 2
             && query_alt_required.contains(&set(&["hm"]))
             && query_alt_required.contains(&set(&["oc"])),
-        "public.jsonb_query element anyOf must offer exactly the hm-only and \
+        "public.query_jsonb element anyOf must offer exactly the hm-only and \
          oc-only term alternatives (each arm a singleton), got {query_alt_required:?}"
     );
 }

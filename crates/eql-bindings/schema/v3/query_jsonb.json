@@ -1,0 +1,69 @@
+{
+  "$defs": {
+    "Hmac256": {
+      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.",
+      "type": "string"
+    },
+    "OreCllw": {
+      "description": "CLLW-ORE ordered term — the `oc` wire key of a SteVec entry. Backs entry\nordering (`<` `<=` `>` `>=`) and equality on ordered leaves. SQL-side\nconstructor: `eql_v3.ore_cllw`. A SteVec entry carries exactly one of `hm`\n(equality) XOR `oc` (ordering) — enforced by the SQL domain CHECK.",
+      "type": "string"
+    },
+    "Selector": {
+      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`public.json`); present on every entry and query element.",
+      "type": "string"
+    },
+    "SteVecQueryEntry": {
+      "anyOf": [
+        {
+          "properties": {
+            "hm": {
+              "$ref": "#/$defs/Hmac256"
+            }
+          },
+          "required": [
+            "hm"
+          ],
+          "type": "object"
+        },
+        {
+          "properties": {
+            "oc": {
+              "$ref": "#/$defs/OreCllw"
+            }
+          },
+          "required": [
+            "oc"
+          ],
+          "type": "object"
+        }
+      ],
+      "description": "One element of a SteVec containment needle: a selector plus one term, and\n(per the SQL CHECK) no ciphertext. LAX for the same flatten reason as\n`SteVecEntry`; the \"no `c`\" contract is enforced by `is_valid_ste_vec_query_payload`.",
+      "properties": {
+        "s": {
+          "$ref": "#/$defs/Selector"
+        }
+      },
+      "required": [
+        "s"
+      ],
+      "type": "object"
+    }
+  },
+  "$id": "https://schemas.cipherstash.com/eql/v3/query_jsonb.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "`public.query_jsonb` — a containment needle (`{sv:[query-entry]}`). Strict.",
+  "properties": {
+    "sv": {
+      "items": {
+        "$ref": "#/$defs/SteVecQueryEntry"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "sv"
+  ],
+  "title": "SteVecQuery",
+  "type": "object"
+}

@@ -105,7 +105,7 @@ pub struct SteVecEntry {
     pub term: SteVecTerm,
 }
 
-/// `public.jsonb_query` — a containment needle (`{sv:[query-entry]}`). Strict.
+/// `public.query_jsonb` — a containment needle (`{sv:[query-entry]}`). Strict.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -157,4 +157,4 @@ macro_rules! ste_vec_domain_type {
 
 ste_vec_domain_type!(SteVecDocument, "public.json");
 ste_vec_domain_type!(SteVecEntry, "public.jsonb_entry");
-ste_vec_domain_type!(SteVecQuery, "public.jsonb_query");
+ste_vec_domain_type!(SteVecQuery, "public.query_jsonb");

@@ -144,15 +144,15 @@ CREATE OPERATOR @>(
   RIGHTARG=public.json
 );
 
---! @brief @> contains operator with an jsonb_query needle.
+--! @brief @> contains operator with an query_jsonb needle.
 --!
 --! Inlines to native `jsonb @>` over `eql_v3.to_ste_vec_query(a)::jsonb`, so a
 --! functional GIN index on the same expression engages.
 --!
 --! @param a public.json Container.
---! @param b public.jsonb_query Query payload.
+--! @param b public.query_jsonb Query payload.
 --! @return boolean True if a contains b.
-CREATE FUNCTION eql_v3."@>"(a public.json, b public.jsonb_query)
+CREATE FUNCTION eql_v3."@>"(a public.json, b public.query_jsonb)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -162,7 +162,7 @@ $$;
 CREATE OPERATOR @>(
   FUNCTION=eql_v3."@>",
   LEFTARG=public.json,
-  RIGHTARG=public.jsonb_query
+  RIGHTARG=public.query_jsonb
 );
 
 --! @brief @> contains operator with a single jsonb_entry needle.
@@ -219,11 +219,11 @@ CREATE OPERATOR <@(
   RIGHTARG=public.json
 );
 
---! @brief <@ contained-by operator with an jsonb_query LHS.
---! @param a public.jsonb_query Query payload.
+--! @brief <@ contained-by operator with an query_jsonb LHS.
+--! @param a public.query_jsonb Query payload.
 --! @param b public.json Container.
 --! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a public.jsonb_query, b public.json)
+CREATE FUNCTION eql_v3."<@"(a public.query_jsonb, b public.json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -232,7 +232,7 @@ $$;
 
 CREATE OPERATOR <@(
   FUNCTION=eql_v3."<@",
-  LEFTARG=public.jsonb_query,
+  LEFTARG=public.query_jsonb,
   RIGHTARG=public.json
 );
 

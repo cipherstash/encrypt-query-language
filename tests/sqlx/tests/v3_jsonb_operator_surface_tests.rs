@@ -38,7 +38,7 @@ async fn v3_jsonb_operators(pool: &PgPool) -> anyhow::Result<Vec<(String, String
         WITH d AS (
           SELECT 'public.json'::regtype          AS j,
                  'public.jsonb_entry'::regtype  AS e,
-                 'public.jsonb_query'::regtype  AS q
+                 'public.query_jsonb'::regtype  AS q
         )
         SELECT o.oprname,
                pg_catalog.format_type(o.oprleft, NULL)  AS lhs,
@@ -59,7 +59,7 @@ fn norm(ty: &str) -> String {
     match ty {
         "\"json\"" => "public.json".to_string(),
         "jsonb_entry" => "public.jsonb_entry".to_string(),
-        "jsonb_query" => "public.jsonb_query".to_string(),
+        "query_jsonb" => "public.query_jsonb".to_string(),
         _ => ty.replace("public.\"json\"", "public.json"),
     }
 }
@@ -144,10 +144,10 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
         ("@>", "public.json", "public.json"),
-        ("@>", "public.json", "public.jsonb_query"),
+        ("@>", "public.json", "public.query_jsonb"),
         ("@>", "public.json", "public.jsonb_entry"),
         ("<@", "public.json", "public.json"),
-        ("<@", "public.jsonb_query", "public.json"),
+        ("<@", "public.query_jsonb", "public.json"),
         ("<@", "public.jsonb_entry", "public.json"),
         // path access
         ("->", "public.json", "text"),
@@ -316,7 +316,7 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
         (">=", "public.json", "jsonb"),
         (">=", "jsonb", "public.json"),
         // mixed jsonb containment shapes are blocked; safe forms use json,
-        // jsonb_query, or jsonb_entry.
+        // query_jsonb, or jsonb_entry.
         ("@>", "public.json", "jsonb"),
         ("@>", "jsonb", "public.json"),
         ("<@", "public.json", "jsonb"),

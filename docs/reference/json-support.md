@@ -43,7 +43,7 @@ Always give the operand a known type:
 ```sql
 -- ✅ correct — typed operand resolves to the eql_v3 operator
 WHERE doc -> 'email'::text = $1
-WHERE doc @> $1::public.jsonb_query
+WHERE doc @> $1::public.query_jsonb
 WHERE doc -> $1            -- a text parameter (the CipherStash Proxy interface)
 
 -- ⚠ wrong — bare untyped literal resolves to native jsonb -> text, returns NULL
@@ -56,11 +56,11 @@ This is **intrinsic to the domain type-kind**, not a bug: the only way to remove
 
 ### Containment queries (`@>`, `<@`)
 
-`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.json`, an `public.jsonb_query`, or an `public.jsonb_entry`:
+`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.json`, an `public.query_jsonb`, or an `public.jsonb_entry`:
 
 ```sql
 SELECT * FROM examples
-WHERE encrypted_json @> $1::public.jsonb_query;
+WHERE encrypted_json @> $1::public.query_jsonb;
 ```
 
 This is the encrypted equivalent of the plaintext `jsonb_column @> '{"top":{"nested":["a"]}}'`.
@@ -72,7 +72,7 @@ CREATE INDEX examples_json_gin
   ON examples USING gin (eql_v3.to_ste_vec_query(encrypted_json)::jsonb jsonb_path_ops);
 ANALYZE examples;
 
-SELECT * FROM examples WHERE encrypted_json @> $1::public.jsonb_query;
+SELECT * FROM examples WHERE encrypted_json @> $1::public.query_jsonb;
 ```
 
 See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for the full setup.
@@ -145,7 +145,7 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 
 - **`eql_v3.ste_vec(val jsonb) RETURNS jsonb[]`** — extracts the ste_vec index array from an encrypted payload.
 - **`eql_v3.ste_vec_contains(a public.json, b public.json) RETURNS boolean`** — true if all ste_vec terms in `b` exist in `a`; backs the `@>` operator.
-- **`eql_v3.to_ste_vec_query(val public.json) RETURNS public.jsonb_query`** — the GIN-indexable query shape `@>` inlines to.
+- **`eql_v3.to_ste_vec_query(val public.json) RETURNS public.query_jsonb`** — the GIN-indexable query shape `@>` inlines to.
 - **`eql_v3.meta_data(val jsonb)`**, **`eql_v3.ciphertext(val jsonb)`**, **`eql_v3.selector(val jsonb)` / `(entry public.jsonb_entry)`** — envelope / ciphertext / selector accessors.
 
 ### Path query functions
@@ -197,7 +197,7 @@ Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
 ```sql
 -- Find records where account.email = "alice@example.com"
-WHERE encrypted_data @> $1::public.jsonb_query;
+WHERE encrypted_data @> $1::public.query_jsonb;
 ```
 
 Encryption and selector generation are handled by CipherStash Proxy or CipherStash Stack, not by EQL directly.

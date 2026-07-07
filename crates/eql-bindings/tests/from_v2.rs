@@ -417,12 +417,12 @@ fn ste_vec_query_entry_term_errors_match_document_rules() {
         from_v2_query(&both, TargetDomain::Json).unwrap_err(),
         FromV2Error::AmbiguousTerm { entry: 0 }
     ));
-    // The query path names ITS shape (jsonb_query, not json) and locates the
+    // The query path names ITS shape (query_jsonb, not json) and locates the
     // entry.
     let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
     match from_v2_query(&neither, TargetDomain::Json).unwrap_err() {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "jsonb_query");
+            assert_eq!(domain, "query_jsonb");
             assert_eq!(key, "hm|oc");
             assert_eq!(entry, Some(1));
         }

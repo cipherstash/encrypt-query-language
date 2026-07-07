@@ -181,7 +181,7 @@ the `eql_v3.jsonb_path_*` helper functions, all without operator classes:
 
 ```sql
 -- Document containment (GIN-indexable on Supabase)
-SELECT * FROM orders WHERE data_encrypted @> $1::public.jsonb_query;
+SELECT * FROM orders WHERE data_encrypted @> $1::public.query_jsonb;
 
 -- Field access (selector is the deterministic selector hash, typed as text)
 SELECT data_encrypted -> '<selector>'::text FROM orders;

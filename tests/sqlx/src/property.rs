@@ -85,19 +85,26 @@ fn jsonb(payload_json: &str) -> String {
 }
 
 /// Cast a JSON text literal into a QUERY-operand value: strip the ciphertext
-/// `c` (a query operand carries index terms only) and cast to `<domain>_query`.
-/// This is exactly what a client sends — the stored envelope minus `c` — and
-/// the RHS the `(storage, <name>_query)` query operators consume (CIP-3432).
+/// `c` (a query operand carries index terms only) and cast to the domain's
+/// `query_<name>` twin (prefix naming — CIP-3442). This is exactly what a
+/// client sends — the stored envelope minus `c` — and the RHS the
+/// `(storage, query_<name>)` query operators consume (CIP-3432).
 fn query_cast(payload_json: &str, domain: &str) -> String {
     let mut v: serde_json::Value =
         serde_json::from_str(payload_json).expect("payload_json is valid JSON");
     if let Some(obj) = v.as_object_mut() {
         obj.remove("c");
     }
+    // `domain` is schema-qualified (`public.integer_eq`); the twin prefixes the
+    // unqualified name (`public.query_integer_eq`).
+    let query_domain = match domain.rsplit_once('.') {
+        Some((schema, name)) => format!("{schema}.query_{name}"),
+        None => format!("query_{domain}"),
+    };
     format!(
-        "'{}'::jsonb::{}_query",
+        "'{}'::jsonb::{}",
         v.to_string().replace('\'', "''"),
-        domain
+        query_domain
     )
 }
 
@@ -113,7 +120,7 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
             let b_dom = cast(&b.payload_json, &domain);
             // CIP-3432: the SAME pair also exercises the term-only query operand
             // (the stored payload minus its ciphertext `c`) through the
-            // `(storage, <name>_query)` operators, in both directions — folded
+            // `(storage, query_<name>)` operators, in both directions — folded
             // into this one round trip so query coverage adds no DB load.
             let a_qry = query_cast(&a.payload_json, &domain);
             let b_qry = query_cast(&b.payload_json, &domain);
@@ -146,19 +153,19 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
             );
             anyhow::ensure!(
                 eq_q == Some(want),
-                "query `=` mismatch on {domain}_query: {:?} vs {:?} want {want}, got {eq_q:?}",
+                "query `=` mismatch on the query twin of {domain}: {:?} vs {:?} want {want}, got {eq_q:?}",
                 a.plaintext,
                 b.plaintext
             );
             anyhow::ensure!(
                 neq_q == Some(!want),
-                "query `<>` mismatch on {domain}_query: {:?} vs {:?}",
+                "query `<>` mismatch on the query twin of {domain}: {:?} vs {:?}",
                 a.plaintext,
                 b.plaintext
             );
             anyhow::ensure!(
                 eq_qc == Some(want),
-                "commutator query `=` mismatch on {domain}_query: {:?} vs {:?}",
+                "commutator query `=` mismatch on the query twin of {domain}: {:?} vs {:?}",
                 a.plaintext,
                 b.plaintext
             );
@@ -186,7 +193,7 @@ pub async fn assert_ord_oracle<T: ScalarType>(
             let a_cast = cast(&a.payload_json, &domain);
             let b_cast = cast(&b.payload_json, &domain);
             // CIP-3432: the term-only query operand for `b` (payload minus `c`),
-            // exercised through `(storage, <name>_query)` ordering in the SAME
+            // exercised through `(storage, query_<name>)` ordering in the SAME
             // round trip (no added DB load).
             let b_qry = query_cast(&b.payload_json, &domain);
             let sql = format!(
@@ -221,19 +228,19 @@ pub async fn assert_ord_oracle<T: ScalarType>(
             );
             anyhow::ensure!(
                 lt_q == Some(pa < pb),
-                "query `<` mismatch on {domain}_query: {pa:?}<{pb:?}"
+                "query `<` mismatch on the query twin of {domain}: {pa:?}<{pb:?}"
             );
             anyhow::ensure!(
                 lte_q == Some(pa <= pb),
-                "query `<=` mismatch on {domain}_query: {pa:?}<={pb:?}"
+                "query `<=` mismatch on the query twin of {domain}: {pa:?}<={pb:?}"
             );
             anyhow::ensure!(
                 gt_q == Some(pa > pb),
-                "query `>` mismatch on {domain}_query: {pa:?}>{pb:?}"
+                "query `>` mismatch on the query twin of {domain}: {pa:?}>{pb:?}"
             );
             anyhow::ensure!(
                 gte_q == Some(pa >= pb),
-                "query `>=` mismatch on {domain}_query: {pa:?}>={pb:?}"
+                "query `>=` mismatch on the query twin of {domain}: {pa:?}>={pb:?}"
             );
         }
     }
@@ -250,9 +257,9 @@ pub enum Overload {
     DomainDomain,
     DomainJsonb,
     JsonbDomain,
-    /// CIP-3432: the RHS is the term-only query operand (`<domain>_query`, the
-    /// payload minus `c`) — the `(storage, <name>_query)` function overload. The
-    /// facet that reaches `text_search_query`, which the operator oracle (which
+    /// CIP-3432: the RHS is the term-only query operand (`query_<domain>`, the
+    /// payload minus `c`) — the `(storage, query_<name>)` function overload. The
+    /// facet that reaches `query_text_search`, which the operator oracle (which
     /// runs text via `_eq`/`_ord`/`_ord_ore`, not `_search`) never touches.
     DomainQuery,
 }
@@ -502,7 +509,7 @@ pub async fn assert_match_smoke(
     let needle = cast(needle_json, domain);
     let disjoint = cast(disjoint_json, domain);
     // CIP-3432: the term-only query operands (bloom `bf`, no ciphertext `c`),
-    // consumed by the `(text_match, text_match_query)` containment operators.
+    // consumed by the `(text_match, query_text_match)` containment operators.
     let needle_q = query_cast(needle_json, domain);
     let disjoint_q = query_cast(disjoint_json, domain);
 

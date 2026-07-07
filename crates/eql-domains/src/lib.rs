@@ -135,7 +135,7 @@ pub enum Shape {
     Scalar,
     /// A `jsonb` family payload: `public.json` (`{v, i, sv: [entry]}`),
     /// `public.jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
-    /// `public.jsonb_query` (`{sv: [query-entry]}`). The three differ in
+    /// `public.query_jsonb` (`{sv: [query-entry]}`). The three differ in
     /// payload body but share the non-flat-scalar shape, so a single variant
     /// covers them; `Domain.name` (`"json"`/`"entry"`/`"query"`) already
     /// disambiguates which one a given domain is (see `Domain::full_name` /
@@ -435,7 +435,7 @@ const JSONB_DOMAINS: &[Domain] = &[
 
 /// `jsonb` — the encrypted-JSONB (SteVec) family: `public.json` (document, the
 /// one explicit-name exception — see `JSONB_DOMAINS`), `public.jsonb_entry`
-/// (one sv element), `public.jsonb_query` (containment needle). The Rust
+/// (one sv element), `public.query_jsonb` (containment needle). The Rust
 /// struct *bodies* are hand-written (`crates/eql-bindings/src/v3/jsonb.rs`,
 /// not derivable from the catalog); `Domain::rust_struct_name` derives their
 /// *identifiers* (`SteVecDocument`/`SteVecEntry`/`SteVecQuery`) from

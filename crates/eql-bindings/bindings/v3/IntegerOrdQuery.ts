@@ -4,7 +4,7 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.integer_ord_query` — ordering domain query operand.
+ * `public.query_integer_ord` — ordering domain query operand.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
  */

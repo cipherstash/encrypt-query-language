@@ -142,7 +142,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname = 'public'
-          AND t.typname IN ('integer_eq', 'json', 'jsonb_entry', 'jsonb_query')
+          AND t.typname IN ('integer_eq', 'json', 'jsonb_entry', 'query_jsonb')
         ORDER BY 1
         "#,
     )
@@ -158,7 +158,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
             "public.integer_eq",
             "public.json",
             "public.jsonb_entry",
-            "public.jsonb_query",
+            "public.query_jsonb",
         ],
         "repeat install must keep public user-column domains available"
     );
@@ -187,7 +187,7 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
           id integer PRIMARY KEY,
           scalar_value public.integer_eq NOT NULL,
           doc_value public.json NOT NULL,
-          query_value public.jsonb_query NOT NULL,
+          query_value public.query_jsonb NOT NULL,
           entry_value public.jsonb_entry
         )
         "#,
@@ -204,7 +204,7 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
             1,
             $1::jsonb::public.integer_eq,
             $2::jsonb::public.json,
-            $3::jsonb::public.jsonb_query,
+            $3::jsonb::public.query_jsonb,
             $4::jsonb::public.jsonb_entry
           )
         "#,
@@ -260,7 +260,7 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
             "pg_catalog.int4",
             "public.integer_eq",
             "public.json",
-            "public.jsonb_query",
+            "public.query_jsonb",
             "public.jsonb_entry",
         ]
     );

@@ -598,9 +598,9 @@ fn from_v2_query_output_validates_against_published_v3_schema() {
     });
     let out = from_v2_query(&v2, TargetDomain::Json).expect("query conversion must succeed");
     assert_valid(
-        &load_v3_schema("jsonb_query"),
+        &load_v3_schema("query_jsonb"),
         &out,
-        "from_v2_query output for jsonb_query",
+        "from_v2_query output for query_jsonb",
     );
 }
 

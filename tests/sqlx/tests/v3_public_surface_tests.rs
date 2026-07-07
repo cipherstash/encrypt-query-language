@@ -106,7 +106,7 @@ fn user_domain_names() -> Vec<String> {
         }
     }
     names.extend(
-        ["json", "jsonb_entry", "jsonb_query"]
+        ["json", "jsonb_entry", "query_jsonb"]
             .into_iter()
             .map(String::from),
     );

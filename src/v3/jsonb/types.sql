@@ -8,7 +8,7 @@
 --! blockers.sql can attach):
 --!   - public.json     — storage/root: an EQL envelope object ({i, v, ...}).
 --!   - public.jsonb_entry — a single sv element (returned by `->`).
---!   - public.jsonb_query  — a containment needle (sv elements, no ciphertext).
+--!   - public.query_jsonb  — a containment needle (sv elements, no ciphertext).
 
 --! @brief Validate a single SteVec entry payload.
 --! @internal
@@ -39,7 +39,7 @@ $$;
 --!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
 --!         `oc`).
 --! @note plpgsql, not LANGUAGE sql (issues #353/#354): the only caller is the
---!   public.jsonb_query domain CHECK, where a SQL function can never be
+--!   public.query_jsonb domain CHECK, where a SQL function can never be
 --!   inlined (and the CHECK itself cannot absorb this body — it needs a
 --!   subquery over the sv elements, which CHECK constraints forbid). plpgsql
 --!   caches its plan across calls instead of paying the per-call SQL-function
@@ -188,7 +188,7 @@ $$;
 --! `jsonb @>`.
 --!
 --! @note Construct from inline JSON via the DOMAIN cast:
---!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::public.jsonb_query`.
+--!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::public.query_jsonb`.
 --! @see eql_v3.to_ste_vec_query
 --!
 --! @internal
@@ -199,25 +199,25 @@ $$;
 --! plan; substantially cheaper per call than a non-inlined LANGUAGE sql
 --! function — the same finding as issue #353), since this cast sits on the
 --! per-query hot path of every containment scenario
---! (`$1::jsonb::public.jsonb_query`).
+--! (`$1::jsonb::public.query_jsonb`).
 --! @endinternal
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'jsonb_query' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'query_jsonb' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.jsonb_query AS jsonb
+    CREATE DOMAIN public.query_jsonb AS jsonb
       CHECK (
         public.eql_v3_is_valid_ste_vec_query_payload(VALUE)
       );
   END IF;
 
-  COMMENT ON DOMAIN public.jsonb_query IS 'EQL JSONB query operand (containment)';
+  COMMENT ON DOMAIN public.query_jsonb IS 'EQL JSONB query operand (containment)';
 END
 $$;
 
---! @brief Convert a public.json to a jsonb_query needle.
+--! @brief Convert a public.json to a query_jsonb needle.
 --!
 --! Normalises each sv element down to the matching-relevant fields: `s` plus
 --! exactly one of `hm` / `oc`. Other fields (`c`, `a`, `i`/`v`, anything else)
@@ -226,10 +226,10 @@ $$;
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
 --! @param e public.json Source encrypted payload
---! @return public.jsonb_query Query-shaped needle, sv elements normalised.
---! @see public.jsonb_query
+--! @return public.query_jsonb Query-shaped needle, sv elements normalised.
+--! @see public.query_jsonb
 CREATE FUNCTION eql_v3.to_ste_vec_query(e public.json)
-  RETURNS public.jsonb_query
+  RETURNS public.query_jsonb
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT jsonb_build_object(
@@ -247,9 +247,9 @@ AS $$
        FROM jsonb_array_elements(e::jsonb -> 'sv') AS elem),
       '[]'::jsonb
     )
-  )::public.jsonb_query
+  )::public.query_jsonb
 $$;
 
-CREATE CAST (public.json AS public.jsonb_query)
+CREATE CAST (public.json AS public.query_jsonb)
   WITH FUNCTION eql_v3.to_ste_vec_query
   AS ASSIGNMENT;
