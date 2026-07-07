@@ -189,6 +189,106 @@ pub fn render_operators_file(family_name: &str, domain: &Domain) -> String {
         .expect("render operators.sql")
 }
 
+/// REQUIRE path for a family's _query_types.sql.
+fn query_types_path(family_name: &str) -> String {
+    scalar_path(family_name, &format!("{family_name}_query_types.sql"))
+}
+
+/// Body for a term-bearing domain's <name>_query_functions.sql (CIP-3432): the
+/// query-operand extractor OVERLOADS (the same extractors, on
+/// `public.<name>_query`) plus the comparison WRAPPERS binding the storage
+/// domain to its query twin — for the domain's SUPPORTED operators only, in
+/// both directions. Reuses the same `functions.sql` template as the storage
+/// surface; a query operand carries the same terms, so each wrapper compares
+/// `extractor(a)` to `extractor(b)` with no ciphertext cast.
+pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String {
+    use crate::consts::sql_str;
+    use crate::context::{
+        domain_name, environment, extractor_entry, wrapper_entry, FunctionsContext,
+    };
+    let name = domain.full_name(family_name);
+    let query_name = format!("{name}_query");
+    let storage_dom = domain_name(&name);
+    let query_dom = domain_name(&query_name);
+    let supported = Term::operators_for_terms(domain.terms);
+
+    let mut entries = Vec::new();
+    // Extractor overloads on the query domain (the template renders `a {{ dom }}`
+    // with dom = the query domain).
+    for term in Term::extractor_terms(domain.terms) {
+        entries.push(extractor_entry(term));
+    }
+    // Comparison wrappers: (storage, query) and its (query, storage) commutator,
+    // for supported operators only (a query operand is never sent for a blocked
+    // operator). `is_supported(op) ⟹ extractor_for_operator is Some`.
+    for op in OPERATORS {
+        if !supported.contains(&op.symbol) {
+            continue;
+        }
+        let extractor = Term::extractor_for_operator(domain.terms, op.symbol)
+            .expect("a supported operator resolves an extractor");
+        entries.push(wrapper_entry(&query_dom, op, &storage_dom, &query_dom, extractor));
+        entries.push(wrapper_entry(&query_dom, op, &query_dom, &storage_dom, extractor));
+    }
+
+    let ctx = FunctionsContext {
+        requires: vec![
+            V3_SCHEMA.to_string(),
+            query_types_path(family_name),
+            scalar_path(family_name, &format!("{name}_functions.sql")),
+        ],
+        family_name: family_name.to_string(),
+        name: query_name,
+        domain_lit: sql_str(&query_dom),
+        dom: query_dom,
+        entries,
+    };
+    environment()
+        .get_template("functions.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render query functions.sql")
+}
+
+/// Body for a term-bearing domain's <name>_query_operators.sql (CIP-3432): a
+/// `CREATE OPERATOR` binding `(storage_domain, <name>_query)` for every
+/// supported operator, plus its `(<name>_query, storage_domain)` commutator, so
+/// `col <op> $1::public.<name>_query` resolves to the query wrapper.
+pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String {
+    use crate::context::{domain_name, environment, operator_entry, OperatorsContext};
+    let name = domain.full_name(family_name);
+    let query_name = format!("{name}_query");
+    let storage_dom = domain_name(&name);
+    let query_dom = domain_name(&query_name);
+    let supported = Term::operators_for_terms(domain.terms);
+
+    let mut operators = Vec::new();
+    for op in OPERATORS {
+        if !supported.contains(&op.symbol) {
+            continue;
+        }
+        operators.push(operator_entry(op, &storage_dom, &query_dom, true));
+        operators.push(operator_entry(op, &query_dom, &storage_dom, true));
+    }
+
+    let ctx = OperatorsContext {
+        requires: vec![
+            V3_SCHEMA.to_string(),
+            query_types_path(family_name),
+            scalar_path(family_name, &format!("{query_name}_functions.sql")),
+        ],
+        family_name: family_name.to_string(),
+        name: query_name,
+        dom: query_dom,
+        operators,
+    };
+    environment()
+        .get_template("operators.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render query operators.sql")
+}
+
 /// Body for a domain's _aggregates.sql, or None if not ord-capable.
 /// Port of `render_aggregates_file`.
 pub fn render_aggregates_file(family_name: &str, domain: &Domain) -> Option<String> {
@@ -255,6 +355,19 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
             out_dir.join(format!("{name}_operators.sql")),
             render_operators_file(family_name, d),
         ));
+        // Query-operand surface (CIP-3432): extractor overloads + wrappers +
+        // operators binding the storage domain to its `<name>_query` twin. Only
+        // term-bearing domains have a query twin (storage-only = no operators).
+        if !d.terms.is_empty() {
+            rendered.push((
+                out_dir.join(format!("{name}_query_functions.sql")),
+                render_query_functions_file(family_name, d),
+            ));
+            rendered.push((
+                out_dir.join(format!("{name}_query_operators.sql")),
+                render_query_operators_file(family_name, d),
+            ));
+        }
         if let Some(agg) = render_aggregates_file(family_name, d) {
             rendered.push((out_dir.join(format!("{name}_aggregates.sql")), agg));
         }
@@ -436,13 +549,21 @@ mod tests {
             assert!(names.contains(&format!("{dom}_functions.sql")));
             assert!(names.contains(&format!("{dom}_operators.sql")));
         }
+        // Query-operand functions/operators for the term-bearing domains only
+        // (not the storage-only bare `integer`).
+        for dom in ["integer_eq", "integer_ord_ore", "integer_ord", "integer_ord_ope"] {
+            assert!(names.contains(&format!("{dom}_query_functions.sql")));
+            assert!(names.contains(&format!("{dom}_query_operators.sql")));
+        }
+        assert!(!names.contains(&"integer_query_functions.sql".to_string()));
         assert!(!names.contains(&"integer_aggregates.sql".to_string()));
         assert!(!names.contains(&"integer_eq_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_ore_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_ope_aggregates.sql".to_string()));
-        // 1 types + 1 query_types + 2 per domain (5 domains) + 3 ord-capable aggregates.
-        assert_eq!(written.len(), 15);
+        // 1 types + 1 query_types + 2 per domain (5) + 2 query per term-bearing
+        // domain (4) + 3 ord-capable aggregates = 1+1+10+8+3.
+        assert_eq!(written.len(), 23);
         for p in &written {
             assert!(fs::read_to_string(p)
                 .unwrap()
