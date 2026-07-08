@@ -1016,3 +1016,23 @@ Everything else is the standard path: one catalog row, regenerate, commit the
 generated `src/v3/scalars/boolean/` SQL (3 files), no edits to
 `pin_search_path_v3.sql` or `splinter.sh` (a storage-only type emits only blockers
 — no extractors/wrappers/aggregates, so no new inline-critical names).
+
+## Adding an alias
+
+To add a Postgres-native spelling for an existing scalar (e.g. `int` for
+`integer`), add it to that family's `aliases` array in
+`crates/eql-domains/src/lib.rs`:
+
+    const INTEGER: DomainFamily = DomainFamily {
+        name: "integer",
+        aliases: &["int4", "int"],   // add here
+        domains: ORDERED_INT_DOMAINS,
+    };
+
+Then `mise run clean && mise run build`. The generator emits a full
+`src/v3/scalars/<alias>/` surface plus cross-name operators in the canonical
+dir (`src/v3/scalars/<canonical>/<canonical>__<alias>_cross.sql`) so the alias
+and canonical interoperate both ways. No bindings, fixtures, or matrix tests
+change — aliases are a SQL-surface concern only. `mise run codegen:parity` gates
+the committed output. See [Native-spelling type aliases](./aliases.md) for the
+user-facing behaviour.
