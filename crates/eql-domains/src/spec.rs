@@ -127,6 +127,16 @@ impl DomainFamily {
     pub fn is_scalar(&self) -> bool {
         self.domains.iter().all(|d| d.is_scalar())
     }
+
+    /// The names in this family's type group: the canonical `name` first, then
+    /// every alias in declared order. The SINGLE site the codegen SQL emitter
+    /// iterates to fan out a per-name surface; every other consumer stays
+    /// canonical-only via `name` / `scalar_families`.
+    pub fn group_names(&self) -> Vec<&'static str> {
+        std::iter::once(self.name)
+            .chain(self.aliases.iter().copied())
+            .collect()
+    }
 }
 
 #[cfg(test)]
@@ -200,6 +210,24 @@ mod tests {
         );
         assert_eq!(JSONB.domains[1].rust_struct_name(JSONB.name), "SteVecEntry");
         assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecQuery");
+    }
+
+    #[test]
+    fn group_names_is_canonical_first_then_aliases() {
+        use crate::DomainFamily;
+        let f = DomainFamily {
+            name: "integer",
+            aliases: &["int4", "int"],
+            domains: crate::ORDERED_INT_DOMAINS,
+        };
+        assert_eq!(f.group_names(), vec!["integer", "int4", "int"]);
+
+        let none = DomainFamily {
+            name: "date",
+            aliases: &[],
+            domains: crate::ORDERED_INT_DOMAINS,
+        };
+        assert_eq!(none.group_names(), vec!["date"]);
     }
 
     #[test]

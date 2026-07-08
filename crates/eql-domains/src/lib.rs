@@ -161,6 +161,11 @@ pub struct Domain {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct DomainFamily {
     pub name: &'static str,
+    /// Postgres-native spelling synonyms for `name` (e.g. `["int4"]` for
+    /// `integer`). Each alias gets a full generated surface plus cross-name
+    /// operators; empty for families with no alias. Purely a SQL-surface concern
+    /// — no bindings/fixtures/matrix impact.
+    pub aliases: &'static [&'static str],
     pub domains: &'static [Domain],
 }
 
@@ -169,7 +174,7 @@ pub struct DomainFamily {
 /// `_ord_ope` (ope). `_ord_ope` carries the CLLW-OPE term (`op`): a
 /// hex-encoded ciphertext ordered by native bytea comparison after
 /// hex-decode — unlike `_ord`/`_ord_ore` it needs no custom comparator.
-const ORDERED_INT_DOMAINS: &[Domain] = &[
+pub(crate) const ORDERED_INT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",
         terms: &[],
@@ -221,16 +226,19 @@ const EQ_ONLY_DOMAINS: &[Domain] = &[
 
 const INTEGER: DomainFamily = DomainFamily {
     name: "integer",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
 const SMALLINT: DomainFamily = DomainFamily {
     name: "smallint",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
 const BIGINT: DomainFamily = DomainFamily {
     name: "bigint",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -245,6 +253,7 @@ const BIGINT: DomainFamily = DomainFamily {
 /// materialised here).
 pub const DATE: DomainFamily = DomainFamily {
     name: "date",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -265,6 +274,7 @@ pub const DATE: DomainFamily = DomainFamily {
 /// `eql-domains` stays zero-dep).
 pub const TIMESTAMP: DomainFamily = DomainFamily {
     name: "timestamp",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -282,6 +292,7 @@ pub const TIMESTAMP: DomainFamily = DomainFamily {
 /// `rust_decimal`).
 pub const NUMERIC: DomainFamily = DomainFamily {
     name: "numeric",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -366,6 +377,7 @@ const STORAGE_ONLY_DOMAINS: &[Domain] = &[Domain {
 /// two values are read straight from the record).
 pub const BOOLEAN: DomainFamily = DomainFamily {
     name: "boolean",
+    aliases: &[],
     domains: STORAGE_ONLY_DOMAINS,
 };
 
@@ -374,6 +386,7 @@ pub const BOOLEAN: DomainFamily = DomainFamily {
 /// harness reads `TEXT_VALUES` (materialised in the `fixtures` module).
 pub const TEXT: DomainFamily = DomainFamily {
     name: "text",
+    aliases: &[],
     domains: TEXT_DOMAINS,
 };
 
@@ -385,6 +398,7 @@ pub const TEXT: DomainFamily = DomainFamily {
 /// `REAL_FIXTURES.values` directly to parse the strings into `f32`.
 pub const REAL: DomainFamily = DomainFamily {
     name: "real",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -394,6 +408,7 @@ pub const REAL: DomainFamily = DomainFamily {
 /// `f64`.
 pub const DOUBLE: DomainFamily = DomainFamily {
     name: "double",
+    aliases: &[],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -443,6 +458,7 @@ const JSONB_DOMAINS: &[Domain] = &[
 /// the mapping. Added to `CATALOG` at the flip task.
 pub const JSONB: DomainFamily = DomainFamily {
     name: "jsonb",
+    aliases: &[],
     domains: JSONB_DOMAINS,
 };
 

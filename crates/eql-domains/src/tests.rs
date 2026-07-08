@@ -224,6 +224,7 @@ mod rust_tests {
         // `EQ_ONLY_DOMAINS` shape (storage + `_eq`, no `_ord`).
         let eq_only = DomainFamily {
             name: "synthetic_eq_only",
+            aliases: &[],
             domains: EQ_ONLY_DOMAINS,
         };
         assert!(
