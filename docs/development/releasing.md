@@ -132,12 +132,13 @@ that is **already pinned** in the repo.
      via `scripts/npm-publish.mjs`) and creates the `eql-typescript-vV` tag.
      Both steps are idempotent (`npm view` / `git ls-remote` guards) so a rerun
      after a partial failure converges.
-   - `prerelease-publish-rust` → dispatches `release-plz.yml` against the
-     `eql-V` **tag** (created by `prerelease-build-sql` at the release commit),
-     so the crate publishes from the exact commit the SQL + npm artifacts
-     shipped from even if `eql_v3` has advanced since. release-plz refuses to
-     publish if the committed `crates/eql-bindings/sql/` bundle wasn't prepared
-     for the crate's version (the DEV-placeholder guard).
+   - `prerelease-publish-rust` → pins a `release/eql-V` **branch** at the
+     release commit and dispatches `release-plz.yml` against it, so the crate
+     publishes from the exact commit the SQL + npm artifacts shipped from even
+     if `eql_v3` has advanced since. (A branch, not the `eql-V` tag:
+     release-plz refuses detached HEADs.) release-plz also refuses to publish
+     if the committed `crates/eql-bindings/sql/` bundle wasn't prepared for
+     the crate's version (the DEV-placeholder guard).
 
 Prereleases keep the pending changesets **unconsumed** — Changesets pre-mode
 emits a `X.Y.Z-alpha.N` entry but the changesets are only finalized into the

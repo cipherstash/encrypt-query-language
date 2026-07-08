@@ -123,9 +123,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@11.5.1
-
       - uses: jdx/mise-action@v3
         with:
           version: 2026.4.0
@@ -134,6 +131,13 @@ jobs:
           # covers mise-action too): a poisoned toolchain cache would run inside
           # the job that holds npm OIDC publishing power.
           cache: false
+
+      # AFTER mise-action, deliberately: mise's node (from [tools]) is first on
+      # PATH and its bundled npm 10.x has no OIDC trusted publishing — upgrading
+      # before mise-action upgrades an npm that never runs (the exact cause of
+      # the alpha.3 ENEEDAUTH failures).
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@11.5.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -271,9 +275,6 @@ jobs:
         with:
           node-version: 22
 
-      - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@11.5.1
-
       - uses: jdx/mise-action@v3
         with:
           version: 2026.4.0
@@ -282,6 +283,13 @@ jobs:
           # covers mise-action too): a poisoned toolchain cache would run inside
           # the job that holds npm OIDC publishing power.
           cache: false
+
+      # AFTER mise-action, deliberately: mise's node (from [tools]) is first on
+      # PATH and its bundled npm 10.x has no OIDC trusted publishing — upgrading
+      # before mise-action upgrades an npm that never runs (the exact cause of
+      # the alpha.3 ENEEDAUTH failures).
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@11.5.1
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -344,23 +352,33 @@ jobs:
     timeout-minutes: 10
     permissions:
       actions: write
+      contents: write # create/update the release/eql-<V> branch ref
     steps:
-      - name: Dispatch release-plz.yml against the prerelease tag
-        # Dispatch against the eql-<VERSION> tag, not the branch (same pattern
-        # as build-image): prerelease-build-sql (a `needs`) created that tag at
-        # the release commit, so the crate publishes from the EXACT commit the
-        # SQL + npm artifacts shipped from even if eql_v3 has advanced since
-        # the marker push — preserving the one-identity-one-commit invariant.
+      - name: Dispatch release-plz.yml at the release commit
+        # release-plz refuses detached HEADs ("cannot determine current
+        # branch"), so a tag dispatch does not work. To still publish from the
+        # EXACT commit the SQL + npm artifacts shipped from — even if eql_v3
+        # has advanced since the marker push — pin a release/eql-<VERSION>
+        # branch at this run's commit and dispatch against that. The branch is
+        # a stable pointer per identity: force-updated on retries of the same
+        # identity, never reused across identities.
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.classify.outputs.version }}
           REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          branch="release/eql-${VERSION}"
+          if ! gh api -X POST "repos/${REPO}/git/refs" \
+              -f ref="refs/heads/${branch}" -f sha="$SHA" >/dev/null 2>&1; then
+            gh api -X PATCH "repos/${REPO}/git/refs/heads/${branch}" \
+              -f sha="$SHA" -F force=true >/dev/null
+          fi
           # --repo is required: this job has no checkout, and without it gh
           # tries to resolve the workflow through a local git repo and dies
           # with "not a git repository".
-          gh workflow run release-plz.yml --repo "$REPO" --ref "eql-${VERSION}"
+          gh workflow run release-plz.yml --repo "$REPO" --ref "$branch"
 
   summary:
     name: Summary
