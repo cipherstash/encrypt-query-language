@@ -136,6 +136,7 @@ cat src/handwritten-ordered-v3.txt src/generated-order-v3.txt > src/deps-ordered
 
 verify_deps_exist src/deps-ordered-v3.txt
 verify_linearization src/deps-v3.txt src/deps-ordered-v3.txt
+bash tasks/test/verify_symbol_order_v3.sh src/deps-ordered-v3.txt
 
 : > release/cipherstash-encrypt.sql
 while IFS= read -r f; do

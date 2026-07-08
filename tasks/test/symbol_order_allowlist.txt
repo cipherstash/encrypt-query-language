@@ -1,0 +1,4 @@
+# One fully-qualified symbol per line (e.g. eql_v3.foo) whose "defined earlier"
+# check should be skipped. Use ONLY for genuine false positives (a reference the
+# regex sees but that is not a real dependency — e.g. a symbol assembled by
+# dynamic SQL). Keep this list minimal and comment WHY each entry is here.
