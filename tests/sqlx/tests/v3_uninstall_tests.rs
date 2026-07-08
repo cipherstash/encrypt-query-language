@@ -117,6 +117,29 @@ async fn uninstaller_drops_both_schemas(pool: PgPool) -> Result<()> {
         "no eql_v3 / eql_v3_internal objects should survive uninstall"
     );
 
+    // [fix R6] The native-spelling alias feature adds cross-name OPERATORS that
+    // live in eql_v3 / eql_v3_internal but reference `public.<T>_eq/_ord*`
+    // encrypted domains as operands. `DROP SCHEMA ... CASCADE` removes them via
+    // their backing function's oprcode dependency; the leftover_objects gate above
+    // counts pg_proc + pg_type but NOT pg_operator, so assert operator teardown
+    // explicitly: zero operators may remain whose left or right operand is a
+    // public encrypted domain.
+    let leftover_ops: i64 = sqlx::query_scalar(
+        r#"
+        SELECT count(*)
+        FROM pg_operator o
+        JOIN pg_type lt ON lt.oid = o.oprleft
+        JOIN pg_type rt ON rt.oid = o.oprright
+        JOIN pg_namespace ln ON ln.oid = lt.typnamespace
+        JOIN pg_namespace rn ON rn.oid = rt.typnamespace
+        WHERE (ln.nspname='public' AND lt.typname ~ '_(eq|ord|ord_ore|ord_ope)$')
+           OR (rn.nspname='public' AND rt.typname ~ '_(eq|ord|ord_ore|ord_ope)$')
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(leftover_ops, 0, "cross-name operators survived uninstall");
+
     Ok(())
 }
 
