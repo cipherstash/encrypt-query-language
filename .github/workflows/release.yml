@@ -354,9 +354,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ needs.classify.outputs.version }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
-          gh workflow run release-plz.yml --ref "eql-${VERSION}"
+          # --repo is required: this job has no checkout, and without it gh
+          # tries to resolve the workflow through a local git repo and dies
+          # with "not a git repository".
+          gh workflow run release-plz.yml --repo "$REPO" --ref "eql-${VERSION}"
 
   summary:
     name: Summary
