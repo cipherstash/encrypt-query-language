@@ -1450,4 +1450,27 @@ mod shape_tests {
             "JSONB must be catalogued at the flip"
         );
     }
+
+    #[test]
+    fn every_group_name_is_globally_unique_and_aliases_are_nonempty() {
+        use crate::CATALOG;
+        use std::collections::HashSet;
+        let mut seen = HashSet::new();
+        for f in CATALOG {
+            for a in f.aliases {
+                assert!(!a.is_empty(), "empty alias on family {}", f.name);
+                assert_ne!(*a, f.name, "alias equals its own canonical name: {}", f.name);
+            }
+            for n in f.group_names() {
+                assert!(seen.insert(n), "duplicate type name across catalog groups: {n}");
+            }
+        }
+    }
+
+    #[test]
+    fn integer_family_declares_int4_alias() {
+        use crate::CATALOG;
+        let integer = CATALOG.iter().find(|f| f.name == "integer").unwrap();
+        assert_eq!(integer.aliases, &["int4"]);
+    }
 }

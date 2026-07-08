@@ -226,19 +226,19 @@ const EQ_ONLY_DOMAINS: &[Domain] = &[
 
 const INTEGER: DomainFamily = DomainFamily {
     name: "integer",
-    aliases: &[],
+    aliases: &["int4"],
     domains: ORDERED_INT_DOMAINS,
 };
 
 const SMALLINT: DomainFamily = DomainFamily {
     name: "smallint",
-    aliases: &[],
+    aliases: &["int2"],
     domains: ORDERED_INT_DOMAINS,
 };
 
 const BIGINT: DomainFamily = DomainFamily {
     name: "bigint",
-    aliases: &[],
+    aliases: &["int8"],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -292,7 +292,7 @@ pub const TIMESTAMP: DomainFamily = DomainFamily {
 /// `rust_decimal`).
 pub const NUMERIC: DomainFamily = DomainFamily {
     name: "numeric",
-    aliases: &[],
+    aliases: &["decimal"],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -398,7 +398,7 @@ pub const TEXT: DomainFamily = DomainFamily {
 /// `REAL_FIXTURES.values` directly to parse the strings into `f32`.
 pub const REAL: DomainFamily = DomainFamily {
     name: "real",
-    aliases: &[],
+    aliases: &["float4"],
     domains: ORDERED_INT_DOMAINS,
 };
 
@@ -408,7 +408,7 @@ pub const REAL: DomainFamily = DomainFamily {
 /// `f64`.
 pub const DOUBLE: DomainFamily = DomainFamily {
     name: "double",
-    aliases: &[],
+    aliases: &["float8"],
     domains: ORDERED_INT_DOMAINS,
 };
 
