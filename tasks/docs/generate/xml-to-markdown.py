@@ -191,17 +191,34 @@ def process_function(memberdef):
     if func_name.upper() in sql_intrinsics:
         return None
 
-    # For SQL operators, Doxygen uses schema name as function name
-    # Extract actual operator from brief description
+    # Doxygen puts a SCHEMA where the function name should be in two cases,
+    # told apart by the <definition> (CREATE OPERATOR vs CREATE FUNCTION):
+    #   1. CREATE OPERATOR — Doxygen names it by schema and puts the operator
+    #      symbol in the brief ("->> operator with ..."); recover it.
+    #   2. CREATE FUNCTION <schema>.<name>(... <schema>.<domain> ...) where a
+    #      schema-qualified operand type derails the C++ parser: it drops the
+    #      real name, leaving the schema as <name>. Unrecoverable, and these are
+    #      the internal "Unsupported operator blocker" helpers — skip them.
+    #      NB their brief contains the word "operator" ("Unsupported operator
+    #      blocker for ..."), so the skip must key on <definition>, NOT the
+    #      brief, or they'd be mis-remapped to a junk operator name. Left in,
+    #      ~hundreds surface as bogus `eql_v3_internal` functions mislabeled
+    #      public.
     brief_elem = memberdef.find('briefdescription')
-    if func_name in ['eql_v2', 'eql_v3', 'public'] and brief_elem is not None:
-        brief_para = brief_elem.find('para')
-        if brief_para is not None and brief_para.text:
-            # Check if brief starts with an operator (like "->>" or "->")
-            import re
-            op_match = re.match(r'^([^\s]+)\s+operator', brief_para.text.strip())
-            if op_match:
-                func_name = op_match.group(1)  # Use operator as function name
+    if func_name in ['eql_v2', 'eql_v3', 'eql_v3_internal', 'public']:
+        definition = extract_para_text(memberdef.find('definition'))
+        if definition.upper().startswith('CREATE FUNCTION'):
+            return None  # name-dropped CREATE FUNCTION mis-parse
+        brief_para = brief_elem.find('para') if brief_elem is not None else None
+        op_match = (
+            re.match(r'^([^\s]+)\s+operator', brief_para.text.strip())
+            if brief_para is not None and brief_para.text
+            else None
+        )
+        if op_match:
+            func_name = op_match.group(1)  # CREATE OPERATOR: use the operator symbol
+        else:
+            return None  # unrecoverable schema-named mis-parse
 
     # Check if this is a private/internal function.
     # Internal functions live in the `eql_v3_internal` schema. Doxygen puts the
@@ -286,7 +303,6 @@ def process_function(memberdef):
 
     if argsstring is not None and argsstring.text:
         # Look for RETURNS keyword in argsstring
-        import re
         returns_match = re.search(r'RETURNS\s+([^\s]+)', argsstring.text)
         if returns_match:
             return_type_text = returns_match.group(1)
