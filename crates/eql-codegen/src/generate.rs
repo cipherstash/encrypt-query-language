@@ -328,7 +328,24 @@ pub fn render_cross_file(family: &DomainFamily, a: &str, b: &str) -> String {
 /// deleted-but-not-rewritten. The trailing orphan sweep prunes generated SQL for
 /// domains dropped from the catalog, marker-aware (hand-written files survive).
 pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>, WriteError> {
-    let rendered = render_type(spec, out_dir);
+    generate_type_named(spec.name, spec.domains, out_dir, &[])
+}
+
+/// Regenerate one type NAME's surface (its domain set) into `out_dir`,
+/// crash-safely, PLUS any `extra` (path, body) files that belong in the same
+/// dir and must survive the orphan sweep (e.g. cross-name operator files in a
+/// canonical dir). The name-parameterized core of `generate_type`.
+///
+/// The `extra` set is included in BOTH the write set and the keep set, so the
+/// orphan sweep never deletes a cross file that this same pass just wrote (R4).
+pub fn generate_type_named(
+    name: &str,
+    domains: &[Domain],
+    out_dir: &Path,
+    extra: &[(PathBuf, String)],
+) -> Result<Vec<PathBuf>, WriteError> {
+    let mut rendered = render_type_named(name, domains, out_dir);
+    rendered.extend(extra.iter().cloned());
     let targets: Vec<PathBuf> = rendered.iter().map(|(p, _)| p.clone()).collect();
     ensure_generated_paths_writable(&targets, GeneratedKind::Sql)?;
 
@@ -349,16 +366,34 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     let scalars_root = out_root.join(V3_SCALARS_DIR);
     let mut all_written: Vec<PathBuf> = Vec::new();
     for spec in eql_domains::scalar_families() {
-        let family_name = spec.name;
-        let out_dir = scalars_root.join(family_name);
-        let written = generate_type(spec, &out_dir)?;
+        // Cross files (one per alias) belong in the CANONICAL dir and must be
+        // written together with that dir's surface so the per-dir orphan sweep
+        // keeps them (R4). Build them first.
+        let canonical_dir = scalars_root.join(spec.name);
+        let cross_extra: Vec<(PathBuf, String)> = spec
+            .aliases
+            .iter()
+            .map(|alias| {
+                (
+                    canonical_dir.join(format!("{}__{}_cross.sql", spec.name, alias)),
+                    render_cross_file(spec, spec.name, alias),
+                )
+            })
+            .collect();
 
-        for p in &written {
-            let rel = p.strip_prefix(out_root).unwrap_or(p);
-            println!("generated {}", rel.display());
+        // One dir per group name (canonical + each alias), each a full surface.
+        // The canonical dir also gets the cross files as `extra`.
+        for name in spec.group_names() {
+            let out_dir = scalars_root.join(name);
+            let extra: &[(PathBuf, String)] = if name == spec.name { &cross_extra } else { &[] };
+            let written = generate_type_named(name, spec.domains, &out_dir, extra)?;
+            for p in &written {
+                let rel = p.strip_prefix(out_root).unwrap_or(p);
+                println!("generated {}", rel.display());
+            }
+            println!("generated {} files for {name}", written.len());
+            all_written.extend(written.iter().cloned());
         }
-        println!("generated {} files for {family_name}", written.len());
-        all_written.extend(written.iter().cloned());
     }
 
     // Orphan sweep across every scalar type dir. `generate_type` already prunes
@@ -389,8 +424,14 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
     }
 
-    let names: Vec<&str> = eql_domains::scalar_families().map(|s| s.name).collect();
-    println!("codegen: ok ({} types: {})", names.len(), names.join(", "));
+    let names: Vec<String> = eql_domains::scalar_families()
+        .flat_map(|s| s.group_names().into_iter().map(String::from))
+        .collect();
+    println!(
+        "codegen: ok ({} type surfaces: {})",
+        names.len(),
+        names.join(", ")
+    );
     Ok(0)
 }
 
@@ -1005,6 +1046,90 @@ mod tests {
             }
             _ => panic!("expected Unsupported"),
         }
+    }
+
+    #[test]
+    fn generate_all_emits_alias_dir_and_cross_file_for_aliased_family() {
+        // Requires the catalog to declare integer's int4 alias (Task 2).
+        let d = crate::writer::test_support::tempdir();
+        let root = d.path();
+        generate_all(root).unwrap();
+
+        let scalars = root.join(V3_SCALARS_DIR);
+        // canonical dir
+        assert!(scalars.join("integer/integer_types.sql").exists());
+        // alias dir with its own full surface
+        assert!(scalars.join("int4/int4_types.sql").exists());
+        assert!(scalars.join("int4/int4_eq_functions.sql").exists());
+        assert!(scalars.join("int4/int4_eq_operators.sql").exists());
+        assert!(scalars.join("int4/int4_ord_aggregates.sql").exists());
+        // cross file in the canonical dir
+        assert!(scalars.join("integer/integer__int4_cross.sql").exists());
+        // a non-aliased family emits no cross file
+        assert!(!scalars.join("date/date__int4_cross.sql").exists());
+    }
+
+    // [fix R4] The cross file lives in the CANONICAL dir, whose per-type orphan
+    // sweep must NOT delete it. Regenerating twice must leave it intact (idempotent,
+    // not delete-then-rewrite).
+    #[test]
+    fn regenerating_preserves_cross_file_in_canonical_dir() {
+        let d = crate::writer::test_support::tempdir();
+        let root = d.path();
+        generate_all(root).unwrap();
+        let cross = root
+            .join(V3_SCALARS_DIR)
+            .join("integer/integer__int4_cross.sql");
+        let first = std::fs::read_to_string(&cross).unwrap();
+        generate_all(root).unwrap(); // second pass over the just-written tree
+        assert!(
+            cross.exists(),
+            "cross file was swept by the canonical dir orphan pass"
+        );
+        assert_eq!(first, std::fs::read_to_string(&cross).unwrap());
+    }
+
+    // [fix R9] A stray alias artefact (dir + in-canonical-dir cross file) that is
+    // NOT declared by the catalog must be swept, while the real int4 alias dir and
+    // its cross file survive — marker-aware orphan removal at both the scalars-root
+    // and canonical-dir levels.
+    #[test]
+    fn dropping_an_alias_sweeps_its_dir_and_cross_file() {
+        let d = crate::writer::test_support::tempdir();
+        let root = d.path();
+        let scalars = root.join(V3_SCALARS_DIR);
+        let s = spec("integer");
+        generate_all(root).unwrap();
+        let cross = scalars.join("integer/integer__int4_cross.sql");
+        assert!(cross.exists(), "the real int4 cross file exists after gen");
+
+        // Seed stray alias artefacts as if a now-removed alias "int4_bogus" had
+        // been generated: a full alias dir + an in-canonical-dir cross file, both
+        // marker-bearing.
+        let stray_dir = scalars.join("int4_bogus");
+        generate_type_named("int4_bogus", s.domains, &stray_dir, &[]).unwrap();
+        let stray_cross = scalars.join("integer/integer__int4_bogus_cross.sql");
+        std::fs::write(
+            &stray_cross,
+            format!("{}\n-- stray\n", crate::consts::AUTO_GENERATED_MARKER),
+        )
+        .unwrap();
+
+        generate_all(root).unwrap();
+        // The sweep is marker-aware and removes generated FILES (matching
+        // `generate_all_prunes_orphaned_type_dir`, which leaves the now-empty dir);
+        // the stray alias surface's generated files and its in-canonical-dir cross
+        // file must both be gone.
+        assert!(
+            !stray_dir.join("int4_bogus_types.sql").exists(),
+            "orphaned alias surface not swept"
+        );
+        assert!(!stray_cross.exists(), "orphaned cross file not swept");
+        assert!(cross.exists(), "the real int4 cross file must survive");
+        assert!(
+            root.join(V3_SCALARS_DIR).join("int4/int4_types.sql").exists(),
+            "the real int4 alias surface must survive"
+        );
     }
 
     #[test]
