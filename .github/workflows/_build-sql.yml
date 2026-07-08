@@ -1,8 +1,7 @@
 name: "Build SQL (reusable)"
 
-# Reusable SQL build+attach, extracted from release-eql.yml's build-and-publish
-# job. Called inline by release-alpha.yml and release-eql.yml so SQL releases
-# have one build path.
+# Reusable SQL build+attach. Called inline by release.yml (production and
+# prerelease paths) so SQL releases have one build path.
 
 on:
   workflow_call:
@@ -104,7 +103,16 @@ jobs:
             release/cipherstash-encrypt-uninstall.sql
 
       - name: Notify Multitudes
-        if: ${{ github.event_name == 'release' }}
+        # Production deploy tracking: fire only when release.yml creates a
+        # non-prerelease SQL release (attach + create path + not a prerelease).
+        # release.yml runs on `push`, so the old `event_name == 'release'` gate
+        # never matched under the unified workflow.
+        # continue-on-error: a deploy-tracking ping is not part of the release
+        # itself. If Multitudes is down / rate-limits / the token is empty, the
+        # curl failing must not fail build-sql and skip downstream build-docs /
+        # build-image after npm + SQL have already published.
+        if: ${{ inputs.attach && !inputs.prerelease && inputs.target_commitish != '' }}
+        continue-on-error: true
         run: |
           curl --request POST \
             --fail-with-body \

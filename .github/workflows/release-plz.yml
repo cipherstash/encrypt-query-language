@@ -1,19 +1,16 @@
 name: "Release eql-bindings (crates.io)"
 
-# Publishes the `eql-bindings` crate to crates.io via release-plz. Mirrors the
-# canonical cipherstash-suite release-plz setup (crates.io Trusted Publishing
-# via OIDC — no long-lived token; GPG-signed release commits/tags; `release`
-# before `release-pr`) and keeps EQL's own infra conventions (blacksmith runner,
-# mise toolchain).
+# Publishes the `eql-bindings` crate to crates.io via release-plz (crates.io
+# Trusted Publishing via OIDC — no long-lived token; GPG-signed release
+# commits/tags; blacksmith runner + mise toolchain).
 #
-# Flow (see also cipherstash-suite RELEASING.md):
-#   1. Push to main -> `release-pr` opens/updates a release PR (version bump +
-#      crates/eql-bindings/CHANGELOG.md from conventional commits).
-#   2. Merge that PR -> `release` publishes to crates.io, tags, and cuts a
-#      GitHub Release.
-# `release-pr` runs AFTER `release` (needs: release): if it ran first it would
-# see the just-merged `chore: release` commit as unreleased and open a recursive
-# release PR. (cipherstash-suite commit 02a989405.)
+# Publish-only: crate versioning is owned by CHANGESETS, not release-plz. The
+# changesets "Version Packages" PR bumps crates/eql-bindings/Cargo.toml to the
+# lockstep version V (scripts/sync-lockstep-versions.mjs) alongside the npm
+# package. On push to main, `release` publishes the committed Cargo.toml version
+# V to crates.io (no-op when V is already published) and tags eql-bindings-vV.
+# There is deliberately NO release-plz `release-pr` job — changesets opens the
+# version PR, so a release-plz PR would fight it.
 #
 # One-time crates.io setup (Trusted Publishing): on the eql-bindings crate's
 # Settings -> Trusted Publishing, add a GitHub publisher with
@@ -40,9 +37,8 @@ env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
   MISE_VERBOSE: "1"
 
-defaults:
-  run:
-    shell: bash {0}
+# No `defaults.run.shell` override: GitHub's default `bash` shell runs with
+# `-eo pipefail` — the right default for a publish workflow.
 
 # Static group: push-to-main and workflow_dispatch share it so two release-plz
 # invocations never race a tag/publish. Never cancel — a cancelled release could
@@ -73,44 +69,42 @@ jobs:
         with:
           version: 2026.4.0
           install: true
-          cache: true
+          # Publish workflows must not restore caches (lint-no-workflow-caching
+          # covers mise-action): a poisoned toolchain cache would run inside the
+          # job that holds crates.io OIDC publishing power.
+          cache: false
+
+      # The crate bundles its SQL via include_str! on COMMITTED files, and
+      # release-plz publishes the committed tree verbatim. Refuse to publish a
+      # crate whose bundled SQL wasn't prepared for this exact version — e.g. a
+      # hand-pinned Cargo.toml without running `pnpm run version` would
+      # otherwise ship the DEV placeholder as its "exact SQL". Enforced only
+      # when this run would actually publish (the committed version is not on
+      # crates.io yet): routine no-op runs on main between releases carry the
+      # DEV placeholder legitimately. A crates.io API failure fails towards
+      # ENFORCING the guard, never towards skipping it.
+      - name: Verify bundled SQL matches the crate version
+        run: |
+          set -euo pipefail
+          cargo_version="$(grep -m1 '^version = ' crates/eql-bindings/Cargo.toml | cut -d'"' -f2)"
+          published="$(curl -fsSL --retry 3 "https://crates.io/api/v1/crates/eql-bindings/versions" | jq -r '.versions[].num' | grep -Fx "$cargo_version" || true)"
+          if [[ -n "$published" ]]; then
+            echo "eql-bindings@${cargo_version} is already on crates.io; this run is a publish no-op — skipping the bundled-SQL guard"
+            exit 0
+          fi
+          manifest_version="$(jq -r '.eqlVersion' crates/eql-bindings/sql/release-manifest.json)"
+          if [[ "$manifest_version" != "$cargo_version" ]]; then
+            echo "::error::crates/eql-bindings/sql/release-manifest.json eqlVersion ('$manifest_version') does not match Cargo.toml version ('$cargo_version') — the bundled SQL was not prepared for this release. Run 'pnpm run version' (or 'mise run release:prepare_bindings_assets --version $cargo_version') and commit the result." >&2
+            exit 1
+          fi
+          if ! grep -q "eql_v3" crates/eql-bindings/sql/cipherstash-encrypt.sql; then
+            echo "::error::crates/eql-bindings/sql/cipherstash-encrypt.sql looks like the DEV placeholder — refusing to publish it as release SQL." >&2
+            exit 1
+          fi
 
       - name: Run release-plz release
         uses: release-plz/action@v0.5
         with:
           command: release
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  release-pr:
-    name: "Release PR"
-    # A coordinator dispatch against a tag or feature branch must publish
-    # without opening a recursive release PR.
-    if: github.ref == 'refs/heads/main'
-    runs-on: blacksmith-16vcpu-ubuntu-2204
-    needs: release
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v7
-        with:
-          gpg_private_key: ${{ secrets.GPG_PRIVATE_KEY }}
-          git_user_signingkey: true
-          git_commit_gpgsign: true
-          git_tag_gpgsign: true
-
-      - uses: jdx/mise-action@v3
-        with:
-          version: 2026.4.0
-          install: true
-          cache: true
-
-      - name: Run release-plz release-pr
-        uses: release-plz/action@v0.5
-        with:
-          command: release-pr
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

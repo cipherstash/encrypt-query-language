@@ -1,5 +1,11 @@
 # CI-native alpha releases (SQL surface + `eql-bindings` crate) — Implementation Plan
 
+> **SUPERSEDED (historical record).** The `workflow_dispatch` coordinator with
+> `mise run release:*` targets and a `crate-publish`/`crate_tag` job described
+> below was never shipped. Releases now run through the single unified
+> `.github/workflows/release.yml`. See `docs/development/releasing.md`
+> for the current process. This file is kept only as a point-in-time snapshot.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Cut alpha (prerelease) versions of the EQL SQL surface alone, the `eql-bindings` crate alone, or both in version lockstep, from a single `workflow_dispatch` GitHub Actions coordinator, driven by thin `mise run release:*` tasks that only trigger and watch CI. Alpha releases carry the same assets as finals: the two `.sql` files **and** the packaged docs bundle.

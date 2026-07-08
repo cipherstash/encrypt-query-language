@@ -1,7 +1,7 @@
 # Encrypt Query Language (EQL)
 
 [![Test EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml/badge.svg?branch=main)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
-[![Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml/badge.svg?event=release)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml)
+[![Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release.yml)
 
 Encrypt Query Language (EQL) is a set of abstractions for transmitting, storing, and interacting with encrypted data and indexes in PostgreSQL.
 
@@ -83,6 +83,14 @@ The `eql_v3` schema holds the operators, term extractors, comparison wrappers, a
 Encrypted columns are typed as `public` domains (e.g. `public.text_eq`, `public.json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
 
 The domain types deliberately live in `public`, not `eql_v3`, so application tables survive an EQL uninstall: `DROP SCHEMA eql_v3 CASCADE` removes the operators, extractors, and aggregates but leaves the `public`-typed columns (and their data) intact. Re-running the install script is idempotent.
+
+
+### Release artifacts
+
+EQL v3 prereleases can ship three artifacts under one identity: the SQL + docs
+GitHub release, the Rust `eql-bindings` crate, and the TypeScript
+`@cipherstash/eql` npm package. The language packages bundle the exact SQL
+installer they were generated against.
 
 
 ## Database Permissions

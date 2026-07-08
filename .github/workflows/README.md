@@ -18,8 +18,8 @@ actually runs).
 | Workflow | Triggers | What it does | Gates merge? |
 |---|---|---|---|
 | **test-eql.yml** | `pull_request`, `merge_group`, `workflow_dispatch` | Full test/lint/validate matrix; the one required check | **Yes** — `ci-required` |
-| **release-eql.yml** | `release: published`, `pull_request` (paths), `workflow_dispatch` | Build release SQL + docs; PR runs everything **but** the publish step | No |
-| **release-postgres-eql-image.yml** | `release: published`, `workflow_dispatch` | Build & push the Postgres+EQL Docker image to GHCR | No |
+| **release-postgres-eql-image.yml** | `workflow_dispatch` (dispatched by `release.yml` on production finals) | Build & push the Postgres+EQL Docker image to GHCR | No |
+| **release.yml** | `push: main`, `push: eql_v3`, `workflow_dispatch` | Unified release entrypoint: production on `main`, prerelease on `eql_v3` when the commit is an explicit `chore(release): ...` marker | No |
 | **release-plz.yml** | `push: main`, `workflow_dispatch` | Publish the `eql-bindings` crate to crates.io (Trusted Publishing) + open the release PR | No |
 | **bench-eql.yml** | `push: main` (paths), `schedule` 02:00 UTC daily, `workflow_dispatch` | `test:bench` (bench cargo feature). **Never runs on PRs** | No |
 | **macro-expand-eql.yml** | `schedule` 03:00 UTC daily, `workflow_dispatch` | Regenerate the integer `cargo expand` matrix snapshot; needs pinned nightly | **No — explicitly non-blocking** |
@@ -33,8 +33,9 @@ snapshots surface on the nightly schedule, not on the PR that caused them.
 There are two independent release flows keyed on distinct git tags:
 
 - **`eql-<semver>`** (e.g. `eql-3.0.0`) — the EQL **SQL surface** release, cut
-  manually as a GitHub Release. Drives `release-eql.yml`,
-  `release-postgres-eql-image.yml`, and `rebuild-docs.yml`.
+  by `release.yml` (production on `main`, prerelease on `eql_v3`), which builds
+  and attaches the SQL + docs in-run. On production finals `release.yml` also
+  dispatches `release-postgres-eql-image.yml` (the Postgres+EQL Docker image).
 - **`eql-bindings-v<semver>`** (e.g. `eql-bindings-v0.1.0`) — the **`eql-bindings`
   Rust crate** release, cut automatically by `release-plz.yml` when its release
   PR merges. Publishes to crates.io only.

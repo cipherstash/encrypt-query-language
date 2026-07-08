@@ -1,9 +1,10 @@
 name: "Release Postgres + EQL image"
 
 on:
-  release:
-    types:
-      - published
+  # Driven by release.yml on production finals (it dispatches this workflow with
+  # update_floating_tags=true), plus manual runs. Not `on: release`: a
+  # GITHUB_TOKEN-created release does not trigger `on: release` fan-out, whereas
+  # a GITHUB_TOKEN workflow_dispatch does — so release.yml dispatches instead.
   workflow_dispatch:
     inputs:
       eql_version:
@@ -33,17 +34,13 @@ jobs:
   build-sql:
     runs-on: blacksmith-16vcpu-ubuntu-2204
     name: Build EQL SQL
-    # `!startsWith(...'eql-bindings')` excludes the eql-bindings crate tags
-    # (eql-bindings-v*) cut by release-plz — a Rust-crate release must not build
-    # a Postgres+EQL image. Downstream jobs `needs: build-sql`, so they skip too.
-    if: ${{ github.event_name != 'release' || (contains(github.event.release.tag_name, 'eql') && !startsWith(github.event.release.tag_name, 'eql-bindings')) }}
     timeout-minutes: 5
     outputs:
       # Used for image tags, e.g. "2.1.8" -> ghcr.io/.../postgres-eql:17-2.1.8
       eql_version: ${{ steps.ver.outputs.eql_version }}
       # Passed to `mise run build --version`. Bare semver (no `eql-` prefix),
-      # matching release-eql.yml, so eql_v3.version() in the image is
-      # byte-identical to the SQL release.
+      # matching the SQL release build (_build-sql.yml), so eql_v3.version() in
+      # the image is byte-identical to the SQL release.
       build_version: ${{ steps.ver.outputs.build_version }}
       update_floating_tags: ${{ steps.ver.outputs.update_floating_tags }}
 
@@ -58,24 +55,19 @@ jobs:
 
       - name: Compute EQL version and tag policy
         id: ver
+        # eql_version is passed in as bare semver (release.yml sends
+        # needs.release.outputs.version, e.g. "3.0.0"), used both as the image
+        # tag and, verbatim, as the `mise run build --version` value so
+        # eql_v3.version() in the image is byte-identical to the SQL release.
         env:
-          EVENT_NAME: ${{ github.event_name }}
-          RELEASE_TAG: ${{ github.event.release.tag_name }}
           INPUT_VERSION: ${{ inputs.eql_version }}
           INPUT_FLOATING: ${{ inputs.update_floating_tags }}
         run: |
-          if [[ "$EVENT_NAME" == "release" ]]; then
-            eql_version="${RELEASE_TAG#eql-}"     # e.g. "2.1.8"
-            build_version="$eql_version"          # bare semver for eql_v3.version()
-            floating="true"
-          else
-            eql_version="$INPUT_VERSION"
-            build_version="$INPUT_VERSION"
-            floating="$INPUT_FLOATING"
-          fi
-          echo "eql_version=${eql_version}" >> "$GITHUB_OUTPUT"
-          echo "build_version=${build_version}" >> "$GITHUB_OUTPUT"
-          echo "update_floating_tags=${floating}" >> "$GITHUB_OUTPUT"
+          {
+            echo "eql_version=${INPUT_VERSION}"
+            echo "build_version=${INPUT_VERSION}"
+            echo "update_floating_tags=${INPUT_FLOATING}"
+          } >> "$GITHUB_OUTPUT"
 
       - name: Build EQL release SQL
         run: mise run build --version ${{ steps.ver.outputs.build_version }}
