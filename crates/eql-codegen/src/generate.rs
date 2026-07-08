@@ -37,23 +37,25 @@ fn types_path(family_name: &str) -> String {
     scalar_path(family_name, &format!("{family_name}_types.sql"))
 }
 
-/// Body for <T>_types.sql: every domain in one idempotent DO block.
-/// Port of `render_types_file`.
-pub fn render_types_file(spec: &DomainFamily) -> String {
+/// Body for a `<name>_types.sql` given an explicit type name and domain set —
+/// the name-parameterized core of `render_types_file`, reused for aliases.
+pub fn render_types_file_named(family_name: &str, domains: &[Domain]) -> String {
     use crate::context::{domain_block, environment, TypesContext};
     let ctx = TypesContext {
-        family_name: spec.name.to_string(),
-        domains: spec
-            .domains
-            .iter()
-            .map(|d| domain_block(spec.name, d))
-            .collect(),
+        family_name: family_name.to_string(),
+        domains: domains.iter().map(|d| domain_block(family_name, d)).collect(),
     };
     environment()
         .get_template("types.sql")
         .unwrap()
         .render(&ctx)
         .expect("render types.sql")
+}
+
+/// Body for <T>_types.sql: every domain in one idempotent DO block.
+/// Port of `render_types_file`.
+pub fn render_types_file(spec: &DomainFamily) -> String {
+    render_types_file_named(spec.name, spec.domains)
 }
 
 /// REQUIRE edges for a domain's _functions.sql. Port of `_functions_requires`.
@@ -209,27 +211,33 @@ use crate::writer::{
 /// before any filesystem mutation, so a render `.expect` panic aborts the run
 /// before a single file is written or deleted. Order matches `generate_type`'s
 /// write order (types file, then per-domain functions/operators/aggregates).
-pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)> {
-    let family_name = spec.name;
+/// Render every generated file for one type NAME + domain set into memory. The
+/// name-parameterized core of `render_type`, reused to emit alias surfaces under
+/// their own name.
+pub fn render_type_named(name: &str, domains: &[Domain], out_dir: &Path) -> Vec<(PathBuf, String)> {
     let mut rendered = vec![(
-        out_dir.join(format!("{family_name}_types.sql")),
-        render_types_file(spec),
+        out_dir.join(format!("{name}_types.sql")),
+        render_types_file_named(name, domains),
     )];
-    for d in spec.domains {
-        let name = d.full_name(family_name);
+    for d in domains {
+        let full = d.full_name(name);
         rendered.push((
-            out_dir.join(format!("{name}_functions.sql")),
-            render_functions_file(family_name, d),
+            out_dir.join(format!("{full}_functions.sql")),
+            render_functions_file(name, d),
         ));
         rendered.push((
-            out_dir.join(format!("{name}_operators.sql")),
-            render_operators_file(family_name, d),
+            out_dir.join(format!("{full}_operators.sql")),
+            render_operators_file(name, d),
         ));
-        if let Some(agg) = render_aggregates_file(family_name, d) {
-            rendered.push((out_dir.join(format!("{name}_aggregates.sql")), agg));
+        if let Some(agg) = render_aggregates_file(name, d) {
+            rendered.push((out_dir.join(format!("{full}_aggregates.sql")), agg));
         }
     }
     rendered
+}
+
+pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)> {
+    render_type_named(spec.name, spec.domains, out_dir)
 }
 
 /// Regenerate every generated file for one type into `out_dir`, crash-safely.
@@ -887,6 +895,27 @@ mod tests {
             }
             _ => panic!("expected unsupported-operator entry"),
         }
+    }
+
+    #[test]
+    fn render_type_named_uses_alias_name_not_family_name() {
+        // Render integer's domain set under the alias name "int4": every emitted
+        // path and every CREATE DOMAIN must say int4, never integer.
+        let s = spec("integer");
+        let d = crate::writer::test_support::tempdir();
+        let out = d.path().join("int4");
+        let rendered = render_type_named("int4", s.domains, &out);
+        let types = rendered
+            .iter()
+            .find(|(p, _)| p.file_name().unwrap() == "int4_types.sql")
+            .map(|(_, body)| body.clone())
+            .expect("int4_types.sql rendered");
+        assert!(types.contains("CREATE DOMAIN public.int4 AS jsonb"));
+        assert!(types.contains("CREATE DOMAIN public.int4_eq AS jsonb"));
+        assert!(!types.contains("public.integer"));
+        assert!(rendered
+            .iter()
+            .any(|(p, _)| p.file_name().unwrap() == "int4_eq_functions.sql"));
     }
 
     #[test]
