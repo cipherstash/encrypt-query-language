@@ -9,10 +9,14 @@
 
 set -euo pipefail
 
+source tasks/build/ordering.sh
+
 # Regenerate encrypted-domain SQL from the Rust catalog before building.
-# Generated files (src/v3/scalars/<T>/<T>_*.sql) are gitignored; the
-# catalog at crates/eql-domains/src (eql-domains::CATALOG) is the source of
-# truth, rendered by the eql-codegen binary.
+# The generated files (src/v3/scalars/<T>/<T>_*.sql) are COMMITTED in place and
+# drift-gated by `mise run codegen:parity`; only src/v3/version.sql and the
+# src/deps*-v3.txt build intermediates are gitignored. The catalog at
+# crates/eql-domains/src (eql-domains::CATALOG) is the source of truth, rendered
+# by the eql-codegen binary.
 #
 # eql-codegen owns orphan removal: it writes every current file first (each via
 # an atomic temp+rename), then prunes stale generated SQL across ALL
@@ -49,13 +53,13 @@ verify_deps_exist() {
 # must be self-contained (no eql_v2 coupling); a stray `-- REQUIRE: src/...`
 # edge to a non-v3 file would silently pull eql_v2 SQL into the v3 artefact (or
 # tsort would drop it), breaking self-containment. Each line in deps-v3.txt is
-# "<file> <dep>"; self-edges (file == dep) are skipped, every other dep target
-# must start with src/v3/.
+# "<dep> <file>" (dependency FIRST); self-edges (dep == file) are skipped, every
+# other dep target (field 1) must start with src/v3/.
 verify_v3_self_contained() {
   local dep_file=$1
   local offending=0
-  while IFS=' ' read -r src dep; do
-    [[ -z "$dep" ]] && continue
+  while IFS=' ' read -r dep src; do
+    [[ -z "$src" ]] && continue
     [[ "$src" == "$dep" ]] && continue
     if [[ "$dep" != src/v3/* ]]; then
       echo "ERROR: v3 REQUIRE edge points outside src/v3: $src -- REQUIRE: $dep" >&2
@@ -92,27 +96,31 @@ sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/v3/version.template > src/v3/ve
 # dependency (CI-gated by verify_v3_self_contained below + test:self_contained_v3),
 # and it is written under the canonical release name now that the combined v2
 # build that previously produced that name is gone.
-find src/v3 -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
-    echo "$sql_file"
-
-    echo "$sql_file $sql_file" >> src/deps-v3.txt
-
-    while IFS= read -r line; do
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            deps=${line#*-- REQUIRE: }
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps-v3.txt
-            done
+find src/v3 -type f -path "*.sql" ! -path "*_test.sql" -print0 \
+  | LC_ALL=C sort -z \
+  | while IFS= read -r -d '' sql_file; do
+      # self-edge: isolated files still appear in tsort output. A self-edge is a
+      # tsort no-op, not a cycle (see run_tsort_or_die), so it is safe here.
+      echo "$sql_file $sql_file" >> src/deps-v3.txt
+      while IFS= read -r line; do
+        if [[ "$line" =~ ^[[:space:]]*--\ REQUIRE: ]]; then
+          deps=${line#*-- REQUIRE: }
+          for dep in $deps; do
+            echo "$dep $sql_file" >> src/deps-v3.txt        # dependency FIRST (no tac)
+          done
         fi
-    done < "$sql_file"
-done
+      done < "$sql_file"
+    done
 
 verify_v3_self_contained src/deps-v3.txt
-
-cat src/deps-v3.txt | tsort | tac > src/deps-ordered-v3.txt
+run_tsort_or_die src/deps-v3.txt src/deps-ordered-v3.txt
 verify_deps_exist src/deps-ordered-v3.txt
+verify_linearization src/deps-v3.txt src/deps-ordered-v3.txt
 
-cat src/deps-ordered-v3.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
+: > release/cipherstash-encrypt.sql
+while IFS= read -r f; do
+  strip_require_lines "$f" >> release/cipherstash-encrypt.sql
+done < src/deps-ordered-v3.txt
 cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt.sql
 
 cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-uninstall.sql
