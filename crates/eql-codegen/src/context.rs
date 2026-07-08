@@ -49,6 +49,8 @@ pub fn environment() -> minijinja::Environment<'static> {
         include_str!("../templates/aggregates.sql.j2"),
     )
     .expect("aggregates.sql template");
+    env.add_template("cross.sql", include_str!("../templates/cross.sql.j2"))
+        .expect("cross.sql template");
     env.add_global("schema", SCHEMA);
     env.add_global("internal_schema", INTERNAL_SCHEMA);
     env
@@ -142,6 +144,18 @@ pub struct FunctionsContext {
     pub name: String, // full domain name (family-name + "_" + domain-name)
     pub dom: String,  // schema-qualified domain, e.g. public.integer_eq (file-level @brief)
     pub entries: Vec<FnEntry>,
+}
+
+/// Template context for a cross-name operator file: both members' requires,
+/// the two group names (for the file header), the function entries (wrappers +
+/// blockers, both directions) and the CREATE OPERATOR entries.
+#[derive(serde::Serialize)]
+pub struct CrossContext {
+    pub requires: Vec<String>,
+    pub a: String,
+    pub b: String,
+    pub entries: Vec<FnEntry>,
+    pub operators: Vec<OpEntry>,
 }
 
 /// Build the inlinable index-extractor entry for a domain term.

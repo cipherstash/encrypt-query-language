@@ -1,0 +1,16 @@
+-- AUTOMATICALLY GENERATED FILE.
+{% for r in requires -%}
+-- REQUIRE: {{ r }}
+{% endfor %}
+--! @file encrypted_domain/{{ a }}/{{ a }}__{{ b }}_cross.sql
+--! @brief Cross-name operators between {{ a }} and {{ b }}.
+{% for e in entries %}
+{% include "functions/" ~ e.kind|lower ~ ".sql.j2" -%}
+{% endfor %}
+{% for o in operators %}
+CREATE OPERATOR {{ o.symbol }} (
+  FUNCTION = {{ o.function_schema }}.{{ o.function_name }},
+  LEFTARG = {{ o.leftarg }}, RIGHTARG = {{ o.rightarg }}{% if o.metadata %},
+  {{ o.metadata }}{% endif %}
+);
+{% endfor -%}

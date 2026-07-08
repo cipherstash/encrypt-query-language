@@ -237,6 +237,87 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
     render_type_named(spec.name, spec.domains, out_dir)
 }
 
+/// Render the cross-name operator file for one ordered pair of group names
+/// (`a`, `b`) sharing `family`'s domain set. For each domain role and each
+/// cross-name operator (§ `cross_name_operators`), emit — in BOTH directions —
+/// a public wrapper (supported ops) or an internal blocker (unsupported ops),
+/// plus the matching CREATE OPERATOR. No casts.
+pub fn render_cross_file(family: &DomainFamily, a: &str, b: &str) -> String {
+    use crate::context::{
+        environment, operator_entry, unsupported_entry, wrapper_entry, CrossContext, SqlParam,
+    };
+    use crate::operator_surface::{cross_name_operators, TypeSlot};
+
+    let cross_ops = cross_name_operators();
+    let mut entries = Vec::new();
+    let mut operators = Vec::new();
+
+    // Both ordered directions: (a,b) and (b,a).
+    for (left_name, right_name) in [(a, b), (b, a)] {
+        for d in family.domains {
+            let dom_l = domain_name(&d.full_name(left_name));
+            let dom_r = domain_name(&d.full_name(right_name));
+            let supported = Term::operators_for_terms(d.terms);
+            for op in &cross_ops {
+                let is_supported = supported.contains(&op.symbol);
+                // R3: take the return type from the op's Domain/Domain signature
+                // (Boolean -> "boolean" for the 8 comparisons, Jsonb -> "jsonb"
+                // for `||`), NOT a string match on op.symbol.
+                let dd_sig = op
+                    .signatures
+                    .iter()
+                    .find(|s| s.left == TypeSlot::Domain && s.right == TypeSlot::Domain)
+                    .expect("cross-name op has a Domain/Domain signature");
+                let returns = dd_sig.render(&dom_l).returns;
+                if is_supported {
+                    let ex = Term::extractor_for_operator(d.terms, op.symbol)
+                        .expect("supported cross op has an extractor");
+                    entries.push(wrapper_entry(&dom_l, op, &dom_l, &dom_r, ex));
+                } else {
+                    entries.push(unsupported_entry(
+                        &dom_l,
+                        op,
+                        [
+                            SqlParam {
+                                name: "a",
+                                ty: dom_l.clone(),
+                            },
+                            SqlParam {
+                                name: "b",
+                                ty: dom_r.clone(),
+                            },
+                        ],
+                        &returns,
+                    ));
+                }
+                operators.push(operator_entry(op, &dom_l, &dom_r, is_supported));
+            }
+        }
+    }
+
+    // REQUIRE: both members' types + every per-domain functions file (extractors).
+    let mut requires = vec![V3_SCHEMA.to_string()];
+    for name in [a, b] {
+        requires.push(types_path(name));
+        for d in family.domains {
+            requires.push(scalar_path(name, &format!("{}_functions.sql", d.full_name(name))));
+        }
+    }
+
+    let ctx = CrossContext {
+        requires,
+        a: a.to_string(),
+        b: b.to_string(),
+        entries,
+        operators,
+    };
+    environment()
+        .get_template("cross.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render cross.sql")
+}
+
 /// Regenerate every generated file for one type into `out_dir`, crash-safely.
 /// Port of `generate_type`. Returns the written paths.
 ///
@@ -924,6 +1005,56 @@ mod tests {
             }
             _ => panic!("expected Unsupported"),
         }
+    }
+
+    #[test]
+    fn cross_file_emits_both_directions_supported_wrappers_and_blockers() {
+        // integer/int4 group. The _eq role supports = and <> (public cross
+        // wrappers); the other 7 cross ops are internal blockers. Both directions
+        // (int4->integer AND integer->int4) must appear. No casts.
+        let s = spec("integer");
+        let sql = render_cross_file(s, "integer", "int4");
+
+        // supported cross wrapper, both directions
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.int4_eq, b public.integer_eq)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.integer_eq, b public.int4_eq)"));
+        // supported cross OPERATOR, both directions
+        assert!(sql.contains("LEFTARG = public.int4_eq, RIGHTARG = public.integer_eq"));
+        assert!(sql.contains("LEFTARG = public.integer_eq, RIGHTARG = public.int4_eq"));
+        // unsupported cross op on the eq role is a blocker (internal, plpgsql)
+        assert!(
+            sql.contains("CREATE FUNCTION eql_v3_internal.lt(a public.int4_eq, b public.integer_eq)")
+        );
+        // ordered role supports < etc. as a public cross wrapper
+        assert!(
+            sql.contains("CREATE FUNCTION eql_v3.lt(a public.int4_ord, b public.integer_ord)")
+        );
+        // never a cast, never a path/key operator cross (no Domain/Domain sig)
+        assert!(!sql.contains("CREATE CAST"));
+        assert!(!sql.contains("eql_v3_internal.\"->\"(a public.int4"));
+        // R1 GUARD: every cross blocker names its LEFT domain in the RAISE — never
+        // the empty string that a file-level domain_lit would produce.
+        assert!(sql.contains("'public.int4_eq'"));
+        assert!(!sql.contains("is not supported for %', '<', ''"));
+        // blockers must be plpgsql and never STRICT. (Match the `IMMUTABLE STRICT`
+        // modifier specifically — a bare "STRICT" also appears as a substring of
+        // the `RESTRICT = ...` operator metadata in the trailing CREATE OPERATOR
+        // block that the final split-block sweeps up.)
+        for block in sql.split("CREATE FUNCTION").skip(1) {
+            if block.contains("RAISE EXCEPTION") {
+                assert!(block.contains("LANGUAGE plpgsql"));
+                assert!(!block.contains("IMMUTABLE STRICT"));
+            }
+        }
+        // R3 GUARD: the `||` cross op is a blocker returning jsonb (not boolean),
+        // derived from its signature, not a hardcoded symbol match.
+        assert!(sql.contains("eql_v3_internal.") && sql.contains("RETURNS jsonb")); // the || blocker
+        // header + REQUIRE edges for both members' types AND their extractor fns
+        assert!(sql.starts_with(&format!("{}\n", crate::consts::AUTO_GENERATED_MARKER)));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_eq_functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_eq_functions.sql"));
     }
 
     #[test]

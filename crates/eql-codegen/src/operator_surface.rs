@@ -215,6 +215,28 @@ impl Operator {
     }
 }
 
+/// The operators that can silently degrade to a native `jsonb` operator when
+/// both operands are encrypted domains of DIFFERENT names in one group: exactly
+/// those carrying a `Domain/Domain` signature (the 8 symmetric
+/// comparison/containment ops + `||`). Every other operator takes
+/// text/integer/text[]/jsonpath on the right, so a domain-typed right operand
+/// has no native `jsonb <op> jsonb` overload to fall into (it errors instead) —
+/// no cross-name shadow needed. Derived from `OPERATORS`, so a new operator with
+/// a Domain/Domain signature is classified automatically. (The pinned-symbol
+/// test above is the deliberate "derive from data AND assert the result" pattern
+/// used elsewhere in this module — a new Domain/Domain op fails it loudly rather
+/// than silently changing the cross surface.)
+pub fn cross_name_operators() -> Vec<&'static Operator> {
+    OPERATORS
+        .iter()
+        .filter(|op| {
+            op.signatures
+                .iter()
+                .any(|s| s.left == TypeSlot::Domain && s.right == TypeSlot::Domain)
+        })
+        .collect()
+}
+
 /// The native-jsonb operator symbols that every encrypted domain blocks, in
 /// `OPERATORS` order. Source of truth for the matrix's native-jsonb-blocker
 /// arm — the arm asserts its hand-written RHS map's keys equal this set.
@@ -615,6 +637,15 @@ mod tests {
                 "@@", "#>", "#>>", "-", "#-", "||"
             ]
         );
+    }
+
+    #[test]
+    fn cross_name_operators_are_exactly_the_domain_domain_signature_ops() {
+        let syms: Vec<&str> = cross_name_operators().iter().map(|o| o.symbol).collect();
+        // The 8 symmetric comparison/containment ops + concat — the only ops with a
+        // Domain/Domain signature, i.e. the only ones that can silently bind native
+        // jsonb when an alias value meets its canonical twin.
+        assert_eq!(syms, vec!["=", "<>", "<", "<=", ">", ">=", "@>", "<@", "||"]);
     }
 
     #[test]
