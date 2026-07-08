@@ -908,10 +908,43 @@ pub fn render_ore_fallback_file() -> String {
 
 use std::fs;
 
+use crate::ordering::{requires_of, topo_order};
 use crate::writer::{
     ensure_generated_paths_writable, normalized_set, remove_generated_orphans,
     write_generated_file, GeneratedKind, WriteError,
 };
+
+/// Ordered generated-file paths plus their dependency edges, both repo-relative.
+pub struct GeneratedOrdering {
+    pub order: Vec<String>,
+    pub edges: Vec<(String, String)>, // (dep, file)
+}
+
+/// Render every scalar family (pure, no fs writes), read back each file's
+/// `-- REQUIRE:` edges, and topologically order the generated surface. Paths are
+/// repo-relative (matching the `-- REQUIRE:` and build.sh conventions).
+pub fn generated_manifest(out_root: &Path) -> Result<GeneratedOrdering, WriteError> {
+    let scalars_root = out_root.join(V3_SCALARS_DIR);
+    let mut files: Vec<(String, Vec<String>)> = Vec::new();
+    let mut edges: Vec<(String, String)> = Vec::new();
+    for spec in eql_domains::scalar_families() {
+        let out_dir = scalars_root.join(spec.name);
+        for (path, body) in render_type(spec, &out_dir) {
+            let rel = path
+                .strip_prefix(out_root)
+                .unwrap_or(&path)
+                .to_string_lossy()
+                .replace('\\', "/");
+            let reqs = requires_of(&body);
+            for dep in &reqs {
+                edges.push((dep.clone(), rel.clone()));
+            }
+            files.push((rel, reqs));
+        }
+    }
+    let order = topo_order(&files).map_err(|e| WriteError::Codegen(e.to_string()))?;
+    Ok(GeneratedOrdering { order, edges })
+}
 
 /// Render every generated file for one type into memory, paired with its output
 /// path under `out_dir`. Mirrors `bindings::render_bindings`: rendering happens
@@ -1087,6 +1120,17 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
     }
 
+    // Emit the ordering intermediates the build consumes: the topo-ordered
+    // generated manifest and its dep-edge file. Both are repo-relative, gitignored
+    // build intermediates (mirroring src/deps-ordered-v3.txt).
+    let manifest = generated_manifest(out_root)?;
+    let order_path = out_root.join("src/generated-order-v3.txt");
+    fs::write(&order_path, format!("{}\n", manifest.order.join("\n")))?;
+    let deps_path = out_root.join("src/generated-deps-v3.txt");
+    let deps_body: String = manifest.edges.iter().map(|(d, f)| format!("{d} {f}\n")).collect();
+    fs::write(&deps_path, deps_body)?;
+    println!("wrote src/generated-order-v3.txt ({} files)", manifest.order.len());
+
     let names: Vec<&str> = eql_domains::families_with_scalar_domains()
         .map(|s| s.name)
         .collect();
@@ -1132,6 +1176,33 @@ pub fn clean_all(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
 mod tests {
     use super::*;
     use eql_domains::CATALOG;
+
+    #[test]
+    fn generated_manifest_is_valid_linearization_of_real_catalog() {
+        let d = crate::writer::test_support::tempdir();
+        generate_all(d.path()).unwrap();
+        let m = generated_manifest(d.path()).unwrap();
+
+        // Every generated file appears exactly once. (219 committed scalar files:
+        // the codegen manifest covers scalar_families() only — version.sql and the
+        // hand-written scalars/functions.sql are NOT part of it.)
+        assert_eq!(m.order.len(), 219, "expected 219 generated scalar files");
+        let set: std::collections::BTreeSet<&String> = m.order.iter().collect();
+        assert_eq!(set.len(), m.order.len(), "duplicate path in manifest");
+
+        // Every intra-generated edge is respected (dep before file).
+        let pos: std::collections::HashMap<&str, usize> =
+            m.order.iter().enumerate().map(|(i, p)| (p.as_str(), i)).collect();
+        for (dep, file) in &m.edges {
+            if let (Some(di), Some(fi)) = (pos.get(dep.as_str()), pos.get(file.as_str())) {
+                assert!(di <= fi, "generated dep {dep} ordered after {file}");
+            }
+        }
+
+        // Determinism: a second call is byte-identical.
+        let m2 = generated_manifest(d.path()).unwrap();
+        assert_eq!(m.order, m2.order);
+    }
 
     fn spec(family_name: &str) -> &'static DomainFamily {
         CATALOG
