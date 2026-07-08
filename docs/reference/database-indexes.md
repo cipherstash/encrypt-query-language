@@ -181,11 +181,11 @@ CREATE INDEX orders_data_gin
   ON orders USING gin (eql_v3.to_ste_vec_query(data_encrypted)::jsonb jsonb_path_ops);
 ANALYZE orders;
 
-SELECT * FROM orders WHERE data_encrypted @> $1::public.jsonb_query;
+SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_jsonb;
 -- Bitmap Index Scan on orders_data_gin
 ```
 
-The needle must be typed — `$1::public.jsonb_query`, another `public.json`, or an `public.jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
+The needle must be typed — `$1::eql_v3.query_jsonb`, another `public.json`, or an `public.jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
 
 ### GIN vs B-tree / hash
 

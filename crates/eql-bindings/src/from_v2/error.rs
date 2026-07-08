@@ -24,7 +24,7 @@ pub enum FromV2Error {
     },
     /// [`TargetDomain::parse`](super::TargetDomain::parse) did not find the
     /// name in the catalog-generated inventory (or it names a SteVec shape —
-    /// `jsonb_entry` / `jsonb_query` — that is not a conversion target).
+    /// `jsonb_entry` / `query_jsonb` — that is not a conversion target).
     UnknownDomain {
         /// The name that failed to resolve.
         name: String,
@@ -35,7 +35,7 @@ pub enum FromV2Error {
     /// is [`FromV2Error::AmbiguousTerm`]) with `entry` locating the offender.
     MissingTerm {
         /// The (unqualified) target domain name, e.g. `text_eq`, or the
-        /// SteVec shape (`json` / `jsonb_query`) for per-entry terms.
+        /// SteVec shape (`json` / `query_jsonb`) for per-entry terms.
         domain: String,
         /// The missing wire key (`hm`/`ob`/`bf`/`op`, or `hm|oc` for entries).
         key: String,

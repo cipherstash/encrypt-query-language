@@ -472,7 +472,7 @@ fn stevec_query_round_trips() {
     let wire = json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] });
     let parsed: SteVecQuery = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(SteVecQuery::sql_domain_static(), "public.jsonb_query");
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_jsonb");
     // Unknown top-level key rejected (SteVecQuery has no flatten field).
     assert!(serde_json::from_value::<SteVecQuery>(json!({ "sv": [], "bogus": 1 })).is_err());
     // NOTE: a query ELEMENT carrying `c` is NOT rejected here — SteVecQueryEntry
@@ -516,7 +516,7 @@ fn stevec_document_and_query_schemas_are_strict() {
     assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
     // SteVecDocument/Query domain names.
     assert_eq!(SteVecDocument::sql_domain_static(), "public.json");
-    assert_eq!(SteVecQuery::sql_domain_static(), "public.jsonb_query");
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_jsonb");
 }
 
 #[test]

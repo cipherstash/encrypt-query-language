@@ -5,7 +5,7 @@ import type { OpeCllw } from "./OpeCllw";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.text_ord_ope_query` — ordering domain query operand.
+ * `eql_v3.query_text_ord_ope` — ordering domain query operand.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `op`.
  */

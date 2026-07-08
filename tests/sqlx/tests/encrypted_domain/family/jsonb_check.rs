@@ -12,11 +12,11 @@
 //! divergence is SQL NULL, which both forms accept (the validator via
 //! STRICT, the inline expression via a leading `VALUE IS NULL OR`).
 //!
-//! `public.jsonb_query`'s CHECK CANNOT be inlined — validating sv elements
+//! `eql_v3.query_jsonb`'s CHECK CANNOT be inlined — validating sv elements
 //! needs a subquery, which CHECK constraints forbid — so its validator is
 //! plpgsql instead (cached plan vs the per-call SQL-function executor; the
-//! issue #353 finding). `jsonb_query_check_behaviour` characterises the
-//! accept/reject matrix, and `jsonb_query_validator_is_plpgsql` guards the
+//! issue #353 finding). `query_jsonb_check_behaviour` characterises the
+//! accept/reject matrix, and `query_jsonb_validator_is_plpgsql` guards the
 //! language so a revert to LANGUAGE sql fails here.
 
 use anyhow::Result;
@@ -102,7 +102,7 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn jsonb_query_check_behaviour(pool: PgPool) -> Result<()> {
+async fn query_jsonb_check_behaviour(pool: PgPool) -> Result<()> {
     // (payload, expected accept) — hardcoded verdicts: the CHECK calls the
     // validator, so a validator-equivalence assertion would be tautological.
     let candidates: &[(Option<&str>, bool)] = &[
@@ -128,22 +128,22 @@ async fn jsonb_query_check_behaviour(pool: PgPool) -> Result<()> {
         (Some("[]"), false),
     ];
     for (payload, expected) in candidates {
-        let cast = cast_accepts(&pool, "public.jsonb_query", *payload).await?;
+        let cast = cast_accepts(&pool, "eql_v3.query_jsonb", *payload).await?;
         anyhow::ensure!(
             cast == *expected,
-            "public.jsonb_query cast verdict changed for {payload:?}: \
+            "eql_v3.query_jsonb cast verdict changed for {payload:?}: \
              accepted = {cast}, expected = {expected}"
         );
     }
     Ok(())
 }
 
-/// The jsonb_query validator must stay plpgsql: its only caller is the domain
+/// The query_jsonb validator must stay plpgsql: its only caller is the domain
 /// CHECK (a context that can never inline a SQL function), so LANGUAGE sql
 /// pays the per-call SQL-function executor on every containment-needle cast
 /// (issues #353/#354). A revert fails here.
 #[sqlx::test]
-async fn jsonb_query_validator_is_plpgsql(pool: PgPool) -> Result<()> {
+async fn query_jsonb_validator_is_plpgsql(pool: PgPool) -> Result<()> {
     let lang: String = sqlx::query_scalar(
         "SELECT l.lanname FROM pg_proc p \
          JOIN pg_language l ON l.oid = p.prolang \

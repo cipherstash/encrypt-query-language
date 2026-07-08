@@ -209,7 +209,7 @@ fn parse_constructs_every_stored_payload_domain() {
             } else if stored {
                 from_v2(&v2_ct_full(), target(&name)).unwrap()
             } else {
-                // jsonb_entry / jsonb_query: inventory members but not stored
+                // jsonb_entry / query_jsonb: inventory members but not stored
                 // payloads — no DomainPayload variant, parse returns None.
                 assert!(
                     DomainPayload::parse(&name, &json!({})).is_none(),
@@ -234,7 +234,7 @@ fn parse_returns_none_for_unknown_domains() {
         "",
         "jsonb",
         "jsonb_entry",
-        "jsonb_query",
+        "query_jsonb",
     ] {
         assert!(
             DomainPayload::parse(name, &json!({})).is_none(),

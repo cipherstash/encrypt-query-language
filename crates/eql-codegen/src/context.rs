@@ -157,12 +157,12 @@ pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
     }
 }
 
-/// The query-operand twin block for a term-bearing domain: `public.<name>_query`,
+/// The query-operand twin block for a term-bearing domain: `public.query_<name>`,
 /// keys = envelope-minus-`c` (`v`/`i`) + the domain's terms, with `c` FORBIDDEN
 /// (a query operand carries no ciphertext — CIP-3432). Same non-empty-array term
 /// rule as the storage block.
 pub fn query_domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
-    let name = format!("{}_query", domain.full_name(family_name));
+    let name = domain.query_name(family_name);
 
     // Envelope minus the ciphertext `c`, then the domain's terms.
     let mut keys: Vec<String> = ENVELOPE_KEYS
@@ -350,6 +350,16 @@ pub struct AggregatesContext {
 /// EQL-owned schemas cannot drop application columns.
 pub fn domain_name(name: &str) -> String {
     format!("public.{name}")
+}
+
+/// The schema-qualified name of a QUERY-OPERAND domain, e.g.
+/// `eql_v3.query_integer_eq`. Query twins live in the public-API `SCHEMA`
+/// (not `public`) — they are never valid column types, so the
+/// application-columns-survive-schema-drop rationale behind `domain_name`
+/// does not apply, and keeping them out of `public` keeps the column-type
+/// namespace to actual column types (CIP-3442).
+pub fn query_domain_name(name: &str) -> String {
+    format!("{SCHEMA}.{name}")
 }
 
 /// The extractor-call SQL for one operand, casting jsonb to the domain first.

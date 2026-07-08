@@ -3,9 +3,9 @@
 use super::domain_type::DomainType;
 use serde::{Deserialize, Serialize};
 /// Every v3 QUERY-operand shape in one type: one variant per term-bearing
-/// scalar query twin (`public.<name>_query`, the enveloped term-only
+/// scalar query twin (`eql_v3.query_<name>`, the enveloped term-only
 /// operand — `{v, i, <terms>}`, no `c`) plus the SteVec containment
-/// needle (`public.jsonb_query`). Generated from the catalog, so it
+/// needle (`eql_v3.query_jsonb`). Generated from the catalog, so it
 /// cannot drift when the catalog grows.
 ///
 /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -17,90 +17,90 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum QueryPayload {
-    /// The `public.integer_eq_query` query operand.
+    /// The `eql_v3.query_integer_eq` query operand.
     IntegerEqQuery(super::integer::IntegerEqQuery),
-    /// The `public.integer_ord_ore_query` query operand.
+    /// The `eql_v3.query_integer_ord_ore` query operand.
     IntegerOrdOreQuery(super::integer::IntegerOrdOreQuery),
-    /// The `public.integer_ord_query` query operand.
+    /// The `eql_v3.query_integer_ord` query operand.
     IntegerOrdQuery(super::integer::IntegerOrdQuery),
-    /// The `public.integer_ord_ope_query` query operand.
+    /// The `eql_v3.query_integer_ord_ope` query operand.
     IntegerOrdOpeQuery(super::integer::IntegerOrdOpeQuery),
-    /// The `public.smallint_eq_query` query operand.
+    /// The `eql_v3.query_smallint_eq` query operand.
     SmallintEqQuery(super::smallint::SmallintEqQuery),
-    /// The `public.smallint_ord_ore_query` query operand.
+    /// The `eql_v3.query_smallint_ord_ore` query operand.
     SmallintOrdOreQuery(super::smallint::SmallintOrdOreQuery),
-    /// The `public.smallint_ord_query` query operand.
+    /// The `eql_v3.query_smallint_ord` query operand.
     SmallintOrdQuery(super::smallint::SmallintOrdQuery),
-    /// The `public.smallint_ord_ope_query` query operand.
+    /// The `eql_v3.query_smallint_ord_ope` query operand.
     SmallintOrdOpeQuery(super::smallint::SmallintOrdOpeQuery),
-    /// The `public.bigint_eq_query` query operand.
+    /// The `eql_v3.query_bigint_eq` query operand.
     BigintEqQuery(super::bigint::BigintEqQuery),
-    /// The `public.bigint_ord_ore_query` query operand.
+    /// The `eql_v3.query_bigint_ord_ore` query operand.
     BigintOrdOreQuery(super::bigint::BigintOrdOreQuery),
-    /// The `public.bigint_ord_query` query operand.
+    /// The `eql_v3.query_bigint_ord` query operand.
     BigintOrdQuery(super::bigint::BigintOrdQuery),
-    /// The `public.bigint_ord_ope_query` query operand.
+    /// The `eql_v3.query_bigint_ord_ope` query operand.
     BigintOrdOpeQuery(super::bigint::BigintOrdOpeQuery),
-    /// The `public.date_eq_query` query operand.
+    /// The `eql_v3.query_date_eq` query operand.
     DateEqQuery(super::date::DateEqQuery),
-    /// The `public.date_ord_ore_query` query operand.
+    /// The `eql_v3.query_date_ord_ore` query operand.
     DateOrdOreQuery(super::date::DateOrdOreQuery),
-    /// The `public.date_ord_query` query operand.
+    /// The `eql_v3.query_date_ord` query operand.
     DateOrdQuery(super::date::DateOrdQuery),
-    /// The `public.date_ord_ope_query` query operand.
+    /// The `eql_v3.query_date_ord_ope` query operand.
     DateOrdOpeQuery(super::date::DateOrdOpeQuery),
-    /// The `public.timestamp_eq_query` query operand.
+    /// The `eql_v3.query_timestamp_eq` query operand.
     TimestampEqQuery(super::timestamp::TimestampEqQuery),
-    /// The `public.timestamp_ord_ore_query` query operand.
+    /// The `eql_v3.query_timestamp_ord_ore` query operand.
     TimestampOrdOreQuery(super::timestamp::TimestampOrdOreQuery),
-    /// The `public.timestamp_ord_query` query operand.
+    /// The `eql_v3.query_timestamp_ord` query operand.
     TimestampOrdQuery(super::timestamp::TimestampOrdQuery),
-    /// The `public.timestamp_ord_ope_query` query operand.
+    /// The `eql_v3.query_timestamp_ord_ope` query operand.
     TimestampOrdOpeQuery(super::timestamp::TimestampOrdOpeQuery),
-    /// The `public.numeric_eq_query` query operand.
+    /// The `eql_v3.query_numeric_eq` query operand.
     NumericEqQuery(super::numeric::NumericEqQuery),
-    /// The `public.numeric_ord_ore_query` query operand.
+    /// The `eql_v3.query_numeric_ord_ore` query operand.
     NumericOrdOreQuery(super::numeric::NumericOrdOreQuery),
-    /// The `public.numeric_ord_query` query operand.
+    /// The `eql_v3.query_numeric_ord` query operand.
     NumericOrdQuery(super::numeric::NumericOrdQuery),
-    /// The `public.numeric_ord_ope_query` query operand.
+    /// The `eql_v3.query_numeric_ord_ope` query operand.
     NumericOrdOpeQuery(super::numeric::NumericOrdOpeQuery),
-    /// The `public.text_eq_query` query operand.
+    /// The `eql_v3.query_text_eq` query operand.
     TextEqQuery(super::text::TextEqQuery),
-    /// The `public.text_match_query` query operand.
+    /// The `eql_v3.query_text_match` query operand.
     TextMatchQuery(super::text::TextMatchQuery),
-    /// The `public.text_ord_ore_query` query operand.
+    /// The `eql_v3.query_text_ord_ore` query operand.
     TextOrdOreQuery(super::text::TextOrdOreQuery),
-    /// The `public.text_ord_query` query operand.
+    /// The `eql_v3.query_text_ord` query operand.
     TextOrdQuery(super::text::TextOrdQuery),
-    /// The `public.text_ord_ope_query` query operand.
+    /// The `eql_v3.query_text_ord_ope` query operand.
     TextOrdOpeQuery(super::text::TextOrdOpeQuery),
-    /// The `public.text_search_query` query operand.
+    /// The `eql_v3.query_text_search` query operand.
     TextSearchQuery(super::text::TextSearchQuery),
-    /// The `public.real_eq_query` query operand.
+    /// The `eql_v3.query_real_eq` query operand.
     RealEqQuery(super::real::RealEqQuery),
-    /// The `public.real_ord_ore_query` query operand.
+    /// The `eql_v3.query_real_ord_ore` query operand.
     RealOrdOreQuery(super::real::RealOrdOreQuery),
-    /// The `public.real_ord_query` query operand.
+    /// The `eql_v3.query_real_ord` query operand.
     RealOrdQuery(super::real::RealOrdQuery),
-    /// The `public.real_ord_ope_query` query operand.
+    /// The `eql_v3.query_real_ord_ope` query operand.
     RealOrdOpeQuery(super::real::RealOrdOpeQuery),
-    /// The `public.double_eq_query` query operand.
+    /// The `eql_v3.query_double_eq` query operand.
     DoubleEqQuery(super::double::DoubleEqQuery),
-    /// The `public.double_ord_ore_query` query operand.
+    /// The `eql_v3.query_double_ord_ore` query operand.
     DoubleOrdOreQuery(super::double::DoubleOrdOreQuery),
-    /// The `public.double_ord_query` query operand.
+    /// The `eql_v3.query_double_ord` query operand.
     DoubleOrdQuery(super::double::DoubleOrdQuery),
-    /// The `public.double_ord_ope_query` query operand.
+    /// The `eql_v3.query_double_ord_ope` query operand.
     DoubleOrdOpeQuery(super::double::DoubleOrdOpeQuery),
-    /// The `public.jsonb_query` query operand.
+    /// The `eql_v3.query_jsonb` query operand.
     SteVec(super::jsonb::SteVecQuery),
 }
 impl QueryPayload {
     /// Strictly parse `value` as `domain`'s query payload, KEEPING the
     /// parsed value — the query-side counterpart of
     /// [`super::DomainPayload::parse`]. `domain` is the unqualified name
-    /// (`"integer_eq_query"`, `"jsonb_query"`, …). `None` when `domain`
+    /// (`"query_integer_eq"`, `"query_jsonb"`, …). `None` when `domain`
     /// is not a query-operand domain; `Some(Err)` when the strict parse
     /// fails (`deny_unknown_fields` rejects a stray `c`).
     pub fn parse(
@@ -108,130 +108,130 @@ impl QueryPayload {
         value: &serde_json::Value,
     ) -> Option<Result<Self, serde_json::Error>> {
         match domain {
-            "integer_eq_query" => {
+            "query_integer_eq" => {
                 Some(super::integer::IntegerEqQuery::deserialize(value).map(Self::IntegerEqQuery))
             }
-            "integer_ord_ore_query" => Some(
+            "query_integer_ord_ore" => Some(
                 super::integer::IntegerOrdOreQuery::deserialize(value)
                     .map(Self::IntegerOrdOreQuery),
             ),
-            "integer_ord_query" => {
+            "query_integer_ord" => {
                 Some(super::integer::IntegerOrdQuery::deserialize(value).map(Self::IntegerOrdQuery))
             }
-            "integer_ord_ope_query" => Some(
+            "query_integer_ord_ope" => Some(
                 super::integer::IntegerOrdOpeQuery::deserialize(value)
                     .map(Self::IntegerOrdOpeQuery),
             ),
-            "smallint_eq_query" => Some(
+            "query_smallint_eq" => Some(
                 super::smallint::SmallintEqQuery::deserialize(value).map(Self::SmallintEqQuery),
             ),
-            "smallint_ord_ore_query" => Some(
+            "query_smallint_ord_ore" => Some(
                 super::smallint::SmallintOrdOreQuery::deserialize(value)
                     .map(Self::SmallintOrdOreQuery),
             ),
-            "smallint_ord_query" => Some(
+            "query_smallint_ord" => Some(
                 super::smallint::SmallintOrdQuery::deserialize(value).map(Self::SmallintOrdQuery),
             ),
-            "smallint_ord_ope_query" => Some(
+            "query_smallint_ord_ope" => Some(
                 super::smallint::SmallintOrdOpeQuery::deserialize(value)
                     .map(Self::SmallintOrdOpeQuery),
             ),
-            "bigint_eq_query" => {
+            "query_bigint_eq" => {
                 Some(super::bigint::BigintEqQuery::deserialize(value).map(Self::BigintEqQuery))
             }
-            "bigint_ord_ore_query" => Some(
+            "query_bigint_ord_ore" => Some(
                 super::bigint::BigintOrdOreQuery::deserialize(value).map(Self::BigintOrdOreQuery),
             ),
-            "bigint_ord_query" => {
+            "query_bigint_ord" => {
                 Some(super::bigint::BigintOrdQuery::deserialize(value).map(Self::BigintOrdQuery))
             }
-            "bigint_ord_ope_query" => Some(
+            "query_bigint_ord_ope" => Some(
                 super::bigint::BigintOrdOpeQuery::deserialize(value).map(Self::BigintOrdOpeQuery),
             ),
-            "date_eq_query" => {
+            "query_date_eq" => {
                 Some(super::date::DateEqQuery::deserialize(value).map(Self::DateEqQuery))
             }
-            "date_ord_ore_query" => {
+            "query_date_ord_ore" => {
                 Some(super::date::DateOrdOreQuery::deserialize(value).map(Self::DateOrdOreQuery))
             }
-            "date_ord_query" => {
+            "query_date_ord" => {
                 Some(super::date::DateOrdQuery::deserialize(value).map(Self::DateOrdQuery))
             }
-            "date_ord_ope_query" => {
+            "query_date_ord_ope" => {
                 Some(super::date::DateOrdOpeQuery::deserialize(value).map(Self::DateOrdOpeQuery))
             }
-            "timestamp_eq_query" => Some(
+            "query_timestamp_eq" => Some(
                 super::timestamp::TimestampEqQuery::deserialize(value).map(Self::TimestampEqQuery),
             ),
-            "timestamp_ord_ore_query" => Some(
+            "query_timestamp_ord_ore" => Some(
                 super::timestamp::TimestampOrdOreQuery::deserialize(value)
                     .map(Self::TimestampOrdOreQuery),
             ),
-            "timestamp_ord_query" => Some(
+            "query_timestamp_ord" => Some(
                 super::timestamp::TimestampOrdQuery::deserialize(value)
                     .map(Self::TimestampOrdQuery),
             ),
-            "timestamp_ord_ope_query" => Some(
+            "query_timestamp_ord_ope" => Some(
                 super::timestamp::TimestampOrdOpeQuery::deserialize(value)
                     .map(Self::TimestampOrdOpeQuery),
             ),
-            "numeric_eq_query" => {
+            "query_numeric_eq" => {
                 Some(super::numeric::NumericEqQuery::deserialize(value).map(Self::NumericEqQuery))
             }
-            "numeric_ord_ore_query" => Some(
+            "query_numeric_ord_ore" => Some(
                 super::numeric::NumericOrdOreQuery::deserialize(value)
                     .map(Self::NumericOrdOreQuery),
             ),
-            "numeric_ord_query" => {
+            "query_numeric_ord" => {
                 Some(super::numeric::NumericOrdQuery::deserialize(value).map(Self::NumericOrdQuery))
             }
-            "numeric_ord_ope_query" => Some(
+            "query_numeric_ord_ope" => Some(
                 super::numeric::NumericOrdOpeQuery::deserialize(value)
                     .map(Self::NumericOrdOpeQuery),
             ),
-            "text_eq_query" => {
+            "query_text_eq" => {
                 Some(super::text::TextEqQuery::deserialize(value).map(Self::TextEqQuery))
             }
-            "text_match_query" => {
+            "query_text_match" => {
                 Some(super::text::TextMatchQuery::deserialize(value).map(Self::TextMatchQuery))
             }
-            "text_ord_ore_query" => {
+            "query_text_ord_ore" => {
                 Some(super::text::TextOrdOreQuery::deserialize(value).map(Self::TextOrdOreQuery))
             }
-            "text_ord_query" => {
+            "query_text_ord" => {
                 Some(super::text::TextOrdQuery::deserialize(value).map(Self::TextOrdQuery))
             }
-            "text_ord_ope_query" => {
+            "query_text_ord_ope" => {
                 Some(super::text::TextOrdOpeQuery::deserialize(value).map(Self::TextOrdOpeQuery))
             }
-            "text_search_query" => {
+            "query_text_search" => {
                 Some(super::text::TextSearchQuery::deserialize(value).map(Self::TextSearchQuery))
             }
-            "real_eq_query" => {
+            "query_real_eq" => {
                 Some(super::real::RealEqQuery::deserialize(value).map(Self::RealEqQuery))
             }
-            "real_ord_ore_query" => {
+            "query_real_ord_ore" => {
                 Some(super::real::RealOrdOreQuery::deserialize(value).map(Self::RealOrdOreQuery))
             }
-            "real_ord_query" => {
+            "query_real_ord" => {
                 Some(super::real::RealOrdQuery::deserialize(value).map(Self::RealOrdQuery))
             }
-            "real_ord_ope_query" => {
+            "query_real_ord_ope" => {
                 Some(super::real::RealOrdOpeQuery::deserialize(value).map(Self::RealOrdOpeQuery))
             }
-            "double_eq_query" => {
+            "query_double_eq" => {
                 Some(super::double::DoubleEqQuery::deserialize(value).map(Self::DoubleEqQuery))
             }
-            "double_ord_ore_query" => Some(
+            "query_double_ord_ore" => Some(
                 super::double::DoubleOrdOreQuery::deserialize(value).map(Self::DoubleOrdOreQuery),
             ),
-            "double_ord_query" => {
+            "query_double_ord" => {
                 Some(super::double::DoubleOrdQuery::deserialize(value).map(Self::DoubleOrdQuery))
             }
-            "double_ord_ope_query" => Some(
+            "query_double_ord_ope" => Some(
                 super::double::DoubleOrdOpeQuery::deserialize(value).map(Self::DoubleOrdOpeQuery),
             ),
-            "jsonb_query" => Some(super::jsonb::SteVecQuery::deserialize(value).map(Self::SteVec)),
+            "query_jsonb" => Some(super::jsonb::SteVecQuery::deserialize(value).map(Self::SteVec)),
             _ => None,
         }
     }
@@ -279,11 +279,11 @@ impl QueryPayload {
             Self::SteVec(payload) => payload,
         }
     }
-    /// Fully-qualified SQL domain name, e.g. `"public.integer_eq_query"`.
+    /// Fully-qualified SQL domain name, e.g. `"eql_v3.query_integer_eq"`.
     pub fn sql_domain(&self) -> &'static str {
         self.as_domain_type().sql_domain()
     }
-    /// Unqualified SQL domain name, e.g. `"integer_eq_query"` — the name
+    /// Unqualified SQL domain name, e.g. `"query_integer_eq"` — the name
     /// [`QueryPayload::parse`] accepts.
     pub fn domain(&self) -> &'static str {
         self.as_domain_type().domain()

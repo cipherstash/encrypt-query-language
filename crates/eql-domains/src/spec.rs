@@ -11,21 +11,42 @@ impl Domain {
     /// the `_` join — codegen builds every domain name through this, so the
     /// "domain name starts with the family name" rule is structural.
     ///
-    /// One documented exception: the `jsonb` family's document domain
-    /// (`public.json`, `Domain.name == "json"`) predates the catalog and
-    /// doesn't follow the family+suffix convention (`family_name` is
-    /// `"jsonb"`, not `"json"`), so its `name` is returned verbatim instead of
-    /// being joined. Every other domain — scalar or the other two SteVec
-    /// shapes — uses the join.
+    /// Two documented exceptions, both on the `jsonb` family:
+    ///
+    /// - the document domain (`public.json`, `Domain.name == "json"`) predates
+    ///   the catalog and doesn't follow the family+suffix convention
+    ///   (`family_name` is `"jsonb"`, not `"json"`), so its `name` is returned
+    ///   verbatim instead of being joined;
+    /// - the containment needle (`Domain.name == "query"`) follows the
+    ///   query-operand PREFIX convention (CIP-3442): `query_jsonb`, matching
+    ///   the scalar `query_<name>` twins so every query-operand type sorts
+    ///   apart from the column domains in alphabetical type listings.
+    ///
+    /// Every other domain — scalar or the SteVec entry — uses the join.
     pub fn full_name(&self, family_name: &str) -> String {
         if matches!(self.shape, crate::Shape::SteVec) && self.name == "json" {
             return self.name.to_string();
+        }
+        if matches!(self.shape, crate::Shape::SteVec) && self.name == "query" {
+            return format!("query_{family_name}");
         }
         if self.name.is_empty() {
             family_name.to_string()
         } else {
             format!("{family_name}_{}", self.name)
         }
+    }
+
+    /// The full (unqualified) name of this domain's query-operand twin under
+    /// `family_name`: the `query_` PREFIX joined to [`Self::full_name`]
+    /// (`"query_integer_eq"`). The **single** site that owns the query-twin
+    /// naming convention — codegen (SQL + bindings) builds every query-domain
+    /// name through this. A prefix (not the earlier `_query` suffix) so query
+    /// operands sort together, apart from the column domains they twin, in
+    /// alphabetical type listings such as Supabase Studio's type picker
+    /// (CIP-3442).
+    pub fn query_name(&self, family_name: &str) -> String {
+        format!("query_{}", self.full_name(family_name))
     }
 
     /// The PascalCase Rust/TS struct identifier for this domain under
@@ -160,6 +181,24 @@ mod tests {
     }
 
     #[test]
+    fn query_name_prefixes_the_full_name() {
+        // `query_` is a PREFIX so query twins sort apart from the column
+        // domains in alphabetical type listings (Supabase Studio — CIP-3442).
+        let eq = Domain {
+            name: "eq",
+            terms: &[Term::Hm],
+            shape: Shape::Scalar,
+        };
+        assert_eq!(eq.query_name("integer"), "query_integer_eq");
+        let ord_ore = Domain {
+            name: "ord_ore",
+            terms: &[Term::Ore],
+            shape: Shape::Scalar,
+        };
+        assert_eq!(ord_ore.query_name("timestamp"), "query_timestamp_ord_ore");
+    }
+
+    #[test]
     fn scalar_families_exclude_non_scalar_families_after_jsonb_flip() {
         use crate::{scalar_families, CATALOG, JSONB};
         let names: Vec<&str> = scalar_families().map(|f| f.name).collect();
@@ -171,16 +210,18 @@ mod tests {
     }
 
     #[test]
-    fn jsonb_domain_names_follow_the_family_suffix_convention() {
-        // Entry/query carry the same family+suffix naming as every scalar
-        // family. The document is the one documented exception — its
-        // established name `json` doesn't match the family name `jsonb`, so
-        // `full_name` returns it verbatim rather than concatenating. Real SQL
-        // names: public.json, public.jsonb_entry, public.jsonb_query.
+    fn jsonb_domain_names_follow_the_documented_conventions() {
+        // The entry carries the family+suffix naming every scalar family uses.
+        // The document is one documented exception — its established name
+        // `json` doesn't match the family name `jsonb`, so `full_name` returns
+        // it verbatim rather than concatenating. The containment needle is the
+        // other — it follows the query-operand PREFIX convention (CIP-3442),
+        // like the scalar `query_<name>` twins. Real SQL names: public.json,
+        // public.jsonb_entry, public.query_jsonb.
         use crate::JSONB;
         assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "json");
         assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "jsonb_entry");
-        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "jsonb_query");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "query_jsonb");
     }
 
     #[test]

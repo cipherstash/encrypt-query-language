@@ -1,5 +1,5 @@
 //! Parameterized test harness for the `eql_v3` encrypted-JSONB (SteVec) surface
-//! (`public.json` / `public.jsonb_entry` / `public.jsonb_query`).
+//! (`public.json` / `public.jsonb_entry` / `eql_v3.query_jsonb`).
 //!
 //! Design source of truth:
 //! `docs/superpowers/plans/2026-06-09-eql-v3-jsonb-test-harness-design.md`.
@@ -102,7 +102,7 @@ fn doc(elems: &[String]) -> String {
     )
 }
 
-/// Build a `jsonb_query` needle literal from `(selector, term_field, hex)`
+/// Build a `query_jsonb` needle literal from `(selector, term_field, hex)`
 /// triples (each element carries `s` + exactly one term, never `c`).
 fn needle(elems: &[(&str, &str, &str)]) -> String {
     let parts: Vec<String> = elems
@@ -306,7 +306,7 @@ async fn v3_jsonb_containment_hm_only(pool: PgPool) -> anyhow::Result<()> {
     let root_hm = root_hm_term(&pool).await?;
     let n = needle(&[(SEL_ROOT_HM, "hm", &root_hm)]);
     let hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -315,9 +315,9 @@ async fn v3_jsonb_containment_hm_only(pool: PgPool) -> anyhow::Result<()> {
         "every fixture row carries the constant root hm"
     );
 
-    // Commutator: jsonb_query <@ json must agree row-for-row.
+    // Commutator: query_jsonb <@ json must agree row-for-row.
     let hits_rev: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE '{n}'::public.jsonb_query <@ payload"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE '{n}'::eql_v3.query_jsonb <@ payload"
     ))
     .fetch_one(&pool)
     .await?;
@@ -337,7 +337,7 @@ async fn v3_jsonb_containment_oc_only(pool: PgPool) -> anyhow::Result<()> {
 
     // Row 1 must be among the matches (oc terms can repeat across rows).
     let row1: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -345,12 +345,12 @@ async fn v3_jsonb_containment_oc_only(pool: PgPool) -> anyhow::Result<()> {
 
     // Commutator agreement over the whole table.
     let fwd: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
     let rev: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE '{n}'::public.jsonb_query <@ payload"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE '{n}'::eql_v3.query_jsonb <@ payload"
     ))
     .fetch_one(&pool)
     .await?;
@@ -403,7 +403,7 @@ async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
     let n = needle(&[(SEL_ROOT_HM, "hm", &root_hm), (SEL_HELLO_OC, "oc", &oc)]);
 
     let row1: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -625,7 +625,7 @@ async fn v3_jsonb_containment_rejects_wrong_bytes(pool: PgPool) -> anyhow::Resul
     let root_hm = root_hm_term(&pool).await?;
     let good = needle(&[(SEL_ROOT_HM, "hm", &root_hm)]);
     let good_hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{good}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{good}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -637,7 +637,7 @@ async fn v3_jsonb_containment_rejects_wrong_bytes(pool: PgPool) -> anyhow::Resul
     // Real selector, WRONG hm bytes — must match nothing.
     let n = needle(&[(SEL_ROOT_HM, "hm", "deadbeefdeadbeefdeadbeefdeadbeef")]);
     let hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -664,12 +664,12 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     let oc_needle = needle(&[(COLLIDE_SEL, "oc", COLLIDE_TERM)]);
     let hm_needle = needle(&[(COLLIDE_SEL, "hm", COLLIDE_TERM)]);
     let collide_accept: bool = sqlx::query_scalar(&format!(
-        "SELECT '{hm_doc}'::public.json @> '{hm_needle}'::public.jsonb_query"
+        "SELECT '{hm_doc}'::public.json @> '{hm_needle}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
     let collide_reject: bool = sqlx::query_scalar(&format!(
-        "SELECT '{hm_doc}'::public.json @> '{oc_needle}'::public.jsonb_query"
+        "SELECT '{hm_doc}'::public.json @> '{oc_needle}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -685,7 +685,7 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     let root_hm = root_hm_term(&pool).await?;
     let good = needle(&[(SEL_ROOT_HM, "hm", &root_hm)]);
     let good_hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{good}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{good}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -697,7 +697,7 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     // An `oc`-field needle carrying the real hm term at the hm selector: rejects.
     let n = needle(&[(SEL_ROOT_HM, "oc", &root_hm)]);
     let hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -715,7 +715,7 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     .await?;
     let n2 = needle(&[(SEL_HELLO_OC, "hm", &oc)]);
     let hits2: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n2}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n2}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -733,7 +733,7 @@ async fn v3_jsonb_containment_rejects_wrong_selector(pool: PgPool) -> anyhow::Re
     let root_hm = root_hm_term(&pool).await?;
     let good = needle(&[(SEL_ROOT_HM, "hm", &root_hm)]);
     let good_hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{good}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{good}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -745,7 +745,7 @@ async fn v3_jsonb_containment_rejects_wrong_selector(pool: PgPool) -> anyhow::Re
     // Right term bytes, but a selector that exists in no fixture row.
     let n = needle(&[("ffffffffffffffffffffffffffffffff", "hm", &root_hm)]);
     let hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::public.jsonb_query"
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -803,12 +803,12 @@ v3_jsonb_supported_null!(
     // document containment: json @> json
     (doc_contains_doc_lhs, "SELECT NULL::public.json @> '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json"),
     (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json @> NULL::public.json"),
-    // json @> jsonb_query / json @> jsonb_entry
-    (doc_contains_query_lhs, "SELECT NULL::public.json @> '{\"sv\":[]}'::public.jsonb_query"),
-    (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json @> NULL::public.jsonb_query"),
+    // json @> query_jsonb / json @> jsonb_entry
+    (doc_contains_query_lhs, "SELECT NULL::public.json @> '{\"sv\":[]}'::eql_v3.query_jsonb"),
+    (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json @> NULL::eql_v3.query_jsonb"),
     (doc_contains_entry_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json @> NULL::public.jsonb_entry"),
     // <@ reverses
-    (query_contained_lhs, "SELECT NULL::public.jsonb_query <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json"),
+    (query_contained_lhs, "SELECT NULL::eql_v3.query_jsonb <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json"),
     (entry_contained_lhs, "SELECT NULL::public.jsonb_entry <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json"),
 );
 
@@ -1164,7 +1164,7 @@ v3_jsonb_payload_reject!(
 
 v3_jsonb_payload_reject!(
     v3_jsonb_ste_vec_query_payload_check,
-    "public.jsonb_query",
+    "eql_v3.query_jsonb",
     [
         "[]",                                                   // non-object
         "{\"sv\":{}}",                                          // sv not an array
@@ -1194,7 +1194,7 @@ async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()
     .await?;
     assert!(ok_entry);
     let ok_query: bool = sqlx::query_scalar(
-        "SELECT '{\"sv\":[{\"s\":\"x\",\"hm\":\"00\"}]}'::public.jsonb_query IS NOT NULL",
+        "SELECT '{\"sv\":[{\"s\":\"x\",\"hm\":\"00\"}]}'::eql_v3.query_jsonb IS NOT NULL",
     )
     .fetch_one(&pool)
     .await?;
@@ -1371,7 +1371,7 @@ async fn v3_jsonb_index_to_ste_vec_query_gin_engages(pool: PgPool) -> anyhow::Re
     let root_hm = root_hm_term(&pool).await?;
     let n = needle(&[(SEL_ROOT_HM, "hm", &root_hm)]);
     let query =
-        format!("SELECT id FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::public.jsonb_query");
+        format!("SELECT id FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb");
     assert_index_scan_uses(
         &mut *tx,
         &query,
@@ -1483,7 +1483,7 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     // oc, exactly the single pivot row contains it.
     let n = needle(&[(SEL_HELLO_OC, "oc", &pivot_oc)]);
     let query =
-        format!("SELECT count(*) FROM v3_jsonb_scale WHERE payload @> '{n}'::public.jsonb_query");
+        format!("SELECT count(*) FROM v3_jsonb_scale WHERE payload @> '{n}'::eql_v3.query_jsonb");
     assert_index_scan_uses(
         &mut *tx,
         &query,

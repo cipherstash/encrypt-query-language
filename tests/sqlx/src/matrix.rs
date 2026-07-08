@@ -1507,8 +1507,8 @@ macro_rules! __scalar_matrix_planner_metadata_case {
 
                 // 5 arg shapes per operator: the 3 storage shapes — (d,d),
                 // (d,jsonb), (jsonb,d) — plus the 2 CIP-3432 query-operand shapes
-                // — (d, d_query), (d_query, d). Every term-bearing domain the
-                // planner-metadata suite runs on has a `<name>_query` twin, so
+                // — (d, query_d), (query_d, d). Every term-bearing domain the
+                // planner-metadata suite runs on has a `query_<name>` twin, so
                 // the count is uniformly ops x 5.
                 let expected = ops.len() * 5;
                 anyhow::ensure!(

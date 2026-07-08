@@ -61,7 +61,7 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<super::jsonb::SteVecQuery>),
     ]
 }
-/// Every v3 QUERY-operand twin (`public.<name>_query`, the enveloped
+/// Every v3 QUERY-operand twin (`eql_v3.query_<name>`, the enveloped
 /// term-only operand), in `eql-domains::CATALOG` order — generated.
 /// Separate from [`all`] so query domains never resolve as stored
 /// conversion targets; used by the JSON Schema export and query

@@ -142,7 +142,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname = 'public'
-          AND t.typname IN ('integer_eq', 'json', 'jsonb_entry', 'jsonb_query')
+          AND t.typname IN ('integer_eq', 'json', 'jsonb_entry')
         ORDER BY 1
         "#,
     )
@@ -154,13 +154,32 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
     public_domains.sort();
     assert_eq!(
         public_domains,
-        vec![
-            "public.integer_eq",
-            "public.json",
-            "public.jsonb_entry",
-            "public.jsonb_query",
-        ],
+        vec!["public.integer_eq", "public.json", "public.jsonb_entry"],
         "repeat install must keep public user-column domains available"
+    );
+
+    // The query-operand domains are NOT column types and live in the EQL-owned
+    // eql_v3 schema (CIP-3442); a repeat install recreates them there.
+    let mut query_domains: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT format('%I.%I', n.nspname, t.typname)
+        FROM pg_catalog.pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        WHERE n.nspname = 'eql_v3'
+          AND t.typname IN ('query_integer_eq', 'query_jsonb')
+        ORDER BY 1
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?
+    .into_iter()
+    .map(normalize_regtype_name)
+    .collect();
+    query_domains.sort();
+    assert_eq!(
+        query_domains,
+        vec!["eql_v3.query_integer_eq", "eql_v3.query_jsonb"],
+        "repeat install must recreate the eql_v3 query-operand domains"
     );
 
     Ok(())
@@ -178,7 +197,6 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
 
     let scalar_payload = r#"{"v":3,"i":{},"c":"scalar-42","hm":"hm-42"}"#;
     let json_payload = r#"{"i":{},"v":3,"sv":[{"s":"age","c":"cipher-age","hm":"hm-age"}]}"#;
-    let query_payload = r#"{"sv":[{"s":"age","hm":"hm-age"}]}"#;
     let entry_payload = r#"{"s":"age","c":"cipher-age","hm":"hm-age"}"#;
 
     sqlx::query(
@@ -187,7 +205,6 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
           id integer PRIMARY KEY,
           scalar_value public.integer_eq NOT NULL,
           doc_value public.json NOT NULL,
-          query_value public.jsonb_query NOT NULL,
           entry_value public.jsonb_entry
         )
         "#,
@@ -198,21 +215,34 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
     sqlx::query(
         r#"
         INSERT INTO public.eql_v3_uninstall_preserve
-          (id, scalar_value, doc_value, query_value, entry_value)
+          (id, scalar_value, doc_value, entry_value)
         VALUES
           (
             1,
             $1::jsonb::public.integer_eq,
             $2::jsonb::public.json,
-            $3::jsonb::public.jsonb_query,
-            $4::jsonb::public.jsonb_entry
+            $3::jsonb::public.jsonb_entry
           )
         "#,
     )
     .bind(scalar_payload)
     .bind(json_payload)
-    .bind(query_payload)
     .bind(entry_payload)
+    .execute(&pool)
+    .await?;
+
+    // The inverse contract (CIP-3442): a query-operand domain is NOT a column
+    // type and lives in the EQL-owned eql_v3 schema, so a column misusing it
+    // is dropped with the schema. Pin that a table holding one loses exactly
+    // that column on uninstall (CASCADE), while the table itself survives.
+    sqlx::query(
+        r#"
+        CREATE TABLE public.eql_v3_uninstall_query_misuse (
+          id integer PRIMARY KEY,
+          misused_query_value eql_v3.query_jsonb
+        )
+        "#,
+    )
     .execute(&pool)
     .await?;
 
@@ -260,22 +290,15 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
             "pg_catalog.int4",
             "public.integer_eq",
             "public.json",
-            "public.jsonb_query",
             "public.jsonb_entry",
         ]
     );
 
-    let values: (
-        serde_json::Value,
-        serde_json::Value,
-        serde_json::Value,
-        serde_json::Value,
-    ) = sqlx::query_as(
+    let values: (serde_json::Value, serde_json::Value, serde_json::Value) = sqlx::query_as(
         r#"
         SELECT
           scalar_value::jsonb,
           doc_value::jsonb,
-          query_value::jsonb,
           entry_value::jsonb
         FROM public.eql_v3_uninstall_preserve
         WHERE id = 1
@@ -293,11 +316,35 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
     );
     assert_eq!(
         values.2,
-        serde_json::from_str::<serde_json::Value>(query_payload)?
-    );
-    assert_eq!(
-        values.3,
         serde_json::from_str::<serde_json::Value>(entry_payload)?
+    );
+
+    // The misuse table survives, but its query-operand column went down with
+    // the eql_v3 schema (DROP SCHEMA ... CASCADE drops the domain, which
+    // cascades to columns of that type).
+    assert!(
+        table_exists(&pool, "eql_v3_uninstall_query_misuse").await?,
+        "the misuse table itself must survive uninstall"
+    );
+    let misuse_columns: Vec<String> = sqlx::query_scalar(
+        r#"
+        SELECT a.attname
+        FROM pg_catalog.pg_attribute a
+        JOIN pg_catalog.pg_class c ON c.oid = a.attrelid
+        JOIN pg_catalog.pg_namespace cn ON cn.oid = c.relnamespace
+        WHERE cn.nspname = 'public'
+          AND c.relname = 'eql_v3_uninstall_query_misuse'
+          AND a.attnum > 0
+          AND NOT a.attisdropped
+        ORDER BY a.attnum
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+    assert_eq!(
+        misuse_columns,
+        vec!["id"],
+        "a column typed as an eql_v3 query-operand domain is dropped with the schema"
     );
 
     Ok(())

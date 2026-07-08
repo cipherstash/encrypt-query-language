@@ -66,7 +66,7 @@
 //! `eql_v3.to_ste_vec_query` does (stray `a` markers and `c` ciphertexts are
 //! stripped). A term-bearing scalar target hoists the target's required terms
 //! into the enveloped term-only operand `{v: 3, i, <terms>}` for its
-//! `<name>_query` domain — the query counterpart of the stored conversion,
+//! `query_<name>` domain — the query counterpart of the stored conversion,
 //! dropping `c`/`k` (CIP-3432). A STORAGE-ONLY scalar target (no terms, no
 //! operators) has no query operand and returns
 //! [`FromV2Error::UnsupportedQueryTarget`].
@@ -173,7 +173,7 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
 ///
 /// A term-bearing [`TargetDomain::Scalar`]: the target's required terms are
 /// hoisted into the enveloped term-only operand `{v: 3, i, <terms>}` for its
-/// `<name>_query` domain, dropping `c`/`k` (`bf` reinterpreted to signed
+/// `query_<name>` domain, dropping `c`/`k` (`bf` reinterpreted to signed
 /// `smallint[]`). A storage-only scalar target has no operators and returns
 /// [`FromV2Error::UnsupportedQueryTarget`].
 ///
@@ -183,7 +183,7 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
 pub fn from_v2_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     let out = convert_query(v2, target)?;
     // Validate through the generated QueryPayload strict parser (the query-side
-    // counterpart of validate_as), keyed on the target's `<name>_query` domain.
+    // counterpart of validate_as), keyed on the target's `query_<name>` domain.
     parse_query(&query_domain_name(target), &out)?;
     Ok(out)
 }
@@ -202,7 +202,7 @@ pub fn from_v2_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Er
 ///
 /// Storage-only scalar targets fail with
 /// [`FromV2Error::UnsupportedQueryTarget`] exactly like [`from_v2_query`];
-/// term-bearing scalars yield the matching `<name>_query` [`QueryPayload`]
+/// term-bearing scalars yield the matching `query_<name>` [`QueryPayload`]
 /// variant.
 pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayload, FromV2Error> {
     let out = convert_query(v2, target)?;
@@ -210,12 +210,13 @@ pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayl
 }
 
 /// The unqualified query-operand domain a target converts into: the scalar
-/// twin `<name>_query`, or `jsonb_query` for the SteVec needle. (Replaces the
-/// old single `QUERY_DOMAIN` constant now that scalar query shapes exist.)
+/// twin `query_<name>`, or `query_jsonb` for the hand-written SteVec needle —
+/// both on the query-operand PREFIX convention (CIP-3442). (Replaces the old
+/// single `QUERY_DOMAIN` constant now that scalar query shapes exist.)
 fn query_domain_name(target: TargetDomain) -> String {
     match target {
-        TargetDomain::Json => "jsonb_query".to_string(),
-        TargetDomain::Scalar(t) => format!("{}_query", t.domain()),
+        TargetDomain::Json => "query_jsonb".to_string(),
+        TargetDomain::Scalar(t) => format!("query_{}", t.domain()),
     }
 }
 
@@ -243,7 +244,7 @@ fn convert_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error>
 }
 
 /// v2 scalar query payload → v3 enveloped term-only operand `{v: 3, i,
-/// <terms>}` for `target`'s `<name>_query` domain. Hoists exactly the target's
+/// <terms>}` for `target`'s `query_<name>` domain. Hoists exactly the target's
 /// required terms out of the v2 payload (a query operand may omit the v2
 /// envelope), dropping `c`/`k` — the query counterpart of [`convert_scalar`]
 /// (which keeps `c`). A STORAGE-ONLY target (no terms, no operators) has no
@@ -335,7 +336,7 @@ fn validate_as(domain: &str, value: &Value) -> Result<(), FromV2Error> {
         .find(|d| d.domain() == domain)
         .unwrap_or_else(|| {
             // `domain` always came from the same inventory via
-            // `TargetDomain::parse` (or is the literal "json"/"jsonb_query").
+            // `TargetDomain::parse` (or is the literal "json"/"query_jsonb").
             unreachable!("domain {domain} resolved by parse must be in the inventory")
         });
     entry.parse_value(value).map_err(FromV2Error::Invalid)
@@ -483,7 +484,7 @@ impl EntryShape {
     fn domain(self) -> &'static str {
         match self {
             Self::Document => "json",
-            Self::Query => "jsonb_query",
+            Self::Query => "query_jsonb",
         }
     }
 }

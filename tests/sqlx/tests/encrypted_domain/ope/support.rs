@@ -257,9 +257,10 @@ macro_rules! ope_ord_fixture_smoke {
             );
 
             // CIP-3432: the term-only query operand — the pivot payload minus
-            // its ciphertext `c`, cast to `<domain>_query`. Every predicate must
-            // match the SAME oracle through the `(storage, <domain>_query)`
-            // operators as through the full-envelope operand.
+            // its ciphertext `c`, cast to `query_<domain>` (prefix naming —
+            // CIP-3442). Every predicate must match the SAME oracle through the
+            // `(storage, query_<domain>)` operators as through the
+            // full-envelope operand.
             let pivot_query_cast = {
                 let mut v: serde_json::Value =
                     serde_json::from_str(&pivot_json).expect("pivot payload is valid JSON");
@@ -267,7 +268,7 @@ macro_rules! ope_ord_fixture_smoke {
                     o.remove("c");
                 }
                 format!(
-                    "'{}'::jsonb::public.{}_query",
+                    "'{}'::jsonb::eql_v3.query_{}",
                     v.to_string().replace('\'', "''"),
                     $domain
                 )

@@ -9,7 +9,10 @@ use std::marker::PhantomData;
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::Deserialize;
 
-/// The PostgreSQL schema every user-column domain in this module inhabits.
+/// The PostgreSQL schema every user-COLUMN domain in this module inhabits.
+/// The `query_<name>` operand twins are NOT column types and live in `eql_v3`
+/// instead (CIP-3442) — dropping the EQL-owned schema can never drop an
+/// application column, and a query operand is never an application column.
 pub const SQL_SCHEMA: &str = "public";
 
 /// Base URL for the canonical `$id` of every published v3 JSON Schema.
@@ -41,12 +44,14 @@ pub trait DomainType {
     fn sql_domain(&self) -> &'static str;
 
     /// Unqualified SQL domain name (e.g. `"integer_eq"`) — [`Self::sql_domain`]
-    /// minus the schema qualifier; matches `eql-domains`
+    /// minus the schema qualifier (`public.` for column domains, `eql_v3.` for
+    /// the query-operand twins); matches `eql-domains`
     /// `DomainFamily::domain_name`.
     fn domain(&self) -> &'static str {
         self.sql_domain()
-            .strip_prefix("public.")
-            .expect("sql_domain must be qualified with the public schema")
+            .split_once('.')
+            .expect("sql_domain must be schema-qualified")
+            .1
     }
 
     /// Canonical `$id` for this domain's published JSON Schema —

@@ -23,17 +23,63 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-/// #1 — Every operator that operates on an `eql_v3` domain and is backed by a
+/// Every EQL COLUMN-domain name in the `public` schema, from the catalog: the
+/// storage and capability domains of every family. The jsonb needle
+/// (`query_jsonb`) is a query operand and lives in `eql_v3`, so `full_name`s
+/// starting with `query_` are excluded here (see [`eql_query_domain_names`]).
+/// The structural scan below identifies "an EQL operator" by these names —
+/// the column domains deliberately live in `public` (dropping EQL-owned
+/// schemas must not drop application columns), so a namespace filter alone
+/// cannot find them.
+fn eql_public_domain_names() -> Vec<String> {
+    eql_domains::CATALOG
+        .iter()
+        .flat_map(|f| f.domains.iter().map(move |d| d.full_name(f.name)))
+        .filter(|n| !n.starts_with("query_"))
+        .collect()
+}
+
+/// Every EQL QUERY-OPERAND domain name, from the catalog: the `query_<name>`
+/// twin of every term-bearing scalar domain plus the jsonb containment needle
+/// (`query_jsonb`). These live in the `eql_v3` schema (CIP-3442) — never
+/// valid column types, so they don't share the column domains' `public` home.
+fn eql_query_domain_names() -> Vec<String> {
+    let mut names: Vec<String> = eql_domains::scalar_families()
+        .flat_map(|f| {
+            f.domains
+                .iter()
+                .filter(|d| !d.terms.is_empty())
+                .map(move |d| d.query_name(f.name))
+        })
+        .collect();
+    names.push("query_jsonb".to_string());
+    names
+}
+
+/// #1 — Every operator that operates on an EQL domain and is backed by a
 /// real comparison WRAPPER (a `LANGUAGE sql` function — blockers are
 /// `LANGUAGE plpgsql`) must have that wrapper in the PUBLIC `eql_v3` schema.
 ///
 /// An offender is a supported operator whose function equivalent is hidden in
 /// `eql_v3_internal`, where an operator-free caller cannot reach it.
+///
+/// EQL operands are identified by catalog name in their home namespace —
+/// column domains in `public`, query-operand twins in `eql_v3` (an earlier
+/// bare `nspname = 'eql_v3'` filter matched zero operators, before the query
+/// domains moved there, and the scan passed vacuously). The test first
+/// asserts the scan MATCHES a healthy number of operators, so it can never
+/// silently rot back into vacuous-pass.
 #[sqlx::test]
 async fn every_supported_eql_v3_operator_has_a_public_function_equivalent(
     pool: PgPool,
 ) -> Result<()> {
-    let offenders: Vec<(String, String, String)> = sqlx::query_as(
+    let column_domains = eql_public_domain_names();
+    let query_domains = eql_query_domain_names();
+
+    // All operators touching an EQL domain, wrapper-backed (LANGUAGE sql) or
+    // not, with the backing function's schema. One scan, partitioned in Rust:
+    // non-vacuousness first, then the offender assertion.
+    let scanned: Vec<(String, String, String, String)> = sqlx::query_as(
         r#"
         SELECT
           o.oprname::text,
@@ -41,7 +87,8 @@ async fn every_supported_eql_v3_operator_has_a_public_function_equivalent(
           format('%s %s %s',
                  lt.typname,
                  o.oprname,
-                 COALESCE(rt.typname, '')) AS operator_shape
+                 COALESCE(rt.typname, '')) AS operator_shape,
+          l.lanname::text
         FROM pg_catalog.pg_operator o
         JOIN pg_catalog.pg_proc       p  ON p.oid = o.oprcode
         JOIN pg_catalog.pg_namespace  pn ON pn.oid = p.pronamespace
@@ -50,14 +97,38 @@ async fn every_supported_eql_v3_operator_has_a_public_function_equivalent(
         JOIN pg_catalog.pg_namespace  ln ON ln.oid = lt.typnamespace
         LEFT JOIN pg_catalog.pg_type      rt ON rt.oid = o.oprright
         LEFT JOIN pg_catalog.pg_namespace rn ON rn.oid = rt.typnamespace
-        WHERE (ln.nspname = 'eql_v3' OR rn.nspname = 'eql_v3')  -- touches an eql_v3 domain
-          AND l.lanname = 'sql'          -- a supported wrapper, not a plpgsql blocker
-          AND pn.nspname <> 'eql_v3'     -- OFFENDER: backing wrapper is not public
+        WHERE (ln.nspname = 'public' AND lt.typname = ANY($1))
+           OR (rn.nspname = 'public' AND rt.typname = ANY($1))
+           OR (ln.nspname = 'eql_v3' AND lt.typname = ANY($2))
+           OR (rn.nspname = 'eql_v3' AND rt.typname = ANY($2))
         ORDER BY 3, 1
         "#,
     )
+    .bind(&column_domains)
+    .bind(&query_domains)
     .fetch_all(&pool)
     .await?;
+
+    // Anti-vacuousness guard: the generated surface binds hundreds of
+    // operators to EQL domains (10 scalar families x supported ops x operand
+    // shapes, plus the jsonb surface). If the scan stops matching, the filter
+    // is broken — fail loudly instead of passing on an empty set.
+    assert!(
+        scanned.len() >= 100,
+        "the structural scan matched only {} operators on EQL domains — the \
+         domain-name filter is broken (vacuous pass), fix the query instead of \
+         trusting an empty offender list",
+        scanned.len()
+    );
+
+    // A supported wrapper is LANGUAGE sql (blockers are plpgsql and stay
+    // internal by design). Its backing function must be public.
+    let offenders: Vec<&(String, String, String, String)> = scanned
+        .iter()
+        .filter(|(_, backing_fn, _, lanname)| {
+            lanname == "sql" && !backing_fn.starts_with("eql_v3.")
+        })
+        .collect();
 
     assert!(
         offenders.is_empty(),

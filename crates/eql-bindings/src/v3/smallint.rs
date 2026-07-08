@@ -165,7 +165,7 @@ impl DomainType for SmallintOrdOpe {
         schema_for!(SmallintOrdOpe)
     }
 }
-/// `public.smallint_eq_query` — equality domain query operand.
+/// `eql_v3.query_smallint_eq` — equality domain query operand.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -178,7 +178,7 @@ pub struct SmallintEqQuery {
 }
 impl DomainType for SmallintEqQuery {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_eq_query"
+        "eql_v3.query_smallint_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -196,7 +196,7 @@ impl DomainType for SmallintEqQuery {
         schema_for!(SmallintEqQuery)
     }
 }
-/// `public.smallint_ord_ore_query` — ordering domain query operand.
+/// `eql_v3.query_smallint_ord_ore` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -209,7 +209,7 @@ pub struct SmallintOrdOreQuery {
 }
 impl DomainType for SmallintOrdOreQuery {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_ord_ore_query"
+        "eql_v3.query_smallint_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -227,7 +227,7 @@ impl DomainType for SmallintOrdOreQuery {
         schema_for!(SmallintOrdOreQuery)
     }
 }
-/// `public.smallint_ord_query` — ordering domain query operand.
+/// `eql_v3.query_smallint_ord` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -240,7 +240,7 @@ pub struct SmallintOrdQuery {
 }
 impl DomainType for SmallintOrdQuery {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_ord_query"
+        "eql_v3.query_smallint_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -258,7 +258,7 @@ impl DomainType for SmallintOrdQuery {
         schema_for!(SmallintOrdQuery)
     }
 }
-/// `public.smallint_ord_ope_query` — ordering domain query operand.
+/// `eql_v3.query_smallint_ord_ope` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -271,7 +271,7 @@ pub struct SmallintOrdOpeQuery {
 }
 impl DomainType for SmallintOrdOpeQuery {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_ord_ope_query"
+        "eql_v3.query_smallint_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

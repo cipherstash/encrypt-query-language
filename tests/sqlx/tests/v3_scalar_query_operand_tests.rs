@@ -1,11 +1,11 @@
-//! CIP-3432 conformance: a term-only query operand (`public.<name>_query` — the
+//! CIP-3432 conformance: a term-only query operand (`eql_v3.query_<name>` — the
 //! index terms only, NO ciphertext `c`) matches stored rows through the
 //! generated query operators, using FRESH ZeroKMS encryption for both the
 //! stored values AND the query value.
 //!
 //! This is the end-to-end proof the operator surface exists for: two
 //! INDEPENDENT encryptions of the same plaintext produce equal index terms that
-//! the `(storage_domain, <name>_query)` operator equates — with the query
+//! the `(storage_domain, query_<name>)` operator equates — with the query
 //! operand carrying no decryptable ciphertext. Gated behind `proptest-e2e`
 //! (needs `CS_*` creds at test time), like the rest of the fresh-encryption
 //! suite.
@@ -61,7 +61,7 @@ async fn eq_term_only_operand_matches_exactly_the_equal_rows(pool: PgPool) -> Re
     );
 
     let matches: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM q WHERE val = $1::jsonb::public.integer_eq_query")
+        sqlx::query_scalar("SELECT count(*) FROM q WHERE val = $1::jsonb::eql_v3.query_integer_eq")
             .bind(operand.to_string())
             .fetch_one(&pool)
             .await?;
@@ -73,7 +73,7 @@ async fn eq_term_only_operand_matches_exactly_the_equal_rows(pool: PgPool) -> Re
     // A value never stored matches nothing (the eq-false branch).
     let absent = to_query_operand(encrypt_one(99, &[IndexKind::Unique]).await?);
     let none: i64 =
-        sqlx::query_scalar("SELECT count(*) FROM q WHERE val = $1::jsonb::public.integer_eq_query")
+        sqlx::query_scalar("SELECT count(*) FROM q WHERE val = $1::jsonb::eql_v3.query_integer_eq")
             .bind(absent.to_string())
             .fetch_one(&pool)
             .await?;
@@ -98,7 +98,7 @@ async fn ord_term_only_operand_orders_via_the_ore_operator(pool: PgPool) -> Resu
     // A term-only ordering operand for 25 (never stored): `< 25` → {10, 20}.
     let operand = to_query_operand(encrypt_one(25, &[IndexKind::Ore]).await?);
     let below: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM q WHERE val < $1::jsonb::public.integer_ord_query",
+        "SELECT count(*) FROM q WHERE val < $1::jsonb::eql_v3.query_integer_ord",
     )
     .bind(operand.to_string())
     .fetch_one(&pool)
@@ -107,7 +107,7 @@ async fn ord_term_only_operand_orders_via_the_ore_operator(pool: PgPool) -> Resu
 
     // The commutator direction resolves too: `operand > val`.
     let above: i64 = sqlx::query_scalar(
-        "SELECT count(*) FROM q WHERE $1::jsonb::public.integer_ord_query > val",
+        "SELECT count(*) FROM q WHERE $1::jsonb::eql_v3.query_integer_ord > val",
     )
     .bind(operand.to_string())
     .fetch_one(&pool)
@@ -125,7 +125,7 @@ async fn query_domain_rejects_a_ciphertext_bearing_operand(pool: PgPool) -> Resu
     // `c`) must not be accepted as a query operand.
     let stored = encrypt_one(7, &[IndexKind::Unique]).await?;
     assert!(stored.as_object().unwrap().contains_key("c"));
-    let err = sqlx::query("SELECT $1::jsonb::public.integer_eq_query")
+    let err = sqlx::query("SELECT $1::jsonb::eql_v3.query_integer_eq")
         .bind(stored.to_string())
         .execute(&pool)
         .await

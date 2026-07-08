@@ -190,7 +190,7 @@ flowchart LR
 | `boolean` | Bool | storage-only (2-value cardinality leak → no searchable index) |
 
 **`jsonb` sits outside this classification.** It carries three domains — `public.json`
-(document), `public.jsonb_entry` (one `sv` leaf), `public.jsonb_query` (containment
+(document), `public.jsonb_entry` (one `sv` leaf), `eql_v3.query_jsonb` (containment
 needle) — each tagged `Shape::SteVec` rather than `Shape::Scalar`, with an empty flat
 `terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`
 XOR `oc`), not as a family-level `Term` set. `Domain.name` (`"json"`/`"entry"`/`"query"`)
