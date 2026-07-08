@@ -208,20 +208,24 @@ Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural feature
 
 ## Release & changelog discipline
 
-EQL maintains a [Keep-a-Changelog](https://keepachangelog.com/en/1.1.0/)-style `CHANGELOG.md` and per-version upgrade guides under `docs/upgrading/`. The conventions are documented at the top of `CHANGELOG.md`; what follows is what to do when working in this repo.
+EQL's release version and `CHANGELOG.md` are both owned by **[Changesets](https://github.com/changesets/changesets)**. `@cipherstash/eql`'s package version is the single source of truth for the release identity `V` (SQL, the crate, and npm all ship at `V` — see `docs/development/releasing.md`), and `CHANGELOG.md` is **generated from the `.changeset/*.md` files** you add, not hand-edited. Per-version upgrade guides live under `docs/upgrading/`. What follows is what to do when working in this repo.
 
-**Cutting a release is scripted — don't hand-roll `gh release create`.** There are two paths:
+**Cutting a release is scripted — don't hand-roll `gh release create`, and don't hand-edit `CHANGELOG.md`.** The single entrypoint is `.github/workflows/release.yml`:
 
-- **Prerelease:** use the unified `release.yml` workflow. On `main` it runs the production release path; on `eql_v3` it only publishes when the push is an explicit conventional release commit (`chore(release): ...`). Release-relevant work happens in CI, and prerelease runs still build SQL + docs + language packages in the same workflow. The npm package is published directly by `release.yml`; the Rust crate still publishes via `release-plz.yml` because crates.io Trusted Publishing needs that workflow entry point. Validate on a scratch branch before cutting a real prerelease — a package publish is irreversible. It deliberately does **not** touch `CHANGELOG.md` for prereleases (`[Unreleased]` stays put). Full reference: **`docs/development/releasing.md`**.
-- **Final (non-prerelease) release:** follow **"Cutting a release"** below — this one *does* promote `[Unreleased]` → `[<version>]` in `CHANGELOG.md`. Finals are cut from `main` through the unified `release.yml` (changesets versions/publishes, then the same run builds and attaches the SQL + docs release).
+- **Final (non-prerelease) release** — from `main`. Changesets maintains a "Version Packages" PR that bumps `V` **and writes the `CHANGELOG.md` section** from the pending changesets; merging that PR triggers `release.yml` to publish npm, publish the crate (via `release-plz.yml`, which crates.io Trusted Publishing requires as the entry point), and build + attach the `eql-<V>` SQL + docs release.
+- **Prerelease (alpha/beta/rc)** — from `eql_v3`, via an explicit conventional release commit (`chore(release): ...`) that already pins the prerelease version (Changesets pre-mode). `release.yml` builds SQL + docs and publishes all language packages in one run. Validate on a scratch branch before cutting a real prerelease — a package publish is irreversible.
+
+Full reference for both: **`docs/development/releasing.md`**.
 
 The **language binding packages** are generated from the same `eql-domains::CATALOG` as the SQL surface: the **`eql-bindings` crate** (published to crates.io by **release-plz**, tagged `eql-bindings-v<semver>`) and the **`@cipherstash/eql` npm package** (published via npm Trusted Publishing from `release.yml`, tagged `eql-typescript-v<identity>`). Both bundle the exact self-contained SQL installer/uninstaller they were generated against (the crate exposes it as `eql_bindings::sql`; the npm package via its `./sql` subpath exports). Prerelease release commits on `eql_v3` carry the committed version and bundled SQL for the release; `release.yml` publishes that commit as the prerelease and then dispatches `release-plz.yml` for the crate. release-plz publishes the committed `Cargo.toml` version verbatim and has no absolute-version config, so the release commit must already carry the version pin.
 
 ### When you make a user-facing change
 
-If your PR adds, changes, removes, deprecates, or fixes anything observable to a caller — new function, new operator, behaviour change, error message change, performance characteristic that callers might notice (e.g. an index now engages), changed default — **add an entry under `## [Unreleased]` in `CHANGELOG.md` as part of the same PR.**
+If your PR adds, changes, removes, deprecates, or fixes anything observable to a caller — new function, new operator, behaviour change, error message change, performance characteristic that callers might notice (e.g. an index now engages), changed default — **add a changeset in the same PR** (`pnpm changeset`, or hand-write a `.changeset/<name>.md`). Do **not** edit `CHANGELOG.md` directly — Changesets assembles it from changeset files at release time.
 
-User-facing means: someone outside EQL would care. If in doubt, add the entry; it's cheap.
+Because SQL, the crate, and npm all release in lockstep at one version, **every releasable change needs a changeset** — including SQL-only or crate-only changes. See `.changeset/README.md`.
+
+User-facing means: someone outside EQL would care. If in doubt, add the changeset; it's cheap.
 
 What does *not* need an entry:
 
@@ -231,13 +235,22 @@ What does *not* need an entry:
 - Documentation typo fixes
 - Doxygen comments
 
-### How to write the entry
+### How to write the changeset
 
-Pick the right section (`Added` / `Changed` / `Deprecated` / `Removed` / `Fixed` / `Security`). Lead with the user-visible fact, then a short "Why." explanation, then a PR link in parentheses. Match the tone and density of existing entries — a single dense paragraph per entry, not a bullet list.
+A changeset is a small markdown file: YAML frontmatter selecting the bump type, then the entry body.
 
-Example entry (real entry from `2.3.0`):
+```md
+---
+'@cipherstash/eql': minor   # patch | minor | major — see Versioning below
+---
 
-> **`=`, `<>`, `~~` (`LIKE`), `~~*` (`ILIKE`) on `eql_v2_encrypted` are now inlinable SQL functions.** The planner can structurally match these operators against the documented functional indexes (`eql_v2.hmac_256(col)` for equality, `eql_v2.bloom_filter(col)` for `LIKE`/`ILIKE`), so bare-form queries (`WHERE col = $1`) engage the index without per-query rewriting. Previously these operators wrapped multi-branch PL/pgSQL bodies that the planner could not inline, forcing seq scans on Supabase / managed Postgres installations that lack operator-class indexes. ([#193](...), [#196](...))
+**Lead with the user-visible fact.** Then a short "Why." explanation. Match the tone
+and density of existing entries — a single dense paragraph, not a bullet list.
+```
+
+The body becomes the `CHANGELOG.md` entry; Changesets adds the version heading and the PR/commit link (don't add one by hand). Example body (adapted from `2.3.0`):
+
+> **`=`, `<>`, `~~` (`LIKE`), `~~*` (`ILIKE`) on `eql_v2_encrypted` are now inlinable SQL functions.** The planner can structurally match these operators against the documented functional indexes (`eql_v2.hmac_256(col)` for equality, `eql_v2.bloom_filter(col)` for `LIKE`/`ILIKE`), so bare-form queries (`WHERE col = $1`) engage the index without per-query rewriting. Previously these operators wrapped multi-branch PL/pgSQL bodies that the planner could not inline, forcing seq scans on Supabase / managed Postgres installations that lack operator-class indexes.
 
 ### When a change warrants an upgrade note
 
@@ -258,14 +271,14 @@ The `eql_v3` PostgreSQL schema name is part of the public API and is **independe
 - **Minor (`2.x.0`)** — additive changes, behaviour changes that don't break the public API (signatures, schema name, payload format, operator names)
 - **Major (`3.0.0`)** — only for changes that break the public API. Do not reach for a major bump just because a behaviour change has wide blast radius — that's what upgrade notes are for.
 
+Declare the chosen bump in your changeset's frontmatter (`'@cipherstash/eql': patch|minor|major`). Changesets aggregates all pending changesets to compute the next `V`, which `sync-lockstep-versions.mjs` then propagates to the crate and the bundled SQL.
+
 ### Cutting a release
 
-This section is for **final (non-prerelease) releases**. For an alpha/beta/rc, cut a prerelease from the `eql_v3` branch via the unified `release.yml` workflow — push an explicit `chore(release): ...` commit that already pins the prerelease version in `packages/eql/package.json` — see the pointer at the top of this section and `docs/development/releasing.md`.
+Releases are cut by **Changesets**, not by hand — see **`docs/development/releasing.md`** for the full runbook (production and prerelease). In short, for a final release from `main`:
 
-When a release is being prepared:
+1. Ensure the work to release has merged to `main`, each PR carrying a changeset.
+2. Changesets maintains a **"Version Packages" PR** that bumps `V` and writes the `CHANGELOG.md` section from the pending changesets. Review it.
+3. Merge that PR. `release.yml` then publishes npm, dispatches the crate publish, and builds + attaches the `eql-<V>` SQL + docs release automatically.
 
-1. Confirm `[Unreleased]` is non-empty and entries are coherent.
-2. Rename `## [Unreleased]` to `## [<version>] — YYYY-MM-DD` and add a fresh empty `[Unreleased]` above it.
-3. Update the link references at the bottom of `CHANGELOG.md` (new `[Unreleased]` compare URL, new `[<version>]` tag URL).
-4. Commit to `main`. The unified `release.yml` workflow publishes the release and builds + attaches the SQL + docs artefacts to the `eql-<version>` release it creates.
-5. The `[<version>]` section is the GitHub release body — paste it verbatim.
+Do not hand-edit `CHANGELOG.md` or create the GitHub release manually — Changesets and `release.yml` own all of it.

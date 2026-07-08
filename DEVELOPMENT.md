@@ -402,23 +402,21 @@ generation tasks (`mise run docs:generate`).
 
 ## Releasing
 
-To cut a [release](https://github.com/cipherstash/encrypt-query-language/releases) of EQL:
+EQL releases through a single workflow, `.github/workflows/release.yml`, driven
+by **[Changesets](https://github.com/changesets/changesets)** — you do not create
+GitHub releases by hand. Finals are cut from `main` (merge the Changesets
+"Version Packages" PR); prereleases from `eql_v3` (an explicit `chore(release):`
+commit). `release.yml` builds and attaches the SQL + docs artifacts, publishes
+the `@cipherstash/eql` npm package and the `eql-bindings` crate, and creates the
+`eql-<version>` release — all at one lockstep version.
 
-1. Draft a [new release](https://github.com/cipherstash/encrypt-query-language/releases/new) on GitHub.
-1. Choose a tag, and create a new one with the prefix `eql-` followed by a
-   [semver](https://semver.org/) (for example, `eql-1.2.3`).
-1. Generate the release notes.
-1. Optionally set the release to be the latest (you can mark a release as latest
-   later if you are testing it first).
-1. Click `Publish release`.
+For the full runbook and release architecture, see
+**[`docs/development/releasing.md`](./docs/development/releasing.md)**.
 
-This triggers the
-[Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release-eql.yml)
-workflow, which builds and attaches artifacts to the release.
-
-See `CHANGELOG.md` and `docs/upgrading/` for changelog and upgrade-note
-discipline — user-facing changes need a `## [Unreleased]` changelog entry in the
-same PR, and behaviour callers should be aware of needs a numbered upgrade note.
+User-facing changes need a **changeset** in the same PR (`pnpm changeset`) —
+Changesets assembles `CHANGELOG.md` and computes the version from these files, so
+do not hand-edit `CHANGELOG.md`. Behaviour callers should be aware of also needs
+a numbered upgrade note under `docs/upgrading/`.
 
 #### Public documentation updates
 

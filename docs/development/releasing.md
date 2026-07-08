@@ -87,12 +87,16 @@ The **Rust crate** publishes in parallel: merging the Version PR is a push to
 Changesets, not release-plz). It publishes the committed `Cargo.toml` `V` to
 crates.io and tags `eql-bindings-vV`.
 
-### Cutting the changelog for a final release
+### Changelog
 
-EQL keeps a Keep-a-Changelog `CHANGELOG.md`. When promoting to a final release,
-rename `## [Unreleased]` to `## [V] — YYYY-MM-DD`, add a fresh empty
-`[Unreleased]`, and update the link references at the bottom. See the
-**"Cutting a release"** section of `CLAUDE.md` for the changelog discipline.
+`CHANGELOG.md` is owned by **Changesets** — it is generated from the
+`.changeset/*.md` files, not hand-edited. Every releasable change adds a
+changeset (`pnpm changeset`): its frontmatter selects the bump
+(`patch`/`minor`/`major`) and its body becomes the entry. `changeset version`
+(run in the "Version Packages" PR for finals, and locally in pre-mode when
+pinning a prerelease) writes the versioned section and computes `V`. See
+`.changeset/README.md` and the **"Release & changelog discipline"** section of
+`CLAUDE.md`.
 
 ## Prerelease / alpha (`eql_v3`)
 
@@ -119,9 +123,11 @@ that is **already pinned** in the repo.
    - `prerelease-publish-rust` → dispatches `release-plz.yml --ref eql_v3` to
      publish the crate and tag `eql-bindings-vV`.
 
-Prereleases **do not** promote `[Unreleased]` in `CHANGELOG.md` (entries stay
-put) and **do not** build the Docker image (floating tags must not move for an
-alpha; build one on demand via the image workflow's `workflow_dispatch`).
+Prereleases keep the pending changesets **unconsumed** — Changesets pre-mode
+emits a `X.Y.Z-alpha.N` entry but the changesets are only finalized into the
+release section when the final version is cut — and **do not** build the Docker
+image (floating tags must not move for an alpha; build one on demand via the
+image workflow's `workflow_dispatch`).
 
 ```bash
 # Cut the prerelease (after the chore(release): commit is on eql_v3):
