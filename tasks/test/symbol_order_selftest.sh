@@ -60,4 +60,12 @@ printf '%s\n' "$tmp/opclass.sql" > "$tmp/opclass_order.txt"
 bash tasks/test/verify_symbol_order_v3.sh "$tmp/opclass_order.txt" \
   || { echo "FAIL: CREATE OPERATOR CLASS/FAMILY definer not recognised"; exit 1; }
 echo "ok: CREATE OPERATOR CLASS/FAMILY definition form recognised"
+
+# An UNREADABLE path in the ordered list must FAIL the gate, not be silently
+# skipped as an empty file (a skipped file's definitions/references go unchecked).
+printf '%s\n' "$tmp/does-not-exist.sql" > "$tmp/missing_order.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/missing_order.txt" 2>/dev/null; then
+  echo "FAIL: unreadable path silently accepted"; exit 1
+fi
+echo "ok: unreadable path rejected"
 echo "symbol-order self-test passed"

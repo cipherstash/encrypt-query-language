@@ -7,7 +7,13 @@
 # (allows leading whitespace) so a body line that merely contains the substring
 # "REQUIRE" survives — unlike the old unanchored `grep -v REQUIRE`.
 strip_require_lines() {
-  grep -vE '^[[:space:]]*-- REQUIRE:' "$1" || true
+  local rc=0
+  grep -vE '^[[:space:]]*-- REQUIRE:' "$1" || rc=$?
+  # grep exits 1 when EVERY line matched the exclude (nothing left) — not an
+  # error. Exit codes >= 2 (missing file, unreadable, bad regex) are real
+  # failures: propagate so `set -e` aborts assembly instead of silently emitting
+  # a truncated monolith. (The blanket `|| true` this replaces hid exit 2.)
+  (( rc <= 1 ))
 }
 
 # tsort with a cross-platform cycle gate. Input edges are "<dep> <file>" (one per

@@ -20,6 +20,15 @@ awk -v allowfile="$ALLOW" '
   {
     idx++
     file = $0
+    # Fail loudly on an UNREADABLE path rather than silently treating it as an
+    # empty (zero-definition) file: getline returns -1 on error but 0 at EOF for
+    # a genuinely empty file, so only -1 is a fault. This guards both passes — a
+    # file flagged here sets bad=1, and the END block exits non-zero.
+    if ((getline probe < file) < 0) {
+      printf("ERROR: cannot read %s (listed in the ordered file)\n", file) > "/dev/stderr"
+      bad = 1
+    }
+    close(file)
     # First pass over the file: record DEFINITIONS with this index (min index kept).
     while ((getline line < file) > 0) {
       # Strip trailing line comments so prose/doxygen never counts as code.
