@@ -77,8 +77,9 @@ mkdir -p release
 rm -f release/cipherstash-encrypt.sql
 rm -f release/cipherstash-encrypt-uninstall.sql
 
-rm -f src/deps-v3.txt
-rm -f src/deps-ordered-v3.txt
+# Truncate the build intermediates we APPEND to below. The generated-*.txt files
+# are (re)written wholesale by eql-codegen above, so they are NOT removed here.
+rm -f src/deps-v3.txt src/deps-ordered-v3.txt src/handwritten-deps-v3.txt src/handwritten-ordered-v3.txt
 rm -f src/v3/version.sql
 
 
@@ -99,21 +100,40 @@ sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/v3/version.template > src/v3/ve
 find src/v3 -type f -path "*.sql" ! -path "*_test.sql" -print0 \
   | LC_ALL=C sort -z \
   | while IFS= read -r -d '' sql_file; do
-      # self-edge: isolated files still appear in tsort output. A self-edge is a
-      # tsort no-op, not a cycle (see run_tsort_or_die), so it is safe here.
-      echo "$sql_file $sql_file" >> src/deps-v3.txt
+      IFS= read -r first < "$sql_file" || first=""
+      # Generated scalar files are ordered by eql-codegen (src/generated-order-v3.txt);
+      # only hand-written files are parsed here. The classifier is the EXACT
+      # period-terminated marker ("-- AUTOMATICALLY GENERATED FILE."): generated
+      # scalars carry it, but src/v3/version.sql carries a period-LESS marker and
+      # IS hand-written (it has an authored -- REQUIRE: edge to schema.sql and is
+      # not part of the codegen manifest), so it must be parsed, not skipped.
+      [[ "$first" == "-- AUTOMATICALLY GENERATED FILE."* ]] && continue
+      echo "$sql_file $sql_file" >> src/handwritten-deps-v3.txt   # self-edge
       while IFS= read -r line; do
         if [[ "$line" =~ ^[[:space:]]*--\ REQUIRE: ]]; then
           deps=${line#*-- REQUIRE: }
           for dep in $deps; do
-            echo "$dep $sql_file" >> src/deps-v3.txt        # dependency FIRST (no tac)
+            echo "$dep $sql_file" >> src/handwritten-deps-v3.txt  # dependency first
           done
         fi
       done < "$sql_file"
     done
 
+# Union edge set for the whole-surface verifiers (hand-written + generated).
+cat src/handwritten-deps-v3.txt src/generated-deps-v3.txt > src/deps-v3.txt
+
+# Whole-surface cycle gate (verification only) — tsort output discarded.
 verify_v3_self_contained src/deps-v3.txt
-run_tsort_or_die src/deps-v3.txt src/deps-ordered-v3.txt
+run_tsort_or_die src/deps-v3.txt /dev/null
+
+# Phase A: order the ~25 hand-written files from their authored edges.
+run_tsort_or_die src/handwritten-deps-v3.txt src/handwritten-ordered-v3.txt
+
+# Phase B: hand-written order, then the codegen-emitted generated order. Valid
+# because NO hand-written file depends on a generated file (verified), so every
+# generated->hand-written edge points backward into the already-emitted block.
+cat src/handwritten-ordered-v3.txt src/generated-order-v3.txt > src/deps-ordered-v3.txt
+
 verify_deps_exist src/deps-ordered-v3.txt
 verify_linearization src/deps-v3.txt src/deps-ordered-v3.txt
 
