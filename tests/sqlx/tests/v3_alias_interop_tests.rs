@@ -8,12 +8,28 @@ use anyhow::Result;
 use sqlx::PgPool;
 use sqlx::Row;
 
+/// Every aliased ordered-scalar family and its v1 native-spelling alias. The
+/// matrix these integration tests iterate — kept explicit (not read from the
+/// catalog) so the installed SQL surface is checked against the intended public
+/// contract, independent of the Rust catalog. Catalog-drift coverage lives in
+/// the `eql-domains` unit tests and the `cross_name_routing` property test,
+/// which read `CATALOG` directly.
+const ALIAS_PAIRS: &[(&str, &str)] = &[
+    ("smallint", "int2"),
+    ("integer", "int4"),
+    ("bigint", "int8"),
+    ("real", "float4"),
+    ("double", "float8"),
+    ("numeric", "decimal"),
+];
+
 /// The alias domains exist and their CHECK is byte-identical to the canonical
 /// (modulo the type-name substring — the generated CHECK body carries no type
-/// name, so the two are identical in practice).
+/// name, so the two are identical in practice). Covers every aliased family and
+/// every domain variant.
 #[sqlx::test]
 async fn alias_domains_exist_with_identical_check(pool: PgPool) -> Result<()> {
-    for (canonical, alias) in [("integer", "int4"), ("bigint", "int8")] {
+    for &(canonical, alias) in ALIAS_PAIRS {
         for suffix in ["", "_eq", "_ord", "_ord_ore", "_ord_ope"] {
             let cdom = format!("{canonical}{suffix}");
             let adom = format!("{alias}{suffix}");
@@ -56,38 +72,49 @@ async fn alias_domains_exist_with_identical_check(pool: PgPool) -> Result<()> {
 /// alias/canonical domains live in `public`, so it does NOT cover these.
 #[sqlx::test]
 async fn cross_name_operators_split_public_wrapper_vs_internal_blocker(pool: PgPool) -> Result<()> {
-    // (op, left_domain, right_domain, expected backing schema)
-    let cases: &[(&str, &str, &str, &str)] = &[
-        // _eq role: = and <> supported (public); < is a blocker (internal).
-        ("=", "int4_eq", "integer_eq", "eql_v3"),
-        ("=", "integer_eq", "int4_eq", "eql_v3"),
-        ("<>", "int4_eq", "integer_eq", "eql_v3"),
-        ("<", "int4_eq", "integer_eq", "eql_v3_internal"),
-        // _ord role: < <= > >= supported (public), both directions.
-        ("<", "int4_ord", "integer_ord", "eql_v3"),
-        ("<", "integer_ord", "int4_ord", "eql_v3"),
-        (">=", "int4_ord", "integer_ord", "eql_v3"),
+    // For every aliased family, in BOTH operand directions, assert the
+    // supported/blocker split: the `_eq` role backs `=`/`<>` with the PUBLIC
+    // wrapper and `<` with the INTERNAL blocker; the `_ord` role backs the four
+    // comparisons with the PUBLIC wrapper. Derived per family from ALIAS_PAIRS.
+    // (op, left_suffix, right_suffix, expected backing schema)
+    let shape: &[(&str, &str, &str, &str)] = &[
+        // _eq role
+        ("=", "_eq", "_eq", "eql_v3"),
+        ("<>", "_eq", "_eq", "eql_v3"),
+        ("<", "_eq", "_eq", "eql_v3_internal"),
+        // _ord role, all four comparisons
+        ("<", "_ord", "_ord", "eql_v3"),
+        ("<=", "_ord", "_ord", "eql_v3"),
+        (">", "_ord", "_ord", "eql_v3"),
+        (">=", "_ord", "_ord", "eql_v3"),
     ];
-    for (op, lt, rt, schema) in cases {
-        let n: i64 = sqlx::query_scalar(
-            r#"
-            SELECT count(*)
-            FROM pg_operator o
-            JOIN pg_proc p ON p.oid = o.oprcode
-            JOIN pg_namespace pn ON pn.oid = p.pronamespace
-            JOIN pg_type lt ON lt.oid = o.oprleft
-            JOIN pg_type rt ON rt.oid = o.oprright
-            WHERE o.oprname = $1 AND pn.nspname = $2
-              AND lt.typname = $3 AND rt.typname = $4
-            "#,
-        )
-        .bind(op)
-        .bind(schema)
-        .bind(lt)
-        .bind(rt)
-        .fetch_one(&pool)
-        .await?;
-        assert_eq!(n, 1, "cross op {op} {lt}->{rt} not backed by {schema}");
+    for &(canonical, alias) in ALIAS_PAIRS {
+        for &(op, ls, rs, schema) in shape {
+            // both operand directions: alias->canonical and canonical->alias
+            for (l_name, r_name) in [(alias, canonical), (canonical, alias)] {
+                let lt = format!("{l_name}{ls}");
+                let rt = format!("{r_name}{rs}");
+                let n: i64 = sqlx::query_scalar(
+                    r#"
+                    SELECT count(*)
+                    FROM pg_operator o
+                    JOIN pg_proc p ON p.oid = o.oprcode
+                    JOIN pg_namespace pn ON pn.oid = p.pronamespace
+                    JOIN pg_type lt ON lt.oid = o.oprleft
+                    JOIN pg_type rt ON rt.oid = o.oprright
+                    WHERE o.oprname = $1 AND pn.nspname = $2
+                      AND lt.typname = $3 AND rt.typname = $4
+                    "#,
+                )
+                .bind(op)
+                .bind(schema)
+                .bind(&lt)
+                .bind(&rt)
+                .fetch_one(&pool)
+                .await?;
+                assert_eq!(n, 1, "cross op {op} {lt}->{rt} not backed by {schema}");
+            }
+        }
     }
     Ok(())
 }
@@ -139,25 +166,27 @@ async fn cross_name_equality_uses_hmac_not_jsonb(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// An unsupported cross-name operator raises (the internal blocker), never
-/// returns a native jsonb result. The payload is CHECK-valid (`v`,`i`,`c`,`hm`
-/// present, `v`='3') so the cast succeeds and the failure is the OPERATOR
-/// blocker, not a domain CHECK violation.
+/// Every unsupported cross-name operator on the `_eq` role raises (the internal
+/// blocker), never returns a native jsonb result. Covers all four operators that
+/// carry a Domain/Domain signature but are unsupported on `_eq`: `<` (ordering),
+/// `@>` / `<@` (containment), and `||` (concat, returns jsonb). The payloads are
+/// CHECK-valid (`v`,`i`,`c`,`hm` present, `v`='3') so the cast succeeds and the
+/// failure is the OPERATOR blocker, not a domain CHECK violation. Both operand
+/// directions, so the blocker is verified for each generated cross operator.
 #[sqlx::test]
-async fn unsupported_cross_name_op_raises(pool: PgPool) -> Result<()> {
-    let err = sqlx::query_scalar::<_, bool>(
-        r#"
-        SELECT ('{"v":3,"i":{},"c":"x","hm":"a"}'::jsonb::public.int4_eq)
-             < ('{"v":3,"i":{},"c":"y","hm":"a"}'::jsonb::public.integer_eq)
-        "#,
-    )
-    .fetch_one(&pool)
-    .await
-    .unwrap_err();
-    let msg = err.to_string();
-    assert!(
-        msg.contains("not supported"),
-        "expected blocker RAISE, got: {msg}"
-    );
+async fn unsupported_cross_name_ops_raise(pool: PgPool) -> Result<()> {
+    let a = r#"'{"v":3,"i":{},"c":"x","hm":"a"}'::jsonb::public.int4_eq"#;
+    let b = r#"'{"v":3,"i":{},"c":"y","hm":"a"}'::jsonb::public.integer_eq"#;
+    for op in ["<", "@>", "<@", "||"] {
+        for (l, r) in [(a, b), (b, a)] {
+            let sql = format!("SELECT ({l}) {op} ({r})");
+            let err = sqlx::query(&sql).fetch_one(&pool).await.unwrap_err();
+            let msg = err.to_string();
+            assert!(
+                msg.contains("not supported"),
+                "expected blocker RAISE for `{op}`, got: {msg}"
+            );
+        }
+    }
     Ok(())
 }
