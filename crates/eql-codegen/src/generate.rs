@@ -75,13 +75,11 @@ fn functions_requires(family_name: &str, terms: &[Term]) -> Vec<String> {
 
 /// Body for a domain's _functions.sql. Port of `render_functions_file`.
 pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
-    use crate::consts::sql_str;
     use crate::context::{
         environment, extractor_entry, unsupported_entry, wrapper_entry, FunctionsContext, SqlParam,
     };
     let name = domain.full_name(family_name);
     let dom = domain_name(&name);
-    let domain_lit = sql_str(&dom);
     let supported = Term::operators_for_terms(domain.terms);
     let is_supported = |op: &str| supported.contains(&op);
 
@@ -109,7 +107,7 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
                     ty: rendered.right,
                 },
             ];
-            entries.push(unsupported_entry(op, args, &rendered.returns));
+            entries.push(unsupported_entry(&dom, op, args, &rendered.returns));
         }
     }
 
@@ -118,7 +116,6 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
         family_name: family_name.to_string(),
         name,
         dom,
-        domain_lit,
         entries,
     };
     environment()
@@ -868,13 +865,14 @@ mod tests {
     // --- Escaping guards over the context builders (synthetic inputs) ---
 
     #[test]
-    fn unsupported_entry_preserves_operator_literal_and_domain_lit_is_escaped() {
+    fn unsupported_entry_carries_escaped_per_entry_domain_lit() {
         use crate::consts::sql_str;
         use crate::context::{unsupported_entry, FnEntry, SqlParam};
         use crate::operator_surface::operator;
-        let dom = "eql_v3.o'dom";
-        let domain_lit = sql_str(dom);
+
+        let dom = "public.int4_eq";
         let entry = unsupported_entry(
+            dom, // NEW: per-entry left domain
             &operator("<"),
             [
                 SqlParam {
@@ -883,17 +881,48 @@ mod tests {
                 },
                 SqlParam {
                     name: "b",
-                    ty: dom.into(),
+                    ty: "public.integer_eq".into(),
                 },
             ],
             "boolean",
         );
         match entry {
-            FnEntry::Unsupported { operator_lit, .. } => {
-                assert_eq!(domain_lit, "eql_v3.o''dom"); // quote doubled by sql_str
+            FnEntry::Unsupported {
+                dom: d,
+                domain_lit,
+                operator_lit,
+                ..
+            } => {
+                assert_eq!(d, "public.int4_eq");
+                assert_eq!(domain_lit, sql_str("public.int4_eq"));
                 assert_eq!(operator_lit, "<");
             }
-            _ => panic!("expected unsupported-operator entry"),
+            _ => panic!("expected Unsupported"),
+        }
+
+        // The sql_str quote-doubling behaviour is still covered: a quote-bearing
+        // left domain doubles the quote in the RAISE literal.
+        let quoted = "eql_v3.o'dom";
+        let entry = unsupported_entry(
+            quoted,
+            &operator("<"),
+            [
+                SqlParam {
+                    name: "a",
+                    ty: quoted.into(),
+                },
+                SqlParam {
+                    name: "b",
+                    ty: quoted.into(),
+                },
+            ],
+            "boolean",
+        );
+        match entry {
+            FnEntry::Unsupported { domain_lit, .. } => {
+                assert_eq!(domain_lit, "eql_v3.o''dom"); // quote doubled by sql_str
+            }
+            _ => panic!("expected Unsupported"),
         }
     }
 

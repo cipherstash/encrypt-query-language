@@ -123,12 +123,15 @@ pub enum FnEntry {
         args: [SqlParam; 2],
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
         call_b: String, // e.g. eql_v3.eq_term(b::public.integer_eq)
+        dom: String,    // schema-qualified LEFT domain, for @brief (was file-level {{ dom }})
     },
     Unsupported {
         operator_lit: String,  // sql_str(op), escaped content for the RAISE literal
         function_name: String, // e.g. lt / "->" / "#>"
         args: [SqlParam; 2],
-        returns: String, // boolean / text / jsonb / domain (selection STAYS in Rust)
+        returns: String,    // boolean / text / jsonb / domain (selection STAYS in Rust)
+        dom: String,        // schema-qualified LEFT domain, for @brief
+        domain_lit: String, // sql_str(dom) — the RAISE literal (was file-level {{ domain_lit }})
     },
 }
 
@@ -136,9 +139,8 @@ pub enum FnEntry {
 pub struct FunctionsContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
     pub family_name: String,
-    pub name: String,       // full domain name (family-name + "_" + domain-name)
-    pub dom: String,        // schema-qualified domain, e.g. public.integer_eq
-    pub domain_lit: String, // sql_str(dom), defensively escaped for the RAISE literal
+    pub name: String, // full domain name (family-name + "_" + domain-name)
+    pub dom: String,  // schema-qualified domain, e.g. public.integer_eq (file-level @brief)
     pub entries: Vec<FnEntry>,
 }
 
@@ -181,19 +183,22 @@ pub fn wrapper_entry(
         ],
         call_a: extract_arg(arg_a, extractor, dom, "a"),
         call_b: extract_arg(arg_b, extractor, dom, "b"),
+        dom: dom.to_string(),
     }
 }
 
 /// Build an unsupported-operator entry. Every such entry shares one uniform
 /// `RAISE EXCEPTION` body; only signature facts vary. `op` is the
 /// already-resolved operator (no symbol re-lookup needed).
-pub fn unsupported_entry(op: &Operator, args: [SqlParam; 2], returns: &str) -> FnEntry {
+pub fn unsupported_entry(dom: &str, op: &Operator, args: [SqlParam; 2], returns: &str) -> FnEntry {
     FnEntry::Unsupported {
         // operator_lit is sql_str-escaped defensively for the single-quoted RAISE literal.
         operator_lit: sql_str(op.symbol),
         function_name: op.function_name.to_string(),
         args,
         returns: returns.to_string(),
+        dom: dom.to_string(),
+        domain_lit: sql_str(dom),
     }
 }
 
