@@ -1,0 +1,5 @@
+CREATE OPERATOR {{ o.symbol }} (
+  FUNCTION = {{ o.function_schema }}.{{ o.function_name }},
+  LEFTARG = {{ o.leftarg }}, RIGHTARG = {{ o.rightarg }}{% if o.metadata %},
+  {{ o.metadata }}{% endif %}
+);

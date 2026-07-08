@@ -233,6 +233,10 @@ pub fn render_type_named(name: &str, domains: &[Domain], out_dir: &Path) -> Vec<
     rendered
 }
 
+/// Render every generated file for one type into memory, paired with its output
+/// path under `out_dir`. Rendering happens before any filesystem mutation, so a
+/// render `.expect` panic aborts the run before a single file is written or
+/// deleted. Thin wrapper over [`render_type_named`] for the canonical name.
 pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)> {
     render_type_named(spec.name, spec.domains, out_dir)
 }
@@ -260,20 +264,20 @@ pub fn render_cross_file(family: &DomainFamily, a: &str, b: &str) -> String {
             let supported = Term::operators_for_terms(d.terms);
             for op in &cross_ops {
                 let is_supported = supported.contains(&op.symbol);
-                // R3: take the return type from the op's Domain/Domain signature
-                // (Boolean -> "boolean" for the 8 comparisons, Jsonb -> "jsonb"
-                // for `||`), NOT a string match on op.symbol.
-                let dd_sig = op
-                    .signatures
-                    .iter()
-                    .find(|s| s.left == TypeSlot::Domain && s.right == TypeSlot::Domain)
-                    .expect("cross-name op has a Domain/Domain signature");
-                let returns = dd_sig.render(&dom_l).returns;
                 if is_supported {
                     let ex = Term::extractor_for_operator(d.terms, op.symbol)
                         .expect("supported cross op has an extractor");
                     entries.push(wrapper_entry(&dom_l, op, &dom_l, &dom_r, ex));
                 } else {
+                    // R3: take the return type from the op's Domain/Domain
+                    // signature (Boolean -> "boolean" for the 8 comparisons,
+                    // Jsonb -> "jsonb" for `||`), NOT a string match on op.symbol.
+                    let dd_sig = op
+                        .signatures
+                        .iter()
+                        .find(|s| s.left == TypeSlot::Domain && s.right == TypeSlot::Domain)
+                        .expect("cross-name op has a Domain/Domain signature");
+                    let returns = dd_sig.render(&dom_l).returns;
                     entries.push(unsupported_entry(
                         &dom_l,
                         op,

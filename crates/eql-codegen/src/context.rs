@@ -45,6 +45,11 @@ pub fn environment() -> minijinja::Environment<'static> {
     )
     .expect("operators.sql template");
     env.add_template(
+        "operators/create.sql.j2",
+        include_str!("../templates/operators/create.sql.j2"),
+    )
+    .expect("operators/create.sql.j2 template");
+    env.add_template(
         "aggregates.sql",
         include_str!("../templates/aggregates.sql.j2"),
     )
