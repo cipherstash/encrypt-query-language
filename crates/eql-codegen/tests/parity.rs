@@ -63,14 +63,18 @@ fn committed_scalar_tokens(root: &Path) -> BTreeSet<String> {
 fn committed_scalar_dirs_match_catalog_tokens() {
     let root = repo_root();
     let dirs = committed_scalar_tokens(&root);
+    // One dir per GROUP NAME — the canonical name plus every native-spelling
+    // alias (e.g. `integer` + `int4`), since the generator emits a full surface
+    // per alias under its own dir.
     let catalog: BTreeSet<String> = eql_domains::scalar_families()
-        .map(|s| s.name.to_string())
+        .flat_map(|s| s.group_names().into_iter().map(String::from))
         .collect();
     assert_eq!(
         dirs, catalog,
-        "committed src/v3/scalars/<token>/ dirs must equal the catalog token set: a new \
-         catalog type needs its regenerated SQL committed (run `mise run build` and commit \
-         src/v3/scalars), and a stale dir with no catalog row must be removed"
+        "committed src/v3/scalars/<token>/ dirs must equal the catalog group-name set \
+         (canonical + aliases): a new catalog type or alias needs its regenerated SQL \
+         committed (run `mise run build` and commit src/v3/scalars), and a stale dir with \
+         no catalog row must be removed"
     );
 }
 
