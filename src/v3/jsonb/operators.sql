@@ -18,8 +18,8 @@
 --! index on `eql_v3.eq_term(col -> 'sel')`.
 --!
 --! @warning The selector operand MUST carry a known type — a text-typed
---!   parameter (`$1`, the Proxy interface) or an explicit cast (`col -> 'sel'::text`).
---!   A bare untyped literal (`col -> 'sel'`) resolves to the NATIVE `jsonb -> text`
+--!   parameter (`$1`, the Proxy interface) or an explicit cast (`col -> 'sel'::%text`).
+--!   A bare untyped literal (`col -> 'sel'`) resolves to the NATIVE `jsonb -> %text`
 --!   operator and silently returns native jsonb semantics (a root-key lookup,
 --!   typically NULL), NOT this operator: PostgreSQL reduces the `public.json`
 --!   domain to its base type `jsonb` when resolving an unknown-typed RHS, and the
