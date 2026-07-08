@@ -50,7 +50,7 @@
     "build": "tsup",
     "dev": "tsup --watch",
     "test": "vitest run",
-    "release": "pnpm run check:generated && pnpm run build && npm publish --access public --provenance"
+    "release": "pnpm run check:generated && pnpm run build && node scripts/npm-publish.mjs"
   },
   "publishConfig": {
     "access": "public"

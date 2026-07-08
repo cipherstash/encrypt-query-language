@@ -111,7 +111,12 @@ jobs:
           if [ -n "$(npm view "@cipherstash/eql@${IDENTITY}" version 2>/dev/null)" ]; then
             echo "@cipherstash/eql@${IDENTITY} is already published; skipping publish"
           else
-            npm publish --access public --provenance
+            publish_tag="latest"
+            if [[ "$IDENTITY" == *-* ]]; then
+              prerelease="${IDENTITY#*-}"
+              publish_tag="${prerelease%%.*}"
+            fi
+            npm publish --access public --provenance --tag "$publish_tag"
           fi
 
       - name: Tag TypeScript release
