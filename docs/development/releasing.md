@@ -169,8 +169,11 @@ Three independent git tag families, all keyed to the same identity `V`:
 - **`eql-bindings-vV`** — the **`eql-bindings` Rust crate** on crates.io.
 - **`eql-typescript-vV`** — the **`@cipherstash/eql` npm package**.
 
-The npm dist-tag is `latest` for finals and the channel name (`alpha` / `beta` /
-`rc`) for prereleases. Each language package bundles the **exact** self-contained
+The npm dist-tag is `latest` for finals — and, **until 3.0.0 final ships**,
+also for prereleases (the alphas are the only release line, so `latest`
+tracks the newest alpha; see `PRE_GA_LATEST` in
+`packages/eql/scripts/npm-publish.mjs`). After GA, prereleases return to
+their channel dist-tag (`alpha` / `beta` / `rc`). Each language package bundles the **exact** self-contained
 SQL it was generated against (`eql_bindings::sql`; npm `./sql` subpath), so a
 consumer pins wire types and the matching DDL together.
 
