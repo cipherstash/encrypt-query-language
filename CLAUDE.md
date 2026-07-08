@@ -73,6 +73,17 @@ The same generator also emits the **Rust payload bindings** under `crates/eql-bi
 
 Regeneration is deterministic: an identical `CATALOG` produces byte-identical SQL. If `mise run build` produces unexpected output, the change is in `crates/eql-domains/src` (the catalog/terms) or `crates/eql-codegen/src` (the renderers) — not in random run-to-run variation.
 
+**Committed generated code is never "in conflict" and never needs analysis — the generator is the source of truth.** After anything that changes the catalog (a merge/rebase that pulls in catalog changes, a `crates/eql-domains` edit), the committed generated surfaces (`src/v3/scalars/`, `crates/eql-bindings/{bindings,schema}`, `packages/eql/src/generated`) are brought up to date by **regenerating and committing** — it is a deterministic no-op, not a merge to resolve:
+
+```
+cargo clean   # only if a stale incremental cache makes eql-codegen misbehave (see below)
+mise run types:generate && mise run typescript:generate   # regenerate bindings
+mise run build                                            # regenerate SQL surface
+git add -A && git commit
+```
+
+Do **not** run the drift gates (`types:check` / `typescript:check` / `codegen:parity`) to "diagnose" a stale generated tree — a failing gate after a catalog change trivially means "regenerate and commit," nothing more; run the gates only to *confirm* after committing. And if `eql-codegen` fails to compile against source that is byte-identical to a base that compiles (e.g. `no method named …` on a catalog type), it is a **stale cargo incremental cache**, not a semantic merge break — `cargo clean` fixes it; do not go forensic on the code.
+
 Footguns the spec exists to prevent:
 
 - **Blockers must never be `STRICT`.** A `STRICT` blocker lets PostgreSQL skip the body and return `NULL` on a `NULL` argument, silently bypassing the "operator not supported" exception.
