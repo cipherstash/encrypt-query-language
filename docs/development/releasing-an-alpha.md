@@ -107,8 +107,9 @@ package version is not already prerelease-shaped.
 ## Verification note
 
 The durable PR gate is `.github/workflows/lint-release.yml`. It runs actionlint
-over the release workflows, ShellCheck over the release wrappers and identity
-helper, and `.github/scripts/derive-identity.test.sh`.
+over the release workflows, ShellCheck over `tasks/release/prepare-bindings-assets.sh`,
+and the supply-chain cache guard (`lint:workflow-cache`) plus the script unit
+tests (`test:scripts`).
 
 The SQL-to-docs-to-publish ordering can be exercised safely only on a scratch
 branch, because a real package publish is irreversible. For a scratch

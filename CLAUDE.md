@@ -212,8 +212,8 @@ EQL maintains a [Keep-a-Changelog](https://keepachangelog.com/en/1.1.0/)-style `
 
 **Cutting a release is scripted — don't hand-roll `gh release create`.** There are two paths:
 
-- **Prerelease:** use the unified `release.yml` workflow. On `main` it runs the production release path; on `eql_v3` it only publishes when the push is an explicit conventional release commit (`chore(release): ...`). Release-relevant work happens in CI, and prerelease runs still build SQL + docs + language packages in the same workflow. The npm package is published directly by `release.yml`; the Rust crate still publishes via `release-plz.yml` because crates.io Trusted Publishing needs that workflow entry point. Always use `--dry-run` first when invoking the release tasks or workflow manually. It deliberately does **not** touch `CHANGELOG.md` for prereleases (`[Unreleased]` stays put). Full runbook: **`docs/development/releasing-an-alpha.md`**.
-- **Final (non-prerelease) release:** follow **"Cutting a release"** below — this one *does* promote `[Unreleased]` → `[<version>]`, which the workflow's `verify-changelog` job enforces.
+- **Prerelease:** use the unified `release.yml` workflow. On `main` it runs the production release path; on `eql_v3` it only publishes when the push is an explicit conventional release commit (`chore(release): ...`). Release-relevant work happens in CI, and prerelease runs still build SQL + docs + language packages in the same workflow. The npm package is published directly by `release.yml`; the Rust crate still publishes via `release-plz.yml` because crates.io Trusted Publishing needs that workflow entry point. Validate on a scratch branch before cutting a real prerelease — a package publish is irreversible. It deliberately does **not** touch `CHANGELOG.md` for prereleases (`[Unreleased]` stays put). Full runbook: **`docs/development/releasing-an-alpha.md`**.
+- **Final (non-prerelease) release:** follow **"Cutting a release"** below — this one *does* promote `[Unreleased]` → `[<version>]` in `CHANGELOG.md`. Finals are cut from `main` through the unified `release.yml` (changesets versions/publishes, then the same run builds and attaches the SQL + docs release).
 
 The **language binding packages** are generated from the same `eql-domains::CATALOG` as the SQL surface: the **`eql-bindings` crate** (published to crates.io by **release-plz**, tagged `eql-bindings-v<semver>`) and the **`@cipherstash/eql` npm package** (published via npm Trusted Publishing from `release.yml`, tagged `eql-typescript-v<identity>`). Both bundle the exact self-contained SQL installer/uninstaller they were generated against (the crate exposes it as `eql_bindings::sql`; the npm package via its `./sql` subpath exports). Prerelease release commits on `eql_v3` carry the committed version and bundled SQL for the release; `release.yml` publishes that commit as the prerelease and then dispatches `release-plz.yml` for the crate. release-plz publishes the committed `Cargo.toml` version verbatim and has no absolute-version config, so the release commit must already carry the version pin.
 
@@ -260,12 +260,12 @@ The `eql_v3` PostgreSQL schema name is part of the public API and is **independe
 
 ### Cutting a release
 
-This section is for **final (non-prerelease) releases**. For an alpha/beta/rc, use `mise run release:all`, `mise run release:eql`, `mise run release:bindings`, `mise run release:rust`, or `mise run release:typescript` instead — see the pointer at the top of this section and `docs/development/releasing-an-alpha.md`.
+This section is for **final (non-prerelease) releases**. For an alpha/beta/rc, cut a prerelease from the `eql_v3` branch via the unified `release.yml` workflow — push an explicit `chore(release): ...` commit that already pins the prerelease version in `packages/eql/package.json` — see the pointer at the top of this section and `docs/development/releasing-an-alpha.md`.
 
 When a release is being prepared:
 
 1. Confirm `[Unreleased]` is non-empty and entries are coherent.
 2. Rename `## [Unreleased]` to `## [<version>] — YYYY-MM-DD` and add a fresh empty `[Unreleased]` above it.
 3. Update the link references at the bottom of `CHANGELOG.md` (new `[Unreleased]` compare URL, new `[<version>]` tag URL).
-4. Commit, then create the GitHub release. The release workflow (`.github/workflows/release-eql.yml`) takes the tag and builds artefacts.
+4. Commit to `main`. The unified `release.yml` workflow publishes the release and builds + attaches the SQL + docs artefacts to the `eql-<version>` release it creates.
 5. The `[<version>]` section is the GitHub release body — paste it verbatim.

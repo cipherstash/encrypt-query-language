@@ -4,11 +4,7 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import yaml from 'js-yaml'
 
-const defaultWorkflowFiles = [
-  '.github/workflows/release.yml',
-  '.github/workflows/release-typescript.yml',
-  '.github/workflows/release-alpha.yml',
-]
+const defaultWorkflowFiles = ['.github/workflows/release.yml']
 
 function asArray(value) {
   return Array.isArray(value) ? value : []

@@ -38,8 +38,8 @@ Shared wire fields are reusable newtypes in
 | `BloomFilter` | `bf` | `Vec<i16>` (signed!) | `_match` domains |
 
 Note "v3" names the SQL schema generation (`eql_v3.*`); the JSON envelope
-version is still `v: 2` — the generated domain CHECKs assert it, and the wire
-field names are unchanged from v2 (the purpose-named rename in
+version is `v: 3` — the generated domain CHECKs assert `VALUE->>'v' = '3'`, and
+the wire field names are unchanged from v2 (the purpose-named rename in
 `docs/plans/eql-payload-scheme-discipline-rfc.md` is deferred).
 
 ## Drift protection

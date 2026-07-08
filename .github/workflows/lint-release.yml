@@ -1,21 +1,17 @@
 name: "Lint release tooling"
 
-# Durable gate for the CI-native release machinery. It catches workflow syntax,
-# wrapper shell issues, and identity-derivation regressions before a real alpha.
+# Durable gate for the release machinery. It catches workflow syntax, wrapper
+# shell issues, and supply-chain cache regressions before a real release.
 
 on:
   pull_request:
     paths:
       - .github/workflows/_build-sql.yml
       - .github/workflows/_build-docs.yml
-      - .github/workflows/release-eql.yml
       - .github/workflows/release-plz.yml
       - .github/workflows/release.yml
-      - .github/workflows/release-typescript.yml
-      - .github/workflows/release-alpha.yml
       - .github/workflows/lint-release.yml
       - .github/actionlint.yaml
-      - .github/scripts/*.sh
       - package.json
       - scripts/*.mjs
       - tasks/release/*.sh
@@ -50,49 +46,15 @@ jobs:
           actionlint \
             .github/workflows/_build-sql.yml \
             .github/workflows/_build-docs.yml \
-            .github/workflows/release-eql.yml \
             .github/workflows/release-plz.yml \
             .github/workflows/release.yml \
-            .github/workflows/release-typescript.yml \
-            .github/workflows/release-alpha.yml \
             .github/workflows/lint-release.yml
 
       - name: shellcheck (wrappers + helpers)
         run: |
           set -euo pipefail
           shellcheck \
-            tasks/release/all.sh \
-            tasks/release/eql.sh \
-            tasks/release/bindings.sh \
-            tasks/release/rust.sh \
-            tasks/release/typescript.sh \
-            tasks/release/prepare-bindings-assets.sh \
-            tasks/release/resolve-alpha.sh \
-            tasks/release/pin-bindings.sh \
-            .github/scripts/derive-identity.sh \
-            .github/scripts/derive-identity.test.sh \
-            .github/scripts/release-alpha-resolve.sh \
-            .github/scripts/release-alpha-resolve.test.sh \
-            .github/scripts/release-alpha-pin-bindings.sh \
-            .github/scripts/release-alpha-pin-bindings.test.sh \
-            .github/scripts/release-alpha-verify-commit-signature.sh \
-            .github/scripts/release-alpha-verify-commit-signature.test.sh \
-            .github/scripts/release-typescript-workflow.test.sh
-
-      - name: identity-derivation unit test
-        run: bash .github/scripts/derive-identity.test.sh
-
-      - name: release-alpha resolve unit test
-        run: bash .github/scripts/release-alpha-resolve.test.sh
-
-      - name: release-alpha pin helper test
-        run: bash .github/scripts/release-alpha-pin-bindings.test.sh
-
-      - name: release-alpha signature verification helper test
-        run: bash .github/scripts/release-alpha-verify-commit-signature.test.sh
-
-      - name: release-typescript workflow security guard test
-        run: bash .github/scripts/release-typescript-workflow.test.sh
+            tasks/release/prepare-bindings-assets.sh
 
       - uses: pnpm/action-setup@v6.0.8
         name: Install pnpm

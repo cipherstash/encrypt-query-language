@@ -1,5 +1,13 @@
 # Design: CI-native alpha releases (SQL surface + `eql-bindings` crate)
 
+> **SUPERSEDED (historical record).** The `workflow_dispatch` coordinator with
+> `mise run release:*` targets and a `crate-publish`/`crate_tag` job described
+> below was never shipped. Releases now run through the single unified
+> `.github/workflows/release.yml` (production from `main` via changesets;
+> alpha/prerelease from `eql_v3` via a `chore(release): ...` commit). See
+> `docs/development/releasing-an-alpha.md` for the current process. This file is
+> kept only as a point-in-time design snapshot.
+
 **Date:** 2026-07-04
 **Status:** Approved design (CI-native), ready for implementation plan
 **Scope:** Release the two EQL artefacts — individually and in version lockstep — from a single `workflow_dispatch` GitHub Actions workflow, with thin `mise run release:*` tasks that only *trigger and watch* CI.

@@ -1,8 +1,8 @@
 name: "Build docs (reusable)"
 
-# Reusable docs build+attach, extracted from release-eql.yml's publish-docs job.
-# The target release already exists: _build-sql.yml creates it for alphas, and
-# a human-created release exists for finals.
+# Reusable docs build+attach. Called inline by release.yml (production and
+# prerelease paths). The target release already exists: _build-sql.yml creates
+# it in the same run before this docs job attaches to it.
 
 on:
   workflow_call:
