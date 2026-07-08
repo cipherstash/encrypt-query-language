@@ -107,7 +107,12 @@ jobs:
         # non-prerelease SQL release (attach + create path + not a prerelease).
         # release.yml runs on `push`, so the old `event_name == 'release'` gate
         # never matched under the unified workflow.
+        # continue-on-error: a deploy-tracking ping is not part of the release
+        # itself. If Multitudes is down / rate-limits / the token is empty, the
+        # curl failing must not fail build-sql and skip downstream build-docs /
+        # build-image after npm + SQL have already published.
         if: ${{ inputs.attach && !inputs.prerelease && inputs.target_commitish != '' }}
+        continue-on-error: true
         run: |
           curl --request POST \
             --fail-with-body \

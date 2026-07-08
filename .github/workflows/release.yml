@@ -191,13 +191,17 @@ jobs:
       actions: write
     steps:
       - name: Dispatch release-postgres-eql-image.yml
+        # Dispatch against the eql-<VERSION> tag, not the branch: build-sql
+        # (a `needs`) already created that tag at the release commit via
+        # _build-sql.yml's target_commitish, and the image workflow file exists
+        # at that commit. Pinning to the tag builds the image from the exact
+        # released source even if the branch has advanced since publish.
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.ref_name }}
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
-          gh workflow run release-postgres-eql-image.yml --ref "$BRANCH" \
+          gh workflow run release-postgres-eql-image.yml --ref "eql-${VERSION}" \
             -f eql_version="$VERSION" \
             -f update_floating_tags=true
 
