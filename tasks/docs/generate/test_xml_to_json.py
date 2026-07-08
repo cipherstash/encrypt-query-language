@@ -126,7 +126,7 @@ def test_load_domains():
     # hardcoded on `jsonb_entry` (the sv element type) ONLY — hm -> eq_term,
     # oc -> ore_cllw; the `json` container and `query_jsonb` carry none.
     assert by_name["public.json"]["termFunctions"] == []
-    assert by_name["public.query_jsonb"]["termFunctions"] == []
+    assert by_name["eql_v3.query_jsonb"]["termFunctions"] == []
     assert by_name["public.jsonb_entry"]["capabilities"] == ["json"]
     assert by_name["public.jsonb_entry"]["shape"] == "stevec"
     assert by_name["public.jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ore_cllw"]

@@ -352,6 +352,16 @@ pub fn domain_name(name: &str) -> String {
     format!("public.{name}")
 }
 
+/// The schema-qualified name of a QUERY-OPERAND domain, e.g.
+/// `eql_v3.query_integer_eq`. Query twins live in the public-API `SCHEMA`
+/// (not `public`) — they are never valid column types, so the
+/// application-columns-survive-schema-drop rationale behind `domain_name`
+/// does not apply, and keeping them out of `public` keeps the column-type
+/// namespace to actual column types (CIP-3442).
+pub fn query_domain_name(name: &str) -> String {
+    format!("{SCHEMA}.{name}")
+}
+
 /// The extractor-call SQL for one operand, casting jsonb to the domain first.
 /// Port of `_extract_arg`. `dom` is the schema-qualified domain name.
 pub fn extract_arg(arg_type: &str, extractor: &str, dom: &str, arg: &str) -> String {

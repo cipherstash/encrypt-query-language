@@ -4,76 +4,76 @@
 -- REQUIRE: src/v3/scalars/timestamp/query_timestamp_ord_functions.sql
 
 --! @file encrypted_domain/timestamp/query_timestamp_ord_operators.sql
---! @brief Operators for public.query_timestamp_ord.
+--! @brief Operators for eql_v3.query_timestamp_ord.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.timestamp_ord, RIGHTARG = public.query_timestamp_ord,
+  LEFTARG = public.timestamp_ord, RIGHTARG = eql_v3.query_timestamp_ord,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.timestamp_ord, RIGHTARG = public.query_timestamp_ord,
+  LEFTARG = public.timestamp_ord, RIGHTARG = eql_v3.query_timestamp_ord,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = public.timestamp_ord, RIGHTARG = public.query_timestamp_ord,
+  LEFTARG = public.timestamp_ord, RIGHTARG = eql_v3.query_timestamp_ord,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = public.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = public.timestamp_ord, RIGHTARG = public.query_timestamp_ord,
+  LEFTARG = public.timestamp_ord, RIGHTARG = eql_v3.query_timestamp_ord,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = public.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = public.timestamp_ord, RIGHTARG = public.query_timestamp_ord,
+  LEFTARG = public.timestamp_ord, RIGHTARG = eql_v3.query_timestamp_ord,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = public.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = public.timestamp_ord, RIGHTARG = public.query_timestamp_ord,
+  LEFTARG = public.timestamp_ord, RIGHTARG = eql_v3.query_timestamp_ord,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = public.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.timestamp_ord,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );

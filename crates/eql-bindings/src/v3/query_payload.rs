@@ -3,9 +3,9 @@
 use super::domain_type::DomainType;
 use serde::{Deserialize, Serialize};
 /// Every v3 QUERY-operand shape in one type: one variant per term-bearing
-/// scalar query twin (`public.query_<name>`, the enveloped term-only
+/// scalar query twin (`eql_v3.query_<name>`, the enveloped term-only
 /// operand — `{v, i, <terms>}`, no `c`) plus the SteVec containment
-/// needle (`public.query_jsonb`). Generated from the catalog, so it
+/// needle (`eql_v3.query_jsonb`). Generated from the catalog, so it
 /// cannot drift when the catalog grows.
 ///
 /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -17,83 +17,83 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum QueryPayload {
-    /// The `public.query_integer_eq` query operand.
+    /// The `eql_v3.query_integer_eq` query operand.
     IntegerEqQuery(super::integer::IntegerEqQuery),
-    /// The `public.query_integer_ord_ore` query operand.
+    /// The `eql_v3.query_integer_ord_ore` query operand.
     IntegerOrdOreQuery(super::integer::IntegerOrdOreQuery),
-    /// The `public.query_integer_ord` query operand.
+    /// The `eql_v3.query_integer_ord` query operand.
     IntegerOrdQuery(super::integer::IntegerOrdQuery),
-    /// The `public.query_integer_ord_ope` query operand.
+    /// The `eql_v3.query_integer_ord_ope` query operand.
     IntegerOrdOpeQuery(super::integer::IntegerOrdOpeQuery),
-    /// The `public.query_smallint_eq` query operand.
+    /// The `eql_v3.query_smallint_eq` query operand.
     SmallintEqQuery(super::smallint::SmallintEqQuery),
-    /// The `public.query_smallint_ord_ore` query operand.
+    /// The `eql_v3.query_smallint_ord_ore` query operand.
     SmallintOrdOreQuery(super::smallint::SmallintOrdOreQuery),
-    /// The `public.query_smallint_ord` query operand.
+    /// The `eql_v3.query_smallint_ord` query operand.
     SmallintOrdQuery(super::smallint::SmallintOrdQuery),
-    /// The `public.query_smallint_ord_ope` query operand.
+    /// The `eql_v3.query_smallint_ord_ope` query operand.
     SmallintOrdOpeQuery(super::smallint::SmallintOrdOpeQuery),
-    /// The `public.query_bigint_eq` query operand.
+    /// The `eql_v3.query_bigint_eq` query operand.
     BigintEqQuery(super::bigint::BigintEqQuery),
-    /// The `public.query_bigint_ord_ore` query operand.
+    /// The `eql_v3.query_bigint_ord_ore` query operand.
     BigintOrdOreQuery(super::bigint::BigintOrdOreQuery),
-    /// The `public.query_bigint_ord` query operand.
+    /// The `eql_v3.query_bigint_ord` query operand.
     BigintOrdQuery(super::bigint::BigintOrdQuery),
-    /// The `public.query_bigint_ord_ope` query operand.
+    /// The `eql_v3.query_bigint_ord_ope` query operand.
     BigintOrdOpeQuery(super::bigint::BigintOrdOpeQuery),
-    /// The `public.query_date_eq` query operand.
+    /// The `eql_v3.query_date_eq` query operand.
     DateEqQuery(super::date::DateEqQuery),
-    /// The `public.query_date_ord_ore` query operand.
+    /// The `eql_v3.query_date_ord_ore` query operand.
     DateOrdOreQuery(super::date::DateOrdOreQuery),
-    /// The `public.query_date_ord` query operand.
+    /// The `eql_v3.query_date_ord` query operand.
     DateOrdQuery(super::date::DateOrdQuery),
-    /// The `public.query_date_ord_ope` query operand.
+    /// The `eql_v3.query_date_ord_ope` query operand.
     DateOrdOpeQuery(super::date::DateOrdOpeQuery),
-    /// The `public.query_timestamp_eq` query operand.
+    /// The `eql_v3.query_timestamp_eq` query operand.
     TimestampEqQuery(super::timestamp::TimestampEqQuery),
-    /// The `public.query_timestamp_ord_ore` query operand.
+    /// The `eql_v3.query_timestamp_ord_ore` query operand.
     TimestampOrdOreQuery(super::timestamp::TimestampOrdOreQuery),
-    /// The `public.query_timestamp_ord` query operand.
+    /// The `eql_v3.query_timestamp_ord` query operand.
     TimestampOrdQuery(super::timestamp::TimestampOrdQuery),
-    /// The `public.query_timestamp_ord_ope` query operand.
+    /// The `eql_v3.query_timestamp_ord_ope` query operand.
     TimestampOrdOpeQuery(super::timestamp::TimestampOrdOpeQuery),
-    /// The `public.query_numeric_eq` query operand.
+    /// The `eql_v3.query_numeric_eq` query operand.
     NumericEqQuery(super::numeric::NumericEqQuery),
-    /// The `public.query_numeric_ord_ore` query operand.
+    /// The `eql_v3.query_numeric_ord_ore` query operand.
     NumericOrdOreQuery(super::numeric::NumericOrdOreQuery),
-    /// The `public.query_numeric_ord` query operand.
+    /// The `eql_v3.query_numeric_ord` query operand.
     NumericOrdQuery(super::numeric::NumericOrdQuery),
-    /// The `public.query_numeric_ord_ope` query operand.
+    /// The `eql_v3.query_numeric_ord_ope` query operand.
     NumericOrdOpeQuery(super::numeric::NumericOrdOpeQuery),
-    /// The `public.query_text_eq` query operand.
+    /// The `eql_v3.query_text_eq` query operand.
     TextEqQuery(super::text::TextEqQuery),
-    /// The `public.query_text_match` query operand.
+    /// The `eql_v3.query_text_match` query operand.
     TextMatchQuery(super::text::TextMatchQuery),
-    /// The `public.query_text_ord_ore` query operand.
+    /// The `eql_v3.query_text_ord_ore` query operand.
     TextOrdOreQuery(super::text::TextOrdOreQuery),
-    /// The `public.query_text_ord` query operand.
+    /// The `eql_v3.query_text_ord` query operand.
     TextOrdQuery(super::text::TextOrdQuery),
-    /// The `public.query_text_ord_ope` query operand.
+    /// The `eql_v3.query_text_ord_ope` query operand.
     TextOrdOpeQuery(super::text::TextOrdOpeQuery),
-    /// The `public.query_text_search` query operand.
+    /// The `eql_v3.query_text_search` query operand.
     TextSearchQuery(super::text::TextSearchQuery),
-    /// The `public.query_real_eq` query operand.
+    /// The `eql_v3.query_real_eq` query operand.
     RealEqQuery(super::real::RealEqQuery),
-    /// The `public.query_real_ord_ore` query operand.
+    /// The `eql_v3.query_real_ord_ore` query operand.
     RealOrdOreQuery(super::real::RealOrdOreQuery),
-    /// The `public.query_real_ord` query operand.
+    /// The `eql_v3.query_real_ord` query operand.
     RealOrdQuery(super::real::RealOrdQuery),
-    /// The `public.query_real_ord_ope` query operand.
+    /// The `eql_v3.query_real_ord_ope` query operand.
     RealOrdOpeQuery(super::real::RealOrdOpeQuery),
-    /// The `public.query_double_eq` query operand.
+    /// The `eql_v3.query_double_eq` query operand.
     DoubleEqQuery(super::double::DoubleEqQuery),
-    /// The `public.query_double_ord_ore` query operand.
+    /// The `eql_v3.query_double_ord_ore` query operand.
     DoubleOrdOreQuery(super::double::DoubleOrdOreQuery),
-    /// The `public.query_double_ord` query operand.
+    /// The `eql_v3.query_double_ord` query operand.
     DoubleOrdQuery(super::double::DoubleOrdQuery),
-    /// The `public.query_double_ord_ope` query operand.
+    /// The `eql_v3.query_double_ord_ope` query operand.
     DoubleOrdOpeQuery(super::double::DoubleOrdOpeQuery),
-    /// The `public.query_jsonb` query operand.
+    /// The `eql_v3.query_jsonb` query operand.
     SteVec(super::jsonb::SteVecQuery),
 }
 impl QueryPayload {
@@ -279,7 +279,7 @@ impl QueryPayload {
             Self::SteVec(payload) => payload,
         }
     }
-    /// Fully-qualified SQL domain name, e.g. `"public.query_integer_eq"`.
+    /// Fully-qualified SQL domain name, e.g. `"eql_v3.query_integer_eq"`.
     pub fn sql_domain(&self) -> &'static str {
         self.as_domain_type().sql_domain()
     }

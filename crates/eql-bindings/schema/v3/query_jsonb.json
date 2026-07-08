@@ -52,7 +52,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/query_jsonb.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`public.query_jsonb` — a containment needle (`{sv:[query-entry]}`). Strict.",
+  "description": "`eql_v3.query_jsonb` — a containment needle (`{sv:[query-entry]}`). Strict.",
   "properties": {
     "sv": {
       "items": {

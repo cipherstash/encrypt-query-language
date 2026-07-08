@@ -165,7 +165,7 @@ impl DomainType for DoubleOrdOpe {
         schema_for!(DoubleOrdOpe)
     }
 }
-/// `public.query_double_eq` — equality domain query operand.
+/// `eql_v3.query_double_eq` — equality domain query operand.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -178,7 +178,7 @@ pub struct DoubleEqQuery {
 }
 impl DomainType for DoubleEqQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_double_eq"
+        "eql_v3.query_double_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -196,7 +196,7 @@ impl DomainType for DoubleEqQuery {
         schema_for!(DoubleEqQuery)
     }
 }
-/// `public.query_double_ord_ore` — ordering domain query operand.
+/// `eql_v3.query_double_ord_ore` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -209,7 +209,7 @@ pub struct DoubleOrdOreQuery {
 }
 impl DomainType for DoubleOrdOreQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_double_ord_ore"
+        "eql_v3.query_double_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -227,7 +227,7 @@ impl DomainType for DoubleOrdOreQuery {
         schema_for!(DoubleOrdOreQuery)
     }
 }
-/// `public.query_double_ord` — ordering domain query operand.
+/// `eql_v3.query_double_ord` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -240,7 +240,7 @@ pub struct DoubleOrdQuery {
 }
 impl DomainType for DoubleOrdQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_double_ord"
+        "eql_v3.query_double_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -258,7 +258,7 @@ impl DomainType for DoubleOrdQuery {
         schema_for!(DoubleOrdQuery)
     }
 }
-/// `public.query_double_ord_ope` — ordering domain query operand.
+/// `eql_v3.query_double_ord_ope` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -271,7 +271,7 @@ pub struct DoubleOrdOpeQuery {
 }
 impl DomainType for DoubleOrdOpeQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_double_ord_ope"
+        "eql_v3.query_double_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

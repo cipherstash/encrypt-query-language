@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Scalar query-operand bindings (CIP-3432).** Every term-bearing scalar
   domain now has a generated query twin — `IntegerEqQuery`, `IntegerOrdOpeQuery`,
   `TextSearchQuery`, … — the **enveloped term-only** operand `{v, i, <terms>}`
-  (envelope minus the ciphertext `c`) for its `public.query_<name>` query
+  (envelope minus the ciphertext `c`) for its `eql_v3.query_<name>` query
   domain, with matching TypeScript bindings (`bindings/v3/*Query.ts`) and JSON
   Schemas (`schema/v3/query_<name>.json`). Storage-only domains (no operators)
   get no twin. `QueryPayload` is now catalog-generated — a variant per query
@@ -23,15 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Query-operand domain names switched to the `query_<name>` prefix
-  (CIP-3442).** The SQL domain names carried by the query twins — in
-  `DomainType::sql_domain`, the names `QueryPayload::parse` accepts, and the
-  exported JSON Schema file names — are now `query_<name>` /
-  `public.query_<name>` (e.g. `query_integer_eq`), and the SteVec containment
-  needle is `query_jsonb` (was `jsonb_query`). Matches the renamed SQL surface
-  so query types sort apart from column types in Supabase Studio's type
-  picker; supersedes the `<name>_query` naming shipped only in 3.0.0
-  pre-releases.
+- **Query-operand domain names switched to the `query_<name>` prefix, homed
+  in the `eql_v3` schema (CIP-3442).** The SQL domain names carried by the
+  query twins — in `DomainType::sql_domain`, the names `QueryPayload::parse`
+  accepts, and the exported JSON Schema file names — are now `query_<name>` /
+  `eql_v3.query_<name>` (e.g. `query_integer_eq`), and the SteVec containment
+  needle is `eql_v3.query_jsonb` (was `public.jsonb_query`).
+  `DomainType::domain` now strips whichever schema qualifies `sql_domain`
+  (`public.` for column domains, `eql_v3.` for query operands) instead of
+  assuming `public.`. Matches the renamed/relocated SQL surface — query
+  operands are never column types, so they leave the `public` column-type
+  namespace; supersedes the `public.<name>_query` naming shipped only in
+  3.0.0 pre-releases.
 - **`from_v2_query` / `from_v2_query_typed` now convert scalar query targets.**
   A term-bearing scalar target hoists the v2 payload's required terms into the
   `{v: 3, i, <terms>}` operand for its `query_<name>` domain (dropping the

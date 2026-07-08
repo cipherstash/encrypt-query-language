@@ -196,7 +196,7 @@ fn query_types_path(family_name: &str) -> String {
 
 /// Body for a term-bearing domain's query_<name>_functions.sql (CIP-3432): the
 /// query-operand extractor OVERLOADS (the same extractors, on
-/// `public.query_<name>`) plus the comparison WRAPPERS binding the storage
+/// `eql_v3.query_<name>`) plus the comparison WRAPPERS binding the storage
 /// domain to its query twin — for the domain's SUPPORTED operators only, in
 /// both directions. Reuses the same `functions.sql` template as the storage
 /// surface; a query operand carries the same terms, so each wrapper compares
@@ -204,12 +204,13 @@ fn query_types_path(family_name: &str) -> String {
 pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String {
     use crate::consts::sql_str;
     use crate::context::{
-        domain_name, environment, extractor_entry, wrapper_entry, FunctionsContext,
+        domain_name, environment, extractor_entry, query_domain_name, wrapper_entry,
+        FunctionsContext,
     };
     let name = domain.full_name(family_name);
     let query_name = domain.query_name(family_name);
     let storage_dom = domain_name(&name);
-    let query_dom = domain_name(&query_name);
+    let query_dom = query_domain_name(&query_name);
     let supported = Term::operators_for_terms(domain.terms);
 
     let mut entries = Vec::new();
@@ -274,13 +275,15 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
 /// Body for a term-bearing domain's query_<name>_operators.sql (CIP-3432): a
 /// `CREATE OPERATOR` binding `(storage_domain, query_<name>)` for every
 /// supported operator, plus its `(query_<name>, storage_domain)` commutator, so
-/// `col <op> $1::public.query_<name>` resolves to the query wrapper.
+/// `col <op> $1::eql_v3.query_<name>` resolves to the query wrapper.
 pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String {
-    use crate::context::{domain_name, environment, operator_entry, OperatorsContext};
+    use crate::context::{
+        domain_name, environment, operator_entry, query_domain_name, OperatorsContext,
+    };
     let name = domain.full_name(family_name);
     let query_name = domain.query_name(family_name);
     let storage_dom = domain_name(&name);
-    let query_dom = domain_name(&query_name);
+    let query_dom = query_domain_name(&query_name);
     let supported = Term::operators_for_terms(domain.terms);
 
     let mut operators = Vec::new();

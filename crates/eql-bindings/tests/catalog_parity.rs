@@ -264,7 +264,7 @@ fn schemas_are_strict() {
 ///   every real payload — the SQL CHECK is laxer and only mandates `v`/`i`/`sv`,
 ///   but the binding models the real wire, which always carries `k`)
 /// - `public.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
-/// - `public.query_jsonb`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
+/// - `eql_v3.query_jsonb`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
 #[test]
 fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     let entries = v3::all();
@@ -330,7 +330,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     assert_eq!(
         required(&query, "/required", "query_jsonb"),
         set(&["sv"]),
-        "public.query_jsonb required keys must be sv"
+        "eql_v3.query_jsonb required keys must be sv"
     );
     let elem_required = required(
         &query,
@@ -360,7 +360,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         query_alt_required.len() == 2
             && query_alt_required.contains(&set(&["hm"]))
             && query_alt_required.contains(&set(&["oc"])),
-        "public.query_jsonb element anyOf must offer exactly the hm-only and \
+        "eql_v3.query_jsonb element anyOf must offer exactly the hm-only and \
          oc-only term alternatives (each arm a singleton), got {query_alt_required:?}"
     );
 }

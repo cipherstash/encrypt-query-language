@@ -3,19 +3,23 @@
 
 --! @file v3/scalars/bigint/query_bigint_types.sql
 --! @brief Query-operand domains for bigint (index-terms-only, no ciphertext).
+--! @note Query-operand domains live in `eql_v3` (not `public`): they are
+--!       never valid column types, so they don't belong in the column-type
+--!       namespace, and dropping the EQL-owned schema can never drop an
+--!       application column.
 --! @note Cast a query operand explicitly to its `query_` domain in a predicate
---!       (e.g. `WHERE col = $1::public.query_bigint_eq`). A bare,
+--!       (e.g. `WHERE col = $1::eql_v3.query_bigint_eq`). A bare,
 --!       uncast literal RHS is ambiguous between the `query_` and `jsonb`
 --!       operator overloads and will not resolve.
 
 DO $$
 BEGIN
-  --! @brief Query-operand domain public.query_bigint_eq (term-only; no `c`).
+  --! @brief Query-operand domain eql_v3.query_bigint_eq (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'query_bigint_eq' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'query_bigint_eq' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN public.query_bigint_eq AS jsonb
+    CREATE DOMAIN eql_v3.query_bigint_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -26,14 +30,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.query_bigint_eq IS 'EQL bigint query operand (equality)';
+  COMMENT ON DOMAIN eql_v3.query_bigint_eq IS 'EQL bigint query operand (equality)';
 
-  --! @brief Query-operand domain public.query_bigint_ord_ore (term-only; no `c`).
+  --! @brief Query-operand domain eql_v3.query_bigint_ord_ore (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'query_bigint_ord_ore' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'query_bigint_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN public.query_bigint_ord_ore AS jsonb
+    CREATE DOMAIN eql_v3.query_bigint_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -46,14 +50,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.query_bigint_ord_ore IS 'EQL bigint query operand (equality, ordering)';
+  COMMENT ON DOMAIN eql_v3.query_bigint_ord_ore IS 'EQL bigint query operand (equality, ordering)';
 
-  --! @brief Query-operand domain public.query_bigint_ord (term-only; no `c`).
+  --! @brief Query-operand domain eql_v3.query_bigint_ord (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'query_bigint_ord' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'query_bigint_ord' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN public.query_bigint_ord AS jsonb
+    CREATE DOMAIN eql_v3.query_bigint_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -66,14 +70,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.query_bigint_ord IS 'EQL bigint query operand (equality, ordering)';
+  COMMENT ON DOMAIN eql_v3.query_bigint_ord IS 'EQL bigint query operand (equality, ordering)';
 
-  --! @brief Query-operand domain public.query_bigint_ord_ope (term-only; no `c`).
+  --! @brief Query-operand domain eql_v3.query_bigint_ord_ope (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'query_bigint_ord_ope' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'query_bigint_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
   ) THEN
-    CREATE DOMAIN public.query_bigint_ord_ope AS jsonb
+    CREATE DOMAIN eql_v3.query_bigint_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -84,6 +88,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.query_bigint_ord_ope IS 'EQL bigint query operand (equality, ordering)';
+  COMMENT ON DOMAIN eql_v3.query_bigint_ord_ope IS 'EQL bigint query operand (equality, ordering)';
 END
 $$;

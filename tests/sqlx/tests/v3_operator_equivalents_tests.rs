@@ -23,23 +23,36 @@
 use anyhow::Result;
 use sqlx::PgPool;
 
-/// Every EQL domain name in the `public` schema, from the catalog: the storage
-/// and capability domains of every family (including the jsonb SteVec three)
-/// plus the `query_<name>` operand twin of every term-bearing scalar domain.
-/// The structural scan below identifies "an EQL operator" by these names — the
-/// domains deliberately live in `public` (dropping EQL-owned schemas must not
-/// drop application columns), so a namespace filter alone cannot find them.
+/// Every EQL COLUMN-domain name in the `public` schema, from the catalog: the
+/// storage and capability domains of every family. The jsonb needle
+/// (`query_jsonb`) is a query operand and lives in `eql_v3`, so `full_name`s
+/// starting with `query_` are excluded here (see [`eql_query_domain_names`]).
+/// The structural scan below identifies "an EQL operator" by these names —
+/// the column domains deliberately live in `public` (dropping EQL-owned
+/// schemas must not drop application columns), so a namespace filter alone
+/// cannot find them.
 fn eql_public_domain_names() -> Vec<String> {
-    let mut names: Vec<String> = eql_domains::CATALOG
+    eql_domains::CATALOG
         .iter()
         .flat_map(|f| f.domains.iter().map(move |d| d.full_name(f.name)))
+        .filter(|n| !n.starts_with("query_"))
+        .collect()
+}
+
+/// Every EQL QUERY-OPERAND domain name, from the catalog: the `query_<name>`
+/// twin of every term-bearing scalar domain plus the jsonb containment needle
+/// (`query_jsonb`). These live in the `eql_v3` schema (CIP-3442) — never
+/// valid column types, so they don't share the column domains' `public` home.
+fn eql_query_domain_names() -> Vec<String> {
+    let mut names: Vec<String> = eql_domains::scalar_families()
+        .flat_map(|f| {
+            f.domains
+                .iter()
+                .filter(|d| !d.terms.is_empty())
+                .map(move |d| d.query_name(f.name))
+        })
         .collect();
-    names.extend(eql_domains::scalar_families().flat_map(|f| {
-        f.domains
-            .iter()
-            .filter(|d| !d.terms.is_empty())
-            .map(move |d| d.query_name(f.name))
-    }));
+    names.push("query_jsonb".to_string());
     names
 }
 
@@ -50,16 +63,18 @@ fn eql_public_domain_names() -> Vec<String> {
 /// An offender is a supported operator whose function equivalent is hidden in
 /// `eql_v3_internal`, where an operator-free caller cannot reach it.
 ///
-/// EQL domains are identified by catalog name in the `public` namespace (no
-/// type lives in the `eql_v3` schema itself — an earlier `nspname = 'eql_v3'`
-/// filter matched zero operators and the scan passed vacuously). The test
-/// first asserts the scan MATCHES a healthy number of operators, so it can
-/// never silently rot back into vacuous-pass.
+/// EQL operands are identified by catalog name in their home namespace —
+/// column domains in `public`, query-operand twins in `eql_v3` (an earlier
+/// bare `nspname = 'eql_v3'` filter matched zero operators, before the query
+/// domains moved there, and the scan passed vacuously). The test first
+/// asserts the scan MATCHES a healthy number of operators, so it can never
+/// silently rot back into vacuous-pass.
 #[sqlx::test]
 async fn every_supported_eql_v3_operator_has_a_public_function_equivalent(
     pool: PgPool,
 ) -> Result<()> {
-    let domains = eql_public_domain_names();
+    let column_domains = eql_public_domain_names();
+    let query_domains = eql_query_domain_names();
 
     // All operators touching an EQL domain, wrapper-backed (LANGUAGE sql) or
     // not, with the backing function's schema. One scan, partitioned in Rust:
@@ -84,10 +99,13 @@ async fn every_supported_eql_v3_operator_has_a_public_function_equivalent(
         LEFT JOIN pg_catalog.pg_namespace rn ON rn.oid = rt.typnamespace
         WHERE (ln.nspname = 'public' AND lt.typname = ANY($1))
            OR (rn.nspname = 'public' AND rt.typname = ANY($1))
+           OR (ln.nspname = 'eql_v3' AND lt.typname = ANY($2))
+           OR (rn.nspname = 'eql_v3' AND rt.typname = ANY($2))
         ORDER BY 3, 1
         "#,
     )
-    .bind(&domains)
+    .bind(&column_domains)
+    .bind(&query_domains)
     .fetch_all(&pool)
     .await?;
 

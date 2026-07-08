@@ -4,28 +4,28 @@
 -- REQUIRE: src/v3/scalars/bigint/query_bigint_eq_functions.sql
 
 --! @file encrypted_domain/bigint/query_bigint_eq_operators.sql
---! @brief Operators for public.query_bigint_eq.
+--! @brief Operators for eql_v3.query_bigint_eq.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.bigint_eq, RIGHTARG = public.query_bigint_eq,
+  LEFTARG = public.bigint_eq, RIGHTARG = eql_v3.query_bigint_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.query_bigint_eq, RIGHTARG = public.bigint_eq,
+  LEFTARG = eql_v3.query_bigint_eq, RIGHTARG = public.bigint_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.bigint_eq, RIGHTARG = public.query_bigint_eq,
+  LEFTARG = public.bigint_eq, RIGHTARG = eql_v3.query_bigint_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.query_bigint_eq, RIGHTARG = public.bigint_eq,
+  LEFTARG = eql_v3.query_bigint_eq, RIGHTARG = public.bigint_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );

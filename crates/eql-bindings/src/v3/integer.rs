@@ -165,7 +165,7 @@ impl DomainType for IntegerOrdOpe {
         schema_for!(IntegerOrdOpe)
     }
 }
-/// `public.query_integer_eq` — equality domain query operand.
+/// `eql_v3.query_integer_eq` — equality domain query operand.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -178,7 +178,7 @@ pub struct IntegerEqQuery {
 }
 impl DomainType for IntegerEqQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_integer_eq"
+        "eql_v3.query_integer_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -196,7 +196,7 @@ impl DomainType for IntegerEqQuery {
         schema_for!(IntegerEqQuery)
     }
 }
-/// `public.query_integer_ord_ore` — ordering domain query operand.
+/// `eql_v3.query_integer_ord_ore` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -209,7 +209,7 @@ pub struct IntegerOrdOreQuery {
 }
 impl DomainType for IntegerOrdOreQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_integer_ord_ore"
+        "eql_v3.query_integer_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -227,7 +227,7 @@ impl DomainType for IntegerOrdOreQuery {
         schema_for!(IntegerOrdOreQuery)
     }
 }
-/// `public.query_integer_ord` — ordering domain query operand.
+/// `eql_v3.query_integer_ord` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -240,7 +240,7 @@ pub struct IntegerOrdQuery {
 }
 impl DomainType for IntegerOrdQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_integer_ord"
+        "eql_v3.query_integer_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -258,7 +258,7 @@ impl DomainType for IntegerOrdQuery {
         schema_for!(IntegerOrdQuery)
     }
 }
-/// `public.query_integer_ord_ope` — ordering domain query operand.
+/// `eql_v3.query_integer_ord_ope` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -271,7 +271,7 @@ pub struct IntegerOrdOpeQuery {
 }
 impl DomainType for IntegerOrdOpeQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_integer_ord_ope"
+        "eql_v3.query_integer_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

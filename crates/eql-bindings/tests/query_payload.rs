@@ -68,11 +68,11 @@ fn typed_needle_yields_the_ste_vec_variant() {
     });
     let typed = assert_serialization_pin(&v2);
     assert_eq!(typed.domain(), "query_jsonb");
-    assert_eq!(typed.sql_domain(), "public.query_jsonb");
+    assert_eq!(typed.sql_domain(), "eql_v3.query_jsonb");
     match &typed {
         QueryPayload::SteVec(q) => {
             assert_eq!(q.sv.len(), 2, "entry order/count preserved");
-            assert_eq!(q.sql_domain(), "public.query_jsonb");
+            assert_eq!(q.sql_domain(), "eql_v3.query_jsonb");
         }
         other => panic!("a jsonb target must yield the SteVec needle, got {other:?}"),
     }
@@ -166,7 +166,7 @@ fn scalar_query_hoist_and_storage_only_unsupported() {
             let typed =
                 from_v2_query_typed(&v2, t).unwrap_or_else(|e| panic!("{name} typed hoist: {e:?}"));
             assert_eq!(typed.domain(), format!("query_{name}"), "{name} domain");
-            assert_eq!(typed.sql_domain(), format!("public.query_{name}"));
+            assert_eq!(typed.sql_domain(), format!("eql_v3.query_{name}"));
             assert_eq!(
                 serde_json::to_value(&typed).unwrap(),
                 out,
@@ -250,7 +250,7 @@ fn parse_returns_none_for_non_query_domains() {
         "json",
         "jsonb_entry",
         "integer_eq",
-        "public.query_jsonb",
+        "eql_v3.query_jsonb",
         "",
     ] {
         assert!(

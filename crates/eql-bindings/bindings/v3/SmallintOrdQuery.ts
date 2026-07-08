@@ -4,7 +4,7 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.query_smallint_ord` — ordering domain query operand.
+ * `eql_v3.query_smallint_ord` — ordering domain query operand.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
  */

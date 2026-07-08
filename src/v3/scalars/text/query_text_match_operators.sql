@@ -4,28 +4,28 @@
 -- REQUIRE: src/v3/scalars/text/query_text_match_functions.sql
 
 --! @file encrypted_domain/text/query_text_match_operators.sql
---! @brief Operators for public.query_text_match.
+--! @brief Operators for eql_v3.query_text_match.
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = public.text_match, RIGHTARG = public.query_text_match,
+  LEFTARG = public.text_match, RIGHTARG = eql_v3.query_text_match,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = public.query_text_match, RIGHTARG = public.text_match,
+  LEFTARG = eql_v3.query_text_match, RIGHTARG = public.text_match,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.text_match, RIGHTARG = public.query_text_match,
+  LEFTARG = public.text_match, RIGHTARG = eql_v3.query_text_match,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.query_text_match, RIGHTARG = public.text_match,
+  LEFTARG = eql_v3.query_text_match, RIGHTARG = public.text_match,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );

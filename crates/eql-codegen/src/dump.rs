@@ -14,7 +14,7 @@ use serde::Serialize;
 pub struct CatalogDump {
     pub types: Vec<TypeEntry>,
     /// The `jsonb` (SteVec) family — `public.json` / `public.jsonb_entry` /
-    /// `public.query_jsonb`. Their SQL is hand-written under `src/v3/jsonb/`; the
+    /// `eql_v3.query_jsonb`. Their SQL is hand-written under `src/v3/jsonb/`; the
     /// catalog owns only their inventory (scalar-only consumers ignore this field).
     pub stevec: Vec<SteVecEntry>,
 }
@@ -288,7 +288,7 @@ mod tests {
         // `list-types` / `dump-catalog` output the scalar-matrix tooling consumes)
         // must NOT surface the SteVec `jsonb` family: it has no `scalars::jsonb::*`
         // matrix and no generated SQL surface, even though two of its three
-        // domain names (`public.jsonb_entry` / `public.query_jsonb`) now follow
+        // domain names (`public.jsonb_entry` / `eql_v3.query_jsonb`) now follow
         // the family+suffix string convention — the payload shape is still not
         // flat. This pins the exclusion directly at the codegen surface rather
         // than relying only on the transitive `scalar_families()` guard in

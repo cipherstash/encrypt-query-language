@@ -12,7 +12,7 @@
 //! divergence is SQL NULL, which both forms accept (the validator via
 //! STRICT, the inline expression via a leading `VALUE IS NULL OR`).
 //!
-//! `public.query_jsonb`'s CHECK CANNOT be inlined — validating sv elements
+//! `eql_v3.query_jsonb`'s CHECK CANNOT be inlined — validating sv elements
 //! needs a subquery, which CHECK constraints forbid — so its validator is
 //! plpgsql instead (cached plan vs the per-call SQL-function executor; the
 //! issue #353 finding). `query_jsonb_check_behaviour` characterises the
@@ -128,10 +128,10 @@ async fn query_jsonb_check_behaviour(pool: PgPool) -> Result<()> {
         (Some("[]"), false),
     ];
     for (payload, expected) in candidates {
-        let cast = cast_accepts(&pool, "public.query_jsonb", *payload).await?;
+        let cast = cast_accepts(&pool, "eql_v3.query_jsonb", *payload).await?;
         anyhow::ensure!(
             cast == *expected,
-            "public.query_jsonb cast verdict changed for {payload:?}: \
+            "eql_v3.query_jsonb cast verdict changed for {payload:?}: \
              accepted = {cast}, expected = {expected}"
         );
     }

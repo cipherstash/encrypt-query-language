@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.query_smallint_eq` — equality domain query operand.
+ * `eql_v3.query_smallint_eq` — equality domain query operand.
  *
  * Operators: `=` `<>`. Required keys: `v` `i` `hm`.
  */

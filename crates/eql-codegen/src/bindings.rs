@@ -191,7 +191,7 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
 
 /// One query-operand payload struct + its `DomainType` impl for a capability
 /// domain: the storage struct MINUS the `c` ciphertext. A query operand carries
-/// only index terms (no stored ciphertext), so its `public.query_<name>` domain
+/// only index terms (no stored ciphertext), so its `eql_v3.query_<name>` domain
 /// admits exactly `{v, i, <terms>}` — `deny_unknown_fields` makes a stray `c`
 /// (or any storage key) a parse error, mirroring the SQL `query_<name>` domain
 /// CHECK (CIP-3432). Emitted only for term-bearing domains: a storage-only
@@ -199,12 +199,14 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
 fn render_query_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     let query_name = domain.query_name(family.name);
     let ident = format_ident!("{}Query", domain.struct_ident(family.name));
-    let sql_domain = format!("public.{query_name}");
+    // Query operands live in the public-API schema, NOT `public`: they are
+    // never valid column types (CIP-3442).
+    let sql_domain = format!("eql_v3.{query_name}");
 
     // Query doc: same capability label + operator union as storage, but the
     // required-key list drops `c` (query operands omit the ciphertext).
     let summary = format!(
-        " `public.{query_name}` — {} query operand.",
+        " `eql_v3.{query_name}` — {} query operand.",
         capability_label(domain.name)
     );
     let ops = Term::operators_for_terms(domain.terms);
@@ -382,7 +384,7 @@ pub fn render_inventory_rs() -> String {
             ]
         }
 
-        /// Every v3 QUERY-operand twin (`public.query_<name>`, the enveloped
+        /// Every v3 QUERY-operand twin (`eql_v3.query_<name>`, the enveloped
         /// term-only operand), in `eql-domains::CATALOG` order — generated.
         /// Separate from [`all`] so query domains never resolve as stored
         /// conversion targets; used by the JSON Schema export and query
@@ -517,8 +519,8 @@ pub fn render_payload_rs() -> String {
 }
 
 /// The catalog's QUERY-operand domains, in a stable order: a query twin for
-/// every term-bearing scalar domain (`public.query_<name>`), then the SteVec
-/// containment needle (`public.query_jsonb`). Exactly the shapes the generated
+/// every term-bearing scalar domain (`eql_v3.query_<name>`), then the SteVec
+/// containment needle (`eql_v3.query_jsonb`). Exactly the shapes the generated
 /// `QueryPayload` spans and `from_v2_query` can target. Returned as
 /// `(module, variant ident, struct ident, unqualified query-domain name)`; the
 /// SteVec needle keeps the `SteVec` variant name the `from_v2` query path
@@ -546,8 +548,8 @@ fn query_payload_domains() -> Vec<(String, String, String, String)> {
 
 /// Render the generated `crates/eql-bindings/src/v3/query_payload.rs`: the
 /// `QueryPayload` enum spanning every QUERY-operand domain — a variant per
-/// term-bearing scalar query twin (`public.query_<name>`) plus the SteVec
-/// containment needle (`public.query_jsonb`) — with its
+/// term-bearing scalar query twin (`eql_v3.query_<name>`) plus the SteVec
+/// containment needle (`eql_v3.query_jsonb`) — with its
 /// construct-from-known-domain `parse` constructor.
 ///
 /// Generated for the same reason as [`render_payload_rs`]'s `DomainPayload`:
@@ -564,7 +566,8 @@ pub fn render_query_payload_rs() -> String {
         let m = format_ident!("{module}");
         let v = format_ident!("{variant}");
         let s = format_ident!("{strukt}");
-        let doc = format!(" The `public.{key}` query operand.");
+        // Every query-operand domain lives in eql_v3 (CIP-3442).
+        let doc = format!(" The `eql_v3.{key}` query operand.");
         variants.extend(quote! {
             #[doc = #doc]
             #v(super::#m::#s),
@@ -590,9 +593,9 @@ pub fn render_query_payload_rs() -> String {
         use super::domain_type::DomainType;
 
         /// Every v3 QUERY-operand shape in one type: one variant per term-bearing
-        /// scalar query twin (`public.query_<name>`, the enveloped term-only
+        /// scalar query twin (`eql_v3.query_<name>`, the enveloped term-only
         /// operand — `{v, i, <terms>}`, no `c`) plus the SteVec containment
-        /// needle (`public.query_jsonb`). Generated from the catalog, so it
+        /// needle (`eql_v3.query_jsonb`). Generated from the catalog, so it
         /// cannot drift when the catalog grows.
         ///
         /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -631,7 +634,7 @@ pub fn render_query_payload_rs() -> String {
                 }
             }
 
-            /// Fully-qualified SQL domain name, e.g. `"public.query_integer_eq"`.
+            /// Fully-qualified SQL domain name, e.g. `"eql_v3.query_integer_eq"`.
             pub fn sql_domain(&self) -> &'static str {
                 self.as_domain_type().sql_domain()
             }
@@ -777,7 +780,7 @@ mod tests {
     #[test]
     fn query_twins_drop_c_and_name_query_domains() {
         // CIP-3432: every term-bearing capability domain gets a `<Name>Query`
-        // twin = the storage struct minus `c`, on the `public.query_<name>`
+        // twin = the storage struct minus `c`, on the `eql_v3.query_<name>`
         // domain (prefix naming — CIP-3442). Storage-only domains (no
         // operators) get no twin.
         let out = render_family_bindings(family("integer"));
@@ -797,10 +800,10 @@ mod tests {
         assert_eq!(field_idents(&out, "IntegerEqQuery"), ["v", "i", "hm"]);
         assert_eq!(field_idents(&out, "IntegerOrdQuery"), ["v", "i", "ob"]);
         assert_eq!(field_idents(&out, "IntegerOrdOpeQuery"), ["v", "i", "op"]);
-        assert!(out.contains("\"public.query_integer_eq\""));
+        assert!(out.contains("\"eql_v3.query_integer_eq\""));
         assert!(out.contains("impl DomainType for IntegerEqQuery"));
         assert!(out.contains("schema_for!(IntegerEqQuery)"));
-        assert!(out.contains("`public.query_integer_eq` — equality domain query operand."));
+        assert!(out.contains("`eql_v3.query_integer_eq` — equality domain query operand."));
         // Query twin term keys mirror the storage domain's.
         assert!(out.contains(r#"&["op"]"#));
 
@@ -811,7 +814,7 @@ mod tests {
             field_idents(&text, "TextSearchQuery"),
             ["v", "i", "hm", "ob", "bf"]
         );
-        assert!(text.contains("`public.query_text_match` — match domain query operand."));
+        assert!(text.contains("`eql_v3.query_text_match` — match domain query operand."));
     }
 
     #[test]

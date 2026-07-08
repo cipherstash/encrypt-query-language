@@ -35,7 +35,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/query_bigint_ord.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`public.query_bigint_ord` — ordering domain query operand.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.",
+  "description": "`eql_v3.query_bigint_ord` — ordering domain query operand.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.",
   "properties": {
     "i": {
       "$ref": "#/$defs/Identifier"

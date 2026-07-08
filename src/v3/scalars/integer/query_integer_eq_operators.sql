@@ -4,28 +4,28 @@
 -- REQUIRE: src/v3/scalars/integer/query_integer_eq_functions.sql
 
 --! @file encrypted_domain/integer/query_integer_eq_operators.sql
---! @brief Operators for public.query_integer_eq.
+--! @brief Operators for eql_v3.query_integer_eq.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.integer_eq, RIGHTARG = public.query_integer_eq,
+  LEFTARG = public.integer_eq, RIGHTARG = eql_v3.query_integer_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.query_integer_eq, RIGHTARG = public.integer_eq,
+  LEFTARG = eql_v3.query_integer_eq, RIGHTARG = public.integer_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.integer_eq, RIGHTARG = public.query_integer_eq,
+  LEFTARG = public.integer_eq, RIGHTARG = eql_v3.query_integer_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.query_integer_eq, RIGHTARG = public.integer_eq,
+  LEFTARG = eql_v3.query_integer_eq, RIGHTARG = public.integer_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );

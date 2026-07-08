@@ -91,9 +91,11 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
 }
 
 /// User-column domain names, as they appear in SQL: scalar-family domains plus
-/// the hand-written JSON/JSONB domains. These MUST live in `public` (never
-/// `eql_v3` or `eql_v3_internal`) so application tables using them survive EQL
-/// schema uninstall.
+/// the hand-written JSON/JSONB column domains. These MUST live in `public`
+/// (never `eql_v3` or `eql_v3_internal`) so application tables using them
+/// survive EQL schema uninstall. The query-operand domains are deliberately
+/// NOT here — they are never column types and live in `eql_v3` (CIP-3442);
+/// see [`query_domain_names`].
 fn user_domain_names() -> Vec<String> {
     let mut names = Vec::new();
     for family in eql_domains::scalar_families() {
@@ -105,11 +107,26 @@ fn user_domain_names() -> Vec<String> {
             }
         }
     }
-    names.extend(
-        ["json", "jsonb_entry", "query_jsonb"]
-            .into_iter()
-            .map(String::from),
-    );
+    names.extend(["json", "jsonb_entry"].into_iter().map(String::from));
+    names.sort();
+    names
+}
+
+/// Query-operand domain names: the `query_<name>` twin of every term-bearing
+/// scalar domain plus the jsonb containment needle. These MUST live in
+/// `eql_v3` (never `public`) — a query operand is not a column type, so it
+/// stays out of the column-type namespace and is uninstalled with the EQL
+/// surface (CIP-3442).
+fn query_domain_names() -> Vec<String> {
+    let mut names: Vec<String> = eql_domains::scalar_families()
+        .flat_map(|f| {
+            f.domains
+                .iter()
+                .filter(|d| !d.terms.is_empty())
+                .map(move |d| d.query_name(f.name))
+        })
+        .collect();
+    names.push("query_jsonb".to_string());
     names.sort();
     names
 }
@@ -247,6 +264,65 @@ async fn user_column_domains_absent_from_eql_owned_schemas(pool: PgPool) -> Resu
     assert!(
         offenders.is_empty(),
         "user-column domains must not exist in droppable EQL-owned schemas: {offenders:?}"
+    );
+    Ok(())
+}
+
+/// #2 — Placement invariant (mirror): every query-operand domain lives in
+/// `eql_v3` as a jsonb-backed domain, and none leaks into `public`. A query
+/// operand is never a column type, so it is versioned and uninstalled with
+/// the EQL surface instead of sharing the column domains' `public` home
+/// (CIP-3442).
+#[sqlx::test]
+async fn query_operand_domains_are_eql_v3_jsonb_domains(pool: PgPool) -> Result<()> {
+    let installed: Vec<(String, String, String)> = sqlx::query_as(
+        r#"
+        SELECT n.nspname::text, t.typname::text, bt.typname::text
+        FROM pg_catalog.pg_type t
+        JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+        JOIN pg_catalog.pg_type bt ON bt.oid = t.typbasetype
+        WHERE n.nspname IN ('public', 'eql_v3', 'eql_v3_internal')
+          AND t.typtype = 'd'
+          AND t.typname = ANY($1)
+        ORDER BY t.typname
+        "#,
+    )
+    .bind(query_domain_names())
+    .fetch_all(&pool)
+    .await?;
+
+    let misplaced: Vec<String> = installed
+        .iter()
+        .filter(|(schema, _, _)| schema != "eql_v3")
+        .map(|(schema, name, _)| format!("{schema}.{name}"))
+        .collect();
+    assert!(
+        misplaced.is_empty(),
+        "query-operand domains must live in eql_v3 only: {misplaced:?}"
+    );
+
+    let in_eql_v3: Vec<&String> = installed
+        .iter()
+        .filter(|(schema, _, _)| schema == "eql_v3")
+        .map(|(_, name, _)| name)
+        .collect();
+    let missing: Vec<String> = query_domain_names()
+        .into_iter()
+        .filter(|name| !in_eql_v3.contains(&name))
+        .collect();
+    assert!(
+        missing.is_empty(),
+        "query-operand domain(s) missing from eql_v3: {missing:?}"
+    );
+
+    let non_jsonb: Vec<String> = installed
+        .iter()
+        .filter(|(_, _, base)| base != "jsonb")
+        .map(|(_, name, base)| format!("{name} (base {base})"))
+        .collect();
+    assert!(
+        non_jsonb.is_empty(),
+        "eql_v3 query-operand domains must be jsonb-backed domains: {non_jsonb:?}"
     );
     Ok(())
 }

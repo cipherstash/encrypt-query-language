@@ -5,7 +5,7 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.query_text_ord` — ordering domain query operand.
+ * `eql_v3.query_text_ord` — ordering domain query operand.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `ob`.
  */

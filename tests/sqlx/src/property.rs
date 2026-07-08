@@ -95,12 +95,15 @@ fn query_cast(payload_json: &str, domain: &str) -> String {
     if let Some(obj) = v.as_object_mut() {
         obj.remove("c");
     }
-    // `domain` is schema-qualified (`public.integer_eq`); the twin prefixes the
-    // unqualified name (`public.query_integer_eq`).
-    let query_domain = match domain.rsplit_once('.') {
-        Some((schema, name)) => format!("{schema}.query_{name}"),
-        None => format!("query_{domain}"),
+    // `domain` is schema-qualified (`public.integer_eq`); the twin prefixes
+    // the unqualified name and lives in the eql_v3 schema, not `public`
+    // (query operands are never column types — CIP-3442):
+    // `eql_v3.query_integer_eq`.
+    let bare = match domain.rsplit_once('.') {
+        Some((_, name)) => name,
+        None => domain,
     };
+    let query_domain = format!("eql_v3.query_{bare}");
     format!(
         "'{}'::jsonb::{}",
         v.to_string().replace('\'', "''"),

@@ -268,7 +268,7 @@ macro_rules! ope_ord_fixture_smoke {
                     o.remove("c");
                 }
                 format!(
-                    "'{}'::jsonb::public.query_{}",
+                    "'{}'::jsonb::eql_v3.query_{}",
                     v.to_string().replace('\'', "''"),
                     $domain
                 )

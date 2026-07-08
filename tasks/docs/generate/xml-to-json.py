@@ -115,11 +115,14 @@ def load_domains(catalog_path: Path) -> list:
                 "termFunctions": _term_functions(dom.get("terms", [])),
             })
 
-    # SteVec (jsonb) family: hand-written SQL, catalog inventory only. Like the
-    # scalar domains these live in `public`; the extractor functions are eql_v3.
+    # SteVec (jsonb) family: hand-written SQL, catalog inventory only. The
+    # column-type domains (`json`, `jsonb_entry`) live in `public`; the
+    # containment needle (`query_jsonb`) is a query operand, never a column
+    # type, and lives in `eql_v3` (CIP-3442). Extractor functions are eql_v3.
     for entry in catalog.get("stevec", []):
+        schema = "eql_v3" if entry["full_name"].startswith("query_") else "public"
         domains.append({
-            "name": f"public.{entry['full_name']}",
+            "name": f"{schema}.{entry['full_name']}",
             "type": "jsonb",
             "variant": "",
             "base": "jsonb",

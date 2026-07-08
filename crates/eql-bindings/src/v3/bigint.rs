@@ -165,7 +165,7 @@ impl DomainType for BigintOrdOpe {
         schema_for!(BigintOrdOpe)
     }
 }
-/// `public.query_bigint_eq` — equality domain query operand.
+/// `eql_v3.query_bigint_eq` — equality domain query operand.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -178,7 +178,7 @@ pub struct BigintEqQuery {
 }
 impl DomainType for BigintEqQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_bigint_eq"
+        "eql_v3.query_bigint_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -196,7 +196,7 @@ impl DomainType for BigintEqQuery {
         schema_for!(BigintEqQuery)
     }
 }
-/// `public.query_bigint_ord_ore` — ordering domain query operand.
+/// `eql_v3.query_bigint_ord_ore` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -209,7 +209,7 @@ pub struct BigintOrdOreQuery {
 }
 impl DomainType for BigintOrdOreQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_bigint_ord_ore"
+        "eql_v3.query_bigint_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -227,7 +227,7 @@ impl DomainType for BigintOrdOreQuery {
         schema_for!(BigintOrdOreQuery)
     }
 }
-/// `public.query_bigint_ord` — ordering domain query operand.
+/// `eql_v3.query_bigint_ord` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -240,7 +240,7 @@ pub struct BigintOrdQuery {
 }
 impl DomainType for BigintOrdQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_bigint_ord"
+        "eql_v3.query_bigint_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -258,7 +258,7 @@ impl DomainType for BigintOrdQuery {
         schema_for!(BigintOrdQuery)
     }
 }
-/// `public.query_bigint_ord_ope` — ordering domain query operand.
+/// `eql_v3.query_bigint_ord_ope` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -271,7 +271,7 @@ pub struct BigintOrdOpeQuery {
 }
 impl DomainType for BigintOrdOpeQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_bigint_ord_ope"
+        "eql_v3.query_bigint_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

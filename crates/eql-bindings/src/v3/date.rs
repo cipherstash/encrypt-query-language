@@ -165,7 +165,7 @@ impl DomainType for DateOrdOpe {
         schema_for!(DateOrdOpe)
     }
 }
-/// `public.query_date_eq` — equality domain query operand.
+/// `eql_v3.query_date_eq` — equality domain query operand.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -178,7 +178,7 @@ pub struct DateEqQuery {
 }
 impl DomainType for DateEqQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_date_eq"
+        "eql_v3.query_date_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -196,7 +196,7 @@ impl DomainType for DateEqQuery {
         schema_for!(DateEqQuery)
     }
 }
-/// `public.query_date_ord_ore` — ordering domain query operand.
+/// `eql_v3.query_date_ord_ore` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -209,7 +209,7 @@ pub struct DateOrdOreQuery {
 }
 impl DomainType for DateOrdOreQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_date_ord_ore"
+        "eql_v3.query_date_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -227,7 +227,7 @@ impl DomainType for DateOrdOreQuery {
         schema_for!(DateOrdOreQuery)
     }
 }
-/// `public.query_date_ord` — ordering domain query operand.
+/// `eql_v3.query_date_ord` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -240,7 +240,7 @@ pub struct DateOrdQuery {
 }
 impl DomainType for DateOrdQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_date_ord"
+        "eql_v3.query_date_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -258,7 +258,7 @@ impl DomainType for DateOrdQuery {
         schema_for!(DateOrdQuery)
     }
 }
-/// `public.query_date_ord_ope` — ordering domain query operand.
+/// `eql_v3.query_date_ord_ope` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -271,7 +271,7 @@ pub struct DateOrdOpeQuery {
 }
 impl DomainType for DateOrdOpeQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_date_ord_ope"
+        "eql_v3.query_date_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

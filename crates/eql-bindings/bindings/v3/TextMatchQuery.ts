@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.query_text_match` — match domain query operand.
+ * `eql_v3.query_text_match` — match domain query operand.
  *
  * Operators: `@>` `<@`. Required keys: `v` `i` `bf`.
  */

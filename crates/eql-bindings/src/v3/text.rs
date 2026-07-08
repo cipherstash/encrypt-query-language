@@ -234,7 +234,7 @@ impl DomainType for TextSearch {
         schema_for!(TextSearch)
     }
 }
-/// `public.query_text_eq` — equality domain query operand.
+/// `eql_v3.query_text_eq` — equality domain query operand.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -247,7 +247,7 @@ pub struct TextEqQuery {
 }
 impl DomainType for TextEqQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_text_eq"
+        "eql_v3.query_text_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -265,7 +265,7 @@ impl DomainType for TextEqQuery {
         schema_for!(TextEqQuery)
     }
 }
-/// `public.query_text_match` — match domain query operand.
+/// `eql_v3.query_text_match` — match domain query operand.
 ///
 /// Operators: `@>` `<@`. Required keys: `v` `i` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -278,7 +278,7 @@ pub struct TextMatchQuery {
 }
 impl DomainType for TextMatchQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_text_match"
+        "eql_v3.query_text_match"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -296,7 +296,7 @@ impl DomainType for TextMatchQuery {
         schema_for!(TextMatchQuery)
     }
 }
-/// `public.query_text_ord_ore` — ordering domain query operand.
+/// `eql_v3.query_text_ord_ore` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -310,7 +310,7 @@ pub struct TextOrdOreQuery {
 }
 impl DomainType for TextOrdOreQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_text_ord_ore"
+        "eql_v3.query_text_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -328,7 +328,7 @@ impl DomainType for TextOrdOreQuery {
         schema_for!(TextOrdOreQuery)
     }
 }
-/// `public.query_text_ord` — ordering domain query operand.
+/// `eql_v3.query_text_ord` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -342,7 +342,7 @@ pub struct TextOrdQuery {
 }
 impl DomainType for TextOrdQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_text_ord"
+        "eql_v3.query_text_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -360,7 +360,7 @@ impl DomainType for TextOrdQuery {
         schema_for!(TextOrdQuery)
     }
 }
-/// `public.query_text_ord_ope` — ordering domain query operand.
+/// `eql_v3.query_text_ord_ope` — ordering domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `hm` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -374,7 +374,7 @@ pub struct TextOrdOpeQuery {
 }
 impl DomainType for TextOrdOpeQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_text_ord_ope"
+        "eql_v3.query_text_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -392,7 +392,7 @@ impl DomainType for TextOrdOpeQuery {
         schema_for!(TextOrdOpeQuery)
     }
 }
-/// `public.query_text_search` — search domain query operand.
+/// `eql_v3.query_text_search` — search domain query operand.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `ob` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -407,7 +407,7 @@ pub struct TextSearchQuery {
 }
 impl DomainType for TextSearchQuery {
     fn sql_domain_static() -> &'static str {
-        "public.query_text_search"
+        "eql_v3.query_text_search"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

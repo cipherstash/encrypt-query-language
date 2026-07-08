@@ -4,76 +4,76 @@
 -- REQUIRE: src/v3/scalars/integer/query_integer_ord_ope_functions.sql
 
 --! @file encrypted_domain/integer/query_integer_ord_ope_operators.sql
---! @brief Operators for public.query_integer_ord_ope.
+--! @brief Operators for eql_v3.query_integer_ord_ope.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.integer_ord_ope, RIGHTARG = public.query_integer_ord_ope,
+  LEFTARG = public.integer_ord_ope, RIGHTARG = eql_v3.query_integer_ord_ope,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.integer_ord_ope, RIGHTARG = public.query_integer_ord_ope,
+  LEFTARG = public.integer_ord_ope, RIGHTARG = eql_v3.query_integer_ord_ope,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = public.integer_ord_ope, RIGHTARG = public.query_integer_ord_ope,
+  LEFTARG = public.integer_ord_ope, RIGHTARG = eql_v3.query_integer_ord_ope,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = public.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = public.integer_ord_ope, RIGHTARG = public.query_integer_ord_ope,
+  LEFTARG = public.integer_ord_ope, RIGHTARG = eql_v3.query_integer_ord_ope,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = public.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = public.integer_ord_ope, RIGHTARG = public.query_integer_ord_ope,
+  LEFTARG = public.integer_ord_ope, RIGHTARG = eql_v3.query_integer_ord_ope,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = public.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = public.integer_ord_ope, RIGHTARG = public.query_integer_ord_ope,
+  LEFTARG = public.integer_ord_ope, RIGHTARG = eql_v3.query_integer_ord_ope,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = public.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.integer_ord_ope,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
