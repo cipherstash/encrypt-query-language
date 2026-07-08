@@ -32,6 +32,10 @@ mod match_smoke;
 // value compare equal through both the hm (`_eq`) and ORE (`_ord`/`_ord_ore`)
 // paths.
 mod cross_ciphertext;
+// cross-name routing: proves the generated cross-name `=` between an alias
+// (`int4_eq`) and its canonical twin (`integer_eq`) routes hmac (not native
+// jsonb) across every doubles pair, both operand directions.
+mod cross_name_routing;
 // e2e suite: oracle over freshly generated + batch-encrypted values.
 #[cfg(feature = "proptest-e2e")]
 mod e2e_oracle;
