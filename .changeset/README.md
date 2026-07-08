@@ -21,5 +21,5 @@ User-facing description of what changed and why.
 ```
 
 Prereleases (alpha/beta/rc) use changesets pre-mode; see
-`docs/development/releasing-an-alpha.md`. See
+`docs/development/releasing.md`. See
 https://github.com/changesets/changesets for the tool docs.

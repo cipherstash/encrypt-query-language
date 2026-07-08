@@ -3,7 +3,7 @@
 > **SUPERSEDED (historical record).** The `workflow_dispatch` coordinator with
 > `mise run release:*` targets and a `crate-publish`/`crate_tag` job described
 > below was never shipped. Releases now run through the single unified
-> `.github/workflows/release.yml`. See `docs/development/releasing-an-alpha.md`
+> `.github/workflows/release.yml`. See `docs/development/releasing.md`
 > for the current process. This file is kept only as a point-in-time snapshot.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
