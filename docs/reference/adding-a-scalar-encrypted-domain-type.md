@@ -1019,15 +1019,18 @@ generated `src/v3/scalars/boolean/` SQL (3 files), no edits to
 
 ## Adding an alias
 
-To add a Postgres-native spelling for an existing scalar (e.g. `int` for
-`integer`), add it to that family's `aliases` array in
-`crates/eql-domains/src/lib.rs`:
+To add a Postgres-native spelling for an existing scalar (e.g. adding `int` to
+the `integer` family, which already declares `int4`), append it to that family's
+`aliases` array in `crates/eql-domains/src/lib.rs`:
 
     const INTEGER: DomainFamily = DomainFamily {
         name: "integer",
-        aliases: &["int4", "int"],   // add here
+        aliases: &["int4", "int"],   // `int` is the newly-added spelling
         domains: ORDERED_INT_DOMAINS,
     };
+
+(The `integer` family ships with `aliases: &["int4"]` today; the line above shows
+adding a second spelling.)
 
 Then `mise run clean && mise run build`. The generator emits a full
 `src/v3/scalars/<alias>/` surface plus cross-name operators in the canonical

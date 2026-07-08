@@ -15,6 +15,17 @@ EQL generates a set of Postgres-native spelling **aliases** for its encrypted sc
 
 Every alias carries the same domain variants as its canonical family — `public.<name>`, `public.<name>_eq`, `public.<name>_ord`, `public.<name>_ord_ore`, `public.<name>_ord_ope` — with byte-identical CHECK constraints and the same extractors (`eq_term` / `ord_term`), comparison wrappers, and `min`/`max` aggregates. Because an alias shares the canonical payload envelope exactly, a value encrypted for `public.integer` is a valid `public.int4` value and vice versa: conversion between the two is a plain value coercion, not a re-encryption.
 
+## Always schema-qualify the domain name
+
+> **Important:** every bare-family name in this set — `int2`, `int4`, `int8`, `float4`, `float8`, `decimal`, *and* their canonical spellings `smallint`, `integer`, `bigint`, `real`, `double precision`, `numeric` — is **also a built-in PostgreSQL type name**, resolved from `pg_catalog`, which always shadows the `public` schema. So an **unqualified** name in DDL binds the plaintext built-in type, **not** the encrypted domain:
+>
+> ```sql
+> CREATE TABLE t (x int4);          -- ❌ plaintext built-in integer — NOT encrypted
+> CREATE TABLE t (x public.int4);   -- ✅ the encrypted-domain alias
+> ```
+>
+> This is not specific to the aliases — the canonical `public.integer` storage domain behaves identically (bare `integer` is a built-in too). Always write the **schema-qualified** name (`public.int4`, `public.integer_eq`, …) so the column is typed as the encrypted domain. The alias's value is a *familiar spelling* in that qualified form, not a new bare-name binding.
+
 ## Both-directions interop
 
 An alias and its canonical twin interoperate in **both** directions. Comparing a `public.int4_eq` value to a `public.integer_eq` value (in either operand order) resolves the generated **cross-name operator**, which routes the comparison through the encrypted index term (HMAC for equality, ORE for ordering) — exactly as a same-name comparison would.
