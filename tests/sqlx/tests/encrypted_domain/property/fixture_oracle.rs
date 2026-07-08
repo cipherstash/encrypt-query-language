@@ -120,6 +120,14 @@ pub(crate) fn embedded_doubles_sql<T: ScalarType>() -> &'static str {
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/eql_v3_numeric_doubles.sql"
         )),
+        "real" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v3_real_doubles.sql"
+        )),
+        "double" => include_str!(concat!(
+            env!("CARGO_MANIFEST_DIR"),
+            "/fixtures/eql_v3_double_doubles.sql"
+        )),
         "text" => include_str!(concat!(
             env!("CARGO_MANIFEST_DIR"),
             "/fixtures/eql_v3_text_doubles.sql"

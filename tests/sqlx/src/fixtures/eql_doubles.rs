@@ -32,6 +32,8 @@ pub const DOUBLES_TOKENS: &[&str] = &[
     "date",
     "timestamp",
     "numeric",
+    "real",
+    "double",
     "text",
 ];
 
@@ -88,6 +90,8 @@ pub async fn generate(token: &str) -> Result<()> {
         "date" => generate_doubles_for::<chrono::NaiveDate>().await,
         "timestamp" => generate_doubles_for::<chrono::DateTime<chrono::Utc>>().await,
         "numeric" => generate_doubles_for::<rust_decimal::Decimal>().await,
+        "real" => generate_doubles_for::<crate::scalar_domains::F4>().await,
+        "double" => generate_doubles_for::<crate::scalar_domains::F8>().await,
         "text" => generate_doubles_for::<String>().await,
         other => anyhow::bail!(
             "no doubles generator wired for token '{other}'; add it to \
