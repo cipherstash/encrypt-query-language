@@ -16,6 +16,10 @@
 # so every job that runs mise-action dies before any tools install. The
 # prebuilt binary has no compiler/MSRV dependency. Downstream cargo: tools
 # below are then fetched as prebuilt binaries via this cargo-binstall.
+# Node drives the @cipherstash/eql generated-output gates (types:check /
+# typescript:check invoke packages/eql/scripts/sync-generated.mjs directly —
+# node builtins only, no pnpm/node_modules needed at gate time).
+"node" = "22"
 "cargo-binstall" = "latest"
 "cargo:sqlx-cli" = "latest"
 # Installed via the already-present cargo-binstall (fast in CI). Drives the
@@ -255,7 +259,10 @@ depends = ["types:generate"]
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
-pnpm --filter @cipherstash/eql sync:generated
+# node, not pnpm: sync-generated.mjs uses only node builtins, and this gate
+# runs in contexts (test-eql.yml's Rust job, the pre-commit hook) that
+# provision mise tools but not pnpm/node_modules.
+node packages/eql/scripts/sync-generated.mjs
 git diff --exit-code -- crates/eql-bindings/src/v3 crates/eql-bindings/bindings crates/eql-bindings/schema packages/eql/src/generated || {
   echo "eql-bindings generated Rust/TS/JSON or @cipherstash/eql package output is stale — run 'mise run types:generate' and 'mise run typescript:generate' and commit the result" >&2
   exit 1
@@ -273,7 +280,7 @@ fi
 description = "Regenerate @cipherstash/eql TypeScript package source from eql-bindings outputs"
 dir = "{{config_root}}"
 depends = ["types:generate"]
-run = "pnpm --filter @cipherstash/eql sync:generated"
+run = "node packages/eql/scripts/sync-generated.mjs"
 
 [tasks."typescript:check"]
 description = "Verify @cipherstash/eql generated package source is fresh"
@@ -282,7 +289,7 @@ depends = ["types:generate"]
 run = """
 #!/usr/bin/env bash
 set -euo pipefail
-pnpm --filter @cipherstash/eql sync:generated
+node packages/eql/scripts/sync-generated.mjs
 git diff --exit-code -- packages/eql/src/generated || {
   echo "@cipherstash/eql generated files are stale — run 'mise run typescript:generate' and commit the result" >&2
   exit 1
