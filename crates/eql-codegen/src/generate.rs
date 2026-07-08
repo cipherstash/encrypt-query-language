@@ -366,27 +366,33 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     let scalars_root = out_root.join(V3_SCALARS_DIR);
     let mut all_written: Vec<PathBuf> = Vec::new();
     for spec in eql_domains::scalar_families() {
-        // Cross files (one per alias) belong in the CANONICAL dir and must be
-        // written together with that dir's surface so the per-dir orphan sweep
-        // keeps them (R4). Build them first.
-        let canonical_dir = scalars_root.join(spec.name);
-        let cross_extra: Vec<(PathBuf, String)> = spec
-            .aliases
-            .iter()
-            .map(|alias| {
-                (
-                    canonical_dir.join(format!("{}__{}_cross.sql", spec.name, alias)),
-                    render_cross_file(spec, spec.name, alias),
-                )
-            })
-            .collect();
-
-        // One dir per group name (canonical + each alias), each a full surface.
-        // The canonical dir also gets the cross files as `extra`.
-        for name in spec.group_names() {
+        // Cross-name operator files cover EVERY unordered pair of names in the
+        // group (canonical + every alias), not just canonical×alias — otherwise
+        // two aliases of one family (e.g. `int4` and `int`) would compare via
+        // native jsonb, the exact silent-degradation this feature exists to
+        // close. Each pair's file lives in the dir of its FIRST member (group
+        // order is canonical-first, so a canonical×alias file lands in the
+        // canonical dir, unchanged), written together with that dir's surface so
+        // the per-dir orphan sweep keeps it (R4). With one alias per family this
+        // is exactly the previous canonical×alias behaviour.
+        let group = spec.group_names();
+        for name in group.iter().copied() {
+            // Cross files owned by this dir: (name, b) for every b that follows
+            // `name` in the group — deterministic order, no HashMap.
+            let extra: Vec<(PathBuf, String)> = group
+                .iter()
+                .copied()
+                .skip_while(|&g| g != name)
+                .skip(1)
+                .map(|b| {
+                    (
+                        scalars_root.join(name).join(format!("{name}__{b}_cross.sql")),
+                        render_cross_file(spec, name, b),
+                    )
+                })
+                .collect();
             let out_dir = scalars_root.join(name);
-            let extra: &[(PathBuf, String)] = if name == spec.name { &cross_extra } else { &[] };
-            let written = generate_type_named(name, spec.domains, &out_dir, extra)?;
+            let written = generate_type_named(name, spec.domains, &out_dir, &extra)?;
             for p in &written {
                 let rel = p.strip_prefix(out_root).unwrap_or(p);
                 println!("generated {}", rel.display());
@@ -1180,6 +1186,31 @@ mod tests {
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_eq_functions.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_eq_functions.sql"));
+    }
+
+    #[test]
+    fn render_cross_file_is_symmetric_for_an_alias_by_alias_pair() {
+        // The all-pairs driver (generate_all) emits a cross file for every
+        // unordered pair of group names — including alias×alias when a family
+        // declares two aliases. `render_cross_file` must produce a correct
+        // both-directions surface for ANY pair of names, not just
+        // canonical×alias. Here: a hypothetical `int4`×`int` pair over integer's
+        // domain set.
+        let s = spec("integer");
+        let sql = render_cross_file(s, "int4", "int");
+        // supported eq wrapper, both directions between the two aliases
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.int4_eq, b public.int_eq)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.int_eq, b public.int4_eq)"));
+        // supported ordered wrapper, both directions
+        assert!(sql.contains("CREATE FUNCTION eql_v3.lt(a public.int4_ord, b public.int_ord)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.lt(a public.int_ord, b public.int4_ord)"));
+        // CREATE OPERATOR both directions
+        assert!(sql.contains("LEFTARG = public.int4_eq, RIGHTARG = public.int_eq"));
+        assert!(sql.contains("LEFTARG = public.int_eq, RIGHTARG = public.int4_eq"));
+        // REQUIRE edges name BOTH members (neither is the canonical `integer`)
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int4/int4_types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/int/int_types.sql"));
+        assert!(!sql.contains("public.integer_eq"));
     }
 
     #[test]
