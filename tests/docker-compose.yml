@@ -2,7 +2,12 @@ services:
   postgres: &postgres
     container_name: postgres
     image: postgres:17
-    command: postgres -c track_functions=all -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
+    # max_locks_per_transaction is raised well above the default 64 because the
+    # eql_v3 surface (now including native-spelling alias families + cross-name
+    # operators) creates thousands of objects; concurrent #[sqlx::test]
+    # install/uninstall transactions each `DROP SCHEMA ... CASCADE` over that
+    # surface and would otherwise exhaust the cluster-wide shared lock table.
+    command: postgres -c track_functions=all -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_locks_per_transaction=1024
     ports:
       - 7432:7432
     environment:
