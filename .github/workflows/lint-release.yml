@@ -15,6 +15,8 @@ on:
       - .github/workflows/lint-release.yml
       - .github/actionlint.yaml
       - .github/scripts/*.sh
+      - package.json
+      - scripts/*.mjs
       - tasks/release/*.sh
   workflow_dispatch: {}
 
@@ -89,3 +91,21 @@ jobs:
 
       - name: release-typescript workflow security guard test
         run: bash .github/scripts/release-typescript-workflow.test.sh
+
+      - uses: pnpm/action-setup@v6.0.8
+        name: Install pnpm
+        with:
+          run_install: false
+          cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install JS dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: release workflow supply-chain cache guard
+        run: |
+          pnpm run lint:workflow-cache
+          pnpm run test:scripts
