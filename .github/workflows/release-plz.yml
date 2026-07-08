@@ -1,0 +1,25 @@
+name: "Release eql-bindings (crates.io)"
+
+# REGISTRATION STUB — the real workflow lives on the eql_v3 release line.
+#
+# GitHub only registers (and allows dispatching) workflows whose file exists on
+# the DEFAULT branch. workflow_dispatch then executes the file at the
+# *dispatched ref*, so release.yml on eql_v3 can dispatch this workflow against
+# an eql-<version> tag and run that tag's full publish job. Without this stub
+# the workflow has no ID and every dispatch 404s.
+#
+# Replace with the full workflow when the eql_v3 release line merges to main
+# (the production crate publish triggers on push to main).
+
+on:
+  workflow_dispatch: {}
+
+permissions: {}
+
+jobs:
+  noop:
+    name: "Registration stub (real job runs at the dispatched ref)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - run: echo "release-plz.yml stub on main — dispatch against an eql-<version> tag or eql_v3 to run the real publish job"
