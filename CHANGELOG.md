@@ -152,7 +152,6 @@ See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Eight numbered notes cov
 
 (Backfill pending — entries for tagged 2.x releases will be added retroactively from `git log` in a follow-up.)
 
-[Unreleased]: https://github.com/cipherstash/encrypt-query-language/compare/eql-2.3.1...HEAD
 [2.3.1]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.3.1
 [2.3.0]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.3.0
 [2.2.1]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.2.1
