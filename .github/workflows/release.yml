@@ -332,16 +332,16 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
+          # Create the tag via the REST API with GH_TOKEN — the checkout has
+          # persist-credentials: false (deliberate hardening) and a git-level
+          # extraheader hack proved unreliable ("could not read Username").
           tag="eql-typescript-v${VERSION}"
-          repo_url="https://github.com/${REPO}.git"
-          auth=(-c "http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}")
-          if git "${auth[@]}" ls-remote --exit-code --tags "$repo_url" "refs/tags/${tag}" >/dev/null 2>&1; then
+          if gh api "repos/${REPO}/git/ref/tags/${tag}" >/dev/null 2>&1; then
             echo "tag ${tag} already exists on the remote; skipping"
           else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git tag "$tag"
-            git "${auth[@]}" push "$repo_url" "refs/tags/${tag}"
+            gh api -X POST "repos/${REPO}/git/refs" \
+              -f ref="refs/tags/${tag}" -f sha="$GITHUB_SHA" >/dev/null
+            echo "created ${tag} at ${GITHUB_SHA}"
           fi
 
   prerelease-publish-rust:
