@@ -1,27 +1,18 @@
-name: "Release (changesets)"
+name: "Release"
 
-# Single release entry point for the EQL lockstep artifacts, driven by
-# changesets. On push to main:
-#   - if changesets are pending -> changesets/action opens/updates the
-#     "Version Packages" PR. Its `version:` command bumps @cipherstash/eql AND
-#     derives the crate version + bundled SQL to the same V
-#     (scripts/sync-lockstep-versions.mjs), so the merged commit is a complete,
-#     consistent lockstep bump.
-#   - if none are pending (the Version PR just merged) -> it publishes the npm
-#     package (@cipherstash/eql@V) via OIDC trusted publishing, and this
-#     workflow then builds+attaches the SQL GitHub release (eql-V) and docs.
+# Single release entry point for the EQL release line.
 #
-# The Rust crate publishes independently from release-plz.yml (its own
-# push-to-main trigger publishes the committed Cargo.toml version V; crates.io
-# Trusted Publishing requires that workflow as the entry point). npm auth is
-# OIDC only (no NPM_TOKEN).
+# - `main` uses Changesets to version and publish the production release.
+# - `eql_v3` can cut prereleases from an explicit conventional release commit.
+#   The release commit itself is the marker: `chore(release): ...`.
 #
-# One-time npm setup (Trusted Publishing): on the @cipherstash/eql package's
-# Settings -> Trusted Publisher, add a GitHub publisher with
-#   Organization: cipherstash   Repository: encrypt-query-language
-#   Workflow: release.yml
-# For the brand-new package, bootstrap the first publish out-of-band, then all
-# subsequent publishes are OIDC.
+# Prereleases publish the npm package directly from this workflow and dispatch
+# the Rust crate publish through `release-plz.yml` so crates.io Trusted
+# Publishing still sees the correct entry-point workflow. The SQL GitHub
+# release and docs are built in the same workflow run.
+#
+# npm Trusted Publishing must be configured for this workflow filename:
+# `release.yml`.
 
 permissions:
   id-token: write # npm OIDC trusted publishing
@@ -32,6 +23,8 @@ on:
   push:
     branches:
       - main
+      - eql_v3
+  workflow_dispatch: {}
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -42,8 +35,57 @@ defaults:
     shell: bash {0}
 
 jobs:
+  classify:
+    name: Classify release intent
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      mode: ${{ steps.classify.outputs.mode }}
+      version: ${{ steps.classify.outputs.version }}
+      prerelease: ${{ steps.classify.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - id: classify
+        run: |
+          set -euo pipefail
+          branch="${GITHUB_REF_NAME}"
+          subject="$(git log -1 --format=%s)"
+          mode="skip"
+          version=""
+          prerelease="false"
+
+          if [[ "$branch" == "main" ]]; then
+            mode="production"
+          elif [[ "$branch" == "eql_v3" ]]; then
+            case "$subject" in
+              chore\(release\):*|release:*)
+                mode="prerelease"
+                ;;
+            esac
+          fi
+
+          if [[ "$mode" == "prerelease" ]]; then
+            version="$(node -p "require('./packages/eql/package.json').version")"
+            if [[ "$version" != *-* ]]; then
+              echo "::error::prerelease release commits must already pin a prerelease version in packages/eql/package.json" >&2
+              exit 1
+            fi
+            prerelease="true"
+          fi
+
+          {
+            echo "mode=$mode"
+            echo "version=$version"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+
   release:
     name: Version or publish (changesets)
+    needs: classify
+    if: ${{ needs.classify.outputs.mode == 'production' }}
     # GitHub-hosted (not Blacksmith): npm provenance from OIDC trusted
     # publishing is only accepted from github-hosted runners (self-hosted -> E422).
     runs-on: ubuntu-latest
@@ -133,3 +175,164 @@ jobs:
     with:
       ref: ${{ github.sha }}
       tag: eql-${{ needs.release.outputs.version }}
+
+  prerelease-build-sql:
+    name: Build + attach prerelease SQL
+    needs: classify
+    if: ${{ needs.classify.outputs.mode == 'prerelease' }}
+    permissions:
+      contents: write
+    secrets:
+      MULTITUDES_ACCESS_TOKEN: ${{ secrets.MULTITUDES_ACCESS_TOKEN }}
+    uses: ./.github/workflows/_build-sql.yml
+    with:
+      ref: ${{ github.sha }}
+      tag: eql-${{ needs.classify.outputs.version }}
+      attach: true
+      target_commitish: ${{ github.sha }}
+      prerelease: true
+
+  prerelease-build-docs:
+    name: Build + attach prerelease docs
+    needs: [classify, prerelease-build-sql]
+    if: ${{ needs.classify.outputs.mode == 'prerelease' }}
+    permissions:
+      contents: write
+    uses: ./.github/workflows/_build-docs.yml
+    with:
+      ref: ${{ github.sha }}
+      tag: eql-${{ needs.classify.outputs.version }}
+
+  prerelease-publish-npm:
+    name: Publish prerelease npm package
+    needs: [classify, prerelease-build-sql, prerelease-build-docs]
+    if: ${{ needs.classify.outputs.mode == 'prerelease' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v6.0.8
+        name: Install pnpm
+        with:
+          run_install: false
+          cache: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Upgrade npm for OIDC trusted publishing
+        run: npm install -g npm@^11.5.1
+
+      - uses: jdx/mise-action@v3
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify prerelease marker and version
+        env:
+          VERSION: ${{ needs.classify.outputs.version }}
+        run: |
+          set -euo pipefail
+          actual="$(node -p "require('./packages/eql/package.json').version")"
+          test "$actual" = "$VERSION" || {
+            echo "package version ${actual} does not match prerelease identity ${VERSION}" >&2
+            exit 1
+          }
+
+      - name: Prepare exact SQL assets
+        env:
+          VERSION: ${{ needs.classify.outputs.version }}
+        run: mise run release:prepare_bindings_assets --version "$VERSION"
+
+      - name: Build package
+        run: pnpm --filter @cipherstash/eql build
+
+      - name: Publish package
+        working-directory: packages/eql
+        env:
+          VERSION: ${{ needs.classify.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -n "$(npm view "@cipherstash/eql@${VERSION}" version 2>/dev/null)" ]; then
+            echo "@cipherstash/eql@${VERSION} is already published; skipping publish"
+          else
+            node scripts/npm-publish.mjs
+          fi
+
+      - name: Tag TypeScript release
+        env:
+          VERSION: ${{ needs.classify.outputs.version }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          tag="eql-typescript-v${VERSION}"
+          repo_url="https://github.com/${REPO}.git"
+          auth=(-c "http.https://github.com/.extraheader=AUTHORIZATION: bearer ${GH_TOKEN}")
+          if git "${auth[@]}" ls-remote --exit-code --tags "$repo_url" "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "tag ${tag} already exists on the remote; skipping"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git tag "$tag"
+            git "${auth[@]}" push "$repo_url" "refs/tags/${tag}"
+          fi
+
+  prerelease-publish-rust:
+    name: Dispatch prerelease Rust publish
+    needs: [classify, prerelease-build-sql, prerelease-build-docs]
+    if: ${{ needs.classify.outputs.mode == 'prerelease' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      actions: write
+    steps:
+      - name: Dispatch release-plz.yml against the prerelease commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BRANCH: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          gh workflow run release-plz.yml --ref "$BRANCH"
+
+  summary:
+    name: Summary
+    runs-on: ubuntu-latest
+    needs: [classify, release, build-sql, build-docs, prerelease-build-sql, prerelease-build-docs, prerelease-publish-npm, prerelease-publish-rust]
+    if: always()
+    steps:
+      - name: Emit run summary
+        env:
+          MODE: ${{ needs.classify.outputs.mode }}
+          VERSION: ${{ needs.classify.outputs.version }}
+          CLASSIFY_RESULT: ${{ needs.classify.result }}
+          RELEASE_RESULT: ${{ needs.release.result }}
+          BUILD_SQL_RESULT: ${{ needs.build-sql.result }}
+          BUILD_DOCS_RESULT: ${{ needs.build-docs.result }}
+          PRE_BUILD_SQL_RESULT: ${{ needs.prerelease-build-sql.result }}
+          PRE_BUILD_DOCS_RESULT: ${{ needs.prerelease-build-docs.result }}
+          PRE_PUBLISH_NPM_RESULT: ${{ needs.prerelease-publish-npm.result }}
+          PRE_PUBLISH_RUST_RESULT: ${{ needs.prerelease-publish-rust.result }}
+          SERVER_URL: ${{ github.server_url }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_ID: ${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release result"
+            echo ""
+            echo "- mode: \`${MODE}\`"
+            echo "- version: \`${VERSION}\`"
+            echo "- classify: ${CLASSIFY_RESULT} | release: ${RELEASE_RESULT} | build-sql: ${BUILD_SQL_RESULT} | build-docs: ${BUILD_DOCS_RESULT} | prerelease-build-sql: ${PRE_BUILD_SQL_RESULT} | prerelease-build-docs: ${PRE_BUILD_DOCS_RESULT} | prerelease-publish-npm: ${PRE_PUBLISH_NPM_RESULT} | prerelease-publish-rust: ${PRE_PUBLISH_RUST_RESULT}"
+            echo ""
+            echo "Run: ${SERVER_URL}/${REPOSITORY}/actions/runs/${RUN_ID}"
+          } >> "$GITHUB_STEP_SUMMARY"

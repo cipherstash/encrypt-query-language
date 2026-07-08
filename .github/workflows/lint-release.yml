@@ -10,6 +10,7 @@ on:
       - .github/workflows/_build-docs.yml
       - .github/workflows/release-eql.yml
       - .github/workflows/release-plz.yml
+      - .github/workflows/release.yml
       - .github/workflows/release-typescript.yml
       - .github/workflows/release-alpha.yml
       - .github/workflows/lint-release.yml
@@ -51,6 +52,7 @@ jobs:
             .github/workflows/_build-docs.yml \
             .github/workflows/release-eql.yml \
             .github/workflows/release-plz.yml \
+            .github/workflows/release.yml \
             .github/workflows/release-typescript.yml \
             .github/workflows/release-alpha.yml \
             .github/workflows/lint-release.yml

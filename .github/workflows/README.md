@@ -20,6 +20,7 @@ actually runs).
 | **test-eql.yml** | `pull_request`, `merge_group`, `workflow_dispatch` | Full test/lint/validate matrix; the one required check | **Yes** — `ci-required` |
 | **release-eql.yml** | `release: published`, `pull_request` (paths), `workflow_dispatch` | Build release SQL + docs; PR runs everything **but** the publish step | No |
 | **release-postgres-eql-image.yml** | `release: published`, `workflow_dispatch` | Build & push the Postgres+EQL Docker image to GHCR | No |
+| **release.yml** | `push: main`, `push: eql_v3`, `workflow_dispatch` | Unified release entrypoint: production on `main`, prerelease on `eql_v3` when the commit is an explicit `chore(release): ...` marker | No |
 | **release-plz.yml** | `push: main`, `workflow_dispatch` | Publish the `eql-bindings` crate to crates.io (Trusted Publishing) + open the release PR | No |
 | **bench-eql.yml** | `push: main` (paths), `schedule` 02:00 UTC daily, `workflow_dispatch` | `test:bench` (bench cargo feature). **Never runs on PRs** | No |
 | **macro-expand-eql.yml** | `schedule` 03:00 UTC daily, `workflow_dispatch` | Regenerate the integer `cargo expand` matrix snapshot; needs pinned nightly | **No — explicitly non-blocking** |
