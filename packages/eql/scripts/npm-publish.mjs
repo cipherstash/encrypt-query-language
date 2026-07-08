@@ -11,6 +11,9 @@ const tag = prerelease ? prerelease[1] : 'latest'
 
 console.log(`publishing ${pkg.name}@${pkg.version} with npm dist-tag '${tag}'`)
 
+// The bundled-SQL freshness guard lives in prepublishOnly
+// (scripts/verify-release-assets.mjs), which `npm publish` runs for every
+// publish path — including `changeset publish` on the production side.
 const result = spawnSync(
   'npm',
   ['publish', '--access', 'public', '--provenance', '--tag', tag, ...process.argv.slice(2)],

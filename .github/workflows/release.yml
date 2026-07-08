@@ -30,9 +30,10 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
-defaults:
-  run:
-    shell: bash {0}
+# No `defaults.run.shell` override: GitHub's default `bash` shell runs with
+# `-eo pipefail`, which is exactly what a publish workflow wants. (An explicit
+# `bash {0}` would silently DISABLE errexit/pipefail for any step that forgets
+# its own `set -euo pipefail`.)
 
 jobs:
   classify:
@@ -60,8 +61,11 @@ jobs:
           if [[ "$branch" == "main" ]]; then
             mode="production"
           elif [[ "$branch" == "eql_v3" ]]; then
+            # Exactly `chore(release):` — a bare `release:` prefix would let an
+            # unrelated commit ("release: fix runbook") re-trigger the publish
+            # pipeline for the currently pinned identity.
             case "$subject" in
-              chore\(release\):*|release:*)
+              chore\(release\):*)
                 mode="prerelease"
                 ;;
             esac
@@ -73,7 +77,17 @@ jobs:
               echo "::error::prerelease release commits must already pin a prerelease version in packages/eql/package.json" >&2
               exit 1
             fi
-            prerelease="true"
+            # Idempotency short-circuit: if this identity's npm tag already
+            # exists, the release was already cut — a re-push of the marker (or
+            # a rerun) must not re-publish. Individual steps are also
+            # idempotent; this just skips the whole pipeline up front.
+            if git ls-remote --exit-code --tags origin "refs/tags/eql-typescript-v${version}" >/dev/null 2>&1; then
+              echo "eql-typescript-v${version} already exists; prerelease ${version} was already published — skipping"
+              mode="skip"
+              version=""
+            else
+              prerelease="true"
+            fi
           fi
 
           {
@@ -110,13 +124,16 @@ jobs:
           node-version: 22
 
       - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@^11.5.1
+        run: npm install -g npm@11.5.1
 
       - uses: jdx/mise-action@v3
         with:
           version: 2026.4.0
           install: true
-          cache: true
+          # Publish workflows must not restore caches (lint-no-workflow-caching
+          # covers mise-action too): a poisoned toolchain cache would run inside
+          # the job that holds npm OIDC publishing power.
+          cache: false
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -255,13 +272,16 @@ jobs:
           node-version: 22
 
       - name: Upgrade npm for OIDC trusted publishing
-        run: npm install -g npm@^11.5.1
+        run: npm install -g npm@11.5.1
 
       - uses: jdx/mise-action@v3
         with:
           version: 2026.4.0
           install: true
-          cache: true
+          # Publish workflows must not restore caches (lint-no-workflow-caching
+          # covers mise-action too): a poisoned toolchain cache would run inside
+          # the job that holds npm OIDC publishing power.
+          cache: false
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -325,13 +345,18 @@ jobs:
     permissions:
       actions: write
     steps:
-      - name: Dispatch release-plz.yml against the prerelease commit
+      - name: Dispatch release-plz.yml against the prerelease tag
+        # Dispatch against the eql-<VERSION> tag, not the branch (same pattern
+        # as build-image): prerelease-build-sql (a `needs`) created that tag at
+        # the release commit, so the crate publishes from the EXACT commit the
+        # SQL + npm artifacts shipped from even if eql_v3 has advanced since
+        # the marker push — preserving the one-identity-one-commit invariant.
         env:
           GH_TOKEN: ${{ github.token }}
-          BRANCH: ${{ github.ref_name }}
+          VERSION: ${{ needs.classify.outputs.version }}
         run: |
           set -euo pipefail
-          gh workflow run release-plz.yml --ref "$BRANCH"
+          gh workflow run release-plz.yml --ref "eql-${VERSION}"
 
   summary:
     name: Summary

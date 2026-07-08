@@ -3,7 +3,6 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
-const repoRoot = resolve(packageRoot, '../..')
 
 export async function copyAssets() {
   const dist = join(packageRoot, 'dist')

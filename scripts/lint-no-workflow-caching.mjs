@@ -4,7 +4,10 @@ import { resolve } from 'node:path'
 import process from 'node:process'
 import yaml from 'js-yaml'
 
-const defaultWorkflowFiles = ['.github/workflows/release.yml']
+const defaultWorkflowFiles = [
+  '.github/workflows/release.yml',
+  '.github/workflows/release-plz.yml',
+]
 
 function asArray(value) {
   return Array.isArray(value) ? value : []
@@ -48,6 +51,15 @@ export function lintWorkflowDocument(document, file = '<workflow>') {
       if (action.startsWith('pnpm/action-setup@')) {
         if (!hasCacheInput(step, ['cache']) || !isExplicitlyDisabled(withBlock.cache)) {
           errors.push(`${label}: pnpm/action-setup must set with.cache: false in release workflows`)
+        }
+      }
+
+      // mise-action restores an executable toolchain from cache — the same
+      // poisoned-cache vector as node/pnpm dependency caches, running inside
+      // jobs that hold npm/crates.io OIDC publishing power.
+      if (action.startsWith('jdx/mise-action@')) {
+        if (!hasCacheInput(step, ['cache']) || !isExplicitlyDisabled(withBlock.cache)) {
+          errors.push(`${label}: jdx/mise-action must set with.cache: false in release workflows`)
         }
       }
 

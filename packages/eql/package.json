@@ -48,6 +48,7 @@
     "sync:generated": "node scripts/sync-generated.mjs",
     "check:generated": "node scripts/sync-generated.mjs --check",
     "build": "tsup",
+    "prepublishOnly": "node scripts/verify-release-assets.mjs",
     "dev": "tsup --watch",
     "test": "vitest run",
     "release": "pnpm run check:generated && pnpm run build && node scripts/npm-publish.mjs"

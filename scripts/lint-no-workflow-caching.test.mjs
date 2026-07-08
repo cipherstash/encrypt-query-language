@@ -40,6 +40,31 @@ describe('release workflow dependency cache guard', () => {
     expect(errors[1]).toContain('with.cache: false')
   })
 
+  test('accepts mise-action with cache disabled, rejects missing or enabled cache', () => {
+    const ok = lintWorkflowDocument({
+      jobs: {
+        publish: {
+          steps: [{ uses: 'jdx/mise-action@v3', with: { install: true, cache: false } }],
+        },
+      },
+    })
+    expect(ok).toEqual([])
+
+    const errors = lintWorkflowDocument({
+      jobs: {
+        publish: {
+          steps: [
+            { uses: 'jdx/mise-action@v3', with: { install: true } },
+            { uses: 'jdx/mise-action@v3', with: { install: true, cache: true } },
+          ],
+        },
+      },
+    })
+    expect(errors).toHaveLength(2)
+    expect(errors[0]).toContain('jdx/mise-action must set with.cache: false')
+    expect(errors[1]).toContain('jdx/mise-action must set with.cache: false')
+  })
+
   test('rejects setup-node package manager caches and actions/cache', () => {
     const errors = lintWorkflowDocument({
       jobs: {

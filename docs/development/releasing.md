@@ -89,9 +89,13 @@ crates.io and tags `eql-bindings-vV`.
 
 ### Changelog
 
-`CHANGELOG.md` is owned by **Changesets** — it is generated from the
-`.changeset/*.md` files, not hand-edited. Every releasable change adds a
-changeset (`pnpm changeset`): its frontmatter selects the bump
+The release changelog is owned by **Changesets** — generated from the
+`.changeset/*.md` files, not hand-edited. Changesets writes *per-package*
+changelogs, so the file it maintains is **`packages/eql/CHANGELOG.md`**; since
+SQL, the crate, and the npm package release in lockstep at one version, that
+file is the changelog for the whole release. (The root `CHANGELOG.md` is the
+frozen pre-3.0 archive and is no longer appended to.) Every releasable change
+adds a changeset (`pnpm changeset`): its frontmatter selects the bump
 (`patch`/`minor`/`major`) and its body becomes the entry. `changeset version`
 (run in the "Version Packages" PR for finals, and locally in pre-mode when
 pinning a prerelease) writes the versioned section and computes `V`. See
@@ -110,9 +114,17 @@ that is **already pinned** in the repo.
    runs `sync-lockstep-versions.mjs`) so `packages/eql/package.json`,
    `Cargo.toml`, and the bundled SQL all carry the prerelease identity.
 2. **Commit with the release marker and push to `eql_v3`.** The commit subject
-   must be `chore(release): …` (or `release: …`) — that marker is what
-   `classify` keys on. `classify` reads the version from `package.json` and
-   **rejects the run** if it is not prerelease-shaped (`*-*`).
+   must be exactly `chore(release): …` — that marker is what `classify` keys
+   on (a bare `release:` prefix is deliberately NOT a marker, so an unrelated
+   commit can't trigger a publish). `classify` reads the version from
+   `package.json`, **rejects the run** if it is not prerelease-shaped (`*-*`),
+   and **skips** it if the `eql-typescript-vV` tag already exists (the identity
+   was already released — re-pushing a marker never republishes).
+
+   > **Access model:** a prerelease publish is gated by push access to
+   > `eql_v3` (plus this marker convention) — there is no separate release
+   > approval or commit-signature gate. Branch protection on `eql_v3` is the
+   > control; keep force-push restricted and reviews required there.
 3. `release.yml` then runs the prerelease jobs:
    - `prerelease-build-sql` / `prerelease-build-docs` → create the prerelease
      `eql-V` GitHub Release with SQL + docs.
@@ -120,8 +132,12 @@ that is **already pinned** in the repo.
      via `scripts/npm-publish.mjs`) and creates the `eql-typescript-vV` tag.
      Both steps are idempotent (`npm view` / `git ls-remote` guards) so a rerun
      after a partial failure converges.
-   - `prerelease-publish-rust` → dispatches `release-plz.yml --ref eql_v3` to
-     publish the crate and tag `eql-bindings-vV`.
+   - `prerelease-publish-rust` → dispatches `release-plz.yml` against the
+     `eql-V` **tag** (created by `prerelease-build-sql` at the release commit),
+     so the crate publishes from the exact commit the SQL + npm artifacts
+     shipped from even if `eql_v3` has advanced since. release-plz refuses to
+     publish if the committed `crates/eql-bindings/sql/` bundle wasn't prepared
+     for the crate's version (the DEV-placeholder guard).
 
 Prereleases keep the pending changesets **unconsumed** — Changesets pre-mode
 emits a `X.Y.Z-alpha.N` entry but the changesets are only finalized into the

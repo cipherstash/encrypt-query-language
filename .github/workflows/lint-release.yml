@@ -54,7 +54,11 @@ jobs:
         run: |
           set -euo pipefail
           shellcheck \
-            tasks/release/prepare-bindings-assets.sh
+            tasks/release/prepare-bindings-assets.sh \
+            tasks/release/prepare-bindings-assets.test.sh
+
+      - name: prepare-bindings-assets validation unit test
+        run: bash tasks/release/prepare-bindings-assets.test.sh
 
       - uses: pnpm/action-setup@v6.0.8
         name: Install pnpm

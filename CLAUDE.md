@@ -219,7 +219,7 @@ Prefer `LANGUAGE SQL` over `LANGUAGE plpgsql` unless you need procedural feature
 
 ## Release & changelog discipline
 
-EQL's release version and `CHANGELOG.md` are both owned by **[Changesets](https://github.com/changesets/changesets)**. `@cipherstash/eql`'s package version is the single source of truth for the release identity `V` (SQL, the crate, and npm all ship at `V` — see `docs/development/releasing.md`), and `CHANGELOG.md` is **generated from the `.changeset/*.md` files** you add, not hand-edited. Per-version upgrade guides live under `docs/upgrading/`. What follows is what to do when working in this repo.
+EQL's release version and changelog are both owned by **[Changesets](https://github.com/changesets/changesets)**. `@cipherstash/eql`'s package version is the single source of truth for the release identity `V` (SQL, the crate, and npm all ship at `V` — see `docs/development/releasing.md`), and the release changelog — **`packages/eql/CHANGELOG.md`** (Changesets writes per-package changelogs; with everything in lockstep at one version, that file covers the whole release) — is **generated from the `.changeset/*.md` files** you add, not hand-edited. The root `CHANGELOG.md` is the frozen pre-3.0 archive. Per-version upgrade guides live under `docs/upgrading/`. What follows is what to do when working in this repo.
 
 **Cutting a release is scripted — don't hand-roll `gh release create`, and don't hand-edit `CHANGELOG.md`.** The single entrypoint is `.github/workflows/release.yml`:
 
