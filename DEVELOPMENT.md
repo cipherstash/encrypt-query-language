@@ -88,8 +88,7 @@ These are the important files and directories in the repo:
 │   │   │   └── <T>/           <-- e.g. integer/, text/, boolean/ (generated, committed in place)
 │   │   ├── jsonb/             <-- jsonb SteVec support
 │   │   └── lint/              <-- structural lints
-│   ├── deps-v3.txt            <-- REQUIRE edges for the v3 surface
-│   ├── deps-ordered-v3.txt    <-- tsorted build order
+│   ├── deps-ordered-v3.txt    <-- install order, emitted by `eql-codegen order`
 │   └── README.md
 ├── docs/                      <-- reference, concept, and API documentation
 ├── tests/                     <-- test framework and fixtures
@@ -223,10 +222,14 @@ At minimum, a file references the schema:
 -- REQUIRE: src/v3/schema.sql
 ```
 
-The build collects these edges into `src/deps-v3.txt`, resolves them with
-`tsort` into `src/deps-ordered-v3.txt`, and concatenates the files in
-dependency order to produce a single installer. The build fails loudly if a
-file referenced in the dependency list does not exist.
+`cargo run -p eql-codegen -- order` walks the whole `src/v3` tree once, collects
+these edges, and topologically sorts them into `src/deps-ordered-v3.txt`; the
+build then concatenates the files in that order to produce a single installer.
+Generated and hand-written files are ordered together, so nothing can fall
+between two enumerations and be dropped. The build fails loudly if a `-- REQUIRE:`
+target does not exist, if an edge leaves `src/v3`, or if the edges form a cycle.
+`mise run test:installer_complete` then asserts the installer actually contains
+every ordered file's body.
 
 The `eql_v3` surface is **self-contained**: no `eql_v2.<symbol>` reference
 appears anywhere under `src/v3/`. This invariant is enforced in CI by

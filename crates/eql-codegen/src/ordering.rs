@@ -147,7 +147,12 @@ pub fn walk_v3_surface(root: &Path) -> io::Result<Vec<(String, Vec<String>)>> {
                 .unwrap_or(&path)
                 .to_string_lossy()
                 .replace('\\', "/");
-            files.push((rel, requires_of(&fs::read_to_string(&path)?)));
+            // Name the file. A bare `?` here surfaces as "stream did not contain
+            // valid UTF-8" with no indication of which of ~244 files is at fault.
+            let body = fs::read_to_string(&path).map_err(|e| {
+                io::Error::new(e.kind(), format!("reading {}: {e}", path.display()))
+            })?;
+            files.push((rel, requires_of(&body)));
         }
     }
     files.sort();
@@ -362,6 +367,18 @@ mod tests {
         );
     }
 
+    // A file that requires ITSELF is tolerated, not a cycle. `topo_order`'s
+    // `dep != p` guard skips the self-edge, so this is reachable in production —
+    // the old shell build even emitted a self-edge per file, because `tsort` only
+    // prints tokens that appear in some edge. Pinned so a future rewrite of the
+    // guard turns a harmless typo into a build failure loudly, in this test,
+    // rather than quietly at release time.
+    #[test]
+    fn surface_order_tolerates_a_self_edge() {
+        let files = vec![f("src/v3/a.sql", &["src/v3/a.sql"])];
+        assert_eq!(surface_order(&files).unwrap(), vec!["src/v3/a.sql"]);
+    }
+
     // A cycle surfaces as a cycle, not as a silently truncated order.
     #[test]
     fn surface_order_propagates_cycles() {
@@ -452,6 +469,22 @@ mod tests {
         let files = walk_v3_surface(d.path()).unwrap();
         let paths: Vec<&str> = files.iter().map(|(p, _)| p.as_str()).collect();
         assert_eq!(paths, vec!["src/v3/schema.sql"]);
+    }
+
+    // An unreadable file names itself. `fs::read_to_string`'s own error is
+    // "stream did not contain valid UTF-8" — true, and useless across ~244 files.
+    #[test]
+    fn walk_v3_surface_names_the_file_it_could_not_read() {
+        let d = crate::writer::test_support::tempdir();
+        let v3 = d.path().join("src/v3");
+        fs::create_dir_all(&v3).unwrap();
+        fs::write(v3.join("bad.sql"), [0xff, 0xfe, 0x00]).unwrap();
+
+        let err = walk_v3_surface(d.path()).unwrap_err();
+        assert!(
+            err.to_string().contains("bad.sql"),
+            "the error must name the offending file, got: {err}"
+        );
     }
 
     // requires_of reads back anchored `-- REQUIRE:` lines from a rendered body.

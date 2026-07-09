@@ -158,12 +158,20 @@ fn install_order_contains_every_v3_sql_file() {
     }
 
     let files = eql_codegen::ordering::walk_v3_surface(&root).expect("walk src/v3");
-    let ordered: BTreeSet<String> = eql_codegen::ordering::surface_order(&files)
-        .expect(
-            "src/v3 surface must linearize: every REQUIRE target a node under src/v3, no cycles",
-        )
-        .into_iter()
-        .collect();
+    let order = eql_codegen::ordering::surface_order(&files).expect(
+        "src/v3 surface must linearize: every REQUIRE target a node under src/v3, no cycles",
+    );
+
+    // Check for duplicates BEFORE collapsing into a set, which would absorb them.
+    // `tasks/build.sh` concatenates the order line by line with no `uniq`, so a
+    // repeated path emits that file's DDL twice into the installer. Kahn's
+    // algorithm cannot produce one today; this pins that it stays that way.
+    let ordered: BTreeSet<String> = order.iter().cloned().collect();
+    assert_eq!(
+        order.len(),
+        ordered.len(),
+        "the install order contains a duplicate path — build.sh would emit its DDL twice"
+    );
 
     assert_eq!(
         ordered, on_disk,

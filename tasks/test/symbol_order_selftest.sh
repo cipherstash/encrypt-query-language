@@ -89,6 +89,22 @@ if bash tasks/test/verify_symbol_order_v3.sh "$tmp/missing_order.txt" 2>/dev/nul
 fi
 echo "ok: unreadable path rejected"
 
+# An EMPTY ordered list must FAIL, not report "OK (0 files)". A vacuous pass is
+# indistinguishable in CI from a real one, so an emptied src/v3 would clear this
+# gate and ship an installer containing nothing but the pin script.
+: > "$tmp/empty_order.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/empty_order.txt" 2>/dev/null; then
+  echo "FAIL: empty ordered list passed vacuously"; exit 1
+fi
+echo "ok: empty ordered list rejected"
+
+# Whitespace-only is empty too — the guard must not be fooled by a stray blank line.
+printf '\n  \n' > "$tmp/blank_order.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/blank_order.txt" 2>/dev/null; then
+  echo "FAIL: whitespace-only ordered list passed vacuously"; exit 1
+fi
+echo "ok: whitespace-only ordered list rejected"
+
 # An UNREADABLE ALLOWLIST must FAIL the gate. awk's `getline < file` returns <= 0
 # both at EOF and on error, so an unguarded read loop silently yields an empty
 # allowlist. That is fail-safe today only because the committed allowlist has no

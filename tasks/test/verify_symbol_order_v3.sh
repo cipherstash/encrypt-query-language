@@ -26,6 +26,14 @@ ORDERED="${1:-src/deps-ordered-v3.txt}"
 # disturbing the committed one.
 ALLOW="${SYMBOL_ORDER_ALLOWLIST:-tasks/test/symbol_order_allowlist.txt}"
 test -f "$ORDERED" || { echo "ERROR: ordered file $ORDERED missing (run mise run build)" >&2; exit 2; }
+# Refuse a zero-file run. Without this the checker reports "OK (0 files)" and exits
+# 0 on an empty order — a pass that means "I checked nothing", indistinguishable in
+# CI from "I checked everything". An emptied surface would sail through here, and
+# through the self-containment file gate, into an installer holding only the pin
+# script. (A short-but-non-empty order is caught by verify_installer_complete.sh;
+# this gate only has to refuse the vacuous case, since the self-test drives it with
+# one- and two-file lists.)
+grep -qv '^[[:space:]]*$' "$ORDERED" || { echo "ERROR: ordered file $ORDERED is empty — refusing a vacuous check" >&2; exit 2; }
 # awk's `getline < file` cannot distinguish EOF from an unreadable file, so an
 # unguarded read loop turns a bad ALLOW path into a silently empty allowlist.
 # Today that fails safe (nothing to suppress), but this gate runs inside

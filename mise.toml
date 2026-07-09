@@ -234,6 +234,12 @@ bash tasks/test/symbol_order_selftest.sh
 bash tasks/test/verify_symbol_order_v3.sh src/deps-ordered-v3.txt
 """
 
+[tasks."test:installer_complete"]
+description = "Assert the installer contains every ordered src/v3 file's body (DB-free)"
+depends = ["build"]
+dir = "{{config_root}}"
+run = "bash tasks/test/verify_installer_complete.sh src/deps-ordered-v3.txt release/cipherstash-encrypt.sql"
+
 [tasks."test:build_ordering_helpers"]
 description = "Unit tests for tasks/build/ordering.sh strip_require_lines (DB-free)"
 dir = "{{config_root}}"

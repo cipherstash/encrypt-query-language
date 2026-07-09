@@ -2,7 +2,7 @@
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
 #MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
-#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
+#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","src/deps-ordered-v3.txt"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
@@ -10,6 +10,9 @@
 set -euo pipefail
 
 source tasks/build/ordering.sh
+
+# A failed `eql-codegen order` leaves its temp behind; don't strand it.
+trap 'rm -f src/deps-ordered-v3.txt.tmp' EXIT
 
 # Regenerate encrypted-domain SQL from the Rust catalog before building.
 # The generated files (src/v3/scalars/<T>/<T>_*.sql) are COMMITTED in place and
@@ -75,6 +78,13 @@ while IFS= read -r f; do
   strip_require_lines "$f" >> release/cipherstash-encrypt.sql
 done < src/deps-ordered-v3.txt
 cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt.sql
+
+# `eql-codegen order` guarantees the ORDER contains every file on disk. This gate
+# closes the layer below — that the concat loop above actually emitted each ordered
+# file's body. 93 of the ~244 v3 files are leaves (required by nothing, defining
+# nothing another file references), so dropping one yields an installer that applies
+# cleanly and passes the symbol checker while silently shipping less than it should.
+bash tasks/test/verify_installer_complete.sh src/deps-ordered-v3.txt release/cipherstash-encrypt.sql
 
 cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-uninstall.sql
 

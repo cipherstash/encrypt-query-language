@@ -21,7 +21,11 @@ if grep -rnE 'eql_v2[._]' src/v3; then
 fi
 
 # File level (design goal 2): the v3-only dependency closure pulls in no file
-# outside src/v3/. tsort output is one path per line.
+# outside src/v3/. `eql-codegen order` emits one repo-relative path per line.
+#
+# Belt-and-braces: surface_order already rejects any `-- REQUIRE:` edge leaving
+# src/v3, and the walk is rooted at src/v3, so every node is under it by
+# construction. This gate would only fire again if that root ever widened.
 if [[ ! -f src/deps-ordered-v3.txt ]]; then
   echo "ERROR: src/deps-ordered-v3.txt missing — run 'mise run build' first" >&2
   exit 2
