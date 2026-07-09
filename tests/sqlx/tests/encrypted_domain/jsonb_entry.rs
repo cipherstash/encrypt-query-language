@@ -204,7 +204,9 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
             &mut *tx,
             &query,
             "entry_idx_ope",
-            &format!("entry op {op} (domain-cast RHS) must engage the ord_ope_term functional btree"),
+            &format!(
+                "entry op {op} (domain-cast RHS) must engage the ord_ope_term functional btree"
+            ),
         )
         .await?;
     }
