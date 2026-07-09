@@ -868,7 +868,7 @@ mod catalog_tests {
     #[test]
     fn every_type_uses_a_known_domain_shape() {
         // Each scalar's domain shape must be one of the known-valid shapes:
-        // the four-domain ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord`),
+        // the ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord` + `_ord_ope`),
         // the two-domain EQ-ONLY shape (storage + `_eq`), the one-domain
         // STORAGE-ONLY shape (storage only — encryption-only scalars like
         // `bool`), or the ORDERED shape plus a `_match` domain (text's Bloom
@@ -877,11 +877,14 @@ mod catalog_tests {
         // shape (that is the catalog's job; the matrix dispatch and the inventory
         // snapshots are shape-aware). Subsumes the old per-type
         // `<T>_maps_to_*_with_four_domains` / `<T>_domain_terms_match_manifest` tests.
+        //
+        // `_ord` and `_ord_ope` carry the same OPE term: `_ord` is the
+        // OPE-backed default, `_ord_ore` the block-ORE escape hatch.
         let ordered: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("eq", &[Term::Hm][..]),
             ("ord_ore", &[Term::Ore][..]),
-            ("ord", &[Term::Ore][..]),
+            ("ord", &[Term::Ope][..]),
             ("ord_ope", &[Term::Ope][..]),
         ];
         let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("eq", &[Term::Hm][..])];
@@ -891,18 +894,19 @@ mod catalog_tests {
             ("eq", &[Term::Hm][..]),
             ("match", &[Term::Bloom][..]),
             ("ord_ore", &[Term::Ore][..]),
-            ("ord", &[Term::Ore][..]),
+            ("ord", &[Term::Ope][..]),
             ("ord_ope", &[Term::Ope][..]),
         ];
         // text's current shape: equality is exact on the ordered domains (they
         // lead with `Hm`), plus a combined `_search` domain carrying all three
         // terms. `=`/`<>` route through `hm` on every eq-capable text domain.
+        // `_search` is the one text domain still ordered by block-ORE.
         let text_search: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("eq", &[Term::Hm][..]),
             ("match", &[Term::Bloom][..]),
             ("ord_ore", &[Term::Hm, Term::Ore][..]),
-            ("ord", &[Term::Hm, Term::Ore][..]),
+            ("ord", &[Term::Hm, Term::Ope][..]),
             ("ord_ope", &[Term::Hm, Term::Ope][..]),
             ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
         ];
@@ -1409,15 +1413,21 @@ mod invariant_tests {
             vec!["=", "<>"]
         );
         assert_eq!(Term::term_json_keys(s.domains[1].terms), vec!["hm"]);
-        // _ord domain: ore => full ordering.
+        // _ord domain: ope => full ordering.
         assert_eq!(Term::role_for_terms(s.domains[3].terms), Role::Ord);
         assert_eq!(
             Term::operators_for_terms(s.domains[3].terms),
             vec!["=", "<>", "<", "<=", ">", ">="]
         );
-        assert_eq!(Term::term_json_keys(s.domains[3].terms), vec!["ob"]);
+        assert_eq!(Term::term_json_keys(s.domains[3].terms), vec!["op"]);
         assert_eq!(
             Term::extractor_for_operator(s.domains[3].terms, "<"),
+            Some("ord_ope_term")
+        );
+        // _ord_ore domain: ore => full ordering through the block-ORE term.
+        assert_eq!(Term::term_json_keys(s.domains[2].terms), vec!["ob"]);
+        assert_eq!(
+            Term::extractor_for_operator(s.domains[2].terms, "<"),
             Some("ord_term")
         );
     }

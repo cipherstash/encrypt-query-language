@@ -34,7 +34,11 @@ where
         pool_table,
         "payload",
         values,
-        &[IndexKind::Unique, IndexKind::Ore],
+        // The oracle runs each row through BOTH ordered variants, which are now
+        // backed by different SEMs: `_ord` requires `op` (CLLW-OPE) and
+        // `_ord_ore` requires `ob` (block-ORE). Omitting either makes the
+        // corresponding domain's CHECK reject the payload at the cast.
+        &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope],
     )
     .await?;
     // Fail fast on a count mismatch: a silent `zip` truncation would weaken the

@@ -30,14 +30,15 @@ SELECT * FROM users WHERE encrypted_email <> $1;
 
 ### Range — `<` `<=` `>` `>=`
 
-On `public.<T>_ord` / `_ord_ore` and `public.eql_v3_text_search` (carry an `ob` ORE term):
+On `public.<T>_ord` / `_ord_ope` / `_ord_ore` and `public.eql_v3_text_search` (carry an ordering term):
 
 ```sql
 SELECT * FROM events WHERE encrypted_at <  $1::public.eql_v3_timestamp_ord;
 SELECT * FROM events WHERE encrypted_at >= $1::public.eql_v3_timestamp_ord;
 
 -- Ordering (write the sort key as the extractor to engage the index — see Database Indexes)
-SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
+-- `encrypted_at` is a `timestamp_ord` column, so its extractor is `ord_ope_term`.
+SELECT * FROM events ORDER BY eql_v3.ord_ope_term(encrypted_at) DESC;
 ```
 
 ### Text match — `@>` `<@`
@@ -89,9 +90,11 @@ These extract the index term from an encrypted-domain value. They are generated 
 ```sql
 -- Equality term (hm)
 eql_v3.eq_term(a public.eql_v3_integer_eq)        RETURNS eql_v3_internal.hmac_256
--- Ordering term (ob)
-eql_v3.ord_term(a public.eql_v3_integer_ord)      RETURNS eql_v3_internal.ore_block_256
-eql_v3.ord_term(a public.eql_v3_integer_ord_ore)  RETURNS eql_v3_internal.ore_block_256
+-- Ordering term, CLLW-OPE (op) — the default
+eql_v3.ord_ope_term(a public.eql_v3_integer_ord)      RETURNS eql_v3_internal.ope_cllw
+eql_v3.ord_ope_term(a public.eql_v3_integer_ord_ope)  RETURNS eql_v3_internal.ope_cllw
+-- Ordering term, block-ORE (ob)
+eql_v3.ord_term(a public.eql_v3_integer_ord_ore)      RETURNS eql_v3_internal.ore_block_256
 -- Text-match term (bf)
 eql_v3.match_term(a public.eql_v3_text_match)  RETURNS eql_v3_internal.bloom_filter
 ```
@@ -100,11 +103,11 @@ eql_v3.match_term(a public.eql_v3_text_match)  RETURNS eql_v3_internal.bloom_fil
 
 ```sql
 CREATE INDEX ON users USING hash  (eql_v3.eq_term(salary_eq));
-CREATE INDEX ON users USING btree (eql_v3.ord_term(salary_ord));
+CREATE INDEX ON users USING btree (eql_v3.ord_ope_term(salary_ord));
 CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 ```
 
-> The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
+> The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ope` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
 The `public.eql_v3_json` document type extracts entry-level terms with `eql_v3.eq_term(public.eql_v3_jsonb_entry)` and `eql_v3.ord_ope_term(public.eql_v3_jsonb_entry)` — see [json-support.md](./json-support.md).
 

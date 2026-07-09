@@ -66,7 +66,9 @@ Why the internal grant is needed even though you only call public objects:
 
 - **Equality** inlines the index-term constructor
   `eql_v3_internal.hmac_256(jsonb)` (via `eq_term`); **ordering** inlines
-  `eql_v3_internal.ore_block_256` (via `ord_term`) and its comparator. The public
+  `eql_v3_internal.ope_cllw` (via `ord_ope_term`) on the `_ord` / `_ord_ope`
+  domains, or `eql_v3_internal.ore_block_256` (via `ord_term`) and its comparator
+  on `_ord_ore` / `text_search`. The public
   wrappers are inlinable SQL, so the internal call becomes part of *your* query
   and is checked against *your* role's privileges.
 - **`MIN`/`MAX`** dispatch into the aggregate state functions

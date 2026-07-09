@@ -8,11 +8,11 @@
 
 --! @brief Index extractor for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
---! @return eql_v3_internal.ore_block_256
-CREATE FUNCTION eql_v3.ord_term(a eql_v3.query_date_ord)
-RETURNS eql_v3_internal.ore_block_256
+--! @return eql_v3_internal.ope_cllw
+CREATE FUNCTION eql_v3.ord_ope_term(a eql_v3.query_date_ord)
+RETURNS eql_v3_internal.ope_cllw
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
+AS $$ SELECT eql_v3_internal.ope_cllw(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a public.eql_v3_date_ord
@@ -20,7 +20,7 @@ AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.eq(a public.eql_v3_date_ord, b eql_v3.query_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) = eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
@@ -28,7 +28,7 @@ AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.eq(a eql_v3.query_date_ord, b public.eql_v3_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) = eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a public.eql_v3_date_ord
@@ -36,7 +36,7 @@ AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.neq(a public.eql_v3_date_ord, b eql_v3.query_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) <> eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
@@ -44,7 +44,7 @@ AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.neq(a eql_v3.query_date_ord, b public.eql_v3_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) <> eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a public.eql_v3_date_ord
@@ -52,7 +52,7 @@ AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.lt(a public.eql_v3_date_ord, b eql_v3.query_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) < eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
@@ -60,7 +60,7 @@ AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.lt(a eql_v3.query_date_ord, b public.eql_v3_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) < eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a public.eql_v3_date_ord
@@ -68,7 +68,7 @@ AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.lte(a public.eql_v3_date_ord, b eql_v3.query_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) <= eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
@@ -76,7 +76,7 @@ AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.lte(a eql_v3.query_date_ord, b public.eql_v3_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) <= eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a public.eql_v3_date_ord
@@ -84,7 +84,7 @@ AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.gt(a public.eql_v3_date_ord, b eql_v3.query_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) > eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
@@ -92,7 +92,7 @@ AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.gt(a eql_v3.query_date_ord, b public.eql_v3_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) > eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a public.eql_v3_date_ord
@@ -100,7 +100,7 @@ AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.gte(a public.eql_v3_date_ord, b eql_v3.query_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) >= eql_v3.ord_ope_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_date_ord.
 --! @param a eql_v3.query_date_ord
@@ -108,4 +108,4 @@ AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 --! @return boolean
 CREATE FUNCTION eql_v3.gte(a eql_v3.query_date_ord, b public.eql_v3_date_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_ope_term(a) >= eql_v3.ord_ope_term(b) $$;

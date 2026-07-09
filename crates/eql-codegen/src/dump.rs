@@ -204,8 +204,8 @@ mod tests {
         let ord = integer.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.supported_ops, ["=", "<>", "<", "<=", ">", ">="]);
 
-        // `ord_ope` (CLLW-OPE) advertises the same operator set as the
-        // block-ORE ordered domains — only the term/extractor differ.
+        // Every ordered domain advertises the same operator set regardless of
+        // which SEM backs it — only the term/extractor differ.
         let ord_ope = integer
             .domains
             .iter()
@@ -218,11 +218,24 @@ mod tests {
     fn ordered_domain_exposes_its_extractor_and_ctor() {
         let dump = dump_catalog();
         let integer = dump.types.iter().find(|t| t.token == "integer").unwrap();
+
+        // `_ord` is the OPE-backed default.
         let ord = integer.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.terms.len(), 1);
-        assert_eq!(ord.terms[0].key, "ob");
-        assert_eq!(ord.terms[0].extractor, "ord_term");
-        assert_eq!(ord.terms[0].ctor, "ore_block_256");
+        assert_eq!(ord.terms[0].key, "op");
+        assert_eq!(ord.terms[0].extractor, "ord_ope_term");
+        assert_eq!(ord.terms[0].ctor, "ope_cllw");
+
+        // `_ord_ore` keeps the block-ORE term.
+        let ord_ore = integer
+            .domains
+            .iter()
+            .find(|d| d.segment == "ord_ore")
+            .unwrap();
+        assert_eq!(ord_ore.terms.len(), 1);
+        assert_eq!(ord_ore.terms[0].key, "ob");
+        assert_eq!(ord_ore.terms[0].extractor, "ord_term");
+        assert_eq!(ord_ore.terms[0].ctor, "ore_block_256");
     }
 
     #[test]

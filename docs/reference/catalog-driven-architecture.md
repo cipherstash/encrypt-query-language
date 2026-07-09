@@ -169,11 +169,11 @@ fail loudly if they drift into an unreviewed shape. The eleventh `CATALOG` famil
 flowchart LR
     subgraph ordered["ordered (8 families)"]
         direction TB
-        o1["storage []"] --> o2["_eq [Hm]"] --> o3["_ord_ore [Ore]"] --> o4["_ord [Ore]"] --> o5["_ord_ope [Ope]"]
+        o1["storage []"] --> o2["_eq [Hm]"] --> o3["_ord_ore [Ore]"] --> o4["_ord [Ope]"] --> o5["_ord_ope [Ope]"]
     end
     subgraph text["text-search (text)"]
         direction TB
-        t1["storage []"] --> t2["_eq [Hm]"] --> t3["_match [Bloom]"] --> t4["_ord_ore [Hm,Ore]"] --> t5["_ord [Hm,Ore]"] --> t6["_ord_ope [Hm,Ope]"] --> t7["_search [Hm,Ore,Bloom]"]
+        t1["storage []"] --> t2["_eq [Hm]"] --> t3["_match [Bloom]"] --> t4["_ord_ore [Hm,Ore]"] --> t5["_ord [Hm,Ope]"] --> t6["_ord_ope [Hm,Ope]"] --> t7["_search [Hm,Ore,Bloom]"]
     end
     subgraph storage["storage-only (bool)"]
         s1["storage []"]
@@ -326,8 +326,8 @@ The struct doc is **derived entirely from catalog data** — no free-form prose:
 domain name** — making a new shape a compile error rather than a silent fallthrough. The
 operators come from `Term::operators_for_terms`, the keys from
 `ENVELOPE_KEYS ++ Term::term_json_keys`. The required-key list is where structural
-distinctions become visible — e.g. `text_ord` lists `v i c hm ob` (dual-term) versus
-`integer_ord`'s `v i c ob`.
+distinctions become visible — e.g. `text_ord` lists `v i c hm op` (dual-term) versus
+`integer_ord`'s `v i c op`, and `text_ord_ore` lists `v i c hm ob`.
 
 ### 3.3 Why output is byte-identical run-to-run
 

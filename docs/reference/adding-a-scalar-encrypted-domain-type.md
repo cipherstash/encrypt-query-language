@@ -102,7 +102,7 @@ with a `TypeFixtures` record in
 // The structural catalog row — name + domains only:
 const INTEGER: DomainFamily = DomainFamily {
     name: "integer",
-    domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ore), _ord_ope (ope)
+    domains: ORDERED_INT_DOMAINS, // storage, _eq (hm), _ord_ore (ore), _ord (ope), _ord_ope (ope)
 };
 
 // The fixture-layer record — kind + plaintext values — joined back to the
@@ -131,7 +131,7 @@ by the type system and the catalog `#[test]`s rather than a runtime validator:
 - **`domains`** (on `DomainFamily`) — a non-empty `&[Domain]` (pinned by
   `every_type_has_at_least_one_domain`), each a bare `name` + the fixed `&[Term]` it
   carries. The storage domain is `name: ""` with no terms; `eq => [Term::Hm]`;
-  `ord` and `ord_ore => [Term::Ore]`. A `Domain` declares nothing else — no
+  `ord` and `ord_ope => [Term::Ope]`; `ord_ore => [Term::Ore]`. A `Domain` declares nothing else — no
   extractor names, no operator lists, no REQUIRE edges. Every behavioural fact
   comes from the `Term` enum.
 - **`kind`** (on the `TypeFixtures` record) — a `ScalarKind` (`I16` / `I32` /
@@ -178,7 +178,7 @@ enum's `impl` methods (`json_key`, `extractor`, `ctor`, `role`,
 `term_helper_tests`) — never a free-form catalog field.
 
 **Non-empty `ob` invariant (ORE-bearing domains).** Any domain whose terms
-include `Term::Ore` (`_ord` / `_ord_ore`, and text `_search`) automatically
+include `Term::Ore` (`_ord_ore`, and text `_search`) automatically
 emits an extra `CHECK` requiring `ob` to be a non-empty array
 (`jsonb_array_length(VALUE -> 'ob') > 0`). An empty ORE term (`ob: []`) is only
 ever produced by encrypting the empty string into an ordered column, and is
@@ -187,13 +187,20 @@ the catalog by the codegen renderer (the `nonempty_array_keys` field on
 `DomainBlock` in `crates/eql-codegen/src/context.rs`, populated from
 `Term::nonempty_array_keys`, which filters on the per-term
 `Term::nonempty_array_key()` — `Some("ob")` only for `Term::Ore`), not
-hand-added — a new ordered scalar gets it for free.
+hand-added — a new ORE-bearing scalar gets it for free.
 
-**Twins.** `integer_ord` and `integer_ord_ore` both carry `&[Term::Ore]`. The
+The invariant is ORE-specific. `Term::Ope` has no such failure mode: encrypting
+`""` yields a well-formed one-byte `op` term that sorts before every non-empty
+term, so the OPE-backed `_ord` / `_ord_ope` domains accept the empty string and
+order it correctly. `Term::Ope.nonempty_array_key()` is `None`.
+
+**Twins.** `integer_ord` and `integer_ord_ope` both carry `&[Term::Ope]`. The
 generator emits them as independent domains with byte-identical SQL modulo type
 name (`ordered_files_byte_identical_modulo_typename`). Twins let callers choose
 a name that documents intent ("ordered, regardless of mechanism" vs "ordered via
-ORE block") without committing to one term family in a future migration.
+CLLW-OPE") without committing to one term family in a future migration.
+`integer_ord_ore` is NOT a twin of these — it carries `&[Term::Ore]`, so its
+extractor, SEM type, and CHECK all differ.
 
 **Order is significant.** The generator iterates `CATALOG` in order (driving
 generation order), and iterates each spec's `domains` slice in order — that
@@ -679,8 +686,10 @@ Do not create operator classes on generated domains. Index through the
 extractor, whose return type already carries a default opclass:
 
 ```sql
-CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
+-- _ord / _ord_ope (CLLW-OPE); ope_cllw is a domain over bytea, default opclass
 CREATE INDEX ... ON table_name USING btree (eql_v3.ord_ope_term(col));
+-- _ord_ore (block-ORE); needs the superuser-created ore_block_256 opclass
+CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
 CREATE INDEX ... ON table_name USING hash  (eql_v3.eq_term(col));
 ```
 

@@ -2,8 +2,8 @@
 //! source of truth for every scalar type and term. Std-only, no dependencies.
 //!
 //! Capability axes are independent: equality covers every kind; order covers
-//! every kind except `jsonb` (ORE compares ciphertext, so it is
-//! plaintext-agnostic — `text`/`date` order like integers); only the integer
+//! every kind except `jsonb` (the ordering terms compare ciphertext, so they
+//! are plaintext-agnostic — `text`/`date` order like integers); only the integer
 //! kinds have an i128 range with `Min`/`Max`/`Zero` sentinels. `numeric_value`
 //! cannot yet express the order of a non-integer fixture set.
 //!
@@ -181,10 +181,20 @@ pub struct DomainFamily {
 }
 
 /// Domains shared by every ordered-integer scalar, in manifest file order:
-/// storage (no terms), `_eq` (hm), `_ord_ore` (ore), `_ord` (ore),
-/// `_ord_ope` (ope). `_ord_ope` carries the CLLW-OPE term (`op`): a
-/// hex-encoded ciphertext ordered by native bytea comparison after
-/// hex-decode — unlike `_ord`/`_ord_ore` it needs no custom comparator.
+/// storage (no terms), `_eq` (hm), `_ord_ore` (ore), `_ord` (ope),
+/// `_ord_ope` (ope).
+///
+/// **`_ord` is the OPE-backed default.** It carries the CLLW-OPE term (`op`):
+/// a hex-encoded ciphertext ordered by native bytea comparison after
+/// hex-decode. `eql_v3_internal.ope_cllw` is a `DOMAIN ... AS bytea`, so it
+/// inherits bytea's comparison operators and DEFAULT btree opclass — no custom
+/// comparator, no pgcrypto in the compare path, and a functional btree on
+/// `eql_v3.ord_ope_term(col)` needs no superuser-only operator class. `_ord`
+/// and `_ord_ope` are therefore the twins now (identical terms, two names).
+///
+/// `_ord_ore` keeps the block-ORE term (`ob`, compared by the custom N-block
+/// protocol in `src/v3/sem/ore_block_256/`) and is the by-name escape hatch for
+/// callers who need block-ORE specifically.
 const ORDERED_INT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",
@@ -203,7 +213,7 @@ const ORDERED_INT_DOMAINS: &[Domain] = &[
     },
     Domain {
         name: "ord",
-        terms: &[Term::Ore],
+        terms: &[Term::Ope],
         shape: Shape::Scalar,
     },
     Domain {
@@ -251,7 +261,7 @@ const BIGINT: DomainFamily = DomainFamily {
 };
 
 /// `date` — an ordered, non-integer scalar. Reuses `ORDERED_INT_DOMAINS` (the
-/// four-domain ordered shape is identical to the integer scalars); only the
+/// ordered shape is identical to the integer scalars); only the
 /// kind and fixtures (in `DATE_FIXTURES`) differ.
 ///
 /// Public (unlike the integer specs) because the SQLx harness reads
@@ -265,9 +275,11 @@ pub const DATE: DomainFamily = DomainFamily {
 };
 
 /// `timestamp` — an **ordered**, UTC-normalized non-integer scalar. Uses the
-/// four-domain ordered shape (storage, `_eq`, `_ord`, `_ord_ore`): cipherstash
-/// encrypts `Plaintext::Timestamp` at native 12-block ORE width, which the
-/// generalized `eql_v3.compare_ore_block_256_term` comparator orders correctly.
+/// ordered shape (storage, `_eq`, `_ord_ore`, `_ord`, `_ord_ope`). `_ord`/
+/// `_ord_ope` order by CLLW-OPE (`op`, native bytea compare); `_ord_ore`
+/// orders by block-ORE — cipherstash encrypts `Plaintext::Timestamp` at native
+/// 12-block ORE width, which the generalized
+/// `eql_v3.compare_ore_block_256_term` comparator orders correctly.
 /// Values are UTC-normalized (cipherstash has no tz-preserving type) and encrypt
 /// under the `timestamp` cast. NOTE: the value is an instant (Postgres `timestamp
 /// with time zone`); it wears the SQL-standard name `timestamp` to match the
@@ -285,12 +297,13 @@ pub const TIMESTAMP: DomainFamily = DomainFamily {
 };
 
 /// `numeric` — an **ordered** non-integer scalar backed by
-/// `rust_decimal::Decimal`. Uses the four-domain ordered shape: cipherstash
+/// `rust_decimal::Decimal`. Uses the ordered shape. On `_ord_ore`, cipherstash
 /// encrypts `Plaintext::Decimal` at native 14-block ORE width, which the
-/// generalized `eql_v3.compare_ore_block_256_term` comparator orders correctly.
+/// generalized `eql_v3.compare_ore_block_256_term` comparator orders correctly;
+/// `_ord`/`_ord_ope` order the CLLW-OPE term by native bytea compare.
 /// `numeric_value` returns `None` (no i128 range); ordering is supplied by the
-/// harness `Decimal: Ord`, which `ore-rs` guarantees agrees with the ciphertext
-/// order (equivalent scales collide, like `Decimal`'s own `Ord`).
+/// harness `Decimal: Ord`, which the ordering terms guarantee agrees with the
+/// ciphertext order (equivalent scales collide, like `Decimal`'s own `Ord`).
 ///
 /// Public (like `DATE` / `TIMESTAMP`) so the SQLx harness reads
 /// `NUMERIC_FIXTURES.values` directly to parse the decimal strings into
@@ -311,18 +324,24 @@ pub const NUMERIC: DomainFamily = DomainFamily {
 /// OPE (`op`) ordering term — text ordering terms are not equality-lossless.
 /// `Term::Ore`/`Term::Ope` keep their kind-agnostic `=`/`<>` claim; they
 /// simply never win because `Hm` precedes them (Option 1, catalog ordering).
-/// Integer kinds keep `[Ore]`-only `_ord` and `[Ope]`-only `_ord_ope` domains
-/// — ordering-term equality is lossless for them.
+/// Integer kinds keep `[Ope]`-only `_ord`/`_ord_ope` and `[Ore]`-only
+/// `_ord_ore` domains — ordering-term equality is lossless for them.
+///
+/// **`_ord` is OPE-backed**, matching `ORDERED_INT_DOMAINS`; `_ord_ore` keeps
+/// block-ORE. One consequence is visible to callers: encrypting `""` yields an
+/// empty ORE term (`ob: []`) but a well-formed OPE term (`op: "00"`, the bare
+/// domain-tag byte, which sorts before every non-empty term). So `text_ord`
+/// ACCEPTS the empty string and orders it first, while `text_ord_ore` still
+/// rejects it at its non-empty-`ob` CHECK (issue #262).
 ///
 /// **`_search` deliberately excludes `Ope`.** The combined domain stays
 /// `[Hm, Ore, Bloom]`: its operator surface would not grow (OPE's six
 /// operators are already covered via `Ore`, and range extraction would still
-/// route through `ord_term` — first-ordering-term-wins), so adding `Ope`
-/// would only widen its CHECK to require an `op` key for no new capability.
-/// The client now ships `op` emission (0.38.1, CIP-3348); keeping `_search`
-/// at `[Hm, Ore, Bloom]` is a deliberate design decision to revisit
-/// separately — a search-shaped column that wants OPE ordering today uses a
-/// separate `_ord_ope` column instead.
+/// route through `ord_term` — first-ordering-term-wins), so switching it to
+/// `Ope` would only swap which key its CHECK requires for no new capability.
+/// It is the one place block-ORE remains the default, and is a deliberate
+/// design decision to revisit separately — a search-shaped column that wants
+/// OPE ordering today uses a separate `_ord` / `_ord_ope` column instead.
 const TEXT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",
@@ -346,7 +365,7 @@ const TEXT_DOMAINS: &[Domain] = &[
     },
     Domain {
         name: "ord",
-        terms: &[Term::Hm, Term::Ore],
+        terms: &[Term::Hm, Term::Ope],
         shape: Shape::Scalar,
     },
     Domain {
@@ -394,7 +413,7 @@ pub const TEXT: DomainFamily = DomainFamily {
 };
 
 /// `real` — an **ordered**, non-integer scalar (Postgres `real`). Reuses the
-/// four-domain ordered shape (`ORDERED_INT_DOMAINS`); only kind and fixtures
+/// ordered shape (`ORDERED_INT_DOMAINS`); only kind and fixtures
 /// differ. Both float widths encrypt through the SAME f64 crypto path
 /// (`Plaintext::Float`), so `real` vs `double` is purely a Postgres-surface
 /// distinction. Public (like `DATE`/`NUMERIC`) so the SQLx harness reads

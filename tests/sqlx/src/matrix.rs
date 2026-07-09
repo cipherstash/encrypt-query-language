@@ -32,7 +32,7 @@
 // ============================================================================
 // EXPLAIN plan inspection — node-type-aware index-engagement assertion.
 //
-// The index-engagement arms (`*_index_engages_*`, `*_ord_routes_through_ob`)
+// The index-engagement arms (`*_index_engages_*`, `*_ord_routes_through_ordering_term`)
 // previously asserted `plan_text.contains(index_name)` on a *text* EXPLAIN.
 // That substring match is too weak in two independent ways:
 //
@@ -160,7 +160,7 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// invocation shape is the same regardless of capability — only the `caps`
 /// marker differs. The emitted test names for an ordered type are byte-identical
 /// to the old `ordered_numeric_matrix!`; the eq-only name set is exactly that
-/// set minus the `_ord` / `order_by` / `routes_through_ob` lines.
+/// set minus the `_ord` / `order_by` / `routes_through_ordering_term` lines.
 ///
 /// Pivots — the comparison anchors swept by the correctness / cross-shape
 /// arms — are the `OrderedScalar` anchors: `min_pivot()`, `max_pivot()`, and the
@@ -452,7 +452,7 @@ macro_rules! scalar_matrix {
 /// Containment / blockers / payload_check / path-op / native-absent /
 /// planner-metadata stay in the hand-written `v3_jsonb_tests` suite — they have
 /// no scalar analogue or assert document-specific surface.
-/// `ord_routes_through_ob` and scalar `ore_injectivity` are also excluded: they
+/// `ord_routes_through_ordering_term` and scalar `ore_injectivity` are also excluded: they
 /// are scalar-term invariants and are not semantically correct for
 /// `jsonb_entry` (entry equality routes through `eq_term`, not ORE).
 ///
@@ -1804,8 +1804,8 @@ macro_rules! __scalar_matrix_scale_default_case {
                 let d = &spec.sql_domain;
                 // Catalog-derived: the scale-default proof exercises a selective
                 // `=`, so the preferred functional index is the one serving `=`
-                // (`eql_v3.ord_term` for an [Ore] _ord domain, `eql_v3.eq_term`
-                // for a [Hm, Ore] text _ord domain). Same source codegen uses.
+                // (`eql_v3.ord_ope_term` for an [Ope] _ord domain, `eql_v3.eq_term`
+                // for a [Hm, Ope] text _ord domain). Same source codegen uses.
                 let extractor = spec.extractor_for_op("=").ok_or_else(|| {
                     anyhow::anyhow!(
                         "{} declares no extractor for `=` but is wired as a \
@@ -2036,11 +2036,13 @@ macro_rules! __scalar_matrix_fixture_shape {
 }
 
 // ============================================================================
-// Ord-routes-through-ob category — ordered variants carry `c + ob` and
-// drop `hm`. Equality on an ord variant must therefore route through
-// `eql_v3.ord_term` (the `ob` term), never HMAC. Strip `hm` from every
-// fixture payload so an accidental regression to HMAC equality fails
-// rather than passing on the hm-carrying fixture.
+// Ord-routes-through-the-ordering-term category — ordered variants of the
+// integer families carry `c` + their ordering term and drop `hm`. Equality on
+// such a variant must therefore route through that domain's ordering extractor
+// (`eql_v3.ord_ope_term` / `op` on `_ord`, `eql_v3.ord_term` / `ob` on
+// `_ord_ore`), never HMAC. Strip `hm` from every fixture payload so an
+// accidental regression to HMAC equality fails rather than passing on the
+// hm-carrying fixture.
 // ============================================================================
 
 #[macro_export]
@@ -2068,7 +2070,7 @@ macro_rules! __scalar_matrix_ord_routes_case {
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
-            async fn [<matrix_ $suite _ $dom_name _ord_routes_through_ob>](
+            async fn [<matrix_ $suite _ $dom_name _ord_routes_through_ordering_term>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::ScalarType;
@@ -2102,19 +2104,23 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     .terms_for(token)
                     .iter()
                     .any(|t| t.json_key() == "hm");
-                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                // The no-hm ordering extractor is catalog-derived, not a literal:
+                // `_ord` routes `=` through `ord_ope_term`, `_ord_ore` through
+                // `ord_term`. Naming one here would fail on the other domain.
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
-                        "eql_v3.eq_term",
+                        "eql_v3.eq_term".to_string(),
                         "payload",
-                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term".to_string(),
                     )
                 } else {
-                    (
-                        "eql_v3.ord_term",
-                        "(payload - 'hm')",
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
-                    )
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect("an ordered domain resolves `=` to its ordering extractor");
+                    let caveat = format!("= must engage the {ord} functional btree with no hm");
+                    (ord, "(payload - 'hm')", caveat)
                 };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
 
                 let mut tx = pool.begin().await?;
                 sqlx::query(&format!(
@@ -2615,7 +2621,7 @@ macro_rules! __scalar_matrix_order_by_case {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec.ord_extractor)(&format!("({col})::{d}"));
+                let ord = spec.ord_extractor_expr(&format!("({col})::{d}"));
                 let sql = format!(
                     "SELECT plaintext FROM {fixture}{where_clause} \
 ORDER BY {ord} {dir}",
@@ -2647,7 +2653,7 @@ ORDER BY {ord} {dir}",
 // which has no NULL rows, so NULLS placement goes untested there. This arm
 // builds an isolated temp table mixing NULL-valued rows with the fixture rows
 // and pins that the NULL sort keys land at the requested end while the
-// non-NULL rows stay in plaintext order. `eql_v3.ord_term` is STRICT, so a
+// non-NULL rows stay in plaintext order. The ordering extractor is STRICT, so a
 // NULL domain value yields a NULL sort key; a regression making it non-STRICT
 // would let NULL rows interleave — see the `family::mutations` negative
 // control for that dimension.
@@ -2748,7 +2754,7 @@ SELECT plaintext, ({col})::{d} FROM {fixture}", col = &spec.column_expr, fixture
 SELECT NULL::{pg}, NULL::{d} FROM generate_series(1, {n})", n = NULL_ROWS,
                 )).execute(&mut *tx).await?;
 
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = format!(
                     "SELECT plaintext FROM {table} \
 ORDER BY {ord} {dir} NULLS {nulls}",
@@ -2960,10 +2966,12 @@ macro_rules! __scalar_matrix_aggregate_case {
                 // assertion on the comparator — catches the regression
                 // where payload text matches but the ordering term resolves to a
                 // different value (e.g. due to payload-key reordering). Routed
-                // through the ord-extractor seam so scalars use `eql_v3.ord_term`
-                // and SteVec entries use `eql_v3.ord_ope_term`.
-                let lhs_ord = (spec.ord_extractor)(&format!("eql_v3.{}(({col})::{d})", $agg_fn));
-                let rhs_ord = (spec.ord_extractor)(&format!("$1::jsonb::{d}"));
+                // through the ord-extractor seam, so each domain uses its own
+                // catalog ordering extractor (`eql_v3.ord_ope_term` on `_ord`,
+                // `eql_v3.ord_term` on `_ord_ore`) and SteVec entries use
+                // the `public.jsonb_entry` overload of `eql_v3.ord_ope_term`.
+                let lhs_ord = spec.ord_extractor_expr(&format!("eql_v3.{}(({col})::{d})", $agg_fn));
+                let rhs_ord = spec.ord_extractor_expr(&format!("$1::jsonb::{d}"));
                 let ord_terms_match: bool = sqlx::query_scalar(&format!(
                     "SELECT {lhs_ord} = {rhs_ord} FROM {fixture}",
                 ))
@@ -2972,8 +2980,8 @@ macro_rules! __scalar_matrix_aggregate_case {
                 .await?;
                 anyhow::ensure!(
                     ord_terms_match,
-                    "eql_v3.ord_term(eql_v3.{}({})) must equal eql_v3.ord_term(<expected payload>) \
-                     for plaintext={:?}",
+                    "the ordering extractor over eql_v3.{}({}) must equal it over \
+                     the <expected payload> for plaintext={:?}",
                     $agg_fn, d, extremum,
                 );
                 Ok(())

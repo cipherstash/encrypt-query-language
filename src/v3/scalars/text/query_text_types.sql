@@ -82,10 +82,8 @@ BEGIN
         AND VALUE ? 'v'
         AND VALUE ? 'i'
         AND VALUE ? 'hm'
-        AND VALUE ? 'ob'
+        AND VALUE ? 'op'
         AND NOT (VALUE ? 'c')
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '3'
       );
   END IF;

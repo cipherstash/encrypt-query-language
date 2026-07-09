@@ -103,7 +103,7 @@ impl DomainType for BigintOrdOre {
 }
 /// `public.eql_v3_bigint_ord` — ordering domain.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -111,7 +111,7 @@ pub struct BigintOrd {
     pub v: SchemaVersion,
     pub i: Identifier,
     pub c: Ciphertext,
-    pub ob: OreBlock256,
+    pub op: OpeCllw,
 }
 impl DomainType for BigintOrd {
     fn sql_domain_static() -> &'static str {
@@ -121,7 +121,7 @@ impl DomainType for BigintOrd {
         Self::sql_domain_static()
     }
     fn term_json_keys_static() -> Option<&'static [&'static str]> {
-        Some(&["ob"])
+        Some(&["op"])
     }
     fn term_json_keys(&self) -> Option<&'static [&'static str]> {
         Self::term_json_keys_static()
@@ -229,14 +229,14 @@ impl DomainType for BigintOrdOreQuery {
 }
 /// `eql_v3.query_bigint_ord` — ordering domain query operand.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct BigintOrdQuery {
     pub v: SchemaVersion,
     pub i: Identifier,
-    pub ob: OreBlock256,
+    pub op: OpeCllw,
 }
 impl DomainType for BigintOrdQuery {
     fn sql_domain_static() -> &'static str {
@@ -246,7 +246,7 @@ impl DomainType for BigintOrdQuery {
         Self::sql_domain_static()
     }
     fn term_json_keys_static() -> Option<&'static [&'static str]> {
-        Some(&["ob"])
+        Some(&["op"])
     }
     fn term_json_keys(&self) -> Option<&'static [&'static str]> {
         Self::term_json_keys_static()

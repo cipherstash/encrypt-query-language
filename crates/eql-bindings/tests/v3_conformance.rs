@@ -34,16 +34,14 @@ fn integer_eq_round_trips() {
 }
 
 #[test]
-fn integer_ord_round_trips() {
+fn integer_ord_ore_round_trips() {
+    // `_ord_ore` carries the block-ORE term: `ob` is an array of hex blocks.
     let wire = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "ob": ["ore_block_0", "ore_block_1"]
     });
-    let parsed: IntegerOrd = serde_json::from_value(wire.clone()).unwrap();
-    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    // `_ord_ore` is the same shape under the scheme-explicit domain name.
     let parsed: IntegerOrdOre = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
     assert_eq!(
@@ -53,15 +51,19 @@ fn integer_ord_round_trips() {
 }
 
 #[test]
-fn integer_ord_ope_round_trips() {
-    // `_ord_ope` carries the CLLW-OPE term: `op` is a single hex string (not
-    // an array like `ob`), natively bytea-sortable after hex-decode.
+fn integer_ord_round_trips() {
+    // `_ord` (the default) carries the CLLW-OPE term: `op` is a single hex
+    // string (not an array like `ob`), natively bytea-sortable after hex-decode.
     let wire = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext",
         "op": "00ffab"
     });
+    let parsed: IntegerOrd = serde_json::from_value(wire.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
+    assert_eq!(IntegerOrd::sql_domain_static(), "public.eql_v3_integer_ord");
+    // `_ord_ope` is the same shape under the scheme-explicit domain name.
     let parsed: IntegerOrdOpe = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
     assert_eq!(
@@ -73,15 +75,21 @@ fn integer_ord_ope_round_trips() {
 #[test]
 fn integer_ord_ope_rejects_missing_ope_term() {
     // Only the base fields, so the sole cause of failure is the absent `op`.
+    // `_ord` carries the same term, so it must reject the same payload.
     let no_op = json!({
         "v": 3,
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<IntegerOrdOpe, _> = serde_json::from_value(no_op);
+    let result: Result<IntegerOrdOpe, _> = serde_json::from_value(no_op.clone());
     assert!(
         result.is_err(),
         "IntegerOrdOpe must reject a payload with no op"
+    );
+    let result: Result<IntegerOrd, _> = serde_json::from_value(no_op);
+    assert!(
+        result.is_err(),
+        "IntegerOrd must reject a payload with no op"
     );
 }
 
@@ -163,8 +171,8 @@ fn rejects_unknown_keys() {
 }
 
 #[test]
-fn integer_ord_rejects_missing_ore_term() {
-    // Omit `hm`: it is not an IntegerOrd field, so leaving it in would trip
+fn integer_ord_ore_rejects_missing_ore_term() {
+    // Omit `hm`: it is not an IntegerOrdOre field, so leaving it in would trip
     // deny_unknown_fields and the rejection could pass for the wrong reason.
     // This payload carries only the base fields, so the sole cause of failure
     // is the absent `ob`.
@@ -173,10 +181,10 @@ fn integer_ord_rejects_missing_ore_term() {
         "i": { "t": "users", "c": "age" },
         "c": "mp_base85_ciphertext"
     });
-    let result: Result<IntegerOrd, _> = serde_json::from_value(no_ob);
+    let result: Result<IntegerOrdOre, _> = serde_json::from_value(no_ob);
     assert!(
         result.is_err(),
-        "IntegerOrd must reject a payload with no ob"
+        "IntegerOrdOre must reject a payload with no ob"
     );
 }
 
@@ -220,13 +228,15 @@ fn non_integer_tokens_round_trip_every_domain() {
     // Wire builders for the shapes the ordered tokens share.
     let storage = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct" });
     let eq = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef" });
-    let ord = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "ob": ["b0", "b1"] });
-    // `_ord_ope` carries the CLLW-OPE hex string `op` (not an array).
+    // `_ord_ore` carries the block-ORE term `ob` (an array of hex blocks).
+    let ore = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "ob": ["b0", "b1"] });
+    // `_ord` (the default) and `_ord_ope` carry the CLLW-OPE hex string `op`
+    // (a single string, not an array).
     let ope = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "op": "00ffab" });
     // Text routes equality through `hm`, so its ordered domains carry both `hm`
     // and the ordering term (`[Hm, Ore]` / `[Hm, Ope]`); `text_search` adds the
-    // Bloom-filter match term.
-    let text_ord = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
+    // Bloom-filter match term and stays block-ORE ordered.
+    let text_ore = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
     let text_ope = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "op": "00ffab" });
     let text_search = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] });
 
@@ -242,41 +252,41 @@ fn non_integer_tokens_round_trip_every_domain() {
 
     round_trip!(Smallint, storage("a"), "public.eql_v3_smallint");
     round_trip!(SmallintEq, eq("a"), "public.eql_v3_smallint_eq");
-    round_trip!(SmallintOrd, ord("a"), "public.eql_v3_smallint_ord");
-    round_trip!(SmallintOrdOre, ord("a"), "public.eql_v3_smallint_ord_ore");
+    round_trip!(SmallintOrd, ope("a"), "public.eql_v3_smallint_ord");
+    round_trip!(SmallintOrdOre, ore("a"), "public.eql_v3_smallint_ord_ore");
     round_trip!(SmallintOrdOpe, ope("a"), "public.eql_v3_smallint_ord_ope");
 
     round_trip!(Bigint, storage("a"), "public.eql_v3_bigint");
     round_trip!(BigintEq, eq("a"), "public.eql_v3_bigint_eq");
-    round_trip!(BigintOrd, ord("a"), "public.eql_v3_bigint_ord");
-    round_trip!(BigintOrdOre, ord("a"), "public.eql_v3_bigint_ord_ore");
+    round_trip!(BigintOrd, ope("a"), "public.eql_v3_bigint_ord");
+    round_trip!(BigintOrdOre, ore("a"), "public.eql_v3_bigint_ord_ore");
     round_trip!(BigintOrdOpe, ope("a"), "public.eql_v3_bigint_ord_ope");
 
     round_trip!(Date, storage("a"), "public.eql_v3_date");
     round_trip!(DateEq, eq("a"), "public.eql_v3_date_eq");
-    round_trip!(DateOrd, ord("a"), "public.eql_v3_date_ord");
-    round_trip!(DateOrdOre, ord("a"), "public.eql_v3_date_ord_ore");
+    round_trip!(DateOrd, ope("a"), "public.eql_v3_date_ord");
+    round_trip!(DateOrdOre, ore("a"), "public.eql_v3_date_ord_ore");
     round_trip!(DateOrdOpe, ope("a"), "public.eql_v3_date_ord_ope");
 
     // numeric is the first scalar whose native ORE term exceeds 8 blocks (14);
     // the wire shape is identical, so the same `ord` builder applies.
     round_trip!(Numeric, storage("a"), "public.eql_v3_numeric");
     round_trip!(NumericEq, eq("a"), "public.eql_v3_numeric_eq");
-    round_trip!(NumericOrd, ord("a"), "public.eql_v3_numeric_ord");
-    round_trip!(NumericOrdOre, ord("a"), "public.eql_v3_numeric_ord_ore");
+    round_trip!(NumericOrd, ope("a"), "public.eql_v3_numeric_ord");
+    round_trip!(NumericOrdOre, ore("a"), "public.eql_v3_numeric_ord_ore");
     round_trip!(NumericOrdOpe, ope("a"), "public.eql_v3_numeric_ord_ope");
 
     // real/double are the float scalars (renamed from float4/float8); they carry
     // the same ordered-token wire shape as the int scalars (`hm` eq, `ob` ord).
     round_trip!(Real, storage("a"), "public.eql_v3_real");
     round_trip!(RealEq, eq("a"), "public.eql_v3_real_eq");
-    round_trip!(RealOrd, ord("a"), "public.eql_v3_real_ord");
-    round_trip!(RealOrdOre, ord("a"), "public.eql_v3_real_ord_ore");
+    round_trip!(RealOrd, ope("a"), "public.eql_v3_real_ord");
+    round_trip!(RealOrdOre, ore("a"), "public.eql_v3_real_ord_ore");
 
     round_trip!(Double, storage("a"), "public.eql_v3_double");
     round_trip!(DoubleEq, eq("a"), "public.eql_v3_double_eq");
-    round_trip!(DoubleOrd, ord("a"), "public.eql_v3_double_ord");
-    round_trip!(DoubleOrdOre, ord("a"), "public.eql_v3_double_ord_ore");
+    round_trip!(DoubleOrd, ope("a"), "public.eql_v3_double_ord");
+    round_trip!(DoubleOrdOre, ore("a"), "public.eql_v3_double_ord_ore");
 
     // boolean is storage-only (no eq/ord term) — just the shared envelope.
     round_trip!(Boolean, storage("a"), "public.eql_v3_boolean");
@@ -284,20 +294,21 @@ fn non_integer_tokens_round_trip_every_domain() {
     // text_match is covered by `text_match_round_trips_signed_bloom_filter`.
     round_trip!(Text, storage("a"), "public.eql_v3_text");
     round_trip!(TextEq, eq("a"), "public.eql_v3_text_eq");
-    round_trip!(TextOrd, text_ord("a"), "public.eql_v3_text_ord");
-    round_trip!(TextOrdOre, text_ord("a"), "public.eql_v3_text_ord_ore");
+    round_trip!(TextOrd, text_ope("a"), "public.eql_v3_text_ord");
+    round_trip!(TextOrdOre, text_ore("a"), "public.eql_v3_text_ord_ore");
     round_trip!(TextOrdOpe, text_ope("a"), "public.eql_v3_text_ord_ope");
     round_trip!(TextSearch, text_search("a"), "public.eql_v3_text_search");
 }
 
 #[test]
 fn timestamp_round_trips_and_enforces_term_capabilities() {
-    // timestamp is an ordered token (12-block ORE) — it carries the full
-    // storage/`_eq`/`_ord`/`_ord_ore` shape, the same as the int scalars. The
-    // integer template was copy-pasted to produce it, so a dropped `hm`/`ob` or a
-    // field typo would pass `catalog_parity` (domain names only) but is caught
-    // here. (Was equality-only while the ORE comparator was hardcoded to 8
-    // blocks; promoted once `eql_v3.ore_block_256` generalized to any width.)
+    // timestamp is an ordered token — it carries the full
+    // storage/`_eq`/`_ord_ore`/`_ord`/`_ord_ope` shape, the same as the int
+    // scalars. The integer template was copy-pasted to produce it, so a dropped
+    // `hm`/`ob`/`op` or a field typo would pass `catalog_parity` (domain names
+    // only) but is caught here. (Was equality-only while the ORE comparator was
+    // hardcoded to 8 blocks; promoted once `eql_v3.ore_block_256` generalized to
+    // any width — that 12-block ORE width is what `_ord_ore` still carries.)
     use eql_bindings::v3::timestamp::{
         Timestamp, TimestampEq, TimestampOrd, TimestampOrdOpe, TimestampOrdOre,
     };
@@ -326,19 +337,13 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
         "public.eql_v3_timestamp_eq"
     );
 
-    // Ordered: envelope + ob (a 12-block array on the wire; shape is the same).
+    // ORE ordered: envelope + ob (a 12-block array on the wire; shape is the same).
     let with_ob = json!({
         "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext",
         "ob": ["b0", "b1"]
     });
-    let parsed: TimestampOrd = serde_json::from_value(with_ob.clone()).unwrap();
-    assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
-    assert_eq!(
-        TimestampOrd::sql_domain_static(),
-        "public.eql_v3_timestamp_ord"
-    );
     let parsed: TimestampOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
     assert_eq!(
@@ -346,13 +351,20 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
         "public.eql_v3_timestamp_ord_ore"
     );
 
-    // OPE ordered: envelope + op (a single CLLW-OPE hex string).
+    // OPE ordered: envelope + op (a single CLLW-OPE hex string). `_ord` (the
+    // default) and `_ord_ope` share this shape.
     let with_op = json!({
         "v": 3,
         "i": { "t": "events", "c": "occurred_at" },
         "c": "mp_base85_ciphertext",
         "op": "00ffab"
     });
+    let parsed: TimestampOrd = serde_json::from_value(with_op.clone()).unwrap();
+    assert_eq!(serde_json::to_value(&parsed).unwrap(), with_op);
+    assert_eq!(
+        TimestampOrd::sql_domain_static(),
+        "public.eql_v3_timestamp_ord"
+    );
     let parsed: TimestampOrdOpe = serde_json::from_value(with_op.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_op);
     assert_eq!(
@@ -371,10 +383,15 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
         result.is_err(),
         "TimestampEq must reject a payload with no hm"
     );
+    let result: Result<TimestampOrdOre, _> = serde_json::from_value(no_hm.clone());
+    assert!(
+        result.is_err(),
+        "TimestampOrdOre must reject a payload with no ob"
+    );
     let result: Result<TimestampOrd, _> = serde_json::from_value(no_hm);
     assert!(
         result.is_err(),
-        "TimestampOrd must reject a payload with no ob"
+        "TimestampOrd must reject a payload with no op"
     );
 }
 

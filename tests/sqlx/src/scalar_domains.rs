@@ -168,10 +168,27 @@ pub trait ScalarType:
     }
 
     /// Ordering extractor expression for a domain-typed value expression.
-    /// Default scalar Ord/OrdOre path is `eql_v3.ord_term(value)`.
-    /// SteVec entries override this to `eql_v3.ord_ope_term(value)`.
-    fn ord_extractor_expr(value_expr: &str) -> String {
-        format!("eql_v3.ord_term({value_expr})")
+    ///
+    /// The default is **catalog-derived**: it reads the variant's ordering
+    /// `Term` and uses that term's own extractor name, so `_ord` (backed by
+    /// `Term::Ope`) yields `eql_v3.ord_ope_term(value)` while `_ord_ore`
+    /// (backed by `Term::Ore`) yields `eql_v3.ord_term(value)`. Hardcoding
+    /// either name here would silently desync the harness from the generated
+    /// SQL the moment a domain's ordering SEM changes.
+    ///
+    /// Takes `variant` because a single `T` spans several domains with
+    /// different ordering terms. SteVec entries override this to the
+    /// `public.eql_v3_jsonb_entry` overload of `eql_v3.ord_ope_term(value)`,
+    /// ignoring the variant: their ordering term lives inside the payload
+    /// shape, not in the flat catalog `terms` list.
+    fn ord_extractor_expr(variant: Variant, value_expr: &str) -> String {
+        let term = variant.ordering_term(Self::PG_TYPE).unwrap_or_else(|| {
+            panic!(
+                "ord_extractor_expr on non-ordered ({}, {variant:?})",
+                Self::PG_TYPE
+            )
+        });
+        format!("eql_v3.{}({value_expr})", term.extractor())
     }
 
     /// SQL-literal rendering via `Display`. Takes `&Self` so a non-`Copy`
@@ -1280,7 +1297,24 @@ impl Variant {
 
     /// True when the variant's domain supports the four ordering operators.
     pub fn supports_ord(self, token: &str) -> bool {
-        self.terms_for(token).iter().any(|t| t.provides_ordering())
+        self.ordering_term(token).is_some()
+    }
+
+    /// The variant's ordering [`Term`] for `token` — the first term that
+    /// provides ordering — or `None` if the domain is not ordered.
+    ///
+    /// This is what makes the ordering surface catalog-driven rather than
+    /// hardcoded to one SEM. `_ord` is backed by `Term::Ope` and `_ord_ore` by
+    /// `Term::Ore`, so the extractor name (`ord_ope_term` vs `ord_term`), the
+    /// payload key (`op` vs `ob`), and the returned SEM type (a `bytea`-backed
+    /// domain vs an ORE composite) all differ between them. Callers that need
+    /// to know *which* ordering term they are looking at — the extractor-identity
+    /// oracle, chiefly — branch on this rather than assuming block-ORE.
+    pub fn ordering_term(self, token: &str) -> Option<Term> {
+        self.terms_for(token)
+            .iter()
+            .copied()
+            .find(|t| t.provides_ordering())
     }
 
     /// The `eql_v3`-qualified extractor that serves `op` on this variant's
@@ -1316,7 +1350,21 @@ pub struct ScalarDomainSpec {
     pub variant: Variant,
     pub placeholder_payload: &'static str,
     pub eq_extractor: fn(&str) -> String,
-    pub ord_extractor: fn(&str) -> String,
+    /// Takes the variant because one `T` spans domains with different ordering
+    /// terms. Call via [`ScalarDomainSpec::ord_extractor_expr`], which supplies
+    /// `self.variant`.
+    pub ord_extractor: fn(Variant, &str) -> String,
+    /// The variant's ordering term (`Term::Ope` for `_ord`, `Term::Ore` for
+    /// `_ord_ore` / `_search`), or `None` when the domain is not ordered.
+    ///
+    /// Read from `CATALOG` via `T::PG_TYPE`, so it is meaningless for a SteVec
+    /// entry view, whose `PG_TYPE` names the wrapped scalar rather than its own
+    /// structural term (`JsonbEntryInteger` reports `Some(Term::Ope)` but orders
+    /// by `oc`). Only the property oracles read this field, and they are
+    /// instantiated solely with real scalar types — never with an entry view.
+    /// Use [`ScalarDomainSpec::ord_extractor_expr`], which honours the
+    /// `ord_extractor` override, when you need the extractor itself.
+    pub ord_term: Option<Term>,
     /// The scalar's catalog token (`T::PG_TYPE`, e.g. `"integer"`, `"text"`).
     /// Carried so the delegating capability methods can resolve the variant's
     /// terms from `CATALOG` without the call site re-supplying the token.
@@ -1332,8 +1380,15 @@ impl ScalarDomainSpec {
             placeholder_payload: T::placeholder_payload(),
             eq_extractor: T::eq_extractor_expr,
             ord_extractor: T::ord_extractor_expr,
+            ord_term: variant.ordering_term(T::PG_TYPE),
             token: T::PG_TYPE,
         }
+    }
+
+    /// The ordering extractor applied to `value_expr`, using this spec's
+    /// variant. Prefer this over poking `ord_extractor` directly.
+    pub fn ord_extractor_expr(&self, value_expr: &str) -> String {
+        (self.ord_extractor)(self.variant, value_expr)
     }
 
     pub fn supports_eq(&self) -> bool {
@@ -1362,8 +1417,10 @@ impl ScalarDomainSpec {
 
     /// Extractor expression for the variant's discriminating term applied to
     /// `value_expr`. Routes through the per-type `eq_extractor` / `ord_extractor`
-    /// seams, so scalars produce `eql_v3.eq_term(...)` / `eql_v3.ord_term(...)`
-    /// and a SteVec-entry view produces `eql_v3.eq_term(...)` / `eql_v3.ord_ope_term(...)`.
+    /// seams, so scalars produce `eql_v3.eq_term(...)` and the ordering
+    /// extractor their catalog term names (`eql_v3.ord_ope_term(...)` for `_ord`,
+    /// `eql_v3.ord_term(...)` for `_ord_ore` / `_search`), while a SteVec-entry
+    /// view produces `eql_v3.eq_term(...)` / `eql_v3.ord_ope_term(...)`.
     /// `Storage` has no discriminating term and returns `None`. `Search` (the
     /// combined `_search` domain, which provides ordering) routes through the
     /// ordered extractor like `Ord`/`OrdOre`.
@@ -1372,7 +1429,7 @@ impl ScalarDomainSpec {
             Variant::Storage => None,
             Variant::Eq => Some((self.eq_extractor)(value_expr)),
             Variant::Ord | Variant::OrdOre | Variant::Search => {
-                Some((self.ord_extractor)(value_expr))
+                Some(self.ord_extractor_expr(value_expr))
             }
         }
     }
@@ -1618,18 +1675,20 @@ mod seam_tests {
     use super::*;
 
     /// The access-path / extractor seam defaults must reproduce today's scalar
-    /// SQL exactly: bare `payload`, `eql_v3.<pg_type><suffix>`, and
-    /// `eql_v3.ord_term(...)` for the ordered extractor. A view type that
-    /// overrides these (e.g. `JsonbEntryInteger`) is what makes entry reuse
+    /// SQL exactly: bare `payload`, `eql_v3.<pg_type><suffix>`, and the ordering
+    /// extractor named by the domain's catalog term — `ord_ope_term` on the
+    /// OPE-backed `_ord`, `ord_term` on the ORE-backed `_ord_ore`. A view type
+    /// that overrides these (e.g. `JsonbEntryInteger`) is what makes entry reuse
     /// possible — but the defaults are the no-regression contract.
     #[test]
     fn scalar_defaults_reproduce_today_sql() {
         let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
         assert_eq!(spec.column_expr, "payload");
         assert_eq!(spec.sql_domain, "public.eql_v3_integer_ord");
+        assert_eq!(spec.ord_term, Some(Term::Ope));
         assert_eq!(
             spec.extractor_expr("value"),
-            Some("eql_v3.ord_term(value)".to_string()),
+            Some("eql_v3.ord_ope_term(value)".to_string()),
         );
         assert_eq!(
             (spec.eq_extractor)("value"),
@@ -1638,6 +1697,15 @@ mod seam_tests {
         assert_eq!(
             spec.placeholder_payload,
             crate::helpers::PLACEHOLDER_PAYLOAD
+        );
+
+        // `_ord_ore` is the block-ORE surface, and must NOT follow `_ord`.
+        let ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
+        assert_eq!(ore.sql_domain, "public.eql_v3_integer_ord_ore");
+        assert_eq!(ore.ord_term, Some(Term::Ore));
+        assert_eq!(
+            ore.extractor_expr("value"),
+            Some("eql_v3.ord_term(value)".to_string()),
         );
     }
 
@@ -1697,32 +1765,46 @@ mod catalog_resolution_tests {
     // matrix now relies on (no DB needed).
 
     #[test]
-    fn combo_extractor_integer_ord_serves_all_ops_via_ord_term() {
-        // integer `_ord` = [Ore]: every op (eq + the four ord ops) resolves to the
-        // single ord_term extractor, so the combo is single-extractor.
+    fn combo_extractor_integer_ord_serves_all_ops_via_ord_ope_term() {
+        // integer `_ord` = [Ope]: every op (eq + the four ord ops) resolves to the
+        // single ord_ope_term extractor, so the combo is single-extractor.
         let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
         assert_eq!(
             combo_extractor(&spec, &["=", "<", "<=", ">", ">="]).unwrap(),
+            "eql_v3.ord_ope_term",
+        );
+        // integer `_ord_ore` = [Ore]: same single-extractor property, block-ORE.
+        let ore = ScalarDomainSpec::new::<i32>(Variant::OrdOre);
+        assert_eq!(
+            combo_extractor(&ore, &["=", "<", "<=", ">", ">="]).unwrap(),
             "eql_v3.ord_term",
         );
     }
 
     #[test]
     fn combo_extractor_text_ord_splits_eq_from_ord() {
-        // text `_ord` = [Hm, Ore]: `=` routes through eq_term, the ord ops
-        // through ord_term. A single index cannot serve both, so each must be
+        // text `_ord` = [Hm, Ope]: `=` routes through eq_term, the ord ops
+        // through ord_ope_term. A single index cannot serve both, so each must be
         // its own combo — proven here by `=`-only and ord-only succeeding while
         // a mixed combo errors.
         let spec = ScalarDomainSpec::new::<String>(Variant::Ord);
         assert_eq!(combo_extractor(&spec, &["="]).unwrap(), "eql_v3.eq_term");
         assert_eq!(
             combo_extractor(&spec, &["<", "<=", ">", ">="]).unwrap(),
-            "eql_v3.ord_term",
+            "eql_v3.ord_ope_term",
         );
         let mixed = combo_extractor(&spec, &["=", "<"]);
         assert!(
             mixed.is_err(),
             "a combo mixing eq + ord ops on text _ord must error (two extractors)",
+        );
+
+        // text `_ord_ore` = [Hm, Ore]: same split, block-ORE ordering.
+        let ore = ScalarDomainSpec::new::<String>(Variant::OrdOre);
+        assert_eq!(combo_extractor(&ore, &["="]).unwrap(), "eql_v3.eq_term");
+        assert_eq!(
+            combo_extractor(&ore, &["<", "<=", ">", ">="]).unwrap(),
+            "eql_v3.ord_term",
         );
     }
 

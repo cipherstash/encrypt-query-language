@@ -11,11 +11,14 @@
 //! functions of plaintext+key)**, NOT a supported guarantee, and they diverge
 //! from IEEE (`NaN != NaN`). They are discovered-and-locked on first run.
 //!
-//! The `-0.0`/`+0.0` equality below pins the `orderable-bytes` ORE path, which
-//! canonicalizes `-0.0 -> +0.0` before encoding. A dormant alternative encoder
-//! (`cllw-ore`) instead distinguishes them; if float ORE is ever routed through
-//! that path this test flips from "equal" to "`-0.0 < +0.0`" — it is the canary,
-//! so keep this comment pointing at the orderable-bytes canonicalization.
+//! **The two ordering domains disagree on `-0.0` vs `+0.0`.** `_ord_ore`
+//! (block-ORE) rides the `orderable-bytes` encoder, which canonicalizes
+//! `-0.0 -> +0.0` before encoding, so the two are order-equal there. `_ord`
+//! (CLLW-OPE) does NOT canonicalize: their `op` terms differ outright and it
+//! orders `-0.0 < +0.0`. The previous canary comment here predicted exactly this
+//! ("a dormant alternative encoder, `cllw-ore`, instead distinguishes them");
+//! the flip happened when the `_ord` default moved from block-ORE to CLLW-OPE.
+//! Both behaviours are pinned below, one test per domain.
 
 use anyhow::Result;
 use eql_tests::fixtures::cipherstash::encrypt_store;
@@ -35,7 +38,10 @@ async fn encrypt_specials(values: &[F8]) -> Result<Vec<String>> {
         "float_special",
         "payload",
         values,
-        &[IndexKind::Unique, IndexKind::Ore],
+        // `Ope` is required for the `_ord` casts below (its CHECK requires `op`);
+        // `Ore` for the `_ord_ore` casts. Both are requested so one encryption
+        // batch serves the OPE and block-ORE ordering paths.
+        &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope],
     )
     .await?;
     Ok(payloads.into_iter().map(|p| p.to_string()).collect())
@@ -56,10 +62,21 @@ async fn cast_passes_check(pool: &PgPool, payload: &str) -> Result<()> {
     Ok(())
 }
 
-/// Compare two payloads under an operator on the `_ord` domain, returning the
-/// boolean result. Used to pin the discovered NaN/±0/±Inf outcomes.
+/// Compare two payloads under an operator on `public.eql_v3_double_ord` — the default
+/// ordering domain, backed by CLLW-OPE (`op`). Used to pin the discovered
+/// NaN/±0/±Inf outcomes.
 async fn ord_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
-    let d = "public.eql_v3_double_ord";
+    cmp_on(pool, "public.eql_v3_double_ord", a, op, b).await
+}
+
+/// The same comparison on `public.eql_v3_double_ord_ore` — the block-ORE ordering
+/// domain. Kept distinct from [`ord_cmp`] because the two SEMs do not agree on
+/// `-0.0` vs `+0.0` (see the module doc).
+async fn ord_ore_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
+    cmp_on(pool, "public.eql_v3_double_ord_ore", a, op, b).await
+}
+
+async fn cmp_on(pool: &PgPool, d: &str, a: &str, op: &str, b: &str) -> Result<bool> {
     let sql = format!("SELECT ($1::jsonb::{d} {op} $2::jsonb::{d})");
     Ok(sqlx::query_scalar(&sql)
         .bind(a)
@@ -114,14 +131,60 @@ async fn two_encryptions_of_same_nan_bits_compare_equal() -> Result<()> {
 }
 
 #[tokio::test]
-async fn negative_zero_and_positive_zero_compare_equal_and_share_ore() -> Result<()> {
-    // The encoder canonicalizes -0.0 -> +0.0 (byte-equal), matching IEEE
-    // (-0.0 == 0.0). So they compare equal under `=` and are not `<` either way.
+async fn negative_zero_and_positive_zero_share_ore_order() -> Result<()> {
+    // Block-ORE rides the `orderable-bytes` encoder, which canonicalizes
+    // -0.0 -> +0.0 before encoding, so `_ord_ore` orders them equal — matching
+    // IEEE (-0.0 == 0.0). Contrast `negative_zero_orders_below_positive_zero_
+    // under_ope`: the OPE term does NOT canonicalize.
+    let pool = setup().await?;
+    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
+    assert!(
+        !ord_ore_cmp(&pool, &p[0], "<", &p[1]).await?,
+        "-0.0 not < +0.0 under block-ORE"
+    );
+    assert!(
+        !ord_ore_cmp(&pool, &p[1], "<", &p[0]).await?,
+        "+0.0 not < -0.0 under block-ORE"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn negative_zero_orders_below_positive_zero_under_ope() -> Result<()> {
+    // CLLW-OPE does NOT canonicalize the sign of zero: `op(-0.0)` and `op(+0.0)`
+    // are different ciphertexts, and native bytea comparison puts `-0.0` first.
+    // So the OPE-backed `_ord` domain DIVERGES from IEEE here, where block-ORE
+    // agreed with it. This is a deliberate, pinned consequence of `_ord` moving
+    // to CLLW-OPE — a float column that must treat ±0.0 as equal for ORDER BY
+    // should be typed `_ord_ore`.
+    let pool = setup().await?;
+    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
+    assert!(
+        ord_cmp(&pool, &p[0], "<", &p[1]).await?,
+        "-0.0 < +0.0 under CLLW-OPE"
+    );
+    assert!(
+        !ord_cmp(&pool, &p[1], "<", &p[0]).await?,
+        "+0.0 not < -0.0 under CLLW-OPE"
+    );
+    Ok(())
+}
+
+/// `-0.0` and `+0.0` are IEEE-equal, so encrypted `=` on `_eq` must agree.
+///
+/// It does not: `hm` hashes the raw `f64` bytes, sign bit included, so the two
+/// zeroes hash differently. Unrelated to the `_ord` ordering SEM — it reproduces
+/// identically on the block-ORE default. This test therefore FAILS; it is not
+/// run by any CI job today. See the follow-up commit, which wires `float_special`
+/// into CI behind a self-expiring known-failure marker.
+///
+/// Split out of the ordering assertions because it used to run first and abort
+/// the test, so the ORE ordering canary below it had never actually executed.
+#[tokio::test]
+async fn negative_zero_and_positive_zero_compare_equal_under_eq() -> Result<()> {
     let pool = setup().await?;
     let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
     assert!(eq_cmp(&pool, &p[0], &p[1]).await?, "-0.0 == +0.0");
-    assert!(!ord_cmp(&pool, &p[0], "<", &p[1]).await?, "-0.0 not < +0.0");
-    assert!(!ord_cmp(&pool, &p[1], "<", &p[0]).await?, "+0.0 not < -0.0");
     Ok(())
 }
 
@@ -143,8 +206,9 @@ async fn nan_order_position_is_deterministic_and_total() -> Result<()> {
     //
     // NaN is "unordered and unspecified" by design, so we deliberately do NOT
     // pin WHERE NaN sorts relative to finite / ±Inf values (that position is an
-    // encoder artifact and may change). But the Block-ORE index the `_ord`
-    // domain rides on requires a *total, deterministic* order: the same
+    // encoder artifact and may change). But the btree index the `_ord` domain
+    // rides on (now CLLW-OPE over bytea) requires a *total, deterministic*
+    // order: the same
     // plaintext must always land at the same position, and every pair must
     // resolve to exactly one of `<` / `=` / `>`. If a future encoder change
     // makes NaN's position non-deterministic (same bits, different sort slot ->

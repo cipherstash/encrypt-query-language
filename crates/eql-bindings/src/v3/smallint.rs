@@ -103,7 +103,7 @@ impl DomainType for SmallintOrdOre {
 }
 /// `public.eql_v3_smallint_ord` — ordering domain.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -111,7 +111,7 @@ pub struct SmallintOrd {
     pub v: SchemaVersion,
     pub i: Identifier,
     pub c: Ciphertext,
-    pub ob: OreBlock256,
+    pub op: OpeCllw,
 }
 impl DomainType for SmallintOrd {
     fn sql_domain_static() -> &'static str {
@@ -121,7 +121,7 @@ impl DomainType for SmallintOrd {
         Self::sql_domain_static()
     }
     fn term_json_keys_static() -> Option<&'static [&'static str]> {
-        Some(&["ob"])
+        Some(&["op"])
     }
     fn term_json_keys(&self) -> Option<&'static [&'static str]> {
         Self::term_json_keys_static()
@@ -229,14 +229,14 @@ impl DomainType for SmallintOrdOreQuery {
 }
 /// `eql_v3.query_smallint_ord` — ordering domain query operand.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct SmallintOrdQuery {
     pub v: SchemaVersion,
     pub i: Identifier,
-    pub ob: OreBlock256,
+    pub op: OpeCllw,
 }
 impl DomainType for SmallintOrdQuery {
     fn sql_domain_static() -> &'static str {
@@ -246,7 +246,7 @@ impl DomainType for SmallintOrdQuery {
         Self::sql_domain_static()
     }
     fn term_json_keys_static() -> Option<&'static [&'static str]> {
-        Some(&["ob"])
+        Some(&["op"])
     }
     fn term_json_keys(&self) -> Option<&'static [&'static str]> {
         Self::term_json_keys_static()

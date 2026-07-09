@@ -772,7 +772,8 @@ mod tests {
         assert_eq!(field_idents(&out, "Integer"), ["v", "i", "c"]);
         assert_eq!(field_idents(&out, "IntegerEq"), ["v", "i", "c", "hm"]);
         assert_eq!(field_idents(&out, "IntegerOrdOre"), ["v", "i", "c", "ob"]);
-        assert_eq!(field_idents(&out, "IntegerOrd"), ["v", "i", "c", "ob"]);
+        // `_ord` is the OPE-backed default, so it mirrors `_ord_ope`, not `_ord_ore`.
+        assert_eq!(field_idents(&out, "IntegerOrd"), ["v", "i", "c", "op"]);
         assert_eq!(field_idents(&out, "IntegerOrdOpe"), ["v", "i", "c", "op"]);
         assert!(out.contains("impl DomainType for IntegerEq"));
         assert!(out.contains("fn sql_domain_static()"));
@@ -805,7 +806,8 @@ mod tests {
         );
         // Query operand = envelope minus `c`, then the term(s).
         assert_eq!(field_idents(&out, "IntegerEqQuery"), ["v", "i", "hm"]);
-        assert_eq!(field_idents(&out, "IntegerOrdQuery"), ["v", "i", "ob"]);
+        assert_eq!(field_idents(&out, "IntegerOrdOreQuery"), ["v", "i", "ob"]);
+        assert_eq!(field_idents(&out, "IntegerOrdQuery"), ["v", "i", "op"]);
         assert_eq!(field_idents(&out, "IntegerOrdOpeQuery"), ["v", "i", "op"]);
         assert!(out.contains("\"eql_v3.query_integer_eq\""));
         assert!(out.contains("impl DomainType for IntegerEqQuery"));
@@ -815,8 +817,13 @@ mod tests {
         assert!(out.contains(r#"&["op"]"#));
 
         // Dual-term text domains keep BOTH terms in the query twin, still no `c`.
+        // `_ord` is OPE-backed (`op`); `_ord_ore` and `_search` keep `ob`.
         let text = render_family_bindings(family("text"));
-        assert_eq!(field_idents(&text, "TextOrdQuery"), ["v", "i", "hm", "ob"]);
+        assert_eq!(field_idents(&text, "TextOrdQuery"), ["v", "i", "hm", "op"]);
+        assert_eq!(
+            field_idents(&text, "TextOrdOreQuery"),
+            ["v", "i", "hm", "ob"]
+        );
         assert_eq!(
             field_idents(&text, "TextSearchQuery"),
             ["v", "i", "hm", "ob", "bf"]
@@ -876,8 +883,14 @@ mod tests {
         assert!(out.contains("`public.eql_v3_text_match` — match domain."));
         assert!(out.contains("`public.eql_v3_text_search` — search domain."));
         assert!(out.contains("bf: BloomFilter"));
-        assert_eq!(field_idents(&out, "TextOrd"), ["v", "i", "c", "hm", "ob"]);
-        // text_ord_ope is dual-term like text_ord: equality stays exact via hm.
+        // Every ordered text domain is dual-term: equality stays exact via `hm`,
+        // and the second term is the ordering one. `_ord` is OPE-backed (so it
+        // mirrors `_ord_ope`); `_ord_ore` and `_search` keep block-ORE.
+        assert_eq!(
+            field_idents(&out, "TextOrdOre"),
+            ["v", "i", "c", "hm", "ob"]
+        );
+        assert_eq!(field_idents(&out, "TextOrd"), ["v", "i", "c", "hm", "op"]);
         assert_eq!(
             field_idents(&out, "TextOrdOpe"),
             ["v", "i", "c", "hm", "op"]

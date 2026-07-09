@@ -899,8 +899,9 @@ mod tests {
     /// The non-empty-`ob` CHECK (issue #262) is emitted only on ORE-bearing
     /// domains. An empty ORE term (`ob: []`) is what encrypting the empty string
     /// into an ordered column produces; the constraint rejects it at the domain
-    /// boundary. Storage-only (`integer`) and equality-only (`integer_eq`) domains carry
-    /// no `ob`, so they must NOT gain the clause.
+    /// boundary. Domains carrying no `ob` — storage-only (`integer`),
+    /// equality-only (`integer_eq`), and the OPE-bearing ordered domains
+    /// (`integer_ord`, `integer_ord_ope`) — must NOT gain the clause.
     #[test]
     fn ore_bearing_domains_reject_empty_ob() {
         // Per-domain assertion: a domain's CREATE block carries the clause iff it
@@ -911,10 +912,11 @@ mod tests {
         for (dom, expected) in [
             ("integer", false),
             ("integer_eq", false),
-            ("integer_ord", true),
             ("integer_ord_ore", true),
             // The OPE term (`op`) is a single hex string, not an array — no
-            // non-empty-array CHECK on the OPE-bearing domain.
+            // non-empty-array CHECK on the OPE-bearing domains, which since the
+            // `_ord` default flipped to CLLW-OPE includes `_ord` itself.
+            ("integer_ord", false),
             ("integer_ord_ope", false),
         ] {
             let head = format!("CREATE DOMAIN public.eql_v3_{dom} AS jsonb");
@@ -960,13 +962,18 @@ mod tests {
         assert!(!sql.contains("SET search_path"));
     }
 
+    /// The block-ORE ordered domain is now reached only by name: `_ord_ore`.
+    /// (`_ord` is OPE-backed — see `ope_functions_file_counts`.)
     #[test]
     fn ore_functions_file_counts() {
         let s = spec("integer");
-        let sql = render_functions_file(s.name, domain(s, "ord"));
+        let sql = render_functions_file(s.name, domain(s, "ord_ore"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord)"));
+        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord_ore)"));
         assert!(sql.contains("RETURNS eql_v3_internal.ore_block_256"));
+        // Ore needs the hand-written comparison operators on the composite.
+        assert!(sql.contains("-- REQUIRE: src/v3/sem/ore_block_256/functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/sem/ore_block_256/operators.sql"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -975,29 +982,44 @@ mod tests {
         assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
     }
 
+    /// The OPE ordered domains mirror the ORE one — same operator surface
+    /// (18 wrappers), one extractor — but the extractor is `ord_ope_term`
+    /// returning the SEM `eql_v3_internal.ope_cllw` domain (over bytea), and the
+    /// sole SEM REQUIRE edge is the extractor file: the bytea-backed
+    /// domain inherits native comparison operators, so there is no
+    /// hand-written operators.sql to depend on (unlike Ore).
+    ///
+    /// Both `_ord` (the default) and `_ord_ope` carry the OPE term, so both are
+    /// asserted here.
     #[test]
     fn ope_functions_file_counts() {
-        // The OPE ordered domain mirrors the ORE one — same operator surface
-        // (18 wrappers), one extractor — but the extractor is `ord_ope_term`
-        // returning the SEM `eql_v3_internal.ope_cllw` domain (over bytea), and the
-        // sole SEM REQUIRE edge is the extractor file: the bytea-backed
-        // domain inherits native comparison operators, so there is no
-        // hand-written operators.sql to depend on (unlike Ore).
         let s = spec("integer");
-        let sql = render_functions_file(s.name, domain(s, "ord_ope"));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(
-            sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_ord_ope)")
-        );
-        assert!(sql.contains("RETURNS eql_v3_internal.ope_cllw"));
-        assert!(sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/functions.sql"));
-        assert!(!sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"));
-        assert_eq!(
-            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
-                .count(),
-            19
-        );
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
+        for dom in ["ord", "ord_ope"] {
+            let sql = render_functions_file(s.name, domain(s, dom));
+            assert_eq!(sql.matches("CREATE FUNCTION").count(), 45, "{dom}");
+            assert!(
+                sql.contains(&format!(
+                    "CREATE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_{dom})"
+                )),
+                "{dom}"
+            );
+            assert!(sql.contains("RETURNS eql_v3_internal.ope_cllw"), "{dom}");
+            assert!(
+                sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/functions.sql"),
+                "{dom}"
+            );
+            assert!(
+                !sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"),
+                "{dom}"
+            );
+            assert_eq!(
+                sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                    .count(),
+                19,
+                "{dom}"
+            );
+            assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26, "{dom}");
+        }
     }
 
     #[test]
@@ -1074,26 +1096,39 @@ mod tests {
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/integer_types.sql"));
     }
 
+    /// `_ord` and `_ord_ope` are the twins: same term (`Ope`), so their rendered
+    /// surfaces differ only in the domain name. `_ord_ore` is NOT a twin — it
+    /// carries `Ore`, so its extractor and SEM type differ. (Before the default
+    /// flipped to CLLW-OPE, `_ord`/`_ord_ore` were the twins.)
     #[test]
     fn ordered_files_byte_identical_modulo_typename() {
         let s = spec("integer");
         let ord = domain(s, "ord");
+        let ope = domain(s, "ord_ope");
         let ore = domain(s, "ord_ore");
-        let norm = |sql: String| {
-            sql.replace("integer_ord_ore", "T")
-                .replace("integer_ord", "T")
-        };
+        // Normalize each file with its OWN domain name. A single fixed replace
+        // chain would corrupt the `_ord` file: `integer_ord_ope` is a prefix of
+        // `integer_ord_operators.sql`, so replacing the longer name first eats
+        // into the `_operators.sql` filename.
+        let norm = |sql: String, dom: &str| sql.replace(&format!("integer_{dom}"), "T");
         assert_eq!(
-            norm(render_functions_file(s.name, ord)),
-            norm(render_functions_file(s.name, ore))
+            norm(render_functions_file(s.name, ord), "ord"),
+            norm(render_functions_file(s.name, ope), "ord_ope")
         );
         assert_eq!(
-            norm(render_operators_file(s.name, ord)),
-            norm(render_operators_file(s.name, ore))
+            norm(render_operators_file(s.name, ord), "ord"),
+            norm(render_operators_file(s.name, ope), "ord_ope")
         );
         assert_eq!(
-            norm(render_aggregates_file(s.name, ord).unwrap()),
-            norm(render_aggregates_file(s.name, ore).unwrap())
+            norm(render_aggregates_file(s.name, ord).unwrap(), "ord"),
+            norm(render_aggregates_file(s.name, ope).unwrap(), "ord_ope")
+        );
+
+        // The ORE domain is a genuinely different surface, not a renamed twin.
+        assert_ne!(
+            norm(render_functions_file(s.name, ord), "ord"),
+            norm(render_functions_file(s.name, ore), "ord_ore"),
+            "_ord (ope) and _ord_ore (ore) must not render identically"
         );
     }
 

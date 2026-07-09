@@ -91,7 +91,14 @@ impl ScalarType for JsonbEntryInteger {
         format!("eql_v3.eq_term({value_expr})")
     }
 
-    fn ord_extractor_expr(value_expr: &str) -> String {
+    /// A SteVec entry orders by its structural CLLW-OPE term (`op`), whatever
+    /// the variant — the `public.jsonb_entry` overload of `eql_v3.ord_ope_term`.
+    /// Deliberately ignores the catalog default: the entry's ordering term
+    /// lives inside the payload shape, not in the flat catalog `terms` list
+    /// (`PG_TYPE` is `"integer"`, whose `_ord` happens to be OPE-backed too,
+    /// so a catalog lookup would coincide today — the override keeps the
+    /// entry seam independent of the scalar catalog).
+    fn ord_extractor_expr(_variant: Variant, value_expr: &str) -> String {
         format!("eql_v3.ord_ope_term({value_expr})")
     }
 
@@ -142,7 +149,7 @@ mod tests {
             "public.eql_v3_jsonb_entry",
         );
         assert_eq!(
-            <JsonbEntryInteger as ScalarType>::ord_extractor_expr("value"),
+            <JsonbEntryInteger as ScalarType>::ord_extractor_expr(Variant::Ord, "value"),
             "eql_v3.ord_ope_term(value)",
         );
         assert_eq!(

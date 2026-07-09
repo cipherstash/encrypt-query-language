@@ -25,8 +25,8 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | ----------------------------- | ------------------------- | ------------------------ | :------: | :---------------: | :-----------: | :-------: |
 | `public.<T>`                  | none (storage only)       | —                        |    ❌    |        ❌         |      ❌       |    ❌     |
 | `public.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
-| `public.<T>_ord` / `_ord_ore` | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
-| `public.<T>_ord_ope`          | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
+| `public.<T>_ord` / `_ord_ope` | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
+| `public.<T>_ord_ore`          | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
 | `public.eql_v3_text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
 | `public.eql_v3_text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
@@ -35,12 +35,14 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 Notes:
 
 - The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.eql_v3_integer_ord`) when you need to query.
-- `_ord` and `_ord_ore` are **twins**: byte-identical surfaces backed by the ORE block term. Pick the name that documents intent ("ordered" vs "ordered via ORE block"); both support the full ordered surface and the `MIN` / `MAX` aggregates.
-- `_ord_ope` exposes the **same ordered surface** backed by the CLLW-OPE term instead: `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol). On `text_ord_ope`, `=` / `<>` route through `hm` (exact HMAC), like `text_ord` — OPE over text is not equality-lossless.
+- `_ord` and `_ord_ope` are **twins**: byte-identical surfaces backed by the CLLW-OPE term. `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol, and `eql_v3_internal.ope_cllw` is a domain over `bytea`, so a functional btree on `eql_v3.ord_ope_term(col)` uses the default operator class and needs no superuser). `_ord` is the recommended name; `_ord_ope` documents the scheme explicitly.
+- `_ord_ore` exposes the **same ordered surface** backed by the block-ORE term (`ob`) instead, compared by the custom N-block protocol. Use it when you specifically need block-ORE. Caveat: its btree operator class is created by a superuser-only `DO` block that is **silently skipped** without that privilege. When it is missing, `CREATE INDEX … btree (eql_v3.ord_term(col))` still *succeeds* — PostgreSQL falls back to `record_ops` on the composite — but that opfamily does not contain the ORE comparison operators, so the index never engages and the ordering it stores is not the ORE ordering. Verify with `\d+` that the index opclass is `ore_block_256_operator_class`, not `record_ops`.
+- On `text_ord` / `text_ord_ope` / `text_ord_ore`, `=` / `<>` route through `hm` (exact HMAC) — ordering terms over text are not equality-lossless.
+- `text_ord` accepts the empty string (its `op` term is well-formed and sorts first). `text_ord_ore` **rejects** it: encrypting `""` yields an empty ORE term (`ob: []`) that the domain CHECK refuses.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
 - `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `public.eql_v3_boolean` (no `_eq` / `_ord`).
 - `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@>` on `text_match`, not `LIKE`.
-- `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(public.<T>_ord)` / `eql_v3.max(...)` (and the `_ord_ore` twin) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
+- `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(public.<T>_ord)` / `eql_v3.max(...)` (and likewise on `_ord_ope` / `_ord_ore`) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
 
 ---
 
@@ -75,7 +77,7 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col BETWEEN … AND …`          | desugars to `>=` and `<=`                                                               | `_ord`, `text_search` |
 | `WHERE col @> …`                     | bloom-filter token containment (text), or document containment (`public.eql_v3_json`)         | `text_match`, `text_search`, `public.eql_v3_json` |
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
-| `ORDER BY col`                       | meaningful only with an ORE term                                                        | `_ord`, `text_search` |
+| `ORDER BY col`                       | meaningful only with an ordering term                                                   | `_ord`, `text_search` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |
 | `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.eql_v3_integer_ord)`) | `_ord` |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | plain `COUNT(col)` needs no term; `DISTINCT` needs an equality term                     | any / `_eq` for `DISTINCT` |
@@ -84,7 +86,7 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 Notes:
 
 - **Cross-column / cross-table comparisons** (joins, `IN (subquery)`, set-operation dedup) require both sides to have been encrypted with the *same* keyset and a matching variant.
-- **`ORDER BY`** without an ORE term will not produce a meaningful order — type the column as an `_ord` variant when ordering matters.
+- **`ORDER BY`** without an ordering term will not produce a meaningful order — type the column as an `_ord` variant when ordering matters.
 - **Aggregates beyond `MIN` / `MAX`** (`SUM`, `AVG`, …) are not supported on encrypted values — decrypt at the application boundary and aggregate client-side.
 - **Parameter binding**: CipherStash Proxy rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter (`$1::public.eql_v3_integer_ord`) so the encrypted operator resolves rather than the native `jsonb` one.
 
@@ -98,8 +100,8 @@ Notes:
 -- Equality (hash index on eq_term)
 CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
 
--- Ordering / range (btree index on ord_term)
-CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_term(encrypted_at));
+-- Ordering / range (btree index on ord_ope_term; use ord_term for an _ord_ore column)
+CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_ope_term(encrypted_at));
 
 -- Text match (bloom containment — GIN on match_term)
 CREATE INDEX users_name_match ON users USING gin (eql_v3.match_term(encrypted_name));

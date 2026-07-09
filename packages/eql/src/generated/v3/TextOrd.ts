@@ -2,12 +2,12 @@
 import type { Ciphertext } from "./Ciphertext";
 import type { Hmac256 } from "./Hmac256";
 import type { Identifier } from "./Identifier";
-import type { OreBlock256 } from "./OreBlock256";
+import type { OpeCllw } from "./OpeCllw";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
  * `public.eql_v3_text_ord` — ordering domain.
  *
- * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `ob`.
+ * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `op`.
  */
-export type TextOrd = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, ob: OreBlock256, };
+export type TextOrd = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, op: OpeCllw, };
