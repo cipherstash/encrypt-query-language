@@ -469,8 +469,16 @@ mod tests {
                     "public.eql_v3_integer_ord".into(),
                     "jsonb".into()
                 ),
-                ("public.eql_v3_integer_ord".into(), "jsonb".into(), "jsonb".into()),
-                ("jsonb".into(), "public.eql_v3_integer_ord".into(), "jsonb".into()),
+                (
+                    "public.eql_v3_integer_ord".into(),
+                    "jsonb".into(),
+                    "jsonb".into()
+                ),
+                (
+                    "jsonb".into(),
+                    "public.eql_v3_integer_ord".into(),
+                    "jsonb".into()
+                ),
             ]
         );
         assert_eq!(
@@ -497,11 +505,19 @@ mod tests {
         );
         assert_eq!(
             rendered_signatures("#>"),
-            vec![("public.eql_v3_integer_ord".into(), "text[]".into(), "jsonb".into())]
+            vec![(
+                "public.eql_v3_integer_ord".into(),
+                "text[]".into(),
+                "jsonb".into()
+            )]
         );
         assert_eq!(
             rendered_signatures("#>>"),
-            vec![("public.eql_v3_integer_ord".into(), "text[]".into(), "text".into())]
+            vec![(
+                "public.eql_v3_integer_ord".into(),
+                "text[]".into(),
+                "text".into()
+            )]
         );
     }
 

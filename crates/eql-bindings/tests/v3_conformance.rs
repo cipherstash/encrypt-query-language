@@ -46,7 +46,10 @@ fn integer_ord_round_trips() {
     // `_ord_ore` is the same shape under the scheme-explicit domain name.
     let parsed: IntegerOrdOre = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(IntegerOrdOre::sql_domain_static(), "public.eql_v3_integer_ord_ore");
+    assert_eq!(
+        IntegerOrdOre::sql_domain_static(),
+        "public.eql_v3_integer_ord_ore"
+    );
 }
 
 #[test]
@@ -61,7 +64,10 @@ fn integer_ord_ope_round_trips() {
     });
     let parsed: IntegerOrdOpe = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(IntegerOrdOpe::sql_domain_static(), "public.eql_v3_integer_ord_ope");
+    assert_eq!(
+        IntegerOrdOpe::sql_domain_static(),
+        "public.eql_v3_integer_ord_ope"
+    );
 }
 
 #[test]
@@ -315,7 +321,10 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     });
     let parsed: TimestampEq = serde_json::from_value(with_hm.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_hm);
-    assert_eq!(TimestampEq::sql_domain_static(), "public.eql_v3_timestamp_eq");
+    assert_eq!(
+        TimestampEq::sql_domain_static(),
+        "public.eql_v3_timestamp_eq"
+    );
 
     // Ordered: envelope + ob (a 12-block array on the wire; shape is the same).
     let with_ob = json!({
@@ -326,7 +335,10 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     });
     let parsed: TimestampOrd = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
-    assert_eq!(TimestampOrd::sql_domain_static(), "public.eql_v3_timestamp_ord");
+    assert_eq!(
+        TimestampOrd::sql_domain_static(),
+        "public.eql_v3_timestamp_ord"
+    );
     let parsed: TimestampOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
     assert_eq!(

@@ -149,8 +149,8 @@ impl Role {
 pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
-    /// A `jsonb` family payload: `public.json` (`{v, i, sv: [entry]}`),
-    /// `public.jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
+    /// A `jsonb` family payload: `public.eql_v3_json` (`{v, i, sv: [entry]}`),
+    /// `public.eql_v3_jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
     /// `public.query_jsonb` (`{sv: [query-entry]}`). The three differ in
     /// payload body but share the non-flat-scalar shape, so a single variant
     /// covers them; `Domain.name` (`"json"`/`"entry"`/`"query"`) already
@@ -374,7 +374,7 @@ const STORAGE_ONLY_DOMAINS: &[Domain] = &[Domain {
 }];
 
 /// `bool` — an **encryption-only / storage-only** scalar (`ScalarKind::Bool`).
-/// One term-less storage domain (`public.boolean`), no `_eq`/`_ord`: a two-value
+/// One term-less storage domain (`public.eql_v3_boolean`), no `_eq`/`_ord`: a two-value
 /// column has too little cardinality for any searchable index without leaking the
 /// plaintext, so the value is encrypted at rest and decrypted by the proxy,
 /// never searched server-side. Public so the SQLx harness reads
@@ -427,7 +427,7 @@ pub const DOUBLE: DomainFamily = DomainFamily {
 /// from the catalog); the catalog drives only their inventory membership + order.
 const JSONB_DOMAINS: &[Domain] = &[
     Domain {
-        // The established document name `public.json` predates the catalog and
+        // The established document name `public.eql_v3_json` predates the catalog and
         // does not follow the family+suffix convention (family is "jsonb", not
         // "json") — an explicit literal name, not the empty-suffix
         // bare-family-name convention every scalar storage domain uses.
@@ -449,8 +449,8 @@ const JSONB_DOMAINS: &[Domain] = &[
     },
 ];
 
-/// `jsonb` — the encrypted-JSONB (SteVec) family: `public.json` (document, the
-/// one explicit-name exception — see `JSONB_DOMAINS`), `public.jsonb_entry`
+/// `jsonb` — the encrypted-JSONB (SteVec) family: `public.eql_v3_json` (document, the
+/// one explicit-name exception — see `JSONB_DOMAINS`), `public.eql_v3_jsonb_entry`
 /// (one sv element), `public.query_jsonb` (containment needle). The Rust
 /// struct *bodies* are hand-written (`crates/eql-bindings/src/v3/jsonb.rs`,
 /// not derivable from the catalog); `Domain::rust_struct_name` derives their

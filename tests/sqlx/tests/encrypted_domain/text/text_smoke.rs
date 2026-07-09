@@ -1,24 +1,24 @@
-//! Literal-payload smoke tests for the generated `public.text_match` surface:
+//! Literal-payload smoke tests for the generated `public.eql_v3_text_match` surface:
 //! `@>` / `<@` containment engages (supported wrappers), `=` raises (blocker),
 //! `~~`/`~~*` are absent (no pattern-match), and the domain CHECK requires `bf`.
 //! Uses hand-written jsonb payloads carrying `bf` — no encryption/fixtures
 //! needed. The fixture-backed containment behaviour lives in `text_match.rs`.
 use sqlx::PgPool;
 
-/// Build a literal `public.text_match` cast expression carrying bloom array
+/// Build a literal `public.eql_v3_text_match` cast expression carrying bloom array
 /// `bf` (e.g. `"[1,2,3]"` or `"[]"`). Lets these tests state set-containment
 /// semantics directly on `bf` arrays — deterministic, with no encryption and no
 /// bloom false positives to reason about.
 fn match_cast(bf: &str) -> String {
-    format!("'{{\"v\":\"3\",\"i\":{{}},\"c\":\"x\",\"bf\":{bf}}}'::jsonb::public.text_match")
+    format!("'{{\"v\":\"3\",\"i\":{{}},\"c\":\"x\",\"bf\":{bf}}}'::jsonb::public.eql_v3_text_match")
 }
 
 #[sqlx::test]
 async fn text_match_at_contains_engages(pool: PgPool) -> anyhow::Result<()> {
     // self-containment: a filter contains a subset of itself
     let hit: bool = sqlx::query_scalar(
-        "SELECT ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::public.text_match)
-              @> ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[2]}'::jsonb::public.text_match)",
+        "SELECT ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::public.eql_v3_text_match)
+              @> ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[2]}'::jsonb::public.eql_v3_text_match)",
     )
     .fetch_one(&pool)
     .await?;
@@ -29,8 +29,8 @@ async fn text_match_at_contains_engages(pool: PgPool) -> anyhow::Result<()> {
 #[sqlx::test]
 async fn text_match_eq_is_blocked(pool: PgPool) -> anyhow::Result<()> {
     let err = sqlx::query(
-        "SELECT ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::public.text_match)
-              =  ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::public.text_match)",
+        "SELECT ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::public.eql_v3_text_match)
+              =  ('{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1]}'::jsonb::public.eql_v3_text_match)",
     )
     .execute(&pool)
     .await
@@ -50,8 +50,9 @@ async fn empty_bloom_has_empty_set_semantics(pool: PgPool) -> anyhow::Result<()>
     // literal payloads so the assertion is deterministic and independent of how
     // the encryptor renders a `bf` for a degenerate plaintext.
     const NON_EMPTY: &str =
-        "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::public.text_match";
-    const EMPTY: &str = "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[]}'::jsonb::public.text_match";
+        "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::public.eql_v3_text_match";
+    const EMPTY: &str =
+        "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[]}'::jsonb::public.eql_v3_text_match";
 
     let everything_contains_empty: bool =
         sqlx::query_scalar(&format!("SELECT ({NON_EMPTY}) @> ({EMPTY})"))
@@ -80,7 +81,7 @@ async fn match_null_propagates(pool: PgPool) -> anyhow::Result<()> {
     const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1,2,3]}"#;
     for op in ["@>", "<@"] {
         let sql =
-            format!("SELECT ($1::jsonb::public.text_match) {op} ($2::jsonb::public.text_match)");
+            format!("SELECT ($1::jsonb::public.eql_v3_text_match) {op} ($2::jsonb::public.eql_v3_text_match)");
         eql_tests::assert_null(&pool, &sql, &[None, Some(BF)]).await?;
         eql_tests::assert_null(&pool, &sql, &[Some(BF), None]).await?;
     }
@@ -157,12 +158,14 @@ async fn text_match_containment_requires_all_elements(pool: PgPool) -> anyhow::R
 async fn text_match_like_ilike_absent(pool: PgPool) -> anyhow::Result<()> {
     // The bloom containment surface replaces deprecated `LIKE`/`ILIKE`, but it is
     // NOT a pattern-match operator. `~~`/`~~*` are deliberately not declared on
-    // public.text_match, so they resolve to PostgreSQL's "operator does not
+    // public.eql_v3_text_match, so they resolve to PostgreSQL's "operator does not
     // exist" rather than an EQL blocker. Pin that they stay absent on the very
     // domain a `LIKE` user would reach for.
     const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1]}"#;
     for op in ["~~", "~~*"] {
-        let sql = format!("SELECT $1::jsonb::public.text_match {op} $2::jsonb::public.text_match");
+        let sql = format!(
+            "SELECT $1::jsonb::public.eql_v3_text_match {op} $2::jsonb::public.eql_v3_text_match"
+        );
         eql_tests::assert_raises(
             &pool,
             &sql,
@@ -176,14 +179,14 @@ async fn text_match_like_ilike_absent(pool: PgPool) -> anyhow::Result<()> {
 
 #[sqlx::test]
 async fn text_match_payload_check_rejects_missing_bf(pool: PgPool) -> anyhow::Result<()> {
-    // The generated public.text_match domain CHECK requires the `bf` key
+    // The generated public.eql_v3_text_match domain CHECK requires the `bf` key
     // (src/v3/scalars/text/text_types.sql). A well-formed envelope lacking `bf`
     // must be rejected at the cast, so a match query can never silently run
     // against a payload that carries no bloom term.
     const NO_BF: &str = r#"{"v":"3","i":{},"c":"x"}"#;
     eql_tests::assert_raises(
         &pool,
-        "SELECT $1::jsonb::public.text_match",
+        "SELECT $1::jsonb::public.eql_v3_text_match",
         &[Some(NO_BF)],
         "violates check constraint",
     )

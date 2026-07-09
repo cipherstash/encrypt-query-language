@@ -41,22 +41,25 @@ async fn encrypt_specials(values: &[F8]) -> Result<Vec<String>> {
     Ok(payloads.into_iter().map(|p| p.to_string()).collect())
 }
 
-/// Cast a payload literal to `public.double` and read it back, proving the domain
+/// Cast a payload literal to `public.eql_v3_double` and read it back, proving the domain
 /// CHECK accepts the encrypted special value.
 async fn cast_passes_check(pool: &PgPool, payload: &str) -> Result<()> {
-    let sql = "SELECT ($1::jsonb::public.double) IS NOT NULL";
+    let sql = "SELECT ($1::jsonb::public.eql_v3_double) IS NOT NULL";
     let ok: bool = sqlx::query_scalar(sql)
         .bind(payload)
         .fetch_one(pool)
         .await?;
-    anyhow::ensure!(ok, "payload failed the public.double CHECK: {payload}");
+    anyhow::ensure!(
+        ok,
+        "payload failed the public.eql_v3_double CHECK: {payload}"
+    );
     Ok(())
 }
 
 /// Compare two payloads under an operator on the `_ord` domain, returning the
 /// boolean result. Used to pin the discovered NaN/±0/±Inf outcomes.
 async fn ord_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
-    let d = "public.double_ord";
+    let d = "public.eql_v3_double_ord";
     let sql = format!("SELECT ($1::jsonb::{d} {op} $2::jsonb::{d})");
     Ok(sqlx::query_scalar(&sql)
         .bind(a)
@@ -67,7 +70,7 @@ async fn ord_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
 
 /// Equality under the `_eq` domain (HMAC).
 async fn eq_cmp(pool: &PgPool, a: &str, b: &str) -> Result<bool> {
-    let d = "public.double_eq";
+    let d = "public.eql_v3_double_eq";
     let sql = format!("SELECT ($1::jsonb::{d} = $2::jsonb::{d})");
     Ok(sqlx::query_scalar(&sql)
         .bind(a)
@@ -85,7 +88,7 @@ async fn setup() -> Result<PgPool> {
 #[tokio::test]
 async fn nan_encrypts_and_passes_check() -> Result<()> {
     // Encrypting f64::NAN succeeds (no panic) and yields a structurally valid
-    // public.double payload. This is the one universal NaN guarantee.
+    // public.eql_v3_double payload. This is the one universal NaN guarantee.
     let pool = setup().await?;
     let payloads = encrypt_specials(&[F8(f64::NAN)]).await?;
     assert_eq!(payloads.len(), 1);

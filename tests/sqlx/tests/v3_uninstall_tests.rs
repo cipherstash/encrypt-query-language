@@ -76,7 +76,7 @@ async fn table_exists(pool: &PgPool, table: &str) -> Result<bool> {
 }
 
 fn normalize_regtype_name(name: String) -> String {
-    name.replace("public.\"json\"", "public.json")
+    name.replace("public.\"json\"", "public.eql_v3_json")
 }
 
 #[sqlx::test]
@@ -142,7 +142,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname = 'public'
-          AND t.typname IN ('integer_eq', 'json', 'jsonb_entry')
+          AND t.typname IN ('eql_v3_integer_eq', 'eql_v3_json', 'eql_v3_jsonb_entry')
         ORDER BY 1
         "#,
     )
@@ -154,7 +154,11 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
     public_domains.sort();
     assert_eq!(
         public_domains,
-        vec!["public.integer_eq", "public.json", "public.jsonb_entry"],
+        vec![
+            "public.eql_v3_integer_eq",
+            "public.eql_v3_json",
+            "public.eql_v3_jsonb_entry"
+        ],
         "repeat install must keep public user-column domains available"
     );
 
@@ -203,9 +207,9 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         r#"
         CREATE TABLE public.eql_v3_uninstall_preserve (
           id integer PRIMARY KEY,
-          scalar_value public.integer_eq NOT NULL,
-          doc_value public.json NOT NULL,
-          entry_value public.jsonb_entry
+          scalar_value public.eql_v3_integer_eq NOT NULL,
+          doc_value public.eql_v3_json NOT NULL,
+          entry_value public.eql_v3_jsonb_entry
         )
         "#,
     )
@@ -219,9 +223,9 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         VALUES
           (
             1,
-            $1::jsonb::public.integer_eq,
-            $2::jsonb::public.json,
-            $3::jsonb::public.jsonb_entry
+            $1::jsonb::public.eql_v3_integer_eq,
+            $2::jsonb::public.eql_v3_json,
+            $3::jsonb::public.eql_v3_jsonb_entry
           )
         "#,
     )
@@ -288,9 +292,9 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         column_types,
         vec![
             "pg_catalog.int4",
-            "public.integer_eq",
-            "public.json",
-            "public.jsonb_entry",
+            "public.eql_v3_integer_eq",
+            "public.eql_v3_json",
+            "public.eql_v3_jsonb_entry",
         ]
     );
 

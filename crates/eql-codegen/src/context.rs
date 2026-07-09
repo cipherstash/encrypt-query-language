@@ -213,7 +213,7 @@ pub enum FnEntry {
         function_name: String, // e.g. eq
         args: [SqlParam; 2],
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
-        call_b: String, // e.g. eql_v3.eq_term(b::public.integer_eq)
+        call_b: String, // e.g. eql_v3.eq_term(b::public.eql_v3_integer_eq)
     },
     Unsupported {
         operator_lit: String,  // sql_str(op), escaped content for the RAISE literal
@@ -228,7 +228,7 @@ pub struct FunctionsContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
     pub family_name: String,
     pub name: String,       // full domain name (family-name + "_" + domain-name)
-    pub dom: String,        // schema-qualified domain, e.g. public.integer_eq
+    pub dom: String,        // schema-qualified domain, e.g. public.eql_v3_integer_eq
     pub domain_lit: String, // sql_str(dom), defensively escaped for the RAISE literal
     pub entries: Vec<FnEntry>,
 }

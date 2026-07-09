@@ -97,17 +97,20 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
 /// NOT here — they are never column types and live in `eql_v3` (CIP-3442);
 /// see [`query_domain_names`].
 fn user_domain_names() -> Vec<String> {
+    // Installed typnames: the catalog join carrying the eql_v3_ version
+    // prefix (CIP-3472) — resolved through the same DomainFamily::domain_name
+    // the SQL surface is generated through.
     let mut names = Vec::new();
     for family in eql_domains::scalar_families() {
         for domain in family.domains {
-            if domain.name.is_empty() {
-                names.push(family.name.to_string());
-            } else {
-                names.push(format!("{}_{}", family.name, domain.name));
-            }
+            names.push(family.domain_name(domain));
         }
     }
-    names.extend(["json", "jsonb_entry"].into_iter().map(String::from));
+    names.extend(
+        ["eql_v3_json", "eql_v3_jsonb_entry"]
+            .into_iter()
+            .map(String::from),
+    );
     names.sort();
     names
 }

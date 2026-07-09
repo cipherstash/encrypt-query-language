@@ -219,8 +219,8 @@ def test_schema_name_misparse_is_skipped():
         <name>eql_v3_internal</name>
         <definition>CREATE FUNCTION eql_v3_internal</definition>
         <type>CREATE FUNCTION</type>
-        <argsstring>(a jsonb, b public.text_ord) RETURNS jsonb</argsstring>
-        <briefdescription><para>Unsupported operator blocker for public.text_ord.</para></briefdescription>
+        <argsstring>(a jsonb, b public.eql_v3_text_ord) RETURNS jsonb</argsstring>
+        <briefdescription><para>Unsupported operator blocker for public.eql_v3_text_ord.</para></briefdescription>
         <detaileddescription></detaileddescription>
     </memberdef>
     ''')
@@ -232,7 +232,7 @@ def test_schema_name_misparse_is_skipped():
         <name>public</name>
         <definition>CREATE OPERATOR public.-&gt;&gt;</definition>
         <type>CREATE OPERATOR</type>
-        <argsstring>(public.json, text)</argsstring>
+        <argsstring>(public.eql_v3_json, text)</argsstring>
         <briefdescription><para>-&gt;&gt; operator with text selector.</para></briefdescription>
         <detaileddescription></detaileddescription>
     </memberdef>

@@ -248,11 +248,15 @@ fn parse_is_strict_exactly_like_the_binding_struct() {
     // Unknown keys and wrong envelope versions fail — DomainPayload::parse is
     // the binding struct's strict Deserialize, kept instead of discarded.
     let mut good = from_v2(&v2_ct_full(), target("eql_v3_integer_eq")).unwrap();
-    assert!(DomainPayload::parse("eql_v3_integer_eq", &good).unwrap().is_ok());
+    assert!(DomainPayload::parse("eql_v3_integer_eq", &good)
+        .unwrap()
+        .is_ok());
 
     good["extra"] = json!(1);
     assert!(
-        DomainPayload::parse("eql_v3_integer_eq", &good).unwrap().is_err(),
+        DomainPayload::parse("eql_v3_integer_eq", &good)
+            .unwrap()
+            .is_err(),
         "deny_unknown_fields must reject a stray key"
     );
 

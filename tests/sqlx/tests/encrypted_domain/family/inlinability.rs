@@ -10,7 +10,7 @@
 //! on the *identity predicate*: a `LANGUAGE sql`, `IMMUTABLE` function
 //! taking at least one argument typed as a jsonb-backed DOMAIN of the
 //! encrypted-domain families — a domain in the `eql_v3` schema (e.g.
-//! `public.integer_eq`). The identity
+//! `public.eql_v3_integer_eq`). The identity
 //! predicate is proconfig-independent — it describes what a function
 //! intrinsically IS, not whether it has been pinned.
 //!

@@ -15,7 +15,7 @@ impl Domain {
     ///
     /// Two documented exceptions, both on the `jsonb` family:
     ///
-    /// - the document domain (`public.json`, `Domain.name == "json"`) predates
+    /// - the document domain (`public.eql_v3_json`, `Domain.name == "json"`) predates
     ///   the catalog and doesn't follow the family+suffix convention
     ///   (`family_name` is `"jsonb"`, not `"json"`), so its `name` is returned
     ///   verbatim instead of being joined;

@@ -1,7 +1,7 @@
 //! Equivalence guards for the inline SteVec domain CHECK expressions
 //! (issue #354).
 //!
-//! `public.jsonb_entry` carries an INLINE CHECK expression rather than
+//! `public.eql_v3_jsonb_entry` carries an INLINE CHECK expression rather than
 //! calling `public.eql_v3_is_valid_ste_vec_entry_payload`: domain
 //! constraints cannot inline SQL functions, so the function-call form paid
 //! the per-call SQL-function executor on every cast — the needle cast in
@@ -94,7 +94,7 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
     ];
     assert_equivalent(
         &pool,
-        "public.jsonb_entry",
+        "public.eql_v3_jsonb_entry",
         "eql_v3_is_valid_ste_vec_entry_payload",
         candidates,
     )

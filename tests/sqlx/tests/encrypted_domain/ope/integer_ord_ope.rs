@@ -1,4 +1,4 @@
-//! `public.integer_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
+//! `public.eql_v3_integer_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
 //! deeper single-type behaviour (bytea prefix order, blockers, ORDER BY forms,
 //! MIN/MAX aggregates) exercised once on the integer reference — the ope surface
 //! is byte-identical across the ordered families modulo the domain name, so
@@ -6,11 +6,11 @@
 
 use crate::ope_support::ope_cast;
 
-crate::ope_ord_smoke!("integer_ord_ope");
+crate::ope_ord_smoke!("eql_v3_integer_ord_ope");
 
 // Real-ciphertext coverage (CIP-3348): the generated fixture's client-emitted
 // `op` terms must order and compare like the plaintext oracle.
-crate::ope_ord_fixture_smoke!("integer_ord_ope", i32, "eql_v3_integer");
+crate::ope_ord_fixture_smoke!("eql_v3_integer_ord_ope", i32, "eql_v3_integer");
 
 #[sqlx::test]
 async fn ord_ope_functional_index_engages_for_range_and_equality(
@@ -24,13 +24,13 @@ async fn ord_ope_functional_index_engages_for_range_and_equality(
     // opclass — the same mechanism as `hm` equality. `enable_seqscan = off`
     // proves usability only (the matrix's scale tests own preference).
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TABLE ope_idx (id int, payload public.integer_ord_ope)")
+    sqlx::query("CREATE TABLE ope_idx (id int, payload public.eql_v3_integer_ord_ope)")
         .execute(&mut *tx)
         .await?;
     for (id, op) in [(1, "00"), (2, "0a"), (3, "7f"), (4, "ff"), (5, "ffff")] {
         sqlx::query(&format!(
             "INSERT INTO ope_idx VALUES ({id}, ({}))",
-            ope_cast("integer_ord_ope", "aa", op)
+            ope_cast("eql_v3_integer_ord_ope", "aa", op)
         ))
         .execute(&mut *tx)
         .await?;
@@ -45,7 +45,7 @@ async fn ord_ope_functional_index_engages_for_range_and_equality(
     for op in ["<", "<=", ">", ">=", "="] {
         let query = format!(
             "SELECT id FROM ope_idx WHERE payload {op} ({})",
-            ope_cast("integer_ord_ope", "aa", "7f")
+            ope_cast("eql_v3_integer_ord_ope", "aa", "7f")
         );
         eql_tests::matrix::assert_index_scan_uses(
             &mut *tx,
@@ -64,8 +64,8 @@ async fn ord_ope_shorter_prefix_sorts_first(pool: PgPool) -> anyhow::Result<()> 
     // Native bytea semantics: a strict prefix sorts before its extension.
     let lt: bool = sqlx::query_scalar(&format!(
         "SELECT ({}) < ({})",
-        ope_cast("integer_ord_ope", "aa", "00ff"),
-        ope_cast("integer_ord_ope", "aa", "00ff01")
+        ope_cast("eql_v3_integer_ord_ope", "aa", "00ff"),
+        ope_cast("eql_v3_integer_ord_ope", "aa", "00ff01")
     ))
     .fetch_one(&pool)
     .await?;
@@ -77,8 +77,8 @@ async fn ord_ope_shorter_prefix_sorts_first(pool: PgPool) -> anyhow::Result<()> 
 async fn ord_ope_blocks_unsupported_operators(pool: PgPool) -> anyhow::Result<()> {
     let err = sqlx::query(&format!(
         "SELECT ({}) @> ({})",
-        ope_cast("integer_ord_ope", "aa", "00"),
-        ope_cast("integer_ord_ope", "aa", "00")
+        ope_cast("eql_v3_integer_ord_ope", "aa", "00"),
+        ope_cast("eql_v3_integer_ord_ope", "aa", "00")
     ))
     .execute(&pool)
     .await
@@ -97,14 +97,14 @@ async fn ord_ope_order_by_sorts_by_decoded_bytes(pool: PgPool) -> anyhow::Result
     // opclass). `ORDER BY col USING <` must REJECT: the design forbids
     // opclasses on the domains themselves (see the matrix's order_by_using
     // rejection category).
-    sqlx::query("CREATE TABLE ope_smoke (id int, payload public.integer_ord_ope)")
+    sqlx::query("CREATE TABLE ope_smoke (id int, payload public.eql_v3_integer_ord_ope)")
         .execute(&pool)
         .await?;
     // Insert out of byte order: 0xff (3rd), 0x00ff (1st), 0x0100 (2nd).
     for (id, op) in [(1, "ff"), (2, "00ff"), (3, "0100")] {
         sqlx::query(&format!(
             "INSERT INTO ope_smoke VALUES ({id}, ({}))",
-            ope_cast("integer_ord_ope", "aa", op)
+            ope_cast("eql_v3_integer_ord_ope", "aa", op)
         ))
         .execute(&pool)
         .await?;
@@ -133,13 +133,13 @@ async fn ord_ope_order_by_sorts_by_decoded_bytes(pool: PgPool) -> anyhow::Result
 
 #[sqlx::test]
 async fn ord_ope_min_max_aggregates(pool: PgPool) -> anyhow::Result<()> {
-    sqlx::query("CREATE TABLE ope_agg (payload public.integer_ord_ope)")
+    sqlx::query("CREATE TABLE ope_agg (payload public.eql_v3_integer_ord_ope)")
         .execute(&pool)
         .await?;
     for op in ["0a", "00", "ff"] {
         sqlx::query(&format!(
             "INSERT INTO ope_agg VALUES (({}))",
-            ope_cast("integer_ord_ope", "aa", op)
+            ope_cast("eql_v3_integer_ord_ope", "aa", op)
         ))
         .execute(&pool)
         .await?;

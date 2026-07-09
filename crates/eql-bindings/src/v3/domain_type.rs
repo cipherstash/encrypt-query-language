@@ -38,7 +38,7 @@ pub const SCHEMA_ID_BASE: &str = "https://schemas.cipherstash.com/eql/v3/";
 /// published JSON Schema wire contract is pinned by `tests/catalog_parity.rs`.
 /// Public so FFI consumers can enumerate the protocol surface too.
 pub trait DomainType {
-    /// Fully-qualified SQL domain name, e.g. `"public.integer_eq"` — the
+    /// Fully-qualified SQL domain name, e.g. `"public.eql_v3_integer_eq"` — the
     /// per-type fact everything else derives from, defined once in each
     /// type's impl.
     ///

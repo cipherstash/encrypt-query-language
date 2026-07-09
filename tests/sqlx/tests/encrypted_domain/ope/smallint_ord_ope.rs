@@ -4,8 +4,8 @@
 //! (prefix order, blockers, ORDER BY forms, aggregates) lives on the integer
 //! reference in `ope/integer_ord_ope.rs`.
 
-crate::ope_ord_smoke!("smallint_ord_ope");
+crate::ope_ord_smoke!("eql_v3_smallint_ord_ope");
 
 // Real-ciphertext coverage (CIP-3348): the generated fixture's client-emitted
 // `op` terms must order and compare like the plaintext oracle.
-crate::ope_ord_fixture_smoke!("smallint_ord_ope", i16, "eql_v3_smallint");
+crate::ope_ord_fixture_smoke!("eql_v3_smallint_ord_ope", i16, "eql_v3_smallint");

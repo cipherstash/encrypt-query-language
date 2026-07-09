@@ -857,7 +857,9 @@ mod tests {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord_ope"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_ord_ope)"));
+        assert!(
+            sql.contains("CREATE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_ord_ope)")
+        );
         assert!(sql.contains("RETURNS eql_v3_internal.ope_cllw"));
         assert!(sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/functions.sql"));
         assert!(!sql.contains("-- REQUIRE: src/v3/sem/ope_cllw/operators.sql"));
@@ -881,7 +883,9 @@ mod tests {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "eq"));
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a public.eql_v3_integer_eq)"));
-        assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.eql_v3_integer_eq, b public.eql_v3_integer_eq)"));
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_integer_eq, b public.eql_v3_integer_eq)"
+        ));
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a public.eql_v3_integer_eq, b jsonb)"));
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq(a jsonb, b public.eql_v3_integer_eq)"));
         assert!(!sql.contains("a eql_v3.integer_eq"));
@@ -1085,7 +1089,7 @@ mod tests {
             },
         );
         assert_eq!(block.typname, "eql_v3_integer_q"); // no quote present → unchanged
-                                                // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
+                                                       // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
         assert!(block.keys.iter().all(|k| !k.contains("o'")));
     }
 }

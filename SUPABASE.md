@@ -18,7 +18,7 @@ so that recipe needed a cut-down build.
 
 `eql_v3` removes the dependency entirely. Every encrypted column is typed as
 a `jsonb`-backed **domain** in the `public` schema (for example
-`public.text_eq`, `public.integer_ord`, `public.json`), and search is driven by
+`public.eql_v3_text_eq`, `public.eql_v3_integer_ord`, `public.eql_v3_json`), and search is driven by
 **functional indexes over small term-extractor functions** rather than an
 operator class on the column:
 
@@ -62,8 +62,8 @@ or [CipherStash Stack](https://github.com/cipherstash/stack):
 
 - `public.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
 - `public.<T>_ord` (and the `_ord_ore` twin) carries an `ob` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`.
-- `public.text_match` carries a `bf` term — supports bloom-filter token containment (`@>` / `<@`).
-- `public.text_search` carries all three terms — equality, ordering, and containment on `text`.
+- `public.eql_v3_text_match` carries a `bf` term — supports bloom-filter token containment (`@>` / `<@`).
+- `public.eql_v3_text_search` carries all three terms — equality, ordering, and containment on `text`.
 
 Configuring those columns is a client-side concern. See:
 
@@ -147,7 +147,7 @@ for the full explanation.
 
 ```sql
 SELECT eql_v3.min(encrypted_at) FROM events;
-SELECT eql_v3.max(encrypted_amount::public.integer_ord) FROM orders;
+SELECT eql_v3.max(encrypted_amount::public.eql_v3_integer_ord) FROM orders;
 ```
 
 ## Text matching (not `LIKE`)
@@ -157,12 +157,12 @@ There is **no SQL `LIKE` / `ILIKE` pattern matching on encrypted text in
 encrypted domain variant and raise an "operator not supported" exception.
 
 Text search is now **bloom-filter token containment** via `@>` / `<@` on a
-column typed `public.text_match` or `public.text_search`. This tests whether
+column typed `public.eql_v3_text_match` or `public.eql_v3_text_search`. This tests whether
 the encrypted text contains the (encrypted) search terms — a probabilistic
 ngram match, not a SQL pattern match:
 
 ```sql
--- Column typed public.text_match or public.text_search,
+-- Column typed public.eql_v3_text_match or public.eql_v3_text_search,
 -- with: CREATE INDEX ... USING gin (eql_v3.match_term(encrypted_name));
 SELECT * FROM users WHERE encrypted_name @> $1;
 SELECT * FROM users WHERE eql_v3.contains(encrypted_name, $1);
@@ -175,7 +175,7 @@ operator resolves on which variant.
 
 ## Encrypted JSON documents
 
-`public.json` is the structured-encryption (ste_vec) document domain. It
+`public.eql_v3_json` is the structured-encryption (ste_vec) document domain. It
 supports document containment (`@>` / `<@`), field access (`->` / `->>`), and
 the `eql_v3.jsonb_path_*` helper functions, all without operator classes:
 
@@ -200,7 +200,7 @@ which CipherStash Proxy supplies) or an explicit cast:
 ```sql
 -- ✓ resolves the encrypted operator → uses the index
 WHERE encrypted_email = $1;
-WHERE encrypted_email = $1::public.text_eq;
+WHERE encrypted_email = $1::public.eql_v3_text_eq;
 
 -- ✗ a bare jsonb literal falls through to native jsonb semantics
 WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
@@ -215,7 +215,7 @@ the parameter yourself.
 - [Database Indexes for Encrypted Columns](./docs/reference/database-indexes.md) — functional-index and GIN recipes, plus large-table build guidance.
 - [SQL support matrix](./docs/reference/sql-support.md) — which operators work against which domain variant.
 - [EQL Functions Reference](./docs/reference/eql-functions.md) — complete function and operator API.
-- [EQL with JSON and JSONB](./docs/reference/json-support.md) — `public.json` worked examples.
+- [EQL with JSON and JSONB](./docs/reference/json-support.md) — `public.eql_v3_json` worked examples.
 - [CipherStash Proxy configuration tutorial](./docs/tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 
 ---

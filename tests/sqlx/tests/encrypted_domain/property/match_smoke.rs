@@ -13,7 +13,7 @@
 //! fixtures load, exactly like `fixture_oracle.rs`. It is a `#[sqlx::test]`
 //! (its own migrated scratch DB), so the fixtures load into an isolated database.
 //! The `Variant` enum models no `_match` member, so the domain
-//! (`public.text_match`) is named directly.
+//! (`public.eql_v3_text_match`) is named directly.
 
 use super::fixture_oracle::load_fixtures;
 use anyhow::Result;
@@ -21,8 +21,8 @@ use eql_tests::property::assert_match_smoke;
 use eql_tests::scalar_domains::{fetch_fixture_payload, MatchScalar};
 use sqlx::PgPool;
 
-/// `public.text_match` — the bloom-filter (`bf`) domain (`@>`/`<@`).
-const TEXT_MATCH_DOMAIN: &str = "public.text_match";
+/// `public.eql_v3_text_match` — the bloom-filter (`bf`) domain (`@>`/`<@`).
+const TEXT_MATCH_DOMAIN: &str = "public.eql_v3_text_match";
 
 #[sqlx::test]
 async fn text_match_smoke(pool: PgPool) -> Result<()> {

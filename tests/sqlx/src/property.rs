@@ -95,14 +95,18 @@ fn query_cast(payload_json: &str, domain: &str) -> String {
     if let Some(obj) = v.as_object_mut() {
         obj.remove("c");
     }
-    // `domain` is schema-qualified (`public.integer_eq`); the twin prefixes
-    // the unqualified name and lives in the eql_v3 schema, not `public`
-    // (query operands are never column types — CIP-3442):
-    // `eql_v3.query_integer_eq`.
+    // `domain` is schema-qualified (`public.eql_v3_integer_eq`); the twin joins
+    // `query_` to the BARE catalog name — the `eql_v3_` version prefix
+    // (CIP-3472) applies to public-schema column types only — and lives in the
+    // eql_v3 schema, not `public` (query operands are never column types —
+    // CIP-3442): `eql_v3.query_integer_eq`.
     let bare = match domain.rsplit_once('.') {
         Some((_, name)) => name,
         None => domain,
     };
+    let bare = bare
+        .strip_prefix(eql_domains::PUBLIC_TYPNAME_PREFIX)
+        .unwrap_or(bare);
     let query_domain = format!("eql_v3.query_{bare}");
     format!(
         "'{}'::jsonb::{}",
@@ -500,7 +504,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
 /// n-gram relationships (`haystack` ⊇ `needle`, `disjoint` shares none). Asserts
 /// `eql_v3.contains` / `contained_by` respect **left-contains-right** `@>` and
 /// that `match_term` yields a non-empty `bf` array. Operands are the payload
-/// JSON literals cast to `domain` (`public.text_match`).
+/// JSON literals cast to `domain` (`public.eql_v3_text_match`).
 pub async fn assert_match_smoke(
     pool: &PgPool,
     domain: &str,

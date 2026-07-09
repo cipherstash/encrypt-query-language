@@ -93,7 +93,7 @@ fn parse_resolves_every_catalog_scalar_domain_and_json() {
 
 #[test]
 fn parse_rejects_unknown_domain_names() {
-    for name in ["int5", "text_like", "public.integer_eq", "", "jsonb"] {
+    for name in ["int5", "text_like", "public.eql_v3_integer_eq", "", "jsonb"] {
         let parsed = TargetDomain::parse(name);
         assert!(
             matches!(parsed, Err(FromV2Error::UnknownDomain { .. })),
@@ -437,7 +437,8 @@ fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
     // the stored `c`/`k`. A storage-only target has no operators, so it stays
     // UnsupportedQueryTarget.
     let query = json!({ "v": 2, "k": "ct", "i": ident(), "c": CIPHERTEXT, "hm": HEX });
-    let out = from_v2_query(&query, target("eql_v3_text_eq")).expect("text_eq query hoist succeeds");
+    let out =
+        from_v2_query(&query, target("eql_v3_text_eq")).expect("text_eq query hoist succeeds");
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "hm": HEX }),
@@ -491,7 +492,10 @@ fn errors_display_and_implement_std_error() {
     // non-empty, informative message, and Invalid exposes its serde source.
     let err = from_v2(&v2_ct_minimal(), target("eql_v3_text_eq")).unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("eql_v3_text_eq") && msg.contains("hm"), "got {msg:?}");
+    assert!(
+        msg.contains("eql_v3_text_eq") && msg.contains("hm"),
+        "got {msg:?}"
+    );
 
     let query = json!({ "v": 2, "k": "ct", "i": ident(), "hm": HEX });
     let invalid = from_v2(&query, target("eql_v3_text_eq")).unwrap_err();

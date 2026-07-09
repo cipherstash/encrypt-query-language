@@ -3454,7 +3454,7 @@ macro_rules! __scalar_matrix_aggregate_typecheck_case {
 // which only covered plain COUNT and only against the eql_v2_encrypted
 // type. Pinning per-variant DISTINCT catches the breakage class where
 // picking the wrong extractor would fail at runtime ("function
-// eql_v3.eq_term(public.integer_ord) does not exist") — exactly the kind of
+// eql_v3.eq_term(public.eql_v3_integer_ord) does not exist") — exactly the kind of
 // thing the variant-aware matrix is meant to surface mechanically.
 // ============================================================================
 

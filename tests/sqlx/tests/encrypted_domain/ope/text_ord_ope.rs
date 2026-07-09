@@ -1,15 +1,15 @@
-//! `public.text_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
+//! `public.eql_v3_text_ord_ope` smoke suite: the shared `_ord_ope` tests plus the
 //! text-specific routing contract — `=` / `<>` resolve through `hm` (exact
 //! HMAC), never the OPE term, because OPE over text is not equality-lossless
 //! (the same rule as `text_ord`'s `[Hm, Ore]`).
 
 use crate::ope_support::ope_cast;
 
-crate::ope_ord_smoke!("text_ord_ope");
+crate::ope_ord_smoke!("eql_v3_text_ord_ope");
 
 // Real-ciphertext coverage (CIP-3348): the generated fixture's client-emitted
 // `op` terms must order and compare like the plaintext oracle.
-crate::ope_ord_fixture_smoke!("text_ord_ope", String, "eql_v3_text");
+crate::ope_ord_fixture_smoke!("eql_v3_text_ord_ope", String, "eql_v3_text");
 
 #[sqlx::test]
 async fn equality_routes_through_hm_not_op(pool: PgPool) -> anyhow::Result<()> {
@@ -17,8 +17,8 @@ async fn equality_routes_through_hm_not_op(pool: PgPool) -> anyhow::Result<()> {
     // not-equal here.
     let same_hm: bool = sqlx::query_scalar(&format!(
         "SELECT ({}) = ({})",
-        ope_cast("text_ord_ope", "deadbeef", "00"),
-        ope_cast("text_ord_ope", "deadbeef", "ff")
+        ope_cast("eql_v3_text_ord_ope", "deadbeef", "00"),
+        ope_cast("eql_v3_text_ord_ope", "deadbeef", "ff")
     ))
     .fetch_one(&pool)
     .await?;
@@ -28,8 +28,8 @@ async fn equality_routes_through_hm_not_op(pool: PgPool) -> anyhow::Result<()> {
     // say equal here.
     let diff_hm: bool = sqlx::query_scalar(&format!(
         "SELECT ({}) = ({})",
-        ope_cast("text_ord_ope", "deadbeef", "00"),
-        ope_cast("text_ord_ope", "feedface", "00")
+        ope_cast("eql_v3_text_ord_ope", "deadbeef", "00"),
+        ope_cast("eql_v3_text_ord_ope", "feedface", "00")
     ))
     .fetch_one(&pool)
     .await?;
@@ -38,8 +38,8 @@ async fn equality_routes_through_hm_not_op(pool: PgPool) -> anyhow::Result<()> {
     // Ordering still routes through op: hm order here disagrees with op order.
     let lt: bool = sqlx::query_scalar(&format!(
         "SELECT ({}) < ({})",
-        ope_cast("text_ord_ope", "feedface", "00"),
-        ope_cast("text_ord_ope", "deadbeef", "ff")
+        ope_cast("eql_v3_text_ord_ope", "feedface", "00"),
+        ope_cast("eql_v3_text_ord_ope", "deadbeef", "ff")
     ))
     .fetch_one(&pool)
     .await?;
