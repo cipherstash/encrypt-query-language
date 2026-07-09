@@ -38,10 +38,14 @@ SELECT 'public.eql_v3_integer_ord'::regtype;
 SELECT 'eql_v3_internal.hmac_256'::regtype;
 SELECT 'eql_v3_internal.ore_block_256'::regtype;
 
--- A real ordered-domain column + the documented functional index. This is the
--- D4 proof: it fails outright if the ported operator_class is absent.
-CREATE TABLE v3_smoke (c public.eql_v3_integer_ord);
-CREATE INDEX v3_smoke_ord ON v3_smoke (eql_v3.ord_term_ore(c));
+-- Real ordered-domain columns + the documented functional indexes, one per
+-- ordering path. `_ord` is CLLW-OPE: eql_v3.ord_term returns a bytea-backed
+-- type with a native btree opclass, so its index needs nothing installed.
+-- `_ord_ore` is block-ORE and is the D4 proof: eql_v3.ord_term_ore's index
+-- fails outright if the ported operator_class is absent.
+CREATE TABLE v3_smoke (c public.eql_v3_integer_ord, c_ore public.eql_v3_integer_ord_ore);
+CREATE INDEX v3_smoke_ord ON v3_smoke (eql_v3.ord_term(c));
+CREATE INDEX v3_smoke_ord_ore ON v3_smoke (eql_v3.ord_term_ore(c_ore));
 DROP TABLE v3_smoke;
 SQL
 

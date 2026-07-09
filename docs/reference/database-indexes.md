@@ -40,10 +40,10 @@ ANALYZE users;
 
 > **No operator class on a column or domain.** `eql_v3` deliberately does **not** ship an `encrypted_operator_class`. Operators resolve against the domain's `jsonb` base type, so an opclass on the column would bypass the encrypted surface. Always index through the extractor. (This also means no superuser is required to *query* — functional indexes work on Supabase and managed PostgreSQL.)
 
-> **ORE requires a superuser *install*; OPE does not.** The `ord_term` btree recipe above depends on the default operator class the installer creates for the ORE term type — and `CREATE OPERATOR CLASS` requires superuser. On platforms whose installer role is not superuser (cloud-hosted Supabase, most managed Postgres), the installer detects this and **disables the ORE-carrying domains** (`_ord`, `_ord_ore`, `text_search`, and their `eql_v3.query_*` twins): using one raises `feature_not_supported` with a `HINT` naming the alternatives (see [U-003](../upgrading/v3.0.md#u-003-non-superuser-installs-disable-the-ore-backed-domains)). On those platforms type ordered columns as **`_ord_ope`** and index the OPE extractor instead — its return type carries a *native* btree opclass, so no superuser is needed:
+> **ORE requires a superuser *install*; OPE does not.** The `ord_term` btree recipe above needs nothing installed: the default `_ord` domains order via CLLW-OPE, and `eql_v3.ord_term` returns a `bytea`-backed type whose *native* btree operator class the planner already has. The block-ORE domains (`_ord_ore`, `text_search_ore`) instead depend on the operator class the installer creates for the ORE term type — and `CREATE OPERATOR CLASS` requires superuser. On platforms whose installer role is not superuser (cloud-hosted Supabase, most managed Postgres), the installer detects this and **disables the ORE-carrying domains** (`_ord_ore`, `text_search_ore`, and their `eql_v3.query_*` twins): using one raises `feature_not_supported` with a `HINT` naming the alternatives (see [U-003](../upgrading/v3.0.md#u-003-non-superuser-installs-disable-the-ore-backed-domains)). On a superuser install, index an `_ord_ore` column through its own extractor:
 >
 > ```sql
-> CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_term(encrypted_at));
+> CREATE INDEX events_at_ord_ore ON events USING btree (eql_v3.ord_term_ore(encrypted_at));
 > ```
 
 ### When to Create Indexes
