@@ -82,9 +82,9 @@
 //! doc for why it is hand-written rather than generated.
 //!
 //! The SteVec `jsonb` family is the ONE principled exception: a single encrypted
-//! document legitimately mixes `hm` leaves (bool / root) and `oc` leaves
+//! document legitimately mixes `hm` leaves (bool / root) and `op` leaves
 //! (string / number) in one `sv` array, so `SteVecEntry` must hold either term.
-//! There the untagged [`jsonb::SteVecTerm`] (`{hm} | {oc}`) is inherent to the
+//! There the untagged [`jsonb::SteVecTerm`] (`{hm} | {op}`) is inherent to the
 //! wire, not a sniffing workaround — the "per-domain typing is possible"
 //! reasoning above simply does not apply to a heterogeneous `sv` array.
 //!

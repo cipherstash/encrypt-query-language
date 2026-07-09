@@ -138,9 +138,9 @@ impl Role {
 /// Coupling invariant (pinned by `tests::shape_and_terms_are_consistent`): a
 /// non-`Scalar` domain always has empty `terms`, and any domain with non-empty
 /// `terms` is `Scalar`. Empty `terms` here does NOT mean "no index capability":
-/// a SteVec domain is fully searchable (hash-equality via `hm`, ordered via `oc`
-/// CLLW-ORE). Its index terms live *inside* the payload shape — per `sv` leaf,
-/// `hm` XOR `oc` — rather than as a flat family-level `Term` list. The `terms`
+/// a SteVec domain is fully searchable (hash-equality via `hm`, ordered via `op`
+/// CLLW-OPE). Its index terms live *inside* the payload shape — per `sv` leaf,
+/// `hm` XOR `op` — rather than as a flat family-level `Term` list. The `terms`
 /// field models only the flat-scalar term set that `Term`/`Role`/
 /// `operators_for_terms`/`capability_label` consume; SteVec capability is carried
 /// structurally by the `Shape` and is invisible to those flat-term consumers by
@@ -446,8 +446,8 @@ pub const DOUBLE: DomainFamily = DomainFamily {
 
 /// The SteVec (encrypted-JSONB) domains of the `jsonb` family. Every one has
 /// empty `terms` — but these domains ARE searchable: each carries its index
-/// terms *structurally*, inside the payload (`hm` for hash-equality, `oc` for
-/// CLLW-ORE ordering, one per `sv` leaf), not as a flat family-level `Term`.
+/// terms *structurally*, inside the payload (`hm` for hash-equality, `op` for
+/// CLLW-OPE ordering, one per `sv` leaf), not as a flat family-level `Term`.
 /// Empty `terms` records "no flat-scalar term surface," never "no index
 /// capability"; the capability is described by the `Shape` and enforced by the
 /// hand-written SQL CHECKs under `src/v3/jsonb/`. The coupling is pinned by
