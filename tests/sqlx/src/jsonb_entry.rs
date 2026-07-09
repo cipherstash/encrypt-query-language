@@ -96,7 +96,7 @@ impl ScalarType for JsonbEntryInteger {
     /// `"integer"`, whose `_ord` is OPE-backed, so the derived extractor would
     /// be `ord_term` returning `ope_cllw` — wrong for an entry.
     fn ord_extractor_expr(_variant: Variant, value_expr: &str) -> String {
-        format!("eql_v3.ore_cllw({value_expr})")
+        format!("eql_v3.ord_term({value_expr})")
     }
 
     // Not an e2e/property-oracle type (the entry suite runs the jsonb_entry
@@ -147,7 +147,7 @@ mod tests {
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::ord_extractor_expr(Variant::Ord, "value"),
-            "eql_v3.ore_cllw(value)",
+            "eql_v3.ord_term(value)",
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::eq_extractor_expr("value"),

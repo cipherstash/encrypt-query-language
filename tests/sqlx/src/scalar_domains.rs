@@ -178,7 +178,8 @@ pub trait ScalarType:
     ///
     /// Takes `variant` because a single `T` spans several domains with
     /// different ordering terms. SteVec entries override this to
-    /// `eql_v3.ore_cllw(value)`, ignoring the variant: their ordering term
+    /// the `public.jsonb_entry` overload of `eql_v3.ord_term(value)`,
+    /// ignoring the variant: their ordering term
     /// lives inside the payload shape, not in the flat catalog `terms` list
     /// (`JsonbEntryInteger::PG_TYPE` is `"integer"`, whose `_ord` is OPE — a
     /// catalog lookup would give the wrong extractor).
@@ -1428,7 +1429,8 @@ impl ScalarDomainSpec {
     /// extractor their catalog term names (`eql_v3.ord_term(...)` for `_ord` /
     /// `_search`, `eql_v3.ord_term_ore(...)` for `_ord_ore` / `_search_ore`),
     /// while a SteVec-entry
-    /// view produces `eql_v3.eq_term(...)` / `eql_v3.ore_cllw(...)`.
+    /// view produces `eql_v3.eq_term(...)` / `eql_v3.ord_term(...)` (the
+    /// `public.jsonb_entry` overload).
     /// `Storage` has no discriminating term and returns `None`. `Search` /
     /// `SearchOre` (the combined domains, which provide ordering) route through
     /// the ordered extractor like `Ord`/`OrdOre`.
