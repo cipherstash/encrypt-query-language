@@ -189,7 +189,7 @@ HTML output is also generated in `docs/api/html/` for local preview only.
 
 - SQL files are modular - put operator wrappers in `operators.sql`, implementation in `functions.sql`
 - All SQL files must have `-- REQUIRE:` dependency declarations
-- Build system uses `tsort` to resolve dependency order
+- Build system resolves dependency order with `cargo run -p eql-codegen -- order`, which walks the whole `src/v3` surface once and topologically sorts it from the `-- REQUIRE:` edges. Dangling targets, edges leaving `src/v3`, and cycles all fail the build.
 - **Documentation**: All functions/types must have Doxygen comments (see Documentation Standards above)
 
 ### Function Language Choice (SQL vs PL/pgSQL)

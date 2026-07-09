@@ -86,6 +86,72 @@ fn list_schemas_subcommand_prints_owned_schemas() {
     );
 }
 
+/// `order` exits 0 and prints the real surface's install order, one repo-relative
+/// path per line, dependency first. `tasks/build.sh` redirects this straight into
+/// `src/deps-ordered-v3.txt` and concatenates the files in this order, so the
+/// stdout contract is pinned here: nothing but paths (no banner, no progress).
+#[test]
+fn order_subcommand_prints_the_install_order() {
+    let out = Command::new(bin())
+        .arg("order")
+        .output()
+        .expect("run eql-codegen order");
+    assert!(
+        out.status.success(),
+        "order should exit 0; stderr: {}",
+        String::from_utf8_lossy(&out.stderr)
+    );
+    let stdout = String::from_utf8_lossy(&out.stdout);
+    let lines: Vec<&str> = stdout.lines().collect();
+    assert_eq!(
+        lines.first(),
+        Some(&"src/v3/schema.sql"),
+        "schema.sql creates the schemas everything else requires, so it must come first"
+    );
+    assert!(
+        lines
+            .iter()
+            .all(|l| l.starts_with("src/v3/") && l.ends_with(".sql")),
+        "stdout must be paths only — build.sh feeds it to `strip_require_lines` unfiltered"
+    );
+}
+
+/// A `-- REQUIRE:` naming a file that does not exist fails the build loudly
+/// instead of emitting a short order. The two-block scheme this replaced could
+/// omit a file and still exit 0, which is how `scalars/ore_fallback.sql` reached
+/// a green build while missing from `release/cipherstash-encrypt.sql`.
+#[test]
+fn order_subcommand_fails_on_a_dangling_require() {
+    let root = tempdir();
+    let v3 = root.0.join("src/v3");
+    std::fs::create_dir_all(&v3).unwrap();
+    std::fs::write(v3.join("schema.sql"), "CREATE SCHEMA eql_v3;\n").unwrap();
+    std::fs::write(
+        v3.join("broken.sql"),
+        "-- REQUIRE: src/v3/typo.sql\nSELECT 1;\n",
+    )
+    .unwrap();
+
+    let out = Command::new(bin())
+        .arg("order")
+        .env("EQL_CODEGEN_OUT_ROOT", root.0.as_os_str())
+        .output()
+        .expect("run eql-codegen order");
+    assert!(
+        !out.status.success(),
+        "a dangling REQUIRE must fail the build, not emit a partial order"
+    );
+    assert!(
+        out.stdout.is_empty(),
+        "a failed order must print no partial order to stdout"
+    );
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+        stderr.contains("src/v3/typo.sql") && stderr.contains("src/v3/broken.sql"),
+        "the error must name both the dangling target and the file requiring it, got:\n{stderr}"
+    );
+}
+
 /// An unrecognised argument prints usage and exits 2 (the `ExitCode::from(2)`
 /// fall-through in `main.rs`).
 #[test]

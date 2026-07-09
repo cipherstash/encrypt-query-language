@@ -235,7 +235,7 @@ bash tasks/test/verify_symbol_order_v3.sh src/deps-ordered-v3.txt
 """
 
 [tasks."test:build_ordering_helpers"]
-description = "Unit tests for tasks/build/ordering.sh (DB-free)"
+description = "Unit tests for tasks/build/ordering.sh strip_require_lines (DB-free)"
 dir = "{{config_root}}"
 run = "bash tasks/test/build_ordering_helpers_test.sh"
 

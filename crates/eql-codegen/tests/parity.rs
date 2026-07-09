@@ -115,6 +115,68 @@ fn every_generated_sql_file_starts_with_marker() {
     );
 }
 
+/// Every `.sql` file in the real `src/v3` tree is in the install order — the
+/// completeness invariant, checked against an independent walk rather than a
+/// hardcoded count.
+///
+/// This is the gate that a two-block build could not express. When the surface
+/// was ordered as "hand-written files (globbed, minus the AUTO-GENERATED marker)"
+/// plus "generated files (from a codegen manifest of `render_type` output)", the
+/// cross-family `scalars/ore_fallback.sql` — marker-bearing, but rendered outside
+/// `render_type` — matched neither and was silently dropped from the installer,
+/// taking the ORE poison constraints with it. Set equality, not a count: a new
+/// cross-family generated file is required here the moment it lands on disk.
+///
+/// Runs against the real tree, not a tempdir: `surface_order` validates that
+/// every `-- REQUIRE:` target is a node, and a generate-only tempdir has no
+/// `schema.sql` or `sem/**` for the generated files to point at.
+#[test]
+fn install_order_contains_every_v3_sql_file() {
+    let root = repo_root();
+
+    // Independent of walk_v3_surface: if the walker under-collects, this diverges.
+    let mut on_disk: BTreeSet<String> = BTreeSet::new();
+    let mut stack = vec![root.join("src/v3")];
+    while let Some(dir) = stack.pop() {
+        for entry in fs::read_dir(&dir).unwrap() {
+            let entry = entry.unwrap();
+            let path = entry.path();
+            if entry.file_type().unwrap().is_dir() {
+                stack.push(path);
+                continue;
+            }
+            let name = entry.file_name().to_string_lossy().into_owned();
+            if name.ends_with(".sql") && !name.ends_with("_test.sql") {
+                on_disk.insert(
+                    path.strip_prefix(&root)
+                        .unwrap()
+                        .to_string_lossy()
+                        .replace('\\', "/"),
+                );
+            }
+        }
+    }
+
+    let files = eql_codegen::ordering::walk_v3_surface(&root).expect("walk src/v3");
+    let ordered: BTreeSet<String> = eql_codegen::ordering::surface_order(&files)
+        .expect(
+            "src/v3 surface must linearize: every REQUIRE target a node under src/v3, no cycles",
+        )
+        .into_iter()
+        .collect();
+
+    assert_eq!(
+        ordered, on_disk,
+        "the install order must contain exactly the src/v3 SQL files on disk — a file \
+         present on disk but absent from the order is silently missing from \
+         release/cipherstash-encrypt.sql"
+    );
+    assert!(
+        on_disk.contains("src/v3/schema.sql"),
+        "sanity: the walk found no schema.sql, so it is not seeing the real tree"
+    );
+}
+
 #[test]
 fn generate_all_skips_non_scalar_families() {
     let tmp = tempdir("skip-non-scalar");

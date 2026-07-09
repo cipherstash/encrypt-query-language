@@ -69,6 +69,37 @@ fn main() -> ExitCode {
         }
     }
 
+    // `order`: print the install order of the whole src/v3 SQL surface, one
+    // repo-relative path per line, dependency before dependent. Consumed by
+    // tasks/build.sh (`> src/deps-ordered-v3.txt`), which concatenates the files
+    // in this order into release/cipherstash-encrypt.sql.
+    //
+    // The walk is the ONLY enumeration of the surface — hand-written and
+    // generated files are ordered together from their `-- REQUIRE:` edges, with
+    // no marker classifier and no separate codegen manifest to fall out of sync
+    // with. Missing REQUIRE targets, targets outside src/v3, and cycles are all
+    // hard errors here, so build.sh needs no post-hoc verification of the order.
+    if args.len() == 2 && args[1] == "order" {
+        let root = out_root();
+        let result = eql_codegen::ordering::walk_v3_surface(&root)
+            .map_err(|e| format!("walking {}/src/v3: {e}", root.display()))
+            .and_then(|files| {
+                eql_codegen::ordering::surface_order(&files).map_err(|e| e.to_string())
+            });
+        match result {
+            Ok(order) => {
+                for path in &order {
+                    println!("{path}");
+                }
+                return ExitCode::SUCCESS;
+            }
+            Err(e) => {
+                eprintln!("error: {e}");
+                return ExitCode::FAILURE;
+            }
+        }
+    }
+
     // `clean`: remove the generated SQL surface (marker-aware) under every
     // src/v3/scalars/* type dir. Replaces build.sh's filename-pattern sweep;
     // hand-written files (no AUTO-GENERATED marker) are preserved.
@@ -102,6 +133,7 @@ fn main() -> ExitCode {
     }
 
     eprintln!("Usage: eql-codegen            (generate all types)");
+    eprintln!("       eql-codegen order      (print the src/v3 install order, one path per line)");
     eprintln!("       eql-codegen clean      (remove the generated SQL surface)");
     eprintln!("       eql-codegen list-types (print catalog tokens)");
     eprintln!("       eql-codegen list-schemas (print owned schemas, public first)");
