@@ -121,11 +121,11 @@ fn every_generated_sql_file_starts_with_marker() {
 ///
 /// This is the gate that a two-block build could not express. When the surface
 /// was ordered as "hand-written files (globbed, minus the AUTO-GENERATED marker)"
-/// plus "generated files (from a codegen manifest of `render_type` output)", the
-/// cross-family `scalars/ore_fallback.sql` — marker-bearing, but rendered outside
-/// `render_type` — matched neither and was silently dropped from the installer,
-/// taking the ORE poison constraints with it. Set equality, not a count: a new
-/// cross-family generated file is required here the moment it lands on disk.
+/// plus "generated files (from a codegen manifest of `render_type` output)", a
+/// cross-family generated file — marker-bearing, but rendered outside
+/// `render_type` — matched neither predicate and would be silently dropped from
+/// the installer. Set equality, not a count: a new cross-family generated file is
+/// required here the moment it lands on disk.
 ///
 /// Runs against the real tree, not a tempdir: `surface_order` validates that
 /// every `-- REQUIRE:` target is a node, and a generate-only tempdir has no

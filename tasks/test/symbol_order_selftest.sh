@@ -50,24 +50,25 @@ if bash tasks/test/verify_symbol_order_v3.sh "$tmp/domain_bad.txt" 2>/dev/null; 
 fi
 echo "ok: domain-form type used before definition rejected"
 
-# CREATE DOMAIN eql_v3.* form (the query-operand twins `eql_v3.query_<T>_<cap>`
-# and the hand-written `eql_v3.query_jsonb`, CIP-3442). Pins the domain-capture
-# branch's eql_v3 arm: without it every query operand — including the line that
-# creates it, which is also a reference — reads as "defined nowhere".
+# CREATE DOMAIN eql_v3.* form (the query-operand domains CIP-3442 moved out of
+# `public`: eql_v3.query_<T>_<cap> and eql_v3.query_jsonb). Pins the domain-capture
+# branch's eql_v3 arm. Without it the whole surface's 39 query domains read as
+# "defined nowhere" — the regression that reddened every build-dependent CI job.
 printf 'CREATE DOMAIN eql_v3.query_integer_eq AS jsonb;\n' > "$tmp/q.sql"
 printf 'CREATE FUNCTION eql_v3.eq(a public.integer_eq, b eql_v3.query_integer_eq) ...\n' > "$tmp/qf.sql"
-printf '%s\n%s\n' "$tmp/q.sql" "$tmp/qf.sql" > "$tmp/query_good.txt"
-bash tasks/test/verify_symbol_order_v3.sh "$tmp/query_good.txt" \
+printf '%s\n%s\n' "$tmp/q.sql" "$tmp/qf.sql" > "$tmp/qdomain_good.txt"
+bash tasks/test/verify_symbol_order_v3.sh "$tmp/qdomain_good.txt" \
   || { echo "FAIL: CREATE DOMAIN eql_v3.* definer not recognised"; exit 1; }
 echo "ok: CREATE DOMAIN eql_v3.* definition form recognised"
 
-# And the same query operand used BEFORE it is created must still be REJECTED —
-# recognising the schema must not blunt the ordering check.
-printf '%s\n%s\n' "$tmp/qf.sql" "$tmp/q.sql" > "$tmp/query_bad.txt"
-if bash tasks/test/verify_symbol_order_v3.sh "$tmp/query_bad.txt" 2>/dev/null; then
+# And a query-operand domain used BEFORE it is created must still be REJECTED —
+# proves the eql_v3 arm records a definition rather than silently suppressing the
+# symbol (a check that never fires would pass the case above too).
+printf '%s\n%s\n' "$tmp/qf.sql" "$tmp/q.sql" > "$tmp/qdomain_bad.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/qdomain_bad.txt" 2>/dev/null; then
   echo "FAIL: eql_v3.query_integer_eq used before its CREATE DOMAIN accepted"; exit 1
 fi
-echo "ok: eql_v3 query operand used before definition rejected"
+echo "ok: query-operand domain used before definition rejected"
 
 # CREATE OPERATOR CLASS|FAMILY eql_v3_internal.* form (the conditional SEM
 # ordered-index opclasses). A file that both creates the opclass and mentions it
@@ -87,4 +88,35 @@ if bash tasks/test/verify_symbol_order_v3.sh "$tmp/missing_order.txt" 2>/dev/nul
   echo "FAIL: unreadable path silently accepted"; exit 1
 fi
 echo "ok: unreadable path rejected"
+
+# An UNREADABLE ALLOWLIST must FAIL the gate. awk's `getline < file` returns <= 0
+# both at EOF and on error, so an unguarded read loop silently yields an empty
+# allowlist. That is fail-safe today only because the committed allowlist has no
+# active entries; the moment one is added, a path typo would resurrect the very
+# false positive the entry exists to suppress — and it would surface inside
+# `mise run build`, i.e. inside a release.
+if SYMBOL_ORDER_ALLOWLIST="$tmp/no-such-allowlist.txt" \
+   bash tasks/test/verify_symbol_order_v3.sh "$tmp/good_order.txt" 2>/dev/null; then
+  echo "FAIL: unreadable allowlist silently accepted"; exit 1
+fi
+echo "ok: unreadable allowlist rejected"
+
+# The gate is STRICTER than PostgreSQL, deliberately, and the allowlist is the
+# escape hatch. A `LANGUAGE plpgsql` body resolves its callees at execution time,
+# so Postgres accepts a forward reference that this gate rejects. Pin both halves:
+# the rejection (so the strictness is a choice, not an accident) and the release
+# valve (so a real forward reference has a documented, reviewable way out).
+printf 'CREATE FUNCTION eql_v3.caller() RETURNS int LANGUAGE plpgsql AS $$ BEGIN RETURN eql_v3.callee(); END; $$;\n' > "$tmp/caller.sql"
+printf 'CREATE FUNCTION eql_v3.callee() RETURNS int LANGUAGE sql AS $$ SELECT 1 $$;\n' > "$tmp/callee.sql"
+printf '%s\n%s\n' "$tmp/caller.sql" "$tmp/callee.sql" > "$tmp/plpgsql_order.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/plpgsql_order.txt" 2>/dev/null; then
+  echo "FAIL: plpgsql forward reference accepted — the gate's strictness is unpinned"; exit 1
+fi
+echo "ok: plpgsql forward reference rejected (documented strictness)"
+
+printf 'eql_v3.callee  # forward-referenced from a plpgsql body\n' > "$tmp/allow.txt"
+SYMBOL_ORDER_ALLOWLIST="$tmp/allow.txt" \
+  bash tasks/test/verify_symbol_order_v3.sh "$tmp/plpgsql_order.txt" \
+  || { echo "FAIL: allowlist did not release the plpgsql forward reference"; exit 1; }
+echo "ok: allowlist releases a plpgsql forward reference"
 echo "symbol-order self-test passed"

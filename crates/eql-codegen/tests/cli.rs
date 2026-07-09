@@ -118,8 +118,8 @@ fn order_subcommand_prints_the_install_order() {
 
 /// A `-- REQUIRE:` naming a file that does not exist fails the build loudly
 /// instead of emitting a short order. The two-block scheme this replaced could
-/// omit a file and still exit 0, which is how `scalars/ore_fallback.sql` reached
-/// a green build while missing from `release/cipherstash-encrypt.sql`.
+/// omit a file and still exit 0 — a green build with the file missing from
+/// `release/cipherstash-encrypt.sql`.
 #[test]
 fn order_subcommand_fails_on_a_dangling_require() {
     let root = tempdir();

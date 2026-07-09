@@ -5,10 +5,12 @@
 //! by [`surface_order`]. There is deliberately no generated/hand-written
 //! classifier here. An earlier design split the surface into two blocks — a
 //! shell glob that skipped the `-- AUTOMATICALLY GENERATED FILE.` marker, and a
-//! codegen-emitted manifest of `render_type` output — and a cross-family
-//! generated file (`scalars/ore_fallback.sql`, rendered outside `render_type`)
-//! matched neither predicate and was silently dropped from the installer. You
-//! order exactly the set you walk, so that class of bug is unrepresentable.
+//! codegen-emitted manifest of `render_type` output. Two enumerations means two
+//! predicates, and a file matching neither — a generated one rendered outside
+//! `render_type`, say — is silently dropped from the installer while the build
+//! stays green. You order exactly the set you walk, so that class of bug is
+//! unrepresentable. `install_order_contains_every_v3_sql_file` (parity tests)
+//! pins it against an independent walk.
 
 use std::cmp::Reverse;
 use std::collections::{BTreeMap, BTreeSet, BinaryHeap};
@@ -21,7 +23,7 @@ use std::path::Path;
 /// self-contained and owns no edge pointing outside this tree.
 pub const SURFACE_ROOT: &str = "src/v3";
 
-/// A dependency cycle among generated files — the topo-sort could not linearize.
+/// A dependency cycle in the surface — the topo-sort could not linearize.
 #[derive(Debug)]
 pub struct CycleError {
     /// The nodes that never reached in-degree 0 (participate in / are blocked by a cycle).
@@ -30,9 +32,12 @@ pub struct CycleError {
 
 impl std::fmt::Display for CycleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // Names the files, not their provenance: the sort draws no
+        // generated/hand-written distinction, and a cycle is as likely to run
+        // through a hand-authored `-- REQUIRE:` edge as a rendered one.
         write!(
             f,
-            "dependency cycle among generated files: {}",
+            "-- REQUIRE: dependency cycle, these files never linearize: {}",
             self.remaining.join(", ")
         )
     }
@@ -93,10 +98,10 @@ impl std::error::Error for OrderError {}
 /// with the sort rather than with whoever remembers to call the checker.
 pub fn surface_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>, OrderError> {
     let nodes: BTreeSet<&str> = files.iter().map(|(p, _)| p.as_str()).collect();
+    let prefix = format!("{SURFACE_ROOT}/");
     let (mut outside, mut unknown) = (Vec::new(), Vec::new());
     for (file, deps) in files {
         for dep in deps {
-            let prefix = format!("{SURFACE_ROOT}/");
             if !dep.starts_with(&prefix) {
                 outside.push((file.clone(), dep.clone()));
             } else if !nodes.contains(dep.as_str()) {
@@ -158,13 +163,16 @@ pub fn requires_of(body: &str) -> Vec<String> {
         .collect()
 }
 
-/// Deterministic topological order of generated files. `files` is
-/// `(repo-relative path, its REQUIRE targets)`. Edges whose target is NOT a key
-/// in `files` (hand-written prerequisites) are ignored: the generated block is
-/// emitted wholesale AFTER the hand-written block, so those edges are satisfied
-/// by construction. Kahn's algorithm with a min-heap keyed by path string gives
+/// Deterministic topological order of `files`, each `(repo-relative path, its
+/// REQUIRE targets)`. Kahn's algorithm with a min-heap keyed by path string gives
 /// name-sorted tie-breaking ⇒ byte-reproducible output.
-pub fn topo_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>, CycleError> {
+///
+/// Edges whose target is not itself a key in `files` are ignored rather than
+/// rejected. That tolerance is why this is not public: on the real surface a
+/// non-node target means a typo'd or escaping `-- REQUIRE:`, and silently
+/// ignoring it would drop the very check [`surface_order`] exists to make. Go
+/// through [`surface_order`], which validates the targets before sorting.
+pub(crate) fn topo_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>, CycleError> {
     let nodes: BTreeSet<&str> = files.iter().map(|(p, _)| p.as_str()).collect();
     let mut indeg: BTreeMap<&str, usize> = nodes.iter().map(|n| (*n, 0usize)).collect();
     let mut dependents: BTreeMap<&str, Vec<&str>> = BTreeMap::new();
@@ -333,6 +341,27 @@ mod tests {
         ));
     }
 
+    // The cycle diagnostic must describe the surface it actually sorts. It once
+    // said "among generated files", inherited from the two-block design this
+    // module replaced — which sent a reader chasing the codegen when the fix was
+    // a `-- REQUIRE:` line in their own hand-written file.
+    #[test]
+    fn cycle_error_names_the_stuck_files_not_a_generated_block() {
+        let files = vec![
+            f("src/v3/jsonb/a.sql", &["src/v3/jsonb/b.sql"]),
+            f("src/v3/jsonb/b.sql", &["src/v3/jsonb/a.sql"]),
+        ];
+        let msg = surface_order(&files).unwrap_err().to_string();
+        assert!(
+            !msg.contains("generated"),
+            "the sort has no generated/hand-written distinction; the message must not imply one: {msg}"
+        );
+        assert!(
+            msg.contains("src/v3/jsonb/a.sql") && msg.contains("src/v3/jsonb/b.sql"),
+            "the message must name the stuck files: {msg}"
+        );
+    }
+
     // A cycle surfaces as a cycle, not as a silently truncated order.
     #[test]
     fn surface_order_propagates_cycles() {
@@ -374,7 +403,7 @@ mod tests {
         fs::create_dir_all(v3.join("scalars/integer")).unwrap();
         fs::write(v3.join("schema.sql"), "CREATE SCHEMA eql_v3;\n").unwrap();
         fs::write(
-            v3.join("scalars/ore_fallback.sql"),
+            v3.join("scalars/cross_family.sql"),
             "-- AUTOMATICALLY GENERATED FILE.\n-- REQUIRE: src/v3/schema.sql\n",
         )
         .unwrap();
@@ -393,14 +422,15 @@ mod tests {
         assert_eq!(
             paths,
             vec![
+                "src/v3/scalars/cross_family.sql",
                 "src/v3/scalars/integer/integer_types.sql",
-                "src/v3/scalars/ore_fallback.sql",
                 "src/v3/schema.sql",
             ],
             "walk must be sorted, skip *_test.sql and non-sql, and include the \
-             cross-family generated file the two-block build used to drop"
+             cross-family generated file a two-block build would drop"
         );
-        assert_eq!(files[1].1, vec!["src/v3/schema.sql"]);
+        // The cross-family file's edges came back with it, not just its path.
+        assert_eq!(files[0].1, vec!["src/v3/schema.sql"]);
         // And the walked surface linearizes: schema.sql moves ahead of its dependents.
         assert_eq!(surface_order(&files).unwrap()[0], "src/v3/schema.sql");
     }

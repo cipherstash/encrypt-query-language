@@ -44,8 +44,6 @@ pub enum WriteError {
     Ownership(String),
     #[error("io error: {0}")]
     Io(#[from] io::Error),
-    #[error("{0}")]
-    Codegen(String),
 }
 
 fn first_line(path: &Path) -> io::Result<String> {

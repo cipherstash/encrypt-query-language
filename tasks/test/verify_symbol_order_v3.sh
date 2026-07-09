@@ -1,12 +1,37 @@
 #!/usr/bin/env bash
 #MISE description="Cross-check that every eql_v3/eql_v3_internal/public-domain symbol referenced in a file is defined by a file ordered earlier"
+#
+# This gate is deliberately STRICTER than PostgreSQL, in one direction: it treats
+# every owned-schema token as a reference, wherever it appears, including inside a
+# function body. PostgreSQL resolves a `LANGUAGE plpgsql` body's callees at
+# execution time, so it accepts a plpgsql function that forward-references a
+# function defined later in the installer. This gate rejects it.
+#
+# That is the intended trade: a define-before-use order is what makes a
+# single-transaction install of the concatenated monolith safe for `LANGUAGE sql`
+# bodies (which Postgres DOES resolve at CREATE time), and the checker cannot tell
+# the two languages apart from a line-oriented scan. The cost is that a genuine
+# plpgsql forward reference — mutual recursion, say — needs an entry in
+# tasks/test/symbol_order_allowlist.txt.
+#
+# Note this runs inside `mise run build`, so it gates the release build, not just
+# CI. A false positive blocks a release until allowlisted. Both the rejection and
+# the allowlist escape hatch are pinned by tasks/test/symbol_order_selftest.sh.
 set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 cd "$REPO_ROOT"
 
 ORDERED="${1:-src/deps-ordered-v3.txt}"
-ALLOW="tasks/test/symbol_order_allowlist.txt"
+# Overridable so the self-test can exercise the missing-allowlist path without
+# disturbing the committed one.
+ALLOW="${SYMBOL_ORDER_ALLOWLIST:-tasks/test/symbol_order_allowlist.txt}"
 test -f "$ORDERED" || { echo "ERROR: ordered file $ORDERED missing (run mise run build)" >&2; exit 2; }
+# awk's `getline < file` cannot distinguish EOF from an unreadable file, so an
+# unguarded read loop turns a bad ALLOW path into a silently empty allowlist.
+# Today that fails safe (nothing to suppress), but this gate runs inside
+# `mise run build` — including the release build — so a typo in a future entry
+# would resurrect the false positive it was added to suppress, at release time.
+test -r "$ALLOW" || { echo "ERROR: allowlist $ALLOW missing or unreadable" >&2; exit 2; }
 
 awk -v allowfile="$ALLOW" '
   BEGIN {
@@ -40,25 +65,23 @@ awk -v allowfile="$ALLOW" '
         key = schema s
         if (!(key in defined)) defined[key] = idx
       }
-      # CREATE DOMAIN (eql_v3_internal|eql_v3|public).<name>. All three schemas
-      # define domains, across DDL forms:
-      #   - eql_v3_internal: the SEM index-term types hmac_256/ope_cllw/
-      #     bloom_filter are `CREATE DOMAIN` (over text/bytea/smallint[]), NOT
-      #     `CREATE TYPE`. Omitting this schema would leave the three most-
-      #     referenced foundational types (~165 refs) reporting "defined nowhere".
-      #   - eql_v3: the query-operand twins `eql_v3.query_<T>_<cap>` and the
-      #     hand-written `eql_v3.query_jsonb` (CIP-3442 — a query operand is
-      #     never a column type, so it lives here rather than in `public`).
-      #   - public: the user-column domains.
-      # The eql_v3_internal test must precede the eql_v3 one: `eql_v3.` is a
-      # prefix of `eql_v3_internal.`. Only `public.` domains feed isdomain[]
-      # (that gates which `public.*` REFERENCES are checked); `eql_v3*.*`
-      # references are checked unconditionally.
+      # CREATE DOMAIN (eql_v3_internal|eql_v3|public).<name>. All three schemas: the
+      # SEM index-term types split across DDL forms — hmac_256/ope_cllw/bloom_filter
+      # are `CREATE DOMAIN eql_v3_internal.<name>` (over text/bytea/smallint[]),
+      # NOT `CREATE TYPE`. Capturing only `public.` here would leave the three
+      # most-referenced foundational types (~165 refs) reporting "defined
+      # nowhere" — a real gap, not an allowlist case. `eql_v3.` owns the
+      # query-operand domains (`eql_v3.query_<T>_<cap>`, `eql_v3.query_jsonb`),
+      # which CIP-3442 moved out of `public`: omitting the schema here leaves all
+      # 39 of them reporting "defined nowhere". Only `public.` domains feed
+      # isdomain[] (that gates which `public.*` REFERENCES are checked).
+      # Test eql_v3_internal FIRST in both the alternation and the arms below, so
+      # the `eql_v3` prefix cannot shadow it.
       if (match(line, /CREATE[ \t]+DOMAIN[ \t]+(eql_v3_internal|eql_v3|public)\.[a-z0-9_]+/)) {
         seg = substr(line, RSTART, RLENGTH)
         if (seg ~ /eql_v3_internal\./) { sub(/.*eql_v3_internal\./, "", seg); key = "eql_v3_internal." seg }
         else if (seg ~ /eql_v3\./)     { sub(/.*eql_v3\./, "", seg);          key = "eql_v3." seg }
-        else                           { sub(/.*public\./, "", seg);          key = "public." seg; isdomain[seg] = 1 }
+        else                          { sub(/.*public\./, "", seg);          key = "public." seg; isdomain[seg] = 1 }
         if (!(key in defined)) defined[key] = idx
       }
       # CREATE TYPE eql_v3_internal.<name> (the composite SEM types: ore_block_256, ore_cllw)
