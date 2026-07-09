@@ -53,14 +53,18 @@ async fn v3_jsonb_operators(pool: &PgPool) -> anyhow::Result<Vec<(String, String
     Ok(rows)
 }
 
-/// `format_type` renders the reserved word `json` quoted (`public."json"`).
-/// Normalise so comparisons read naturally.
+/// `format_type` omits the schema for types reachable through `search_path`,
+/// so the `public` column domains come back bare (`eql_v3_json`) while the
+/// `eql_v3` query operand stays qualified. Normalise to schema-qualified names
+/// so comparisons read naturally.
 fn norm(ty: &str) -> String {
     match ty {
-        "\"json\"" => "public.eql_v3_json".to_string(),
-        "jsonb_entry" => "public.eql_v3_jsonb_entry".to_string(),
+        "eql_v3_json" => "public.eql_v3_json".to_string(),
+        "eql_v3_jsonb_entry" => "public.eql_v3_jsonb_entry".to_string(),
+        // Qualified today (eql_v3 is off the default search_path); mapped
+        // anyway so the assertions survive a search_path change.
         "query_jsonb" => "eql_v3.query_jsonb".to_string(),
-        _ => ty.replace("public.\"json\"", "public.eql_v3_json"),
+        other => other.to_string(),
     }
 }
 
