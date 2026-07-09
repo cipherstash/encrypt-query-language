@@ -138,7 +138,7 @@ ANALYZE events;
 >   FROM pg_index x
 >   JOIN pg_class i   ON i.oid = x.indexrelid
 >   JOIN pg_opclass oc ON oc.oid = x.indclass[0]
->  WHERE i.relname = 'events_at_ord';
+>  WHERE i.relname = 'events_at_ord_ore';
 > -- ore_block_256_operator_class  → ORE ordering, index engages
 > -- record_ops                    → opclass was skipped at install; index is inert
 > ```

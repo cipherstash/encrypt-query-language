@@ -7,7 +7,7 @@
 --! @brief B-tree operator family + default class on eql_v3_internal.ore_block_256.
 --!
 --! Gives the composite type its DEFAULT btree opclass so the recommended
---! functional index `CREATE INDEX ON t (eql_v3_internal.ord_term_ore(col))` engages without
+--! functional index `CREATE INDEX ON t (eql_v3.ord_term_ore(col))` engages without
 --! an explicit opclass annotation (design D4).
 --!
 --! @note Creating an operator family/class requires superuser: Postgres forbids

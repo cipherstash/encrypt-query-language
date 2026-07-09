@@ -257,7 +257,7 @@ CREATE OPERATOR <@(
 -- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on jsonb_entry via eq_term (hm-or-oc byte equality).
+--! @brief Equality on jsonb_entry via eq_term (hm-or-op byte equality).
 --! @param a public.eql_v3_jsonb_entry Left operand
 --! @param b public.eql_v3_jsonb_entry Right operand
 --! @return boolean True if the entries are equal

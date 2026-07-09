@@ -133,7 +133,7 @@ eql_v3.min(public.eql_v3_integer_ord_ore)  RETURNS public.eql_v3_integer_ord_ore
 eql_v3.max(public.eql_v3_integer_ord_ore)  RETURNS public.eql_v3_integer_ord_ore
 ```
 
-Comparison routes through the variant's `<` / `>` operator, which uses the ORE block term — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
+Comparison routes through the variant's `<` / `>` operator, which uses that variant's ordering term — the `op` CLLW-OPE term on `_ord` / `_ord_ope`, the `ob` block-ORE term on `_ord_ore` — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
 
 **Example:**
 
