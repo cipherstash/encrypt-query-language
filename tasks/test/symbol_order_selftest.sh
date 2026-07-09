@@ -50,6 +50,25 @@ if bash tasks/test/verify_symbol_order_v3.sh "$tmp/domain_bad.txt" 2>/dev/null; 
 fi
 echo "ok: domain-form type used before definition rejected"
 
+# CREATE DOMAIN eql_v3.* form (the query-operand twins `eql_v3.query_<T>_<cap>`
+# and the hand-written `eql_v3.query_jsonb`, CIP-3442). Pins the domain-capture
+# branch's eql_v3 arm: without it every query operand — including the line that
+# creates it, which is also a reference — reads as "defined nowhere".
+printf 'CREATE DOMAIN eql_v3.query_integer_eq AS jsonb;\n' > "$tmp/q.sql"
+printf 'CREATE FUNCTION eql_v3.eq(a public.integer_eq, b eql_v3.query_integer_eq) ...\n' > "$tmp/qf.sql"
+printf '%s\n%s\n' "$tmp/q.sql" "$tmp/qf.sql" > "$tmp/query_good.txt"
+bash tasks/test/verify_symbol_order_v3.sh "$tmp/query_good.txt" \
+  || { echo "FAIL: CREATE DOMAIN eql_v3.* definer not recognised"; exit 1; }
+echo "ok: CREATE DOMAIN eql_v3.* definition form recognised"
+
+# And the same query operand used BEFORE it is created must still be REJECTED —
+# recognising the schema must not blunt the ordering check.
+printf '%s\n%s\n' "$tmp/qf.sql" "$tmp/q.sql" > "$tmp/query_bad.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/query_bad.txt" 2>/dev/null; then
+  echo "FAIL: eql_v3.query_integer_eq used before its CREATE DOMAIN accepted"; exit 1
+fi
+echo "ok: eql_v3 query operand used before definition rejected"
+
 # CREATE OPERATOR CLASS|FAMILY eql_v3_internal.* form (the conditional SEM
 # ordered-index opclasses). A file that both creates the opclass and mentions it
 # in a RAISE NOTICE (same file) must be ACCEPTED — pins the operator-class

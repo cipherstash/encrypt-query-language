@@ -40,17 +40,25 @@ awk -v allowfile="$ALLOW" '
         key = schema s
         if (!(key in defined)) defined[key] = idx
       }
-      # CREATE DOMAIN (eql_v3_internal|public).<name>. Both schemas: the SEM
-      # index-term types split across DDL forms — hmac_256/ope_cllw/bloom_filter
-      # are `CREATE DOMAIN eql_v3_internal.<name>` (over text/bytea/smallint[]),
-      # NOT `CREATE TYPE`. Capturing only `public.` here would leave the three
-      # most-referenced foundational types (~165 refs) reporting "defined
-      # nowhere" — a real gap, not an allowlist case. Only `public.` domains feed
-      # isdomain[] (that gates which `public.*` REFERENCES are checked).
-      if (match(line, /CREATE[ \t]+DOMAIN[ \t]+(eql_v3_internal|public)\.[a-z0-9_]+/)) {
+      # CREATE DOMAIN (eql_v3_internal|eql_v3|public).<name>. All three schemas
+      # define domains, across DDL forms:
+      #   - eql_v3_internal: the SEM index-term types hmac_256/ope_cllw/
+      #     bloom_filter are `CREATE DOMAIN` (over text/bytea/smallint[]), NOT
+      #     `CREATE TYPE`. Omitting this schema would leave the three most-
+      #     referenced foundational types (~165 refs) reporting "defined nowhere".
+      #   - eql_v3: the query-operand twins `eql_v3.query_<T>_<cap>` and the
+      #     hand-written `eql_v3.query_jsonb` (CIP-3442 — a query operand is
+      #     never a column type, so it lives here rather than in `public`).
+      #   - public: the user-column domains.
+      # The eql_v3_internal test must precede the eql_v3 one: `eql_v3.` is a
+      # prefix of `eql_v3_internal.`. Only `public.` domains feed isdomain[]
+      # (that gates which `public.*` REFERENCES are checked); `eql_v3*.*`
+      # references are checked unconditionally.
+      if (match(line, /CREATE[ \t]+DOMAIN[ \t]+(eql_v3_internal|eql_v3|public)\.[a-z0-9_]+/)) {
         seg = substr(line, RSTART, RLENGTH)
         if (seg ~ /eql_v3_internal\./) { sub(/.*eql_v3_internal\./, "", seg); key = "eql_v3_internal." seg }
-        else                          { sub(/.*public\./, "", seg);          key = "public." seg; isdomain[seg] = 1 }
+        else if (seg ~ /eql_v3\./)     { sub(/.*eql_v3\./, "", seg);          key = "eql_v3." seg }
+        else                           { sub(/.*public\./, "", seg);          key = "public." seg; isdomain[seg] = 1 }
         if (!(key in defined)) defined[key] = idx
       }
       # CREATE TYPE eql_v3_internal.<name> (the composite SEM types: ore_block_256, ore_cllw)
