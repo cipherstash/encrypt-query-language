@@ -11,9 +11,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -90,9 +90,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -167,9 +167,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -246,9 +246,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -327,9 +327,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -427,9 +427,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -527,9 +527,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -627,9 +627,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -727,9 +727,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -827,9 +827,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -927,9 +927,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1027,9 +1027,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1127,9 +1127,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1227,9 +1227,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1327,9 +1327,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1427,9 +1427,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1527,9 +1527,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1629,9 +1629,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1731,9 +1731,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1833,9 +1833,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1935,9 +1935,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2037,9 +2037,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2139,9 +2139,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2239,9 +2239,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2339,9 +2339,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2439,9 +2439,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2539,9 +2539,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2639,9 +2639,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2739,9 +2739,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2839,9 +2839,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2939,9 +2939,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3039,9 +3039,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3139,9 +3139,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3239,9 +3239,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3339,9 +3339,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3441,9 +3441,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3543,9 +3543,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3645,9 +3645,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3747,9 +3747,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3849,9 +3849,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3951,9 +3951,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4053,9 +4053,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4155,9 +4155,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4257,9 +4257,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4359,9 +4359,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4461,9 +4461,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4563,9 +4563,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4731,9 +4731,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4899,9 +4899,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5067,9 +5067,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5235,9 +5235,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5403,9 +5403,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5571,9 +5571,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5739,9 +5739,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5907,9 +5907,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6075,9 +6075,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6243,9 +6243,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6411,9 +6411,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6579,9 +6579,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6749,9 +6749,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6919,9 +6919,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7089,9 +7089,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7259,9 +7259,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7429,9 +7429,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7599,9 +7599,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7767,9 +7767,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7935,9 +7935,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8103,9 +8103,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8271,9 +8271,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8439,9 +8439,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8607,9 +8607,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8775,9 +8775,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8943,9 +8943,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9111,9 +9111,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9279,9 +9279,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9447,9 +9447,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9615,9 +9615,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9785,9 +9785,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9955,9 +9955,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10125,9 +10125,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10295,9 +10295,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10465,9 +10465,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10635,9 +10635,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10805,9 +10805,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10975,9 +10975,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11145,9 +11145,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11315,9 +11315,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11485,9 +11485,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11655,9 +11655,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11748,9 +11748,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11841,9 +11841,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -11934,9 +11934,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12027,9 +12027,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12120,9 +12120,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12213,9 +12213,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12306,9 +12306,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12399,9 +12399,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12492,9 +12492,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12585,9 +12585,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12678,9 +12678,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12771,9 +12771,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12864,9 +12864,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -12957,9 +12957,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13094,9 +13094,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13231,9 +13231,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13368,9 +13368,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13505,9 +13505,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13642,9 +13642,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13779,9 +13779,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -13916,9 +13916,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14051,9 +14051,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14186,9 +14186,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14321,9 +14321,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14456,9 +14456,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14593,9 +14593,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14730,9 +14730,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -14867,9 +14867,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15004,9 +15004,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15141,9 +15141,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15278,9 +15278,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -15415,9 +15415,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15557,9 +15557,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15699,9 +15699,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15841,9 +15841,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -15983,9 +15983,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16086,9 +16086,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16189,9 +16189,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16292,9 +16292,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -16395,9 +16395,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16484,9 +16484,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16573,9 +16573,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16662,9 +16662,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -16751,9 +16751,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -16975,9 +16975,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -17199,9 +17199,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -17423,9 +17423,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -17647,9 +17647,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -18018,9 +18018,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -18319,9 +18319,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -18480,9 +18480,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -18641,9 +18641,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18686,14 +18686,14 @@ pub mod integer {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -18805,9 +18805,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -18850,14 +18850,14 @@ pub mod integer {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -18969,9 +18969,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -19014,14 +19014,14 @@ pub mod integer {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -19133,9 +19133,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -19178,14 +19178,14 @@ pub mod integer {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -19297,9 +19297,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -19342,14 +19342,14 @@ pub mod integer {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -19461,9 +19461,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -19641,9 +19641,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -19821,9 +19821,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -20121,9 +20121,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -20421,9 +20421,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1794usize,
+            start_line: 1806usize,
             start_col: 22usize,
-            end_line: 1794usize,
+            end_line: 1806usize,
             end_col: 86usize,
             compile_fail: false,
             no_run: false,
@@ -20625,9 +20625,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1885usize,
+            start_line: 1897usize,
             start_col: 22usize,
-            end_line: 1885usize,
+            end_line: 1897usize,
             end_col: 55usize,
             compile_fail: false,
             no_run: false,
@@ -21021,20 +21021,20 @@ pub mod integer {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::integer::matrix_integer_ord_ord_routes_through_ob"]
+    #[rustc_test_marker = "scalars::integer::matrix_integer_ord_ord_routes_through_ordering_term"]
     #[doc(hidden)]
-    pub const matrix_integer_ord_ord_routes_through_ob: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_integer_ord_ord_routes_through_ordering_term: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::integer::matrix_integer_ord_ord_routes_through_ob",
+                "scalars::integer::matrix_integer_ord_ord_routes_through_ordering_term",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2066usize,
+            start_line: 2080usize,
             start_col: 22usize,
-            end_line: 2066usize,
-            end_col: 75usize,
+            end_line: 2080usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -21042,11 +21042,13 @@ pub mod integer {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_integer_ord_ord_routes_through_ob()),
+            || test::assert_test_result(
+                matrix_integer_ord_ord_routes_through_ordering_term(),
+            ),
         ),
     };
-    fn matrix_integer_ord_ord_routes_through_ob() -> anyhow::Result<()> {
-        async fn matrix_integer_ord_ord_routes_through_ob(
+    fn matrix_integer_ord_ord_routes_through_ordering_term() -> anyhow::Result<()> {
+        async fn matrix_integer_ord_ord_routes_through_ordering_term(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -21066,19 +21068,30 @@ pub mod integer {
                     .terms_for(token)
                     .iter()
                     .any(|t| t.json_key() == "hm");
-                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
-                        "eql_v3.eq_term",
+                        "eql_v3.eq_term".to_string(),
                         "payload",
-                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term"
+                            .to_string(),
                     )
                 } else {
-                    (
-                        "eql_v3.ord_term",
-                        "(payload - 'hm')",
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
-                    )
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect(
+                            "an ordered domain resolves `=` to its ordering extractor",
+                        );
+                    let caveat = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "= must engage the {0} functional btree with no hm",
+                                ord,
+                            ),
+                        )
+                    });
+                    (ord, "(payload - 'hm')", caveat)
                 };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -21242,7 +21255,7 @@ pub mod integer {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::integer::matrix_integer_ord_ord_routes_through_ob",
+            "encrypted_domain::scalars::integer::matrix_integer_ord_ord_routes_through_ordering_term",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -21278,24 +21291,24 @@ pub mod integer {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_integer_ord_ord_routes_through_ob;
+        let f: fn(_) -> _ = matrix_integer_ord_ord_routes_through_ordering_term;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::integer::matrix_integer_ord_ore_ord_routes_through_ob"]
+    #[rustc_test_marker = "scalars::integer::matrix_integer_ord_ore_ord_routes_through_ordering_term"]
     #[doc(hidden)]
-    pub const matrix_integer_ord_ore_ord_routes_through_ob: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_integer_ord_ore_ord_routes_through_ordering_term: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::integer::matrix_integer_ord_ore_ord_routes_through_ob",
+                "scalars::integer::matrix_integer_ord_ore_ord_routes_through_ordering_term",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2066usize,
+            start_line: 2080usize,
             start_col: 22usize,
-            end_line: 2066usize,
-            end_col: 75usize,
+            end_line: 2080usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -21303,11 +21316,13 @@ pub mod integer {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_integer_ord_ore_ord_routes_through_ob()),
+            || test::assert_test_result(
+                matrix_integer_ord_ore_ord_routes_through_ordering_term(),
+            ),
         ),
     };
-    fn matrix_integer_ord_ore_ord_routes_through_ob() -> anyhow::Result<()> {
-        async fn matrix_integer_ord_ore_ord_routes_through_ob(
+    fn matrix_integer_ord_ore_ord_routes_through_ordering_term() -> anyhow::Result<()> {
+        async fn matrix_integer_ord_ore_ord_routes_through_ordering_term(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -21327,19 +21342,30 @@ pub mod integer {
                     .terms_for(token)
                     .iter()
                     .any(|t| t.json_key() == "hm");
-                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
-                        "eql_v3.eq_term",
+                        "eql_v3.eq_term".to_string(),
                         "payload",
-                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term"
+                            .to_string(),
                     )
                 } else {
-                    (
-                        "eql_v3.ord_term",
-                        "(payload - 'hm')",
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
-                    )
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect(
+                            "an ordered domain resolves `=` to its ordering extractor",
+                        );
+                    let caveat = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "= must engage the {0} functional btree with no hm",
+                                ord,
+                            ),
+                        )
+                    });
+                    (ord, "(payload - 'hm')", caveat)
                 };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -21503,7 +21529,7 @@ pub mod integer {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::integer::matrix_integer_ord_ore_ord_routes_through_ob",
+            "encrypted_domain::scalars::integer::matrix_integer_ord_ore_ord_routes_through_ordering_term",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -21539,7 +21565,7 @@ pub mod integer {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_integer_ord_ore_ord_routes_through_ob;
+        let f: fn(_) -> _ = matrix_integer_ord_ore_ord_routes_through_ordering_term;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -21553,9 +21579,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2379usize,
+            start_line: 2397usize,
             start_col: 22usize,
-            end_line: 2379usize,
+            end_line: 2397usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -21655,9 +21681,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -21738,20 +21764,20 @@ pub mod integer {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -21773,7 +21799,7 @@ pub mod integer {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "min",
                                         d,
                                         extremum,
@@ -21837,9 +21863,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -21949,9 +21975,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -22048,9 +22074,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -22236,9 +22262,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -22319,20 +22345,20 @@ pub mod integer {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -22354,7 +22380,7 @@ pub mod integer {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "max",
                                         d,
                                         extremum,
@@ -22418,9 +22444,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -22530,9 +22556,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -22629,9 +22655,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -22817,9 +22843,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -22900,20 +22926,20 @@ pub mod integer {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -22935,7 +22961,7 @@ pub mod integer {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "min",
                                         d,
                                         extremum,
@@ -22999,9 +23025,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -23111,9 +23137,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23210,9 +23236,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -23400,9 +23426,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -23483,20 +23509,20 @@ pub mod integer {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -23518,7 +23544,7 @@ pub mod integer {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "max",
                                         d,
                                         extremum,
@@ -23582,9 +23608,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -23694,9 +23720,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -23793,9 +23819,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -23983,9 +24009,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24236,9 +24262,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24489,9 +24515,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24742,9 +24768,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -24995,9 +25021,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3129usize,
+            start_line: 3149usize,
             start_col: 22usize,
-            end_line: 3129usize,
+            end_line: 3149usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -25104,9 +25130,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3129usize,
+            start_line: 3149usize,
             start_col: 22usize,
-            end_line: 3129usize,
+            end_line: 3149usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -25213,9 +25239,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25381,9 +25407,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25549,9 +25575,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25717,9 +25743,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -25885,9 +25911,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26053,9 +26079,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26221,9 +26247,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26389,9 +26415,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -26557,9 +26583,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -26686,9 +26712,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -26796,9 +26822,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -26936,9 +26962,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -27065,9 +27091,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -27175,9 +27201,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -27313,9 +27339,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -27442,9 +27468,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -27552,9 +27578,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -27690,9 +27716,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -27819,9 +27845,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -27929,9 +27955,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -28069,9 +28095,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28109,12 +28135,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -28212,9 +28238,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28252,12 +28278,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -28355,9 +28381,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28395,12 +28421,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -28498,9 +28524,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28538,12 +28564,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -28641,9 +28667,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28681,12 +28707,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -28784,9 +28810,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28824,12 +28850,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -28927,9 +28953,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -28967,12 +28993,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -29070,9 +29096,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29112,12 +29138,12 @@ pub mod integer {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -29215,9 +29241,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29287,7 +29313,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -29394,9 +29420,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29466,7 +29492,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -29573,9 +29599,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29645,7 +29671,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -29752,9 +29778,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -29824,7 +29850,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -29931,9 +29957,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -30005,7 +30031,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -30112,9 +30138,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -30184,7 +30210,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -30291,9 +30317,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -30365,7 +30391,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -30472,9 +30498,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -30546,7 +30572,7 @@ pub mod integer {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -30653,9 +30679,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30757,9 +30783,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30861,9 +30887,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -30965,9 +30991,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -31069,9 +31095,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -31175,9 +31201,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -31281,9 +31307,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -31387,9 +31413,9 @@ pub mod integer {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,

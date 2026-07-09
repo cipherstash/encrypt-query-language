@@ -84,9 +84,11 @@ async fn eq_term_only_operand_matches_exactly_the_equal_rows(pool: PgPool) -> Re
 }
 
 #[sqlx::test]
-async fn ord_term_only_operand_orders_via_the_ore_operator(pool: PgPool) -> Result<()> {
-    // Store 10, 20, 30 as `integer_ord` (ORE block term).
-    let stored = encrypt_store("qtest", "payload", &[10i32, 20, 30], &[IndexKind::Ore]).await?;
+async fn ord_term_only_operand_orders_via_the_ope_operator(pool: PgPool) -> Result<()> {
+    // Store 10, 20, 30 as `integer_ord`, whose ordering SEM is CLLW-OPE: the
+    // domain CHECK requires the `op` term, so an `ob`-bearing (block-ORE)
+    // payload is rejected. `_ord_ore` is the block-ORE surface.
+    let stored = encrypt_store("qtest", "payload", &[10i32, 20, 30], &[IndexKind::Ope]).await?;
     sqlx::query(
         "CREATE TABLE q (id int GENERATED ALWAYS AS IDENTITY, val public.eql_v3_integer_ord)",
     )
@@ -100,7 +102,7 @@ async fn ord_term_only_operand_orders_via_the_ore_operator(pool: PgPool) -> Resu
     }
 
     // A term-only ordering operand for 25 (never stored): `< 25` → {10, 20}.
-    let operand = to_query_operand(encrypt_one(25, &[IndexKind::Ore]).await?);
+    let operand = to_query_operand(encrypt_one(25, &[IndexKind::Ope]).await?);
     let below: i64 = sqlx::query_scalar(
         "SELECT count(*) FROM q WHERE val < $1::jsonb::eql_v3.query_integer_ord",
     )

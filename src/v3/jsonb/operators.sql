@@ -257,7 +257,7 @@ CREATE OPERATOR <@(
 -- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on jsonb_entry via eq_term (hm-or-oc byte equality).
+--! @brief Equality on jsonb_entry via eq_term (hm-or-op byte equality).
 --! @param a public.eql_v3_jsonb_entry Left operand
 --! @param b public.eql_v3_jsonb_entry Right operand
 --! @return boolean True if the entries are equal
@@ -307,7 +307,7 @@ CREATE FUNCTION eql_v3.lt(a public.eql_v3_jsonb_entry, b public.eql_v3_jsonb_ent
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ord_ope_term(a) < eql_v3.ord_ope_term(b)
+  SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)
 $$;
 
 CREATE OPERATOR < (
@@ -328,7 +328,7 @@ CREATE FUNCTION eql_v3.lte(a public.eql_v3_jsonb_entry, b public.eql_v3_jsonb_en
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ord_ope_term(a) <= eql_v3.ord_ope_term(b)
+  SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b)
 $$;
 
 CREATE OPERATOR <= (
@@ -349,7 +349,7 @@ CREATE FUNCTION eql_v3.gt(a public.eql_v3_jsonb_entry, b public.eql_v3_jsonb_ent
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ord_ope_term(a) > eql_v3.ord_ope_term(b)
+  SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b)
 $$;
 
 CREATE OPERATOR > (
@@ -370,7 +370,7 @@ CREATE FUNCTION eql_v3.gte(a public.eql_v3_jsonb_entry, b public.eql_v3_jsonb_en
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ord_ope_term(a) >= eql_v3.ord_ope_term(b)
+  SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b)
 $$;
 
 CREATE OPERATOR >= (

@@ -91,8 +91,13 @@ impl ScalarType for JsonbEntryInteger {
         format!("eql_v3.eq_term({value_expr})")
     }
 
-    fn ord_extractor_expr(value_expr: &str) -> String {
-        format!("eql_v3.ord_ope_term({value_expr})")
+    /// A SteVec entry orders by its structural CLLW-OPE term (`op`), whatever
+    /// the variant. Deliberately ignores the catalog default rather than relying
+    /// on it: `PG_TYPE` is `"integer"`, so the derived extractor answers for
+    /// `integer`'s `_ord`, which coincides with `ord_term` only for as long as
+    /// that domain stays OPE-backed. The entry's term is structural.
+    fn ord_extractor_expr(_variant: Variant, value_expr: &str) -> String {
+        format!("eql_v3.ord_term({value_expr})")
     }
 
     // Not an e2e/property-oracle type (the entry suite runs the jsonb_entry
@@ -142,13 +147,37 @@ mod tests {
             "public.eql_v3_jsonb_entry",
         );
         assert_eq!(
-            <JsonbEntryInteger as ScalarType>::ord_extractor_expr("value"),
-            "eql_v3.ord_ope_term(value)",
+            <JsonbEntryInteger as ScalarType>::ord_extractor_expr(Variant::Ord, "value"),
+            "eql_v3.ord_term(value)",
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::eq_extractor_expr("value"),
             "eql_v3.eq_term(value)",
         );
+    }
+
+    /// Pins the `ord_extractor_expr` OVERRIDE as load-bearing.
+    ///
+    /// Under `Variant::Ord` the override is indistinguishable from the
+    /// catalog-derived default: `PG_TYPE` is `"integer"`, whose `_ord` is
+    /// `Term::Ope`, which yields `ord_term` — the same string. Asserting only
+    /// that case would pass with the override deleted.
+    ///
+    /// `Variant::OrdOre` is where they diverge. The default would consult the
+    /// catalog, find `Term::Ore`, and emit `ord_term_ore` — wrong for an entry,
+    /// whose ordering term is structurally `op` regardless of variant. So this
+    /// fails the moment the override stops ignoring the variant.
+    #[test]
+    fn ord_extractor_override_ignores_the_variant() {
+        for variant in [Variant::Ord, Variant::OrdOre] {
+            assert_eq!(
+                <JsonbEntryInteger as ScalarType>::ord_extractor_expr(variant, "value"),
+                "eql_v3.ord_term(value)",
+                "a SteVec entry always orders by its structural `op` term, but \
+                 {variant:?} resolved to a different extractor — the override in \
+                 `impl ScalarType for JsonbEntryInteger` was bypassed or removed",
+            );
+        }
     }
 
     #[test]

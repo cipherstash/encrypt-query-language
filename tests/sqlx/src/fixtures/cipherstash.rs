@@ -132,7 +132,7 @@ fn index_type_for(kind: IndexKind) -> IndexType {
         IndexKind::Match => Index::new_match().index_type,
         // No `Index::new_ste_vec()` constructor exists — SteVec is a struct
         // variant. `mode: SteVecMode::Compat` yields CLLW-OPE ordering terms
-        // — the ones the v3 `eql_v3.ord_ope_term` extractor consumes (order-
+        // — the ones the v3 `eql_v3.ord_term` extractor consumes (order-
         // preserving under native byte comparison). The pinned 0.38.1 client
         // serializes Compat-mode OPE bytes under the v2.3 `oc` key (the v2.3
         // schema has no sv-level `op`); the fixture converter remaps them to

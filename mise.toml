@@ -106,20 +106,45 @@ cargo test --features proptest-e2e
 """
 
 [tasks."test:sqlx:e2e"]
-description = "Run ONLY the e2e (fresh-encryption) property suite — needs ZeroKMS creds"
+description = "Run the fresh-encryption suites (e2e oracle + float specials + query operands) — needs ZeroKMS creds"
 # Prep builds + migrates + regenerates fixtures (the latter needs CS_* creds,
-# which the dedicated CI `e2e` job supplies). The e2e suite is the only one that
-# encrypts fresh values through ZeroKMS at run time, so it cannot run from the
-# credential-free sharded archive; it gets its own job. The fixture suite (which
-# DOES run in the shards) is intentionally excluded here via the `e2e_oracle`
-# filter so this job does not duplicate sharded work — it only compiles the
-# `proptest-e2e`-gated binaries and runs the fresh-encryption oracle.
+# which the dedicated CI `e2e` job supplies). These suites are the only ones that
+# encrypt fresh values through ZeroKMS at run time, so they cannot run from the
+# credential-free sharded archive; they get their own job. The fixture suite (which
+# DOES run in the shards) is intentionally excluded here via the name filters
+# below, so this job does not duplicate sharded work.
+#
+# EVERY `proptest-e2e`-gated suite must be named explicitly. A bare
+# `cargo test --features proptest-e2e` would re-run the whole sharded fixture
+# suite; conversely a lone `e2e_oracle` filter silently skipped `float_special`
+# from the day it was written — it is `#[cfg(feature = "proptest-e2e")]` too, so
+# the default-feature shards never compiled it either, and it ran nowhere.
+# `v3_scalar_query_operand_tests` was orphaned the same way, and is a whole test
+# TARGET rather than a module: no name filter reaches it, so it is invoked with
+# `--test`. Adding a new `proptest-e2e`-gated suite means adding a line here; no
+# glob catches it for you.
 depends = ["test:sqlx:prep"]
 dir = "{{config_root}}/tests/sqlx"
 run = """
+#!/usr/bin/env bash
+set -euo pipefail
 echo "Running e2e property suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e e2e_oracle
+echo "Running float special-value suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e float_special
+echo "Running scalar query-operand conformance suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e --test v3_scalar_query_operand_tests
 """
+
+[tasks."test:known-failures"]
+description = "Drift gate: every known_failure marker must name a real, OPEN issue (needs gh)"
+# The Rust-side marker is self-expiring — `known_failure()` fails once the
+# wrapped assertion starts passing, so it cannot outlive its bug. This is the
+# other half of the contract: the issue it names must exist, still be open, and
+# the constant must actually be referenced by a test.
+# See tests/sqlx/src/known_failure.rs.
+dir = "{{config_root}}"
+run = "bash tasks/test/known-failures.sh"
 
 [tasks."test:sqlx:watch"]
 description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
@@ -311,7 +336,7 @@ run = """
 # (snapshots/matrix_tests.txt) pins the set of macro-emitted matrix test names
 # for the ORDERED scalar shape. The second (snapshots/matrix_tests_eq_only.txt)
 # is the equality-only shape: an eq-only type's name set is exactly the ordered
-# set MINUS the ord-only lines (`_ord`/`order_by`/`routes_through_ob`), so it is
+# set MINUS the ord-only lines (`_ord`/`order_by`/`routes_through_ordering_term`), so it is
 # DERIVED from the one baseline — but it is also committed and PINNED: the gate
 # re-derives the subset at runtime and asserts it equals the committed file
 # (step 3 below), so a change to the baseline or the strip filter that alters the
@@ -369,14 +394,14 @@ discovered=$(printf '%s\\n' "$listing" \
 
 # An equality-only type (no `_ord` domain) emits a strict SUBSET of the
 # canonical (ordered) snapshot: the same names minus every ord-only line
-# (`_ord` / `order_by` / `routes_through_ob`). Derive that subset once into a
+# (`_ord` / `order_by` / `routes_through_ordering_term`). Derive that subset once into a
 # file, so an equality-only scalar (e.g. timestamp) needs NO second committed
 # snapshot — it is validated against this derivation from the single baseline.
 # Materialise to a file (not a shell variable) so both shapes compare via the
 # same `cmp`/`diff` path: a variable would strip trailing newlines on capture
 # and force the failure diff to reconstruct the string with `printf`.
 eq_only_expected="/tmp/matrix-eq-only-expected.txt"
-grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > "$eq_only_expected"
+grep -vE '_ord|order_by|routes_through_ordering_term' snapshots/matrix_tests.txt | LC_ALL=C sort -u > "$eq_only_expected"
 
 # Pin the derivation: the runtime-derived eq-only set must equal the COMMITTED
 # snapshot. This closes the blind spot where the strip filter (or a new ordered
@@ -386,7 +411,7 @@ grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C
 if ! cmp -s "$eq_only_expected" snapshots/matrix_tests_eq_only.txt; then
   echo "Derived eq-only set differs from committed snapshots/matrix_tests_eq_only.txt." >&2
   echo "If the ordered baseline changed intentionally, regenerate the eq-only snapshot:" >&2
-  echo "  grep -vE '_ord|order_by|routes_through_ob' snapshots/matrix_tests.txt | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt" >&2
+  echo "  grep -vE '_ord|order_by|routes_through_ordering_term' snapshots/matrix_tests.txt | LC_ALL=C sort -u > snapshots/matrix_tests_eq_only.txt" >&2
   diff snapshots/matrix_tests_eq_only.txt "$eq_only_expected" >&2 || true
   exit 1
 fi
@@ -426,7 +451,7 @@ while IFS= read -r t; do
     echo "Matrix test-name set for '${t}' matches NONE of the known shapes (ordered, eq-only, text, storage-only)." >&2
     echo "  vs ordered (snapshots/matrix_tests.txt):" >&2
     diff snapshots/matrix_tests.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
-    echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ob):" >&2
+    echo "  vs derived eq-only (ordered minus _ord/order_by/routes_through_ordering_term):" >&2
     diff "$eq_only_expected" "/tmp/matrix-norm-${t}.txt" >&2 || true
     echo "  vs text superset (snapshots/matrix_tests_text.txt):" >&2
     diff snapshots/matrix_tests_text.txt "/tmp/matrix-norm-${t}.txt" >&2 || true
@@ -490,7 +515,7 @@ run = """
 #   ordered      → scalars::integer::  (caps = [eq, ord])
 #   text         → scalars::text::  (caps = [eq, ord, search]; superset of ordered)
 #   storage-only → scalars::boolean::  (caps = [storage]; term-less surface arms)
-#   eq-only      → DERIVED from the ordered baseline (minus _ord/order_by/routes_through_ob)
+#   eq-only      → DERIVED from the ordered baseline (minus _ord/order_by/routes_through_ordering_term)
 #
 # Out of scope by design: the sibling snapshots matrix_jsonb_entry_tests.txt and
 # v3_jsonb_tests.txt (driven by non-CATALOG types; regenerated by their own
@@ -532,7 +557,7 @@ printf '%s\\n' "$listing" | grep '^scalars::integer::' \
 
 # Eq-only shape: DERIVED from the freshly-regenerated ordered baseline (the
 # inventory gate re-derives and pins this exact relationship).
-grep -vE '_ord|order_by|routes_through_ob' "$stage/matrix_tests.txt" \
+grep -vE '_ord|order_by|routes_through_ordering_term' "$stage/matrix_tests.txt" \
   | LC_ALL=C sort -u > "$stage/matrix_tests_eq_only.txt"
 
 # Text shape: SUPERSET of ordered, from its own driver type.

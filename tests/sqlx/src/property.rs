@@ -10,8 +10,10 @@
 //! The `*_fn_oracle` helpers complement the operator oracles by calling the
 //! generated `eql_v3.*` comparison **functions** by name across all three
 //! [`Overload`]s, and `assert_extractor_oracle` checks term-extractor identity
-//! (`eq_term` == payload `hm`, `ord_term` == payload `ob`). `assert_match_smoke`
-//! is the example-based bloom-containment check for the text `_match` domain.
+//! (`eq_term` == payload `hm`; and per the domain's catalog ordering term,
+//! `ord_term` == payload `op` or `ord_term_ore` == payload `ob`).
+//! `assert_match_smoke` is the example-based bloom-containment check for the
+//! text `_match` domain.
 //!
 //! Operator evaluation is read-only (`SELECT <a> op <b>`); the fixture suite
 //! runs each property under `#[sqlx::test]` (its own migrated scratch DB), while
@@ -183,18 +185,23 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
 
 /// Ordering oracle: for every ordered pair `(a, b)` and every comparison
 /// operator, SQL agrees with the plaintext comparison; additionally
-/// `ord_term(a) < ord_term(b)` ⇔ `a.plaintext < b.plaintext`.
-/// `variant` is `Variant::Ord` or `Variant::OrdOre` (the two ordered twins).
+/// `<ord extractor>(a) < <ord extractor>(b)` ⇔ `a.plaintext < b.plaintext`.
+/// `variant` is `Variant::Ord` or `Variant::OrdOre` (or `Search` for text).
+///
+/// The ordering extractor is catalog-derived per variant — `ord_term` on
+/// the OPE-backed `_ord`, `ord_term_ore` on the ORE-backed `_ord_ore` — so this
+/// oracle never names one SEM's extractor.
 pub async fn assert_ord_oracle<T: ScalarType>(
     pool: &PgPool,
     variant: Variant,
     rows: &[Row<T>],
 ) -> Result<()> {
+    let spec = ScalarDomainSpec::new::<T>(variant);
     assert!(
-        variant.supports_ord(T::PG_TYPE),
+        spec.supports_ord(),
         "assert_ord_oracle needs an ordered variant"
     );
-    let domain = ScalarDomainSpec::new::<T>(variant).sql_domain;
+    let domain = spec.sql_domain.clone();
     for a in rows {
         for b in rows {
             let a_cast = cast(&a.payload_json, &domain);
@@ -203,12 +210,16 @@ pub async fn assert_ord_oracle<T: ScalarType>(
             // exercised through `(storage, query_<name>)` ordering in the SAME
             // round trip (no added DB load).
             let b_qry = query_cast(&b.payload_json, &domain);
+            let a_term = spec.ord_extractor_expr(&a_cast);
+            let b_term = spec.ord_extractor_expr(&b_cast);
             let sql = format!(
                 "SELECT ({a}) < ({b}), ({a}) <= ({b}), ({a}) > ({b}), ({a}) >= ({b}), \
-                        eql_v3.ord_term({a}) < eql_v3.ord_term({b}), \
+                        ({at}) < ({bt}), \
                         ({a}) < ({bq}), ({a}) <= ({bq}), ({a}) > ({bq}), ({a}) >= ({bq})",
                 a = a_cast,
                 b = b_cast,
+                at = a_term,
+                bt = b_term,
                 bq = b_qry,
             );
             let (lt, lte, gt, gte, term_lt, lt_q, lte_q, gt_q, gte_q): OrdRow =
@@ -231,7 +242,7 @@ pub async fn assert_ord_oracle<T: ScalarType>(
             );
             anyhow::ensure!(
                 term_lt == Some(pa < pb),
-                "ord_term ordering mismatch on {domain}: {pa:?}<{pb:?}"
+                "{a_term} ordering mismatch on {domain}: {pa:?}<{pb:?}"
             );
             anyhow::ensure!(
                 lt_q == Some(pa < pb),
@@ -418,10 +429,19 @@ pub async fn assert_ord_fn_oracle<T: ScalarType>(
 /// - an `Ore` term ⇒ the `ord_term` composite, re-rendered to a hex-block array
 ///   (`encode((t).bytes,'hex')` per block, ordinal order), equals the payload's
 ///   `ob` array.
+/// - an `Ope` term ⇒ `encode(ord_term(<dom>), 'hex')` equals the payload's
+///   `op` string. `eql_v3_internal.ope_cllw` is a domain over `bytea` (not a
+///   composite), so there is no `.terms` to walk — hex-encoding the value round-
+///   trips the `decode(op,'hex')` the extractor performed.
 ///
-/// `text_ord`/`text_search` carry both terms, so both identities are checked on
-/// the one domain. The `hm`/`ob` values are read straight out of `payload_json`
-/// with `serde_json` — no typed struct.
+/// The ordering branch is selected by `spec.ord_term`, NOT by assuming block-ORE:
+/// `_ord` is OPE-backed and `_ord_ore`/`_search` are ORE-backed, and both report
+/// `provides_ordering()`. Running the ORE branch against an `ope_cllw` would fail
+/// obscurely on the missing `.terms` field.
+///
+/// `text_ord`/`text_search` carry both an `Hm` and an ordering term, so both
+/// identities are checked on the one domain. The term values are read straight
+/// out of `payload_json` with `serde_json` — no typed struct.
 pub async fn assert_extractor_oracle<T: ScalarType>(
     pool: &PgPool,
     variant: Variant,
@@ -431,10 +451,12 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
     let domain = &spec.sql_domain;
     let terms = variant.terms_for(T::PG_TYPE);
     let check_eq = terms.contains(&Term::Hm);
-    let check_ord = terms.iter().any(|t| t.provides_ordering());
+    // The ordering term itself, not merely "is ordered": the identity check is
+    // term-shaped (ORE composite vs OPE bytea).
+    let ord_term = spec.ord_term;
     anyhow::ensure!(
-        check_eq || check_ord,
-        "assert_extractor_oracle needs an Hm or Ore term, got {variant:?} for {}",
+        check_eq || ord_term.is_some(),
+        "assert_extractor_oracle needs an Hm or ordering term, got {variant:?} for {}",
         T::PG_TYPE
     );
     for row in rows {
@@ -458,41 +480,71 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
             );
         }
 
-        if check_ord {
-            let ob: Vec<String> = payload
-                .get("ob")
-                .and_then(|v| v.as_array())
-                .with_context(|| format!("payload missing array `ob`: {}", row.payload_json))?
-                .iter()
-                .map(|v| v.as_str().map(str::to_owned))
-                .collect::<Option<Vec<String>>>()
-                .with_context(|| {
-                    format!("`ob` is not an array of strings: {}", row.payload_json)
-                })?;
-            // Re-render the ORE composite to its stored hex-block array
-            // (lower-case `encode(...,'hex')`, in array-subscript order, which is
-            // the order `jsonb_array_to_ore_block_256` built `terms` from the
-            // payload's `ob`). `eql_v3_internal.ore_block_256_term` is a single-field
-            // composite `(bytes bytea)`; a `WITH ORDINALITY AS u(t, n)` column-
-            // alias list expands that single field to `bytea` (so `(t).bytes`
-            // fails to resolve), so index `terms` with `generate_subscripts`
-            // instead — that keeps each element a composite and gives explicit
-            // ordering. `ord_term` is evaluated once.
-            let sql = format!(
-                "SELECT array(\
-                     SELECT encode((ore.terms[i]).bytes, 'hex') \
-                     FROM generate_subscripts(ore.terms, 1) AS i \
-                     ORDER BY i) \
-                 FROM (SELECT (eql_v3.ord_term({value})).terms AS terms) ore"
-            );
-            let got: Vec<String> = sqlx::query_scalar(&sql)
-                .fetch_one(pool)
-                .await
-                .with_context(|| format!("ord_term identity query: {sql}"))?;
-            anyhow::ensure!(
-                got == ob,
-                "ord_term identity on {domain}: extractor returned {got:?}, payload ob={ob:?}",
-            );
+        match ord_term {
+            None => {}
+            Some(Term::Ore) => {
+                let ob: Vec<String> = payload
+                    .get("ob")
+                    .and_then(|v| v.as_array())
+                    .with_context(|| format!("payload missing array `ob`: {}", row.payload_json))?
+                    .iter()
+                    .map(|v| v.as_str().map(str::to_owned))
+                    .collect::<Option<Vec<String>>>()
+                    .with_context(|| {
+                        format!("`ob` is not an array of strings: {}", row.payload_json)
+                    })?;
+                // Re-render the ORE composite to its stored hex-block array
+                // (lower-case `encode(...,'hex')`, in array-subscript order, which is
+                // the order `jsonb_array_to_ore_block_256` built `terms` from the
+                // payload's `ob`). `eql_v3_internal.ore_block_256_term` is a single-field
+                // composite `(bytes bytea)`; a `WITH ORDINALITY AS u(t, n)` column-
+                // alias list expands that single field to `bytea` (so `(t).bytes`
+                // fails to resolve), so index `terms` with `generate_subscripts`
+                // instead — that keeps each element a composite and gives explicit
+                // ordering. `ord_term` is evaluated once.
+                let extractor = spec.ord_extractor_expr(&value);
+                let sql = format!(
+                    "SELECT array(\
+                         SELECT encode((ore.terms[i]).bytes, 'hex') \
+                         FROM generate_subscripts(ore.terms, 1) AS i \
+                         ORDER BY i) \
+                     FROM (SELECT ({extractor}).terms AS terms) ore"
+                );
+                let got: Vec<String> = sqlx::query_scalar(&sql)
+                    .fetch_one(pool)
+                    .await
+                    .with_context(|| format!("ord_term identity query: {sql}"))?;
+                anyhow::ensure!(
+                    got == ob,
+                    "ord_term identity on {domain}: extractor returned {got:?}, payload ob={ob:?}",
+                );
+            }
+            Some(Term::Ope) => {
+                let op = payload
+                    .get("op")
+                    .and_then(|v| v.as_str())
+                    .with_context(|| {
+                        format!("payload missing string `op`: {}", row.payload_json)
+                    })?;
+                // `ope_cllw` is a DOMAIN over bytea, so the extractor's result
+                // hex-encodes straight back to the payload's `op`. Postgres'
+                // `encode(...,'hex')` emits lower-case, which is how the client
+                // writes `op`.
+                let extractor = spec.ord_extractor_expr(&value);
+                let sql = format!("SELECT encode({extractor}, 'hex')");
+                let got: Option<String> = sqlx::query_scalar(&sql)
+                    .fetch_one(pool)
+                    .await
+                    .with_context(|| format!("ord_term identity query: {sql}"))?;
+                anyhow::ensure!(
+                    got.as_deref() == Some(op),
+                    "ord_term identity on {domain}: extractor returned {got:?}, payload op={op:?}",
+                );
+            }
+            Some(other) => anyhow::bail!(
+                "assert_extractor_oracle: unhandled ordering term {other:?} on {domain} — \
+                 add an identity branch for it"
+            ),
         }
     }
     Ok(())

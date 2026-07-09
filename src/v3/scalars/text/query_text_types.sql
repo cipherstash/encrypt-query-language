@@ -82,10 +82,8 @@ BEGIN
         AND VALUE ? 'v'
         AND VALUE ? 'i'
         AND VALUE ? 'hm'
-        AND VALUE ? 'ob'
+        AND VALUE ? 'op'
         AND NOT (VALUE ? 'c')
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '3'
       );
   END IF;
@@ -111,6 +109,28 @@ BEGIN
 
   COMMENT ON DOMAIN eql_v3.query_text_ord_ope IS 'EQL text query operand (equality, ordering)';
 
+  --! @brief Query-operand domain eql_v3.query_text_search_ore (term-only; no `c`).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'query_text_search_ore' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.query_text_search_ore AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'hm'
+        AND VALUE ? 'ob'
+        AND VALUE ? 'bf'
+        AND NOT (VALUE ? 'c')
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN eql_v3.query_text_search_ore IS 'EQL text query operand (equality, ordering, containment)';
+
   --! @brief Query-operand domain eql_v3.query_text_search (term-only; no `c`).
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -122,11 +142,9 @@ BEGIN
         AND VALUE ? 'v'
         AND VALUE ? 'i'
         AND VALUE ? 'hm'
-        AND VALUE ? 'ob'
+        AND VALUE ? 'op'
         AND VALUE ? 'bf'
         AND NOT (VALUE ? 'c')
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '3'
       );
   END IF;

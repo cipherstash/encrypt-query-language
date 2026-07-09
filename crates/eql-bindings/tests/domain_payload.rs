@@ -105,7 +105,32 @@ fn typed_scalar_multi_term_yields_text_search() {
     assert_eq!(typed.domain(), "eql_v3_text_search");
     match &typed {
         DomainPayload::TextSearch(p) => {
-            // All three terms present — the capability is the type.
+            // All three terms present — the capability is the type. `_search` is
+            // OPE-backed, so the ordering term is `op`; the block-ORE `ob` shape
+            // lives on `text_search_ore` below.
+            assert_eq!(
+                serde_json::to_value(p).unwrap(),
+                json!({
+                    "v": 3,
+                    "i": ident(),
+                    "c": CIPHERTEXT,
+                    "hm": HEX,
+                    "op": HEX,
+                    "bf": [12, 47, 91, 188]
+                })
+            );
+        }
+        other => panic!("expected TextSearch, got {other:?}"),
+    }
+}
+
+#[test]
+fn typed_scalar_multi_term_yields_text_search_ore() {
+    let typed = assert_serialization_pin(&v2_ct_full(), target("eql_v3_text_search_ore"));
+    assert_eq!(typed.domain(), "eql_v3_text_search_ore");
+    match &typed {
+        DomainPayload::TextSearchOre(p) => {
+            // The by-name block-ORE sibling keeps the `ob` array.
             assert_eq!(
                 serde_json::to_value(p).unwrap(),
                 json!({
@@ -118,7 +143,7 @@ fn typed_scalar_multi_term_yields_text_search() {
                 })
             );
         }
-        other => panic!("expected TextSearch, got {other:?}"),
+        other => panic!("expected TextSearchOre, got {other:?}"),
     }
 }
 

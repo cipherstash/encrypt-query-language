@@ -55,8 +55,8 @@ needs `USAGE` on it anyway. The exact requirement is path-dependent:
 | Query path | `eql_v3` | `eql_v3_internal` | `extensions` (pgcrypto) |
 | --- | :---: | :---: | :---: |
 | Equality (`=` / `eql_v3.eq`) | ✅ | ✅ | — |
-| Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | ✅ |
-| `MIN` / `MAX` aggregates | ✅ | ✅ | ✅ |
+| Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
+| `MIN` / `MAX` aggregates | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
 | jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
 | Cast/write raw JSON → `public.eql_v3_json` | ✅ | ✅ | — |
 | Cast/write raw JSON → a scalar domain (`public.eql_v3_integer`…) | ✅ | — | — |
@@ -66,14 +66,19 @@ Why the internal grant is needed even though you only call public objects:
 
 - **Equality** inlines the index-term constructor
   `eql_v3_internal.hmac_256(jsonb)` (via `eq_term`); **ordering** inlines
-  `eql_v3_internal.ore_block_256` (via `ord_term`) and its comparator. The public
+  `eql_v3_internal.ope_cllw` (via `ord_term`) on the `_ord` / `_ord_ope` /
+  `text_search`
+  domains, or `eql_v3_internal.ore_block_256` (via `ord_term_ore`) and its comparator
+  on `_ord_ore` / `text_search_ore`. The public
   wrappers are inlinable SQL, so the internal call becomes part of *your* query
   and is checked against *your* role's privileges.
 - **`MIN`/`MAX`** dispatch into the aggregate state functions
   `eql_v3_internal.min_sfunc` / `max_sfunc`.
-- The **ORE comparison** behind ordering and `MIN`/`MAX` calls pgcrypto
-  `encrypt()`, which the installer places in the `extensions` schema — hence the
-  `USAGE` there.
+- The **ORE comparison** behind ordering and `MIN`/`MAX` on the block-ORE
+  variants (`_ord_ore`, `text_search_ore`) calls pgcrypto `encrypt()`, which the
+  installer places in the `extensions` schema — hence the `USAGE` there. The
+  CLLW-OPE variants (`_ord`, `_ord_ope`, `text_search`) compare native `bytea`
+  and need no `extensions` grant.
 - **Casting raw jsonb to `public.eql_v3_json` or `eql_v3.query_jsonb`** fires a
   domain `CHECK` that calls an `eql_v3_internal.is_valid_*` validator. (Scalar
   domain CHECKs — and, since issue #354, the `public.eql_v3_jsonb_entry` CHECK — are

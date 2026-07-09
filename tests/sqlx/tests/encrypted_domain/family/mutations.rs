@@ -115,12 +115,13 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
     Ok(())
 }
 
-// 3. `_ord` equality must route through `ord_term` (`ob`), never HMAC.
+// 3. `_ord` equality must route through its ordering term — `ord_term`
+//    (`op`) since the default flipped to CLLW-OPE — never HMAC.
 //    Rerouting it through `hmac_256` (`hm`) over hm-stripped rows makes `=`
-//    stop matching. Proves the `ord_routes_through_ob` arm has teeth.
+//    stop matching. Proves the `ord_routes_through_*` arm has teeth.
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_integer")))]
 async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Result<()> {
-    // Strip `hm` per-row inline; the `_ord` CHECK only requires `ob`, so the
+    // Strip `hm` per-row inline; the `_ord` CHECK only requires `op`, so the
     // cast still succeeds. The pivot is likewise hm-stripped.
     let pivot: i32 = 42;
     let pivot_payload: String = sqlx::query_scalar(&format!(
@@ -132,15 +133,15 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
     let count_sql = "SELECT count(*) FROM fixtures.eql_v3_integer \
                      WHERE (payload - 'hm')::public.eql_v3_integer_ord = $1::jsonb::public.eql_v3_integer_ord";
 
-    // Baseline: with `hm` stripped, `=` still matches the pivot via `ord_term`
-    // (the `ob` term survives) — exactly one row.
+    // Baseline: with `hm` stripped, `=` still matches the pivot via
+    // `ord_term` (the `op` term survives) — exactly one row.
     let baseline: i64 = sqlx::query_scalar(count_sql)
         .bind(&pivot_payload)
         .fetch_one(&pool)
         .await?;
     ensure!(
         baseline == 1,
-        "baseline: `_ord` `=` must match exactly the pivot via ob with hm stripped (got {baseline})"
+        "baseline: `_ord` `=` must match exactly the pivot via op with hm stripped (got {baseline})"
     );
 
     // Mutation: reroute `_ord` `=` through HMAC. `eql_v3_internal.hmac_256(jsonb)` is
@@ -356,15 +357,15 @@ async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
         "baseline: ORDER BY ord_term DESC must be plaintext-descending"
     );
 
-    // Mutation: collapse ord_term to a constant ORE block. Use a REAL fixture
-    // payload as the source (guaranteed to construct a valid ore_block) and a
+    // Mutation: collapse ord_term to a constant OPE term. Use a REAL fixture
+    // payload as the source (guaranteed to carry a valid `op`) and a
     // unique dollar-quote tag so the embedded jsonb literal can't break the
     // function body.
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
         "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord) \
-         RETURNS eql_v3_internal.ore_block_256 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
-         AS $mutbody$ SELECT eql_v3_internal.ore_block_256('{esc}'::jsonb) $mutbody$",
+         RETURNS eql_v3_internal.ope_cllw LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
+         AS $mutbody$ SELECT eql_v3_internal.ope_cllw('{esc}'::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
     );
     mutate(&pool, &ddl).await?;
@@ -418,8 +419,8 @@ async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Re
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
         "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord) \
-         RETURNS eql_v3_internal.ore_block_256 LANGUAGE sql IMMUTABLE PARALLEL SAFE \
-         AS $mutbody$ SELECT eql_v3_internal.ore_block_256(\
+         RETURNS eql_v3_internal.ope_cllw LANGUAGE sql IMMUTABLE PARALLEL SAFE \
+         AS $mutbody$ SELECT eql_v3_internal.ope_cllw(\
          coalesce(a, '{esc}'::jsonb::public.eql_v3_integer_ord)::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
     );

@@ -5,7 +5,7 @@
 //! (query) role which uses the supported *operators* needs USAGE + EXECUTE on
 //! BOTH `eql_v3` and `eql_v3_internal` — the public wrappers/extractors inline a
 //! call to an `eql_v3_internal` index-term constructor (e.g. `eq_term` →
-//! `eql_v3_internal.hmac_256(jsonb)`, `ord_term` → `eql_v3_internal.ore_block_256`),
+//! `eql_v3_internal.hmac_256(jsonb)`, `ord_term_ore` → `eql_v3_internal.ore_block_256`),
 //! and aggregates dispatch into `eql_v3_internal.*_sfunc`, so granting only the
 //! public schema is not enough. These tests make that contract executable.
 //!
@@ -34,7 +34,7 @@ const EQ_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_integer \
      WHERE payload::public.eql_v3_integer_eq = payload::public.eql_v3_integer_eq";
 
 /// A real ordering query using the `<` *operator* on `integer_ord`, which dispatches
-/// through `eql_v3.lt` → `eql_v3.ord_term` → the `eql_v3_internal.ore_block_256`
+/// through `eql_v3.lt` → `eql_v3.ord_term_ore` → the `eql_v3_internal.ore_block_256`
 /// constructor + comparator. NB: `ORDER BY payload::public.eql_v3_integer_ord` alone does
 /// NOT work here — a bare domain has no ORE opclass, so it silently falls back to
 /// built-in jsonb ordering and never crosses into `eql_v3_internal`. The `<`

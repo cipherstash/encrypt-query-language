@@ -134,7 +134,7 @@ $$;
 --! (`s`), a ciphertext (`c`), and **exactly one** of `hm` (HMAC-256, for
 --! hash-equality) or `op` (CLLW OPE, for ordered queries) — they are mutually
 --! exclusive. This is the type returned by `->` and accepted by the per-entry
---! extractors `eql_v3.eq_term` / `eql_v3.ord_ope_term`. Extra fields (`a`, root
+--! extractors `eql_v3.eq_term` / `eql_v3.ord_term`. Extra fields (`a`, root
 --! `i`/`v` merged in by `->`) are allowed.
 --!
 --! @see src/v3/jsonb/operators.sql

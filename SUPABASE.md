@@ -23,7 +23,8 @@ a `jsonb`-backed **domain** in the `public` schema (for example
 operator class on the column:
 
 - `eql_v3.eq_term(col)` — the equality (`hm` / hmac_256) term.
-- `eql_v3.ord_term(col)` — the ordering (`ob` / ore_block_256) term.
+- `eql_v3.ord_term(col)` — the ordering (`op` / ope_cllw) term.
+- `eql_v3.ord_term_ore(col)` — the block-ORE ordering (`ob` / ore_block_256) term.
 - `eql_v3.match_term(col)` — the text-containment (`bf` / bloom_filter) term.
 
 These extractors are inlinable (`LANGUAGE sql`, single `SELECT`, `IMMUTABLE`,
@@ -61,9 +62,9 @@ the encryption client — [CipherStash Proxy](https://github.com/cipherstash/pro
 or [CipherStash Stack](https://github.com/cipherstash/stack):
 
 - `public.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
-- `public.<T>_ord` (and the `_ord_ore` twin) carries an `ob` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`.
+- `public.<T>_ord` (and the `_ord_ope` twin) carries an `op` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`. `public.<T>_ord_ore` is the block-ORE (`ob`) equivalent.
 - `public.eql_v3_text_match` carries a `bf` term — supports bloom-filter token containment (`@>` / `<@`).
-- `public.eql_v3_text_search` carries all three terms — equality, ordering, and containment on `text`.
+- `public.eql_v3_text_search` carries all three terms — equality, ordering, and containment on `text`. `public.eql_v3_text_search_ore` is its block-ORE equivalent.
 
 Configuring those columns is a client-side concern. See:
 
@@ -111,8 +112,12 @@ SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1);
 
 ### Range and ordering `<` `<=` `>` `>=`
 
-The column must be typed as an `_ord` / `_ord_ore` variant (or
-`text_search`) so it carries the `ob` term:
+The column must be typed as an `_ord` / `_ord_ope` variant (or `text_search`) so
+it carries the `op` term — or as an `_ord_ore` / `text_search_ore` variant, which
+carries `ob`. Prefer the `op`-backed domains on Supabase: their ordered
+functional indexes bind `bytea_ops`, the base type's default operator class,
+whereas block-ORE needs a superuser-created operator class that is silently
+skipped here (leaving an index that builds but never engages).
 
 ```sql
 SELECT * FROM events WHERE encrypted_at < $1;
@@ -121,8 +126,9 @@ SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1);
 
 ### `ORDER BY`
 
-Ordering uses the same ORE (`ob`) term as range comparisons, on an `_ord` /
-`_ord_ore` (or `text_search`) column. The `<`/`>` operators inline in
+Ordering uses the same ordering term as range comparisons, on an `_ord` /
+`_ord_ope` / `text_search` column (`op`), or an `_ord_ore` / `text_search_ore`
+column (`ob`, via `eql_v3.ord_term_ore`). The `<`/`>` operators inline in
 *predicates*, but the planner does **not** rewrite *sort keys* — so to stream
 rows out of the btree already ordered (no `Sort` node), write the sort key in
 extractor form:

@@ -34,23 +34,25 @@ pub struct Hmac256(pub String);
 #[ts(export, export_to = "v3/")]
 pub struct Selector(pub String);
 
-/// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`
-/// domains (`=` `<>` `<` `<=` `>` `>=`) and the ordered entries of a SteVec
-/// document (exactly one of `hm` (equality) XOR `op` (ordering) per entry —
-/// enforced by the SQL domain CHECK): a hex-encoded CLLW OPE ciphertext,
-/// sortable via native bytea comparison after hex-decode — unlike `ob`
-/// (block-ORE) it needs no custom comparator. SQL-side constructor:
-/// `eql_v3_internal.ope_cllw`; per-entry extractor: `eql_v3.ord_ope_term`.
+/// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the
+/// default ordering domain), `_ord_ope`, and `text_search` domains, their
+/// `query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered entries
+/// of a SteVec document (exactly one of `hm` (equality) XOR `op` (ordering)
+/// per entry — enforced by the SQL domain CHECK): a hex-encoded CLLW OPE
+/// ciphertext, sortable via native bytea comparison after hex-decode —
+/// unlike `ob` (block-ORE) it needs no custom comparator. Extracted by
+/// `eql_v3.ord_term` (scalar domains and the `public.jsonb_entry` overload
+/// alike); SQL-side constructor: `eql_v3_internal.ope_cllw`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct OpeCllw(pub String);
 
-/// Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`
-/// domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
+/// Block-ORE order term — the `ob` wire key. Backs the `_ord_ore` domains and
+/// `text_search_ore` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
 /// domain, so it serves equality too. The block count is width-agnostic on the
 /// wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
-/// array just carries more block strings. SQL-side constructor:
-/// `eql_v3_internal.ore_block_256`.
+/// array just carries more block strings. Extracted by `eql_v3.ord_term_ore`;
+/// SQL-side constructor: `eql_v3_internal.ore_block_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct OreBlock256(pub Vec<String>);

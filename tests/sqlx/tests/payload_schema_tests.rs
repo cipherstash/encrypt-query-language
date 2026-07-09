@@ -557,15 +557,17 @@ fn v2_ct_full() -> Value {
 
 #[test]
 fn from_v2_scalar_outputs_validate_against_published_v3_schemas() {
-    // One target per capability shape: storage-only, hm, ob, hm+ob+bf, op,
-    // hm+op. The bf fixture includes an upper-half position (40000) so the
-    // schema's signed int16 bounds are exercised on the converted value.
+    // One target per capability shape: storage-only, hm, ob, hm+op+bf,
+    // hm+ob+bf, op, hm+op. The bf fixture includes an upper-half position
+    // (40000) so the schema's signed int16 bounds are exercised on the
+    // converted value.
     let v2 = v2_ct_full();
     for domain in [
         "eql_v3_integer",
         "eql_v3_text_eq",
         "eql_v3_integer_ord_ore",
         "eql_v3_text_search",
+        "eql_v3_text_search_ore",
         "eql_v3_integer_ord_ope",
         "eql_v3_text_ord_ope",
     ] {

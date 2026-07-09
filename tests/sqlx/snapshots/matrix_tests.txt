@@ -96,7 +96,7 @@ scalars::<T>::matrix_<T>_ord_neq_pivot_mid_cross_shape
 scalars::<T>::matrix_<T>_ord_neq_pivot_min_correctness
 scalars::<T>::matrix_<T>_ord_neq_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_ord_neq_supported_null
-scalars::<T>::matrix_<T>_ord_ord_routes_through_ob
+scalars::<T>::matrix_<T>_ord_ord_routes_through_ordering_term
 scalars::<T>::matrix_<T>_ord_order_by_asc_no_where
 scalars::<T>::matrix_<T>_ord_order_by_asc_nulls_first
 scalars::<T>::matrix_<T>_ord_order_by_asc_nulls_last
@@ -172,7 +172,7 @@ scalars::<T>::matrix_<T>_ord_ore_neq_pivot_mid_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_neq_pivot_min_correctness
 scalars::<T>::matrix_<T>_ord_ore_neq_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_ord_ore_neq_supported_null
-scalars::<T>::matrix_<T>_ord_ore_ord_routes_through_ob
+scalars::<T>::matrix_<T>_ord_ore_ord_routes_through_ordering_term
 scalars::<T>::matrix_<T>_ord_ore_order_by_asc_no_where
 scalars::<T>::matrix_<T>_ord_ore_order_by_asc_nulls_first
 scalars::<T>::matrix_<T>_ord_ore_order_by_asc_nulls_last

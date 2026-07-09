@@ -75,6 +75,8 @@ pub enum QueryPayload {
     TextOrdQuery(super::text::TextOrdQuery),
     /// The `eql_v3.query_text_ord_ope` query operand.
     TextOrdOpeQuery(super::text::TextOrdOpeQuery),
+    /// The `eql_v3.query_text_search_ore` query operand.
+    TextSearchOreQuery(super::text::TextSearchOreQuery),
     /// The `eql_v3.query_text_search` query operand.
     TextSearchQuery(super::text::TextSearchQuery),
     /// The `eql_v3.query_real_eq` query operand.
@@ -204,6 +206,9 @@ impl QueryPayload {
             "query_text_ord_ope" => {
                 Some(super::text::TextOrdOpeQuery::deserialize(value).map(Self::TextOrdOpeQuery))
             }
+            "query_text_search_ore" => Some(
+                super::text::TextSearchOreQuery::deserialize(value).map(Self::TextSearchOreQuery),
+            ),
             "query_text_search" => {
                 Some(super::text::TextSearchQuery::deserialize(value).map(Self::TextSearchQuery))
             }
@@ -267,6 +272,7 @@ impl QueryPayload {
             Self::TextOrdOreQuery(payload) => payload,
             Self::TextOrdQuery(payload) => payload,
             Self::TextOrdOpeQuery(payload) => payload,
+            Self::TextSearchOreQuery(payload) => payload,
             Self::TextSearchQuery(payload) => payload,
             Self::RealEqQuery(payload) => payload,
             Self::RealOrdOreQuery(payload) => payload,

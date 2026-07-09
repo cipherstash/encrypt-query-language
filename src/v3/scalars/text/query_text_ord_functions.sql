@@ -16,11 +16,11 @@ AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) $$;
 
 --! @brief Index extractor for eql_v3.query_text_ord.
 --! @param a eql_v3.query_text_ord
---! @return eql_v3_internal.ore_block_256
+--! @return eql_v3_internal.ope_cllw
 CREATE FUNCTION eql_v3.ord_term(a eql_v3.query_text_ord)
-RETURNS eql_v3_internal.ore_block_256
+RETURNS eql_v3_internal.ope_cllw
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
+AS $$ SELECT eql_v3_internal.ope_cllw(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_ord.
 --! @param a public.eql_v3_text_ord

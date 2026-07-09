@@ -34,7 +34,11 @@ where
         pool_table,
         "payload",
         values,
-        &[IndexKind::Unique, IndexKind::Ore],
+        // The oracle runs each row through BOTH ordered variants, which are now
+        // backed by different SEMs: `_ord` requires `op` (CLLW-OPE) and
+        // `_ord_ore` requires `ob` (block-ORE). Omitting either makes the
+        // corresponding domain's CHECK reject the payload at the cast.
+        &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope],
     )
     .await?;
     // Fail fast on a count mismatch: a silent `zip` truncation would weaken the
@@ -224,7 +228,7 @@ e2e_oracle_suite!(
 ///   encodings of one value are byte-UNEQUAL *by construction* — even same-width,
 ///   same-value. Ordering is decided by the ORE compare function, never by raw
 ///   bytes, so the ONLY correct cross-width ORE check is the SQL
-///   `eql_v3_internal.ore_block_256` `=` operator over the extracted `ord_term`s.
+///   `eql_v3_internal.ore_block_256` `=` operator over the extracted `ord_term_ore`s.
 ///
 /// Creds/e2e-gated like the rest of this file.
 #[test]
@@ -266,20 +270,20 @@ fn real_and_double_share_index_terms_for_the_same_value() -> Result<()> {
     );
 
     // `ob` (probabilistic ORE) is NOT byte-comparable — the only correct check is
-    // the SQL ORE operator over the extracted `ord_term`s. Cast each payload to
+    // the SQL ORE operator over the extracted `ord_term_ore`s. Cast each payload to
     // its width's `_ord_ore` domain, extract the `eql_v3_internal.ore_block_256` term, and
     // compare with `=` (eql_v3_internal.ore_block_256_eq => compare_ore_block_256_terms = 0).
     let pool: PgPool = rt.block_on(connect_pool())?;
     rt.block_on(ensure_eql_installed(&pool, &super::migrator()))?;
 
-    let ord_term = |p: &serde_json::Value, domain: &str| -> String {
+    let ord_term_ore = |p: &serde_json::Value, domain: &str| -> String {
         let lit = p.to_string().replace('\'', "''");
-        format!("eql_v3.ord_term('{lit}'::jsonb::{domain})")
+        format!("eql_v3.ord_term_ore('{lit}'::jsonb::{domain})")
     };
     let sql = format!(
         "SELECT {} = {}",
-        ord_term(&f4_payloads[0], "public.eql_v3_real_ord_ore"),
-        ord_term(&f8_payloads[0], "public.eql_v3_double_ord_ore"),
+        ord_term_ore(&f4_payloads[0], "public.eql_v3_real_ord_ore"),
+        ord_term_ore(&f8_payloads[0], "public.eql_v3_double_ord_ore"),
     );
     let ore_equal: Option<bool> = rt
         .block_on(sqlx::query_scalar(&sql).fetch_one(&pool))

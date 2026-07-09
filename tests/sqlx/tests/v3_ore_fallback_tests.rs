@@ -259,14 +259,14 @@ async fn nosuper_install_poisons_ore_domains(pool: PgPool) -> Result<()> {
         // The poison must fire for NULL too (a STRICT poison function would be
         // skipped on NULL input and let NULLs into the domain silently). One
         // representative domain suffices — the CHECK wiring is identical.
-        sqlx::query("CREATE TABLE ore_fallback_null_probe (x public.eql_v3_integer_ord)")
+        sqlx::query("CREATE TABLE ore_fallback_null_probe (x public.eql_v3_integer_ord_ore)")
             .execute(&pool)
             .await?;
         let err = sqlx::query("INSERT INTO ore_fallback_null_probe VALUES (NULL)")
             .execute(&pool)
             .await
             .expect_err("inserting NULL into a poisoned domain column must raise");
-        assert_poison_error(err, "public.eql_v3_integer_ord");
+        assert_poison_error(err, "public.eql_v3_integer_ord_ore");
 
         Ok::<(), anyhow::Error>(())
     }
@@ -362,11 +362,11 @@ async fn reinstall_over_ore_data(pool: PgPool) -> Result<()> {
         .execute(&mut *conn)
         .await?;
 
-    let ord = eql_domains::scalar_families()
+    let ord_ore = eql_domains::scalar_families()
         .find(|s| s.name == "integer")
-        .and_then(|s| s.domains.iter().find(|d| d.name == "ord"))
-        .expect("integer_ord in catalog");
-    let payload = column_payload(ord.terms);
+        .and_then(|s| s.domains.iter().find(|d| d.name == "ord_ore"))
+        .expect("integer_ord_ore in catalog");
+    let payload = column_payload(ord_ore.terms);
     let expected_poisoned: i64 = eql_domains::scalar_families()
         .flat_map(|s| s.domains.iter())
         .filter(|d| d.terms.contains(&Term::Ore))
@@ -381,7 +381,7 @@ async fn reinstall_over_ore_data(pool: PgPool) -> Result<()> {
         sqlx::query(&format!("SET ROLE {role}"))
             .execute(&mut *conn)
             .await?;
-        sqlx::query("CREATE TABLE ore_reinstall_probe (x public.eql_v3_integer_ord)")
+        sqlx::query("CREATE TABLE ore_reinstall_probe (x public.eql_v3_integer_ord_ore)")
             .execute(&mut *conn)
             .await?;
         sqlx::query("INSERT INTO ore_reinstall_probe VALUES ($1::jsonb)")
@@ -411,7 +411,7 @@ async fn reinstall_over_ore_data(pool: PgPool) -> Result<()> {
             .execute(&pool)
             .await
             .expect_err("new writes into the poisoned domain must raise");
-        assert_poison_error(err, "public.eql_v3_integer_ord");
+        assert_poison_error(err, "public.eql_v3_integer_ord_ore");
 
         // Non-superuser over non-superuser: a further re-run over the same
         // data-bearing, already-poisoned database is idempotent.

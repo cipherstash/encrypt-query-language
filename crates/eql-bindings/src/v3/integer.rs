@@ -103,7 +103,7 @@ impl DomainType for IntegerOrdOre {
 }
 /// `public.eql_v3_integer_ord` — ordering domain.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -111,7 +111,7 @@ pub struct IntegerOrd {
     pub v: SchemaVersion,
     pub i: Identifier,
     pub c: Ciphertext,
-    pub ob: OreBlock256,
+    pub op: OpeCllw,
 }
 impl DomainType for IntegerOrd {
     fn sql_domain_static() -> &'static str {
@@ -121,7 +121,7 @@ impl DomainType for IntegerOrd {
         Self::sql_domain_static()
     }
     fn term_json_keys_static() -> Option<&'static [&'static str]> {
-        Some(&["ob"])
+        Some(&["op"])
     }
     fn term_json_keys(&self) -> Option<&'static [&'static str]> {
         Self::term_json_keys_static()
@@ -229,14 +229,14 @@ impl DomainType for IntegerOrdOreQuery {
 }
 /// `eql_v3.query_integer_ord` — ordering domain query operand.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `ob`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
 pub struct IntegerOrdQuery {
     pub v: SchemaVersion,
     pub i: Identifier,
-    pub ob: OreBlock256,
+    pub op: OpeCllw,
 }
 impl DomainType for IntegerOrdQuery {
     fn sql_domain_static() -> &'static str {
@@ -246,7 +246,7 @@ impl DomainType for IntegerOrdQuery {
         Self::sql_domain_static()
     }
     fn term_json_keys_static() -> Option<&'static [&'static str]> {
-        Some(&["ob"])
+        Some(&["op"])
     }
     fn term_json_keys(&self) -> Option<&'static [&'static str]> {
         Self::term_json_keys_static()

@@ -125,7 +125,8 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **setup** | — | compute PG × shard matrix | no | no |
 | **build-archive** | `test:sqlx:archive` | Build EQL, run prep, **generate fixtures**, compile every `tests/sqlx` binary (**default features**) into a nextest archive; upload archive + `release/*.sql` | yes (PG17) | **yes (sole holder)** |
 | **test** (sharded) | `test:sqlx:partition` | Run the archived sqlx binaries (default features), hash-partitioned across shards | yes (per PG) | no (replays archive) |
-| **e2e** | `test:sqlx:e2e` | The `proptest-e2e` fresh-encryption property suite (`e2e_oracle`) — PG17 only, version-independent | yes (PG17) | **yes** |
+| **e2e** | `test:sqlx:e2e` | The `proptest-e2e` fresh-encryption suites (`e2e_oracle` **and** `float_special`) — PG17 only, version-independent | yes (PG17) | **yes** |
+| **known-failures** | `test:known-failures` | Every `known_failure` marker names a real, OPEN issue and is referenced by a test (DB-free, needs `gh`) | no | no |
 | **validate** (per PG) | `docs:validate:documented-sql` + `test:clean_install_v3` | DB-backed SQL doc-syntax check; clean-DB `eql_v3` install smoke | yes | no |
 | **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); relevance-gated like the other heavy jobs (its inputs — `src/**`, the `crates/**` codegen build, `tasks/docs/**` — are a subset of the `relevant` filter) | no | no |
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |
@@ -149,13 +150,23 @@ CI jobs:
 | **catalog** (`eql-domains` `proptest_invariants`) | **rust-crates** (`cargo test -p eql-domains`; proptest is a dev-dep) | relevant PR + queue | no | no | pure-Rust catalog invariants; shrinking enabled |
 | **fixture** (function-double oracles, extractor identity, `match_smoke`, `edge_cases`) | **test** shards (default features) | relevant PR (PG17×4) + queue (PG14–17×2) | yes | no | oracle over the **committed** real-ciphertext fixtures |
 | **e2e** (`e2e_oracle`, `#[cfg(feature = "proptest-e2e")]`) | **e2e** job (`test:sqlx:e2e`) | relevant PR (PG17) + queue (PG17) | yes | yes | oracle over **fresh** ZeroKMS encryption; PG-version-independent, so one PG17 run |
+| **float specials** (`float_special`, `#[cfg(feature = "proptest-e2e")]`) | **e2e** job (`test:sqlx:e2e`) | relevant PR (PG17) + queue (PG17) | yes | yes | NaN / ±0.0 / ±Inf encoder tripwires over **fresh** encryption |
 
 The wider sqlx suite (everything under `tests/sqlx/tests/`) runs in the **test**
 shards, which replay the default-feature archive — so any
 `#[cfg(feature = …)]`-gated test that isn't in the default feature set does not
-run there. The `proptest-e2e` suite is the one such gate, and it has its own
-**e2e** job (it can't reuse the credential-free archive: it both compiles with a
-non-default feature and needs `CS_*` at run time).
+run there. `proptest-e2e` is the one such gate, and it has its own **e2e** job
+(it can't reuse the credential-free archive: it both compiles with a non-default
+feature and needs `CS_*` at run time).
+
+> **The e2e job filters by test name, so every `proptest-e2e` module must be
+> named there explicitly.** `test:sqlx:e2e` runs `cargo test --features
+> proptest-e2e e2e_oracle` *and* `… float_special`. A bare unfiltered run would
+> duplicate the whole sharded fixture suite; but for a long time the job filtered
+> on `e2e_oracle` alone, and `float_special` — gated behind the same feature, so
+> never compiled by the default-feature shards either — ran in **no** CI job at
+> all from the day it was written. Adding a new `proptest-e2e`-gated module means
+> adding a line to `test:sqlx:e2e`. Nothing globs it for you.
 
 ---
 

@@ -512,6 +512,36 @@ jobs:
         run: |
           mise run test:docs_v3_grep
 
+  # Every `known_failure` marker must name a real, OPEN issue, and its constant
+  # must actually be referenced by a test. The Rust half of the contract is
+  # self-expiring (the marker FAILS once the wrapped assertion starts passing);
+  # this is the half that stops a suppression outliving a closed issue.
+  #
+  # Credential-free and DB-free — it only reads the registry and asks GitHub for
+  # issue state, so it runs on every PR rather than hiding behind the e2e job.
+  known-failures:
+    name: "known-failure markers"
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - name: Every suppressed test names an open issue
+        env:
+          # `gh` needs a token to read issue state; the default job token is
+          # sufficient (issues: read, same repo).
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mise run test:known-failures
+
   # The e2e (fresh-encryption) property suite. Encrypts random values through
   # ZeroKMS at run time, so it needs CS_* creds and is PG-version-independent —
   # one PG17 run, never the matrix. Compiles the `proptest-e2e`-gated binaries
@@ -564,7 +594,8 @@ jobs:
   ci-required:
     name: "ci-required"
     needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
-            codegen, self-contained-v3, matrix-coverage, splinter, docs-static, e2e]
+            codegen, self-contained-v3, matrix-coverage, splinter, docs-static,
+            known-failures, e2e]
     if: always()
     runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:

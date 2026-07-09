@@ -198,21 +198,21 @@ macro_rules! ope_ord_fixture_smoke {
 
             let asc: Vec<$scalar> = sqlx::query_scalar(&format!(
                 "SELECT plaintext FROM {table} \
-                 ORDER BY eql_v3.ord_ope_term((payload)::public.{})",
+                 ORDER BY eql_v3.ord_term((payload)::public.{})",
                 $domain
             ))
             .fetch_all(&pool)
             .await?;
             assert_eq!(
                 asc, expected,
-                "{}: ORDER BY ord_ope_term over real ciphertexts must sort in \
+                "{}: ORDER BY ord_term over real ciphertexts must sort in \
                  plaintext order",
                 $domain
             );
 
             let desc: Vec<$scalar> = sqlx::query_scalar(&format!(
                 "SELECT plaintext FROM {table} \
-                 ORDER BY eql_v3.ord_ope_term((payload)::public.{}) DESC",
+                 ORDER BY eql_v3.ord_term((payload)::public.{}) DESC",
                 $domain
             ))
             .fetch_all(&pool)
@@ -221,7 +221,7 @@ macro_rules! ope_ord_fixture_smoke {
             expected_desc.reverse();
             assert_eq!(
                 desc, expected_desc,
-                "{}: ORDER BY ord_ope_term DESC over real ciphertexts must \
+                "{}: ORDER BY ord_term DESC over real ciphertexts must \
                  sort in reverse plaintext order",
                 $domain
             );

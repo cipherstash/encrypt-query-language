@@ -6,12 +6,18 @@
 //! the empty string yields an empty ORE term (`ob: []`), the only value that
 //! does, so `eql-domains::TEXT_FIXTURES` drops it. This bespoke fixture is the
 //! one place a real-ciphertext empty-`ob` payload lives — its purpose is to
-//! prove the ORE-bearing domains REJECT that payload at their non-empty-`ob`
-//! CHECK (issue #262, SQLSTATE `23514`), while the non-empty controls cast and
-//! order cleanly. See `tests/v3_text_empty_constraint_tests.rs`.
+//! prove the ORE-bearing `public.eql_v3_text_ord_ore` REJECTS that payload at its
+//! non-empty-`ob` CHECK (issue #262, SQLSTATE `23514`), while the non-empty
+//! controls cast and order cleanly. See `tests/v3_text_empty_constraint_tests.rs`.
+//!
+//! The empty string is an ORE-only failure mode. The same encryption yields a
+//! well-formed OPE term (`op: "00"` — the bare domain-tag byte), which decodes
+//! to a 1-byte `bytea` that sorts before every non-empty term. So the
+//! OPE-backed `public.eql_v3_text_ord` ACCEPTS `""` and orders it first; only
+//! `public.eql_v3_text_ord_ore` rejects it.
 //!
 //! The generated `payload` column is plain `jsonb`, so all three rows load; the
-//! rejection happens when a test casts the `id = 1` row to `public.eql_v3_text_ord` /
+//! rejection happens when a test casts the `id = 1` row to
 //! `public.eql_v3_text_ord_ore`, not at fixture load.
 //!
 //! Rows are addressed by `id` (1-based insertion ordinal): `"" → 1`,
@@ -32,8 +38,9 @@ const NAME: &str = "v3_text_empty";
 
 /// The fixture plaintexts, in insertion order. `id` is the 1-based ordinal, so
 /// `"" → 1`, `"frank" → 2`, `"zebra" → 3`. The empty string is the value with
-/// the empty ORE term (`ob: []`) that the domain CHECK rejects; the two
-/// non-empty controls carry real ORE terms that cast and order cleanly.
+/// the empty ORE term (`ob: []`) that the `_ord_ore` CHECK rejects; the two
+/// non-empty controls carry real ORE terms that cast and order cleanly. All
+/// three carry a well-formed OPE term (`op`).
 fn values() -> Vec<String> {
     ["", "frank", "zebra"]
         .iter()
@@ -49,6 +56,7 @@ pub async fn generate() -> Result<()> {
     FixtureSpec::new(NAME)
         .with_index(IndexKind::Unique)
         .with_index(IndexKind::Ore)
+        .with_index(IndexKind::Ope)
         .with_values(&values)
         .run()
         .await

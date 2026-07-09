@@ -137,7 +137,7 @@ impl DomainFamily {
     /// testing `ord` suffices.
     ///
     /// A **flat-scalar** predicate: it describes the storage/`_eq`/`_ord` shape,
-    /// which the non-scalar SteVec `jsonb` family does not have (its ordered `oc`
+    /// which the non-scalar SteVec `jsonb` family does not have (its ordered `op`
     /// capability is carried structurally, not as an `ord` domain). So it is
     /// guarded by [`Self::is_scalar`] — a non-scalar family is never "eq-only",
     /// even though it happens to declare no domain literally named `ord`.

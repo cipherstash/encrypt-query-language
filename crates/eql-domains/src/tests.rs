@@ -251,7 +251,7 @@ mod term_tests {
     fn ore_term_preserves_integer_sql_contract() {
         let ore = Term::Ore;
         assert_eq!(ore.json_key(), "ob");
-        assert_eq!(ore.extractor(), "ord_term");
+        assert_eq!(ore.extractor(), "ord_term_ore");
         assert_eq!(ore.ctor(), "ore_block_256");
         assert_eq!(ore.role(), Role::Ord);
         assert_eq!(ore.operators(), &["=", "<>", "<", "<=", ">", ">="]);
@@ -282,12 +282,13 @@ mod term_tests {
         // over bytea) → native comparison operators and default btree
         // ordering, no custom comparison protocol and no hand-written
         // operators (so the SEM surface is the extractor alone, like `Hm`).
-        // The extractor name is deliberately NOT "ord_term":
-        // `dedupe_terms_by(extractor)` would collapse it against `Term::Ore`
-        // on a hypothetical mixed `[Ore, Ope]` domain.
+        // `Ope` backs the default `_ord` domain, so it takes the unqualified
+        // "ord_term"; `Term::Ore` takes the qualified "ord_term_ore". The two
+        // must stay distinct or `dedupe_terms_by(extractor)` would collapse
+        // them on a hypothetical mixed `[Ore, Ope]` domain.
         let ope = Term::Ope;
         assert_eq!(ope.json_key(), "op");
-        assert_eq!(ope.extractor(), "ord_ope_term");
+        assert_eq!(ope.extractor(), "ord_term");
         assert_eq!(ope.ctor(), "ope_cllw");
         assert_eq!(ope.binding_newtype(), "OpeCllw");
         assert_eq!(ope.role(), Role::Ord);
@@ -432,7 +433,7 @@ mod term_helper_tests {
     fn extractor_terms_dedupes_by_extractor_first_occurrence_wins() {
         // No catalog domain currently carries two terms sharing an extractor, so
         // this exercises the dedupe branch directly: Hm and Ore have distinct
-        // extractors (eq_term / ord_term) and survive; the repeated term collapses.
+        // extractors (eq_term / ord_term_ore) and survive; the repeat collapses.
         assert_eq!(
             Term::extractor_terms(&[Term::Hm, Term::Ore, Term::Hm]),
             vec![Term::Hm, Term::Ore]
@@ -453,7 +454,7 @@ mod term_helper_tests {
         );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Ore], "<"),
-            Some("ord_term")
+            Some("ord_term_ore")
         );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Hm, Term::Ore], "="),
@@ -461,6 +462,11 @@ mod term_helper_tests {
         );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Hm, Term::Ore], "<"),
+            Some("ord_term_ore")
+        );
+        // The default ordering term takes the unqualified extractor name.
+        assert_eq!(
+            Term::extractor_for_operator(&[Term::Ope], "<"),
             Some("ord_term")
         );
     }
@@ -697,7 +703,16 @@ mod catalog_tests {
         let names: Vec<_> = text.domains.iter().map(|d| d.name).collect();
         assert_eq!(
             names,
-            vec!["", "eq", "match", "ord_ore", "ord", "ord_ope", "search"]
+            vec![
+                "",
+                "eq",
+                "match",
+                "ord_ore",
+                "ord",
+                "ord_ope",
+                "search_ore",
+                "search"
+            ]
         );
     }
 
@@ -788,21 +803,26 @@ mod catalog_tests {
             .expect("text must declare a _search domain");
         assert_eq!(
             search.terms,
-            &[Term::Hm, Term::Ore, Term::Bloom],
-            "text_search must carry [Hm, Ore, Bloom]"
+            &[Term::Hm, Term::Ope, Term::Bloom],
+            "text_search must carry [Hm, Ope, Bloom]"
         );
         // ord-capable: some term provides ordering.
         assert!(
             search.terms.iter().any(|t| t.provides_ordering()),
             "text_search must be ord-capable"
         );
-        // Required JSON keys are hm + ob + bf, in term order.
+        // Required JSON keys are hm + op + bf, in term order. `op` carries no
+        // non-empty-array clause, so `text_search` accepts the empty string.
         assert_eq!(
             Term::term_json_keys(search.terms),
-            vec!["hm", "ob", "bf"],
-            "text_search CHECK must require hm, ob, bf"
+            vec!["hm", "op", "bf"],
+            "text_search CHECK must require hm, op, bf"
         );
-        // Equality still routes through hm; ordering through ob; match through bf.
+        assert!(
+            Term::nonempty_array_keys(search.terms).is_empty(),
+            "text_search must not carry a non-empty-array CHECK clause"
+        );
+        // Equality still routes through hm; ordering through op; match through bf.
         assert_eq!(
             Term::extractor_for_operator(search.terms, "="),
             Some("eq_term")
@@ -813,6 +833,52 @@ mod catalog_tests {
         );
         assert_eq!(
             Term::extractor_for_operator(search.terms, "@>"),
+            Some("match_term")
+        );
+    }
+
+    #[test]
+    fn text_search_ore_is_the_block_ore_sibling_of_text_search() {
+        let text = scalar("text");
+        let search_ore = text
+            .domains
+            .iter()
+            .find(|d| d.name == "search_ore")
+            .expect("text must declare a _search_ore domain");
+        assert_eq!(
+            search_ore.terms,
+            &[Term::Hm, Term::Ore, Term::Bloom],
+            "text_search_ore must carry [Hm, Ore, Bloom]"
+        );
+        assert_eq!(
+            Term::term_json_keys(search_ore.terms),
+            vec!["hm", "ob", "bf"],
+            "text_search_ore CHECK must require hm, ob, bf"
+        );
+        // Unlike `_search`, the `ob` term keeps the non-empty-array clause that
+        // rejects the empty string (issue #262).
+        assert_eq!(Term::nonempty_array_keys(search_ore.terms), vec!["ob"]);
+        // Same operator surface as `_search`, reached through the qualified
+        // block-ORE extractor.
+        assert_eq!(
+            Term::operators_for_terms(search_ore.terms),
+            Term::operators_for_terms(
+                text.domain_by_name("search")
+                    .expect("text must declare a _search domain")
+                    .terms
+            ),
+            "the two search domains must expose an identical operator surface"
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search_ore.terms, "="),
+            Some("eq_term")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search_ore.terms, "<"),
+            Some("ord_term_ore")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search_ore.terms, "@>"),
             Some("match_term")
         );
     }
@@ -868,7 +934,7 @@ mod catalog_tests {
     #[test]
     fn every_type_uses_a_known_domain_shape() {
         // Each scalar's domain shape must be one of the known-valid shapes:
-        // the four-domain ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord`),
+        // the ORDERED shape (storage + `_eq` + `_ord_ore` + `_ord` + `_ord_ope`),
         // the two-domain EQ-ONLY shape (storage + `_eq`), the one-domain
         // STORAGE-ONLY shape (storage only — encryption-only scalars like
         // `bool`), or the ORDERED shape plus a `_match` domain (text's Bloom
@@ -877,11 +943,14 @@ mod catalog_tests {
         // shape (that is the catalog's job; the matrix dispatch and the inventory
         // snapshots are shape-aware). Subsumes the old per-type
         // `<T>_maps_to_*_with_four_domains` / `<T>_domain_terms_match_manifest` tests.
+        //
+        // `_ord` and `_ord_ope` carry the same OPE term: `_ord` is the
+        // OPE-backed default, `_ord_ore` the block-ORE escape hatch.
         let ordered: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("eq", &[Term::Hm][..]),
             ("ord_ore", &[Term::Ore][..]),
-            ("ord", &[Term::Ore][..]),
+            ("ord", &[Term::Ope][..]),
             ("ord_ope", &[Term::Ope][..]),
         ];
         let eq_only: Vec<(&str, &[Term])> = vec![("", &[] as &[Term]), ("eq", &[Term::Hm][..])];
@@ -891,20 +960,23 @@ mod catalog_tests {
             ("eq", &[Term::Hm][..]),
             ("match", &[Term::Bloom][..]),
             ("ord_ore", &[Term::Ore][..]),
-            ("ord", &[Term::Ore][..]),
+            ("ord", &[Term::Ope][..]),
             ("ord_ope", &[Term::Ope][..]),
         ];
         // text's current shape: equality is exact on the ordered domains (they
-        // lead with `Hm`), plus a combined `_search` domain carrying all three
-        // terms. `=`/`<>` route through `hm` on every eq-capable text domain.
+        // lead with `Hm`), plus combined `_search` / `_search_ore` domains each
+        // carrying all three term roles. `=`/`<>` route through `hm` on every
+        // eq-capable text domain. `_search` is OPE-backed like `_ord`;
+        // `_search_ore` is its by-name block-ORE escape hatch.
         let text_search: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("eq", &[Term::Hm][..]),
             ("match", &[Term::Bloom][..]),
             ("ord_ore", &[Term::Hm, Term::Ore][..]),
-            ("ord", &[Term::Hm, Term::Ore][..]),
+            ("ord", &[Term::Hm, Term::Ope][..]),
             ("ord_ope", &[Term::Hm, Term::Ope][..]),
-            ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
+            ("search_ore", &[Term::Hm, Term::Ore, Term::Bloom][..]),
+            ("search", &[Term::Hm, Term::Ope, Term::Bloom][..]),
         ];
         for s in crate::scalar_families() {
             let shape: Vec<(&str, &[Term])> = s.domains.iter().map(|d| (d.name, d.terms)).collect();
@@ -1409,16 +1481,23 @@ mod invariant_tests {
             vec!["=", "<>"]
         );
         assert_eq!(Term::term_json_keys(s.domains[1].terms), vec!["hm"]);
-        // _ord domain: ore => full ordering.
+        // _ord domain: ope => full ordering.
         assert_eq!(Term::role_for_terms(s.domains[3].terms), Role::Ord);
         assert_eq!(
             Term::operators_for_terms(s.domains[3].terms),
             vec!["=", "<>", "<", "<=", ">", ">="]
         );
-        assert_eq!(Term::term_json_keys(s.domains[3].terms), vec!["ob"]);
+        assert_eq!(Term::term_json_keys(s.domains[3].terms), vec!["op"]);
         assert_eq!(
             Term::extractor_for_operator(s.domains[3].terms, "<"),
             Some("ord_term")
+        );
+        // _ord_ore domain: ore => full ordering through the block-ORE term,
+        // reached by the qualified extractor name.
+        assert_eq!(Term::term_json_keys(s.domains[2].terms), vec!["ob"]);
+        assert_eq!(
+            Term::extractor_for_operator(s.domains[2].terms, "<"),
+            Some("ord_term_ore")
         );
     }
 }

@@ -4,7 +4,7 @@
 //! `search_path` on every `eql_v3` function — except the
 //! inline-critical ones, which must stay unpinned so the planner can
 //! inline them and the documented functional indexes (`eql_v3.eq_term(col)`,
-//! `eql_v3.ord_term(col)`, …) engage.
+//! `eql_v3.ord_term(col)`, `eql_v3.ord_term_ore(col)`, …) engage.
 //!
 //! The encrypted-domain family is skipped by a structural rule anchored
 //! on the *identity predicate*: a `LANGUAGE sql`, `IMMUTABLE` function

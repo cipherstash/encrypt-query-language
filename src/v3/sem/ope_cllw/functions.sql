@@ -12,7 +12,7 @@
 --! Inlinable single-statement SQL — the body is a strict expression of the
 --! argument (`->>` and `decode` are both STRICT), so the planner folds this
 --! into the calling query and functional btree indexes built on
---! `eql_v3.ord_ope_term(col)` (which calls this) engage structurally, the
+--! `eql_v3.ord_term(col)` (which calls this) engage structurally, the
 --! same way the hmac_256 equality chain does.
 --!
 --! **Missing-`op` semantics**: `val ->> 'op'` is NULL when `op` is absent and

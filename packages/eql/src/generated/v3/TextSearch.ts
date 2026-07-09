@@ -3,12 +3,12 @@ import type { BloomFilter } from "./BloomFilter";
 import type { Ciphertext } from "./Ciphertext";
 import type { Hmac256 } from "./Hmac256";
 import type { Identifier } from "./Identifier";
-import type { OreBlock256 } from "./OreBlock256";
+import type { OpeCllw } from "./OpeCllw";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
  * `public.eql_v3_text_search` — search domain.
  *
- * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
+ * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `op` `bf`.
  */
-export type TextSearch = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, ob: OreBlock256, bf: BloomFilter, };
+export type TextSearch = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, op: OpeCllw, bf: BloomFilter, };

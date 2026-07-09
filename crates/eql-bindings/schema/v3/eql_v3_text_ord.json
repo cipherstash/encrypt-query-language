@@ -27,12 +27,9 @@
       ],
       "type": "object"
     },
-    "OreBlock256": {
-      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`\ndomains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's\ndomain, so it serves equality too. The block count is width-agnostic on the\nwire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the\narray just carries more block strings. SQL-side constructor:\n`eql_v3_internal.ore_block_256`.",
-      "items": {
-        "type": "string"
-      },
-      "type": "array"
+    "OpeCllw": {
+      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the\ndefault ordering domain), `_ord_ope`, and `text_search` domains, their\n`query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered entries\nof a SteVec document (exactly one of `hm` (equality) XOR `op` (ordering)\nper entry — enforced by the SQL domain CHECK): a hex-encoded CLLW OPE\nciphertext, sortable via native bytea comparison after hex-decode —\nunlike `ob` (block-ORE) it needs no custom comparator. Extracted by\n`eql_v3.ord_term` (scalar domains and the `public.jsonb_entry` overload\nalike); SQL-side constructor: `eql_v3_internal.ope_cllw`.",
+      "type": "string"
     },
     "SchemaVersion": {
       "const": 3,
@@ -43,7 +40,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/eql_v3_text_ord.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`public.eql_v3_text_ord` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `ob`.",
+  "description": "`public.eql_v3_text_ord` — ordering domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `op`.",
   "properties": {
     "c": {
       "$ref": "#/$defs/Ciphertext"
@@ -54,8 +51,8 @@
     "i": {
       "$ref": "#/$defs/Identifier"
     },
-    "ob": {
-      "$ref": "#/$defs/OreBlock256"
+    "op": {
+      "$ref": "#/$defs/OpeCllw"
     },
     "v": {
       "$ref": "#/$defs/SchemaVersion"
@@ -66,7 +63,7 @@
     "i",
     "c",
     "hm",
-    "ob"
+    "op"
   ],
   "title": "TextOrd",
   "type": "object"
