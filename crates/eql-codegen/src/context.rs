@@ -54,6 +54,11 @@ pub fn environment() -> minijinja::Environment<'static> {
         include_str!("../templates/aggregates.sql.j2"),
     )
     .expect("aggregates.sql template");
+    env.add_template(
+        "ore_fallback.sql",
+        include_str!("../templates/ore_fallback.sql.j2"),
+    )
+    .expect("ore_fallback.sql template");
     env.add_global("schema", SCHEMA);
     env.add_global("internal_schema", INTERNAL_SCHEMA);
     env
@@ -343,6 +348,26 @@ pub struct AggregatesContext {
     pub name: String,
     pub dom: String,                        // schema-qualified domain, hoisted
     pub aggregates: &'static [AggregateOp], // == AGGREGATE_OPS
+}
+
+/// Context for `ore_fallback.sql` — the cross-family capability-detection file
+/// (CIP-3468) that poisons every ORE-carrying domain when the ORE operator
+/// class could not be installed (non-superuser installer, e.g. cloud Supabase).
+#[derive(serde::Serialize)]
+pub struct OreFallbackContext {
+    pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
+    pub entries: Vec<OreFallbackEntry>,
+    pub count: usize, // == entries.len(), hoisted for the closing NOTICE
+}
+
+/// One poisoned domain in `ore_fallback.sql`: the schema-qualified domain name
+/// and the human-readable alternatives its poison error steers callers to (the
+/// same family's non-ORE term-bearing siblings, e.g.
+/// `public.integer_eq (equality) or public.integer_ord_ope (ordering)`).
+#[derive(serde::Serialize)]
+pub struct OreFallbackEntry {
+    pub name: String,
+    pub alternatives: String,
 }
 
 /// The schema-qualified SQL domain type name, e.g. `public.integer_eq`.
