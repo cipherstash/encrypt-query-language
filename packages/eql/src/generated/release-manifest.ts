@@ -1,6 +1,6 @@
 export const releaseManifest = {
-  eqlVersion: '3.0.0-alpha.4',
+  eqlVersion: '3.0.0',
   schemaVersion: 3,
-  installSqlSha256: 'eb4036cf7d2513e9cdff987582c1bba889300929f8ff4d6e6d984665c06eec9b',
+  installSqlSha256: '9311a0c9faeaebe1397fba2abf9e581ce006e94bbd0255596c21e5ada5245afa',
   uninstallSqlSha256: 'b1b5131b8175c5d04da9ada108d25c81c5772b15fad79a6c419ebb32d18c60a9',
 } as const
