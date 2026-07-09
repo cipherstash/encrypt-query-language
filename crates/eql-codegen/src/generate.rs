@@ -2,15 +2,18 @@
 
 use std::path::{Path, PathBuf};
 
-use eql_domains::{Domain, DomainFamily, Term};
+use eql_domains::{Domain, DomainFamily, Role, Term};
 
-use crate::context::{domain_name, is_ord_capable};
+use crate::context::{domain_name, is_ord_capable, query_domain_name};
 use crate::operator_surface::OPERATORS;
 
 /// REQUIRE edge for the v3 schema file — pulled in by every generated file.
 const V3_SCHEMA: &str = "src/v3/schema.sql";
 /// REQUIRE edge for the hand-written shared blocker helper.
 const V3_SCALARS_BLOCKER: &str = "src/v3/scalars/functions.sql";
+/// REQUIRE edge for the ORE opclass capability-detection DO block — the
+/// `ore_fallback.sql` file must sort after the attempt whose outcome it reads.
+const V3_ORE_OPCLASS: &str = "src/v3/sem/ore_block_256/operator_class.sql";
 /// Root of the generated per-type scalar surface. The single place the tree
 /// layout is spelled out — keeps `types_path`/`scalar_path` and the REQUIRE
 /// vecs from drifting if the surface ever relocates again.
@@ -343,6 +346,103 @@ pub fn render_aggregates_file(family_name: &str, domain: &Domain) -> Option<Stri
     )
 }
 
+/// The plain-English capability word for a domain's role, used in the poison
+/// error's alternatives hint (`ore_fallback.sql`).
+fn role_word(role: Role) -> &'static str {
+    match role {
+        Role::Eq => "equality",
+        Role::Ord => "ordering",
+        Role::Match => "match",
+        Role::Storage => "storage",
+    }
+}
+
+/// The alternatives hint for one poisoned domain: the same family's
+/// term-bearing non-ORE siblings (the domains that stay fully functional
+/// without the ORE operator class), each qualified by `qualify` and labelled
+/// with its capability word, joined with " or ".
+fn ore_alternatives(spec: &DomainFamily, qualify: &dyn Fn(&Domain) -> String) -> String {
+    let alts: Vec<String> = spec
+        .domains
+        .iter()
+        .filter(|d| !d.terms.is_empty() && !d.terms.contains(&Term::Ore))
+        .map(|d| {
+            format!(
+                "{} ({})",
+                qualify(d),
+                role_word(Term::role_for_terms(d.terms))
+            )
+        })
+        .collect();
+    if alts.is_empty() {
+        // Unreachable with the current catalog (every ORE-carrying family also
+        // declares `_eq` and `_ord_ope`), but a future family must still render
+        // a sentence, not an empty hint.
+        "a non-ORE encrypted domain".to_string()
+    } else {
+        alts.join(" or ")
+    }
+}
+
+/// Body for the cross-family `src/v3/scalars/ore_fallback.sql` (CIP-3468).
+///
+/// The rendered DO block runs after the ORE opclass creation attempt
+/// (`V3_ORE_OPCLASS`). If the default btree opclass for
+/// `eql_v3_internal.ore_block_256` exists (superuser install) it is a no-op;
+/// if the attempt was skipped (`insufficient_privilege` — cloud Supabase and
+/// most managed Postgres), it poisons every ORE-carrying domain and its
+/// query-operand twin with an always-raising CHECK constraint so the domains
+/// fail loudly on first use instead of silently degrading to unindexable seq
+/// scans. The poison function is plpgsql and non-STRICT per the
+/// encrypted-domain footgun list, and the constraints are added NOT VALID so
+/// a re-install over existing ORE data (written under an earlier superuser
+/// install) does not abort — domain coercion enforces the CHECK on new values
+/// regardless of validation status.
+pub fn render_ore_fallback_file() -> String {
+    use crate::consts::sql_str;
+    use crate::context::{environment, OreFallbackContext, OreFallbackEntry};
+
+    let mut requires = vec![V3_SCHEMA.to_string(), V3_ORE_OPCLASS.to_string()];
+    let mut entries = Vec::new();
+    for spec in eql_domains::scalar_families() {
+        let ore_domains: Vec<&Domain> = spec
+            .domains
+            .iter()
+            .filter(|d| d.terms.contains(&Term::Ore))
+            .collect();
+        if ore_domains.is_empty() {
+            continue;
+        }
+        requires.push(types_path(spec.name));
+        requires.push(scalar_path(
+            spec.name,
+            &format!("query_{}_types.sql", spec.name),
+        ));
+        let column_alts = ore_alternatives(spec, &|d| domain_name(&d.full_name(spec.name)));
+        let query_alts = ore_alternatives(spec, &|d| query_domain_name(&d.query_name(spec.name)));
+        for d in ore_domains {
+            let col_name = domain_name(&d.full_name(spec.name));
+            entries.push(OreFallbackEntry {
+                name_literal: sql_str(&col_name),
+                name: col_name,
+                alternatives: sql_str(&column_alts),
+            });
+            let query_name = query_domain_name(&d.query_name(spec.name));
+            entries.push(OreFallbackEntry {
+                name_literal: sql_str(&query_name),
+                name: query_name,
+                alternatives: sql_str(&query_alts),
+            });
+        }
+    }
+    let ctx = OreFallbackContext { requires, entries };
+    environment()
+        .get_template("ore_fallback.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render ore_fallback.sql")
+}
+
 use std::fs;
 
 use crate::writer::{
@@ -443,6 +543,24 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         all_written.extend(written.iter().cloned());
     }
 
+    // Cross-family ORE capability-detection fallback (CIP-3468). Depth-1 under
+    // src/v3/scalars (it spans families, so it belongs to no type dir), written
+    // after every per-family surface so all its REQUIRE targets exist.
+    let fallback_path = scalars_root.join("ore_fallback.sql");
+    ensure_generated_paths_writable(std::slice::from_ref(&fallback_path), GeneratedKind::Sql)?;
+    write_generated_file(
+        &fallback_path,
+        &render_ore_fallback_file(),
+        GeneratedKind::Sql,
+    )?;
+    {
+        let rel = fallback_path
+            .strip_prefix(out_root)
+            .unwrap_or(&fallback_path);
+        println!("generated {}", rel.display());
+    }
+    all_written.push(fallback_path);
+
     // Orphan sweep across every scalar type dir. `generate_type` already prunes
     // stale files *within* a regenerated dir, but a type dropped from the catalog
     // entirely leaves a dir the generator never revisits — its generated SQL must
@@ -469,6 +587,13 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
                 println!("removed orphan {}", rel.display());
             }
         }
+        // Depth-1 sweep for cross-family generated files (ore_fallback.sql).
+        // Marker-aware, so the hand-written depth-1 functions.sql (no
+        // AUTO-GENERATED marker) is never touched.
+        for removed in remove_generated_orphans(&scalars_root, GeneratedKind::Sql, &keep)? {
+            let rel = removed.strip_prefix(out_root).unwrap_or(&removed);
+            println!("removed orphan {}", rel.display());
+        }
     }
 
     let names: Vec<&str> = eql_domains::scalar_families().map(|s| s.name).collect();
@@ -476,12 +601,13 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     Ok(0)
 }
 
-/// Remove every generated SQL file under `out_root`'s `src/v3/scalars/*` type
-/// dirs, marker-aware. Replaces build.sh's filename-pattern `find -delete`: it
+/// Remove every generated SQL file under `out_root`'s `src/v3/scalars` tree —
+/// the per-type subdirs plus depth-1 cross-family files (ore_fallback.sql) —
+/// marker-aware. Replaces build.sh's filename-pattern `find -delete`: it
 /// deletes only files carrying the AUTO-GENERATED marker, so a hand-written
-/// `<T>_extensions.sql` (no marker) and the committed depth-1
-/// `src/v3/scalars/functions.sql` (not in a type subdir) are preserved. Returns
-/// the removed paths.
+/// `<T>_extensions.sql` and the hand-written depth-1
+/// `src/v3/scalars/functions.sql` (no marker) are preserved. Returns the
+/// removed paths.
 pub fn clean_all(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
     use crate::writer::clean_generated_files;
     let scalars_root = out_root.join(V3_SCALARS_DIR);
@@ -500,6 +626,9 @@ pub fn clean_all(out_root: &Path) -> Result<Vec<PathBuf>, WriteError> {
     }
     subdirs.sort();
     let mut removed = Vec::new();
+    // Depth-1 cross-family generated files (ore_fallback.sql); marker-aware,
+    // so the hand-written depth-1 functions.sql survives.
+    removed.extend(clean_generated_files(&scalars_root, GeneratedKind::Sql)?);
     for dir in subdirs {
         removed.extend(clean_generated_files(&dir, GeneratedKind::Sql)?);
     }
@@ -1087,5 +1216,116 @@ mod tests {
         assert_eq!(block.typname, "integer_q"); // no quote present → unchanged
                                                 // keys are sql_str-escaped key tokens; none should carry a bare unescaped quote.
         assert!(block.keys.iter().all(|k| !k.contains("o'")));
+    }
+
+    #[test]
+    fn ore_fallback_poisons_exactly_the_ore_carrying_domains_and_their_query_twins() {
+        // Every domain carrying Term::Ore — and ONLY those — gets an
+        // always-raising CHECK, on both the public column domain and its
+        // eql_v3.query_* twin. Trailing space in the needle prevents
+        // `integer_ord` prefix-matching `integer_ord_ore`.
+        let sql = render_ore_fallback_file();
+        for spec in eql_domains::scalar_families() {
+            for d in spec.domains {
+                let col = format!("ALTER DOMAIN public.{} ", d.full_name(spec.name));
+                let query = format!("ALTER DOMAIN eql_v3.{} ", d.query_name(spec.name));
+                if d.terms.contains(&Term::Ore) {
+                    assert!(sql.contains(&col), "missing poison for {col}");
+                    assert!(sql.contains(&query), "missing poison for {query}");
+                } else {
+                    assert!(!sql.contains(&col), "unexpected poison for {col}");
+                    assert!(!sql.contains(&query), "unexpected poison for {query}");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn ore_fallback_poison_function_is_plpgsql_and_not_strict() {
+        // Footguns from the encrypted-domain list: the poison must be plpgsql
+        // (never inlined → the RAISE cannot be planned away) and must not be
+        // STRICT (a STRICT function is skipped on NULL input, silently letting
+        // NULLs through the poisoned domain). Scope the STRICT assertion to the
+        // CREATE FUNCTION statement — the file's doc header legitimately
+        // mentions the word.
+        let sql = render_ore_fallback_file();
+        let start = sql
+            .find("CREATE FUNCTION eql_v3_internal.ore_domain_unavailable")
+            .expect("poison function present");
+        let end = sql[start..].find("$poison$;").expect("function end") + start;
+        let create_fn = &sql[start..end];
+        assert!(create_fn.contains("LANGUAGE plpgsql"));
+        assert!(!create_fn.contains("STRICT"));
+        assert!(!create_fn.contains("RETURNS NULL ON NULL INPUT"));
+    }
+
+    #[test]
+    fn ore_fallback_poison_constraints_are_not_valid() {
+        // ALTER DOMAIN ... ADD CONSTRAINT validates existing stored data, and
+        // the poison raises unconditionally — without NOT VALID, re-running
+        // the installer over a database holding ORE values (written under an
+        // earlier superuser install) would abort inside the DO block. NOT
+        // VALID skips that scan; domain coercion still enforces the CHECK on
+        // every new cast/insert regardless of validation status.
+        let sql = render_ore_fallback_file();
+        let adds = sql.matches("ADD CONSTRAINT eql_ore_unavailable").count();
+        let not_valid = sql.matches(")) NOT VALID;").count();
+        assert!(adds > 0, "poison constraints present");
+        assert_eq!(adds, not_valid, "every poison constraint must be NOT VALID");
+    }
+
+    #[test]
+    fn ore_fallback_requires_opclass_attempt_and_every_affected_family() {
+        // The REQUIRE edges force tsort to place the fallback after the opclass
+        // creation attempt (whose outcome it reads from pg_opclass) and after
+        // every poisoned domain exists. Families with no ORE domain (boolean)
+        // contribute no edge.
+        let sql = render_ore_fallback_file();
+        assert!(sql.contains("-- REQUIRE: src/v3/sem/ore_block_256/operator_class.sql"));
+        for spec in eql_domains::scalar_families() {
+            let types = format!(
+                "-- REQUIRE: {}\n",
+                scalar_path(spec.name, &format!("{}_types.sql", spec.name))
+            );
+            let query_types = format!(
+                "-- REQUIRE: {}\n",
+                scalar_path(spec.name, &format!("query_{}_types.sql", spec.name))
+            );
+            let has_ore = spec.domains.iter().any(|d| d.terms.contains(&Term::Ore));
+            assert_eq!(
+                sql.contains(&types),
+                has_ore,
+                "types edge for {}",
+                spec.name
+            );
+            assert_eq!(
+                sql.contains(&query_types),
+                has_ore,
+                "query types edge for {}",
+                spec.name
+            );
+        }
+    }
+
+    #[test]
+    fn generate_all_writes_ore_fallback_and_clean_all_removes_it() {
+        // The cross-family fallback is depth-1 under src/v3/scalars: generate_all
+        // writes it, clean_all's marker-aware depth-1 pass removes it, and the
+        // hand-written depth-1 functions.sql (no marker) survives both.
+        let d = crate::writer::test_support::tempdir();
+        let root = d.path();
+        let scalars = root.join(V3_SCALARS_DIR);
+        fs::create_dir_all(&scalars).unwrap();
+        let hand = scalars.join("functions.sql");
+        fs::write(&hand, "-- hand-written, no marker\n").unwrap();
+
+        generate_all(root).unwrap();
+        let fallback = scalars.join("ore_fallback.sql");
+        assert!(fallback.exists(), "generate_all writes ore_fallback.sql");
+
+        let removed = clean_all(root).unwrap();
+        assert!(!fallback.exists(), "clean_all removes ore_fallback.sql");
+        assert!(removed.contains(&fallback));
+        assert!(hand.exists(), "hand-written depth-1 functions.sql survives");
     }
 }
