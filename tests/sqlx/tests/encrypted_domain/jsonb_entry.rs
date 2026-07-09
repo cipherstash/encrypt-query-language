@@ -152,7 +152,7 @@ async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::
     .await?;
     anyhow::ensure!(
         collisions == 0,
-        "no two distinct plaintexts may share an CLLW-OPE term ($.field); got {collisions} collisions",
+        "no two distinct plaintexts may share a CLLW-OPE term ($.field); got {collisions} collisions",
     );
     Ok(())
 }
