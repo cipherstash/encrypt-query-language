@@ -316,8 +316,8 @@ pub const NUMERIC: DomainFamily = DomainFamily {
 
 /// Domains for `text`: the ordered shape (with exact `hm` equality on the
 /// ordered domains), a `_match` domain (`Bloom` containment), an `_ord_ope`
-/// domain (CLLW-OPE ordering), and a combined `_search` domain carrying
-/// equality + ordering + match in one type.
+/// domain (CLLW-OPE ordering), and the combined `_search` / `_search_ore`
+/// domains carrying equality + ordering + match in one type.
 ///
 /// **Equality always routes through `hm`.** Every eq-capable text domain leads
 /// with `Hm` so `=`/`<>` resolve to `eq_term`/`hm`, never the ORE (`ob`) or
@@ -334,14 +334,21 @@ pub const NUMERIC: DomainFamily = DomainFamily {
 /// ACCEPTS the empty string and orders it first, while `text_ord_ore` still
 /// rejects it at its non-empty-`ob` CHECK (issue #262).
 ///
-/// **`_search` deliberately excludes `Ope`.** The combined domain stays
-/// `[Hm, Ore, Bloom]`: its operator surface would not grow (OPE's six
-/// operators are already covered via `Ore`, and range extraction would still
-/// route through `ord_term` — first-ordering-term-wins), so switching it to
-/// `Ope` would only swap which key its CHECK requires for no new capability.
-/// It is the one place block-ORE remains the default, and is a deliberate
-/// design decision to revisit separately — a search-shaped column that wants
-/// OPE ordering today uses a separate `_ord` / `_ord_ope` column instead.
+/// **`_search` is OPE-backed too**, for the same reason as `_ord`, and
+/// `_search_ore` is its by-name block-ORE escape hatch. The operator surface is
+/// identical either way (OPE's six operators are already covered via `Ore`), so
+/// the swap is not about capability: it is about which btree operator class an
+/// ordered functional index binds. `ope_cllw` is a `DOMAIN ... AS bytea` and so
+/// inherits `bytea_ops`, the base type's DEFAULT opclass; `ore_block_256` is a
+/// composite whose opclass is hand-written and installed by a `DO` block that
+/// silently skips on `insufficient_privilege` (the ordinary case on managed
+/// Postgres). Absent that opclass, an ordered index over `ord_term_ore` still
+/// CREATEs — Postgres binds `record_ops` — and then never engages. `_search`
+/// removes that failure mode rather than reporting it.
+///
+/// The empty-string consequence mirrors `_ord`/`_ord_ore` exactly: `text_search`
+/// ACCEPTS `""` and orders it first, while `text_search_ore` still rejects it at
+/// its non-empty-`ob` CHECK (issue #262).
 const TEXT_DOMAINS: &[Domain] = &[
     Domain {
         name: "",
@@ -374,8 +381,13 @@ const TEXT_DOMAINS: &[Domain] = &[
         shape: Shape::Scalar,
     },
     Domain {
-        name: "search",
+        name: "search_ore",
         terms: &[Term::Hm, Term::Ore, Term::Bloom],
+        shape: Shape::Scalar,
+    },
+    Domain {
+        name: "search",
+        terms: &[Term::Hm, Term::Ope, Term::Bloom],
         shape: Shape::Scalar,
     },
 ];

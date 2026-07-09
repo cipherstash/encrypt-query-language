@@ -2,7 +2,8 @@
 
 /**
  * CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the
- * default ordering domain) and `_ord_ope` domains, and their `query_` operands
+ * default ordering domain), `_ord_ope`, and `text_search` domains, and their
+ * `query_` operands
  * (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,
  * sortable via native bytea comparison after hex-decode — unlike `ob`
  * (block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. Extracted by

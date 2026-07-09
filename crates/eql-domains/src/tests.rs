@@ -703,7 +703,16 @@ mod catalog_tests {
         let names: Vec<_> = text.domains.iter().map(|d| d.name).collect();
         assert_eq!(
             names,
-            vec!["", "eq", "match", "ord_ore", "ord", "ord_ope", "search"]
+            vec![
+                "",
+                "eq",
+                "match",
+                "ord_ore",
+                "ord",
+                "ord_ope",
+                "search_ore",
+                "search"
+            ]
         );
     }
 
@@ -794,31 +803,82 @@ mod catalog_tests {
             .expect("text must declare a _search domain");
         assert_eq!(
             search.terms,
-            &[Term::Hm, Term::Ore, Term::Bloom],
-            "text_search must carry [Hm, Ore, Bloom]"
+            &[Term::Hm, Term::Ope, Term::Bloom],
+            "text_search must carry [Hm, Ope, Bloom]"
         );
         // ord-capable: some term provides ordering.
         assert!(
             search.terms.iter().any(|t| t.provides_ordering()),
             "text_search must be ord-capable"
         );
-        // Required JSON keys are hm + ob + bf, in term order.
+        // Required JSON keys are hm + op + bf, in term order. `op` carries no
+        // non-empty-array clause, so `text_search` accepts the empty string.
         assert_eq!(
             Term::term_json_keys(search.terms),
-            vec!["hm", "ob", "bf"],
-            "text_search CHECK must require hm, ob, bf"
+            vec!["hm", "op", "bf"],
+            "text_search CHECK must require hm, op, bf"
         );
-        // Equality still routes through hm; ordering through ob; match through bf.
+        assert!(
+            Term::nonempty_array_keys(search.terms).is_empty(),
+            "text_search must not carry a non-empty-array CHECK clause"
+        );
+        // Equality still routes through hm; ordering through op; match through bf.
         assert_eq!(
             Term::extractor_for_operator(search.terms, "="),
             Some("eq_term")
         );
         assert_eq!(
             Term::extractor_for_operator(search.terms, "<"),
-            Some("ord_term_ore")
+            Some("ord_term")
         );
         assert_eq!(
             Term::extractor_for_operator(search.terms, "@>"),
+            Some("match_term")
+        );
+    }
+
+    #[test]
+    fn text_search_ore_is_the_block_ore_sibling_of_text_search() {
+        let text = scalar("text");
+        let search_ore = text
+            .domains
+            .iter()
+            .find(|d| d.name == "search_ore")
+            .expect("text must declare a _search_ore domain");
+        assert_eq!(
+            search_ore.terms,
+            &[Term::Hm, Term::Ore, Term::Bloom],
+            "text_search_ore must carry [Hm, Ore, Bloom]"
+        );
+        assert_eq!(
+            Term::term_json_keys(search_ore.terms),
+            vec!["hm", "ob", "bf"],
+            "text_search_ore CHECK must require hm, ob, bf"
+        );
+        // Unlike `_search`, the `ob` term keeps the non-empty-array clause that
+        // rejects the empty string (issue #262).
+        assert_eq!(Term::nonempty_array_keys(search_ore.terms), vec!["ob"]);
+        // Same operator surface as `_search`, reached through the qualified
+        // block-ORE extractor.
+        assert_eq!(
+            Term::operators_for_terms(search_ore.terms),
+            Term::operators_for_terms(
+                text.domain_by_name("search")
+                    .expect("text must declare a _search domain")
+                    .terms
+            ),
+            "the two search domains must expose an identical operator surface"
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search_ore.terms, "="),
+            Some("eq_term")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search_ore.terms, "<"),
+            Some("ord_term_ore")
+        );
+        assert_eq!(
+            Term::extractor_for_operator(search_ore.terms, "@>"),
             Some("match_term")
         );
     }
@@ -904,9 +964,10 @@ mod catalog_tests {
             ("ord_ope", &[Term::Ope][..]),
         ];
         // text's current shape: equality is exact on the ordered domains (they
-        // lead with `Hm`), plus a combined `_search` domain carrying all three
-        // terms. `=`/`<>` route through `hm` on every eq-capable text domain.
-        // `_search` is the one text domain still ordered by block-ORE.
+        // lead with `Hm`), plus combined `_search` / `_search_ore` domains each
+        // carrying all three term roles. `=`/`<>` route through `hm` on every
+        // eq-capable text domain. `_search` is OPE-backed like `_ord`;
+        // `_search_ore` is its by-name block-ORE escape hatch.
         let text_search: Vec<(&str, &[Term])> = vec![
             ("", &[] as &[Term]),
             ("eq", &[Term::Hm][..]),
@@ -914,7 +975,8 @@ mod catalog_tests {
             ("ord_ore", &[Term::Hm, Term::Ore][..]),
             ("ord", &[Term::Hm, Term::Ope][..]),
             ("ord_ope", &[Term::Hm, Term::Ope][..]),
-            ("search", &[Term::Hm, Term::Ore, Term::Bloom][..]),
+            ("search_ore", &[Term::Hm, Term::Ore, Term::Bloom][..]),
+            ("search", &[Term::Hm, Term::Ope, Term::Bloom][..]),
         ];
         for s in crate::scalar_families() {
             let shape: Vec<(&str, &[Term])> = s.domains.iter().map(|d| (d.name, d.terms)).collect();

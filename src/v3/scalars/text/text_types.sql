@@ -118,6 +118,28 @@ BEGIN
 
   COMMENT ON DOMAIN public.eql_v3_text_ord_ope IS 'EQL encrypted text (equality, ordering)';
 
+  --! @brief Encrypted domain public.eql_v3_text_search_ore.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'eql_v3_text_search_ore' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.eql_v3_text_search_ore AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'hm'
+        AND VALUE ? 'ob'
+        AND VALUE ? 'bf'
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.eql_v3_text_search_ore IS 'EQL encrypted text (equality, ordering, containment)';
+
   --! @brief Encrypted domain public.eql_v3_text_search.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
@@ -130,10 +152,8 @@ BEGIN
         AND VALUE ? 'i'
         AND VALUE ? 'c'
         AND VALUE ? 'hm'
-        AND VALUE ? 'ob'
+        AND VALUE ? 'op'
         AND VALUE ? 'bf'
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
         AND VALUE->>'v' = '3'
       );
   END IF;

@@ -161,8 +161,25 @@ fn text_ord_ope_requires_both_hm_and_op() {
 }
 
 #[test]
-fn text_search_copies_hm_ob_and_bf() {
+fn text_search_copies_hm_op_and_bf() {
     let out = from_v2(&v2_ct_full(), target("eql_v3_text_search")).unwrap();
+    assert_eq!(
+        out,
+        json!({
+            "v": 3,
+            "i": ident(),
+            "c": CIPHERTEXT,
+            "hm": HEX,
+            "op": HEX,
+            "bf": [12, 47, 91, 188]
+        })
+    );
+    assert!(is_v3_payload(&out));
+}
+
+#[test]
+fn text_search_ore_copies_hm_ob_and_bf() {
+    let out = from_v2(&v2_ct_full(), target("eql_v3_text_search_ore")).unwrap();
     assert_eq!(
         out,
         json!({

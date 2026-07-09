@@ -3,11 +3,12 @@
 //! Common utilities for working with encrypted data in tests.
 
 /// Sentinel payload that satisfies every encrypted-domain CHECK in the
-/// `eql_v3.<T>{,_eq,_match,_ord,_ord_ore,_ord_ope,_search}` family. Carries
-/// the EQL envelope (`v`, `i`, `c`) plus *all four* term keys (`hm`, `ob`,
-/// `bf`, `op`) so one bind value works for any variant's cast — including the
-/// combined `text_search` domain, whose CHECK requires `hm` + `ob` + `bf`,
-/// and the `_ord_ope` domains, whose CHECK requires `op`.
+/// `eql_v3.<T>{,_eq,_match,_ord,_ord_ore,_ord_ope,_search,_search_ore}` family.
+/// Carries the EQL envelope (`v`, `i`, `c`) plus *all four* term keys (`hm`,
+/// `ob`, `bf`, `op`) so one bind value works for any variant's cast — including
+/// the combined `text_search` domain, whose CHECK requires `hm` + `op` + `bf`,
+/// its block-ORE sibling `text_search_ore` (`hm` + `ob` + `bf`), and the
+/// `_ord_ope` domains, whose CHECK requires `op`.
 ///
 /// Used by blocker / null-result tests where the payload is bound but
 /// never decrypted — the blocker raises (or the STRICT wrapper

@@ -28,9 +28,10 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | `public.<T>_ord` / `_ord_ope` | `op` (ope_cllw)           | `eql_v3.ord_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
 | `public.<T>_ord_ore`          | `ob` (ore_block_256)      | `eql_v3.ord_term_ore(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
 | `public.eql_v3_text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
-| `public.eql_v3_text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
+| `public.eql_v3_text_search`          | `hm` + `op` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
+| `public.eql_v3_text_search_ore`      | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
-\* On `text_match` / `text_search`, `@>` / `<@` are **bloom-filter token containment** (probabilistic ngram match), **not** JSONB containment and **not** SQL `LIKE`. See [Indexing](#indexing).
+\* On `text_match` / `text_search` / `text_search_ore`, `@>` / `<@` are **bloom-filter token containment** (probabilistic ngram match), **not** JSONB containment and **not** SQL `LIKE`. See [Indexing](#indexing).
 
 Notes:
 

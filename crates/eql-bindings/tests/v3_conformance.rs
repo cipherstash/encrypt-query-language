@@ -235,10 +235,12 @@ fn non_integer_tokens_round_trip_every_domain() {
     let ope = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "op": "00ffab" });
     // Text routes equality through `hm`, so its ordered domains carry both `hm`
     // and the ordering term (`[Hm, Ore]` / `[Hm, Ope]`); `text_search` adds the
-    // Bloom-filter match term and stays block-ORE ordered.
+    // Bloom-filter match term and is OPE-ordered, while `text_search_ore` is its
+    // block-ORE sibling.
     let text_ore = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"] });
     let text_ope = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "op": "00ffab" });
-    let text_search = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] });
+    let text_search = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "op": "00ffab", "bf": [1, 2, 3] });
+    let text_search_ore = |t: &str| json!({ "v": 3, "i": { "t": t, "c": "x" }, "c": "ct", "hm": "deadbeef", "ob": ["b0", "b1"], "bf": [1, 2, 3] });
 
     // Roundtrip a payload byte-for-byte, then confirm the catalog domain name.
     macro_rules! round_trip {
@@ -298,6 +300,11 @@ fn non_integer_tokens_round_trip_every_domain() {
     round_trip!(TextOrdOre, text_ore("a"), "public.eql_v3_text_ord_ore");
     round_trip!(TextOrdOpe, text_ope("a"), "public.eql_v3_text_ord_ope");
     round_trip!(TextSearch, text_search("a"), "public.eql_v3_text_search");
+    round_trip!(
+        TextSearchOre,
+        text_search_ore("a"),
+        "public.eql_v3_text_search_ore"
+    );
 }
 
 #[test]

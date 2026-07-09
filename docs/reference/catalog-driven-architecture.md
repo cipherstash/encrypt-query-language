@@ -175,7 +175,7 @@ flowchart LR
     end
     subgraph text["text-search (text)"]
         direction TB
-        t1["storage []"] --> t2["_eq [Hm]"] --> t3["_match [Bloom]"] --> t4["_ord_ore [Hm,Ore]"] --> t5["_ord [Hm,Ope]"] --> t6["_ord_ope [Hm,Ope]"] --> t7["_search [Hm,Ore,Bloom]"]
+        t1["storage []"] --> t2["_eq [Hm]"] --> t3["_match [Bloom]"] --> t4["_ord_ore [Hm,Ore]"] --> t5["_ord [Hm,Ope]"] --> t6["_ord_ope [Hm,Ope]"] --> t7["_search_ore [Hm,Ore,Bloom]"] --> t8["_search [Hm,Ope,Bloom]"]
     end
     subgraph storage["storage-only (bool)"]
         s1["storage []"]

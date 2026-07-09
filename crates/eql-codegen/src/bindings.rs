@@ -75,7 +75,7 @@ fn capability_label(domain_name: &str) -> &'static str {
         "eq" => "equality domain",
         "ord" | "ord_ore" | "ord_ope" => "ordering domain",
         "match" => "match domain",
-        "search" => "search domain",
+        "search" | "search_ore" => "search domain",
         other => panic!(
             "unmapped bare domain name {other:?} — add it to capability_label \
              in crates/eql-codegen/src/bindings.rs"
@@ -84,7 +84,7 @@ fn capability_label(domain_name: &str) -> &'static str {
 }
 
 /// Render the catalog-derived struct doc lines for a domain: a summary line
-/// (`` `public.eql_v3_<name>` — <label>. ``) and a detail line listing the supported
+/// (`` `public.<name>` — <label>. ``) and a detail line listing the supported
 /// SQL operators and the required payload keys. Every part is derived from data
 /// the catalog already carries — the capability label, the operator union
 /// (`Term::operators_for_terms`), and the key list (`ENVELOPE_KEYS` ++
@@ -817,7 +817,8 @@ mod tests {
         assert!(out.contains(r#"&["op"]"#));
 
         // Dual-term text domains keep BOTH terms in the query twin, still no `c`.
-        // `_ord` is OPE-backed (`op`); `_ord_ore` and `_search` keep `ob`.
+        // `_ord` and `_search` are OPE-backed (`op`); `_ord_ore` and
+        // `_search_ore` keep `ob`.
         let text = render_family_bindings(family("text"));
         assert_eq!(field_idents(&text, "TextOrdQuery"), ["v", "i", "hm", "op"]);
         assert_eq!(
@@ -826,6 +827,10 @@ mod tests {
         );
         assert_eq!(
             field_idents(&text, "TextSearchQuery"),
+            ["v", "i", "hm", "op", "bf"]
+        );
+        assert_eq!(
+            field_idents(&text, "TextSearchOreQuery"),
             ["v", "i", "hm", "ob", "bf"]
         );
         assert!(text.contains("`eql_v3.query_text_match` — match domain query operand."));
@@ -876,16 +881,19 @@ mod tests {
             "struct TextOrdOre ",
             "struct TextOrd ",
             "struct TextOrdOpe ",
+            "struct TextSearchOre ",
             "struct TextSearch ",
         ] {
             assert!(out.contains(s), "missing {s}");
         }
         assert!(out.contains("`public.eql_v3_text_match` — match domain."));
         assert!(out.contains("`public.eql_v3_text_search` — search domain."));
+        assert!(out.contains("`public.eql_v3_text_search_ore` — search domain."));
         assert!(out.contains("bf: BloomFilter"));
         // Every ordered text domain is dual-term: equality stays exact via `hm`,
-        // and the second term is the ordering one. `_ord` is OPE-backed (so it
-        // mirrors `_ord_ope`); `_ord_ore` and `_search` keep block-ORE.
+        // and the second term is the ordering one. `_ord` and `_search` are
+        // OPE-backed (so `_ord` mirrors `_ord_ope`); `_ord_ore` and `_search_ore`
+        // are the by-name block-ORE escape hatches.
         assert_eq!(
             field_idents(&out, "TextOrdOre"),
             ["v", "i", "c", "hm", "ob"]
@@ -898,6 +906,10 @@ mod tests {
         assert_eq!(field_idents(&out, "TextMatch"), ["v", "i", "c", "bf"]);
         assert_eq!(
             field_idents(&out, "TextSearch"),
+            ["v", "i", "c", "hm", "op", "bf"]
+        );
+        assert_eq!(
+            field_idents(&out, "TextSearchOre"),
             ["v", "i", "c", "hm", "ob", "bf"]
         );
     }
@@ -1144,7 +1156,11 @@ mod tests {
 
         // Multi-term domains list keys in catalog (wire) order.
         let text = render_family_bindings(family("text"));
-        assert!(text.contains(r#"&["hm", "ob", "bf"]"#), "text_search keys");
+        assert!(text.contains(r#"&["hm", "op", "bf"]"#), "text_search keys");
+        assert!(
+            text.contains(r#"&["hm", "ob", "bf"]"#),
+            "text_search_ore keys"
+        );
         assert!(text.contains(r#"&["hm", "op"]"#), "text_ord_ope keys");
         assert!(text.contains(r#"&["bf"]"#), "text_match keys");
     }

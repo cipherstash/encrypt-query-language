@@ -78,9 +78,9 @@ For PostgreSQL to use a functional index on an encrypted column, **all** of thes
 
 Capability travels in the payload, chosen by the encryption client and reflected in the column's domain variant:
 
-- **Equality** needs an `hm` (hmac_256) term — `public.<T>_eq`, `public.<T>_ord`, or `public.eql_v3_text_search`.
-- **Range / ordering** needs an ordering term — `op` (ope_cllw) on `public.<T>_ord` / `_ord_ope`, or `ob` (ore_block_256) on `public.<T>_ord_ore` / `public.eql_v3_text_search`.
-- **Text containment** needs a `bf` (bloom_filter) term — `public.eql_v3_text_match` or `public.eql_v3_text_search`.
+- **Equality** needs an `hm` (hmac_256) term — `public.<T>_eq`, `public.<T>_ord`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
+- **Range / ordering** needs an ordering term — `op` (ope_cllw) on `public.<T>_ord` / `_ord_ope` / `public.eql_v3_text_search`, or `ob` (ore_block_256) on `public.<T>_ord_ore` / `public.eql_v3_text_search_ore`.
+- **Text containment** needs a `bf` (bloom_filter) term — `public.eql_v3_text_match`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
 
 A value with only a bloom term will not drive an equality index, and vice versa.
 

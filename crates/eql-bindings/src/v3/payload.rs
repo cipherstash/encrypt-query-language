@@ -89,6 +89,8 @@ pub enum DomainPayload {
     TextOrd(super::text::TextOrd),
     /// The `public.eql_v3_text_ord_ope` payload.
     TextOrdOpe(super::text::TextOrdOpe),
+    /// The `public.eql_v3_text_search_ore` payload.
+    TextSearchOre(super::text::TextSearchOre),
     /// The `public.eql_v3_text_search` payload.
     TextSearch(super::text::TextSearch),
     /// The `public.eql_v3_boolean` payload.
@@ -224,6 +226,9 @@ impl DomainPayload {
             "eql_v3_text_ord_ope" => {
                 Some(super::text::TextOrdOpe::deserialize(value).map(Self::TextOrdOpe))
             }
+            "eql_v3_text_search_ore" => {
+                Some(super::text::TextSearchOre::deserialize(value).map(Self::TextSearchOre))
+            }
             "eql_v3_text_search" => {
                 Some(super::text::TextSearch::deserialize(value).map(Self::TextSearch))
             }
@@ -297,6 +302,7 @@ impl DomainPayload {
             Self::TextOrdOre(payload) => payload,
             Self::TextOrd(payload) => payload,
             Self::TextOrdOpe(payload) => payload,
+            Self::TextSearchOre(payload) => payload,
             Self::TextSearch(payload) => payload,
             Self::Boolean(payload) => payload,
             Self::Real(payload) => payload,

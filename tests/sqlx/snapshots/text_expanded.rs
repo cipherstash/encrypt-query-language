@@ -9,9 +9,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -86,9 +86,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -163,9 +163,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -240,9 +240,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -317,9 +317,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 725usize,
+            start_line: 732usize,
             start_col: 26usize,
-            end_line: 725usize,
+            end_line: 732usize,
             end_col: 60usize,
             compile_fail: false,
             no_run: false,
@@ -386,6 +386,85 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_sanity"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_sanity: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName("scalars::text::matrix_text_search_ore_sanity"),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 732usize,
+            start_col: 26usize,
+            end_line: 732usize,
+            end_col: 60usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_sanity()),
+        ),
+    };
+    fn matrix_text_search_ore_sanity() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_sanity(
+            _pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                if !!spec.sql_domain.is_empty() {
+                    ::core::panicking::panic(
+                        "assertion failed: !spec.sql_domain.is_empty()",
+                    )
+                }
+                if !<String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name()
+                    .starts_with("fixtures.")
+                {
+                    ::core::panicking::panic(
+                        "assertion failed: <String as\n            ::eql_tests::scalar_domains::ScalarType>::fixture_table_name().starts_with(\"fixtures.\")",
+                    )
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_sanity",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_sanity;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_eq_eq_pivot_min_correctness"]
     #[doc(hidden)]
     pub const matrix_text_eq_eq_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
@@ -396,9 +475,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -496,9 +575,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -596,9 +675,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -696,9 +775,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -796,9 +875,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -896,9 +975,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -996,9 +1075,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1096,9 +1175,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1196,9 +1275,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1296,9 +1375,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1396,9 +1475,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1496,9 +1575,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1596,9 +1675,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1696,9 +1775,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1796,9 +1875,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1896,9 +1975,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -1996,9 +2075,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2096,9 +2175,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2196,9 +2275,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2296,9 +2375,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2396,9 +2475,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2496,9 +2575,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2596,9 +2675,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2696,9 +2775,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2786,6 +2865,618 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_pivot_min_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_pivot_min_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eq_pivot_min_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eq_pivot_min_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_pivot_min_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_pivot_min_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_pivot_min_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_pivot_max_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_pivot_max_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_pivot_max_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eq_pivot_max_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eq_pivot_max_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_pivot_max_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_pivot_max_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_pivot_max_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_pivot_mid_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_pivot_mid_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eq_pivot_mid_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_pivot_mid_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_pivot_mid_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_pivot_mid_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_pivot_min_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_pivot_min_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_neq_pivot_min_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_neq_pivot_min_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_pivot_min_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<>",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<>",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_pivot_min_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_pivot_min_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_pivot_max_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_pivot_max_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_pivot_max_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_neq_pivot_max_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_neq_pivot_max_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_pivot_max_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<>",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<>",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_pivot_max_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_pivot_max_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_pivot_mid_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_pivot_mid_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_neq_pivot_mid_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_neq_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_pivot_mid_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<>",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<>",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<>", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_pivot_mid_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_pivot_mid_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_lt_pivot_min_correctness"]
     #[doc(hidden)]
     pub const matrix_text_ord_lt_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
@@ -2796,9 +3487,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2896,9 +3587,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -2996,9 +3687,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3096,9 +3787,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3196,9 +3887,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3296,9 +3987,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3396,9 +4087,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3496,9 +4187,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3596,9 +4287,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3696,9 +4387,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3796,9 +4487,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3896,9 +4587,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -3996,9 +4687,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4096,9 +4787,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4196,9 +4887,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4296,9 +4987,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4396,9 +5087,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4496,9 +5187,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4596,9 +5287,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4696,9 +5387,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4796,9 +5487,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4896,9 +5587,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -4996,9 +5687,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5096,9 +5787,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5196,9 +5887,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5296,9 +5987,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5396,9 +6087,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5496,9 +6187,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5596,9 +6287,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5696,9 +6387,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5796,9 +6487,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5896,9 +6587,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -5996,9 +6687,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6096,9 +6787,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6196,9 +6887,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6296,9 +6987,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 861usize,
+            start_line: 868usize,
             start_col: 22usize,
-            end_line: 861usize,
+            end_line: 868usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6386,6 +7077,1230 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_pivot_min_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_pivot_min_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lt_pivot_min_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lt_pivot_min_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_pivot_min_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_pivot_min_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_pivot_min_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_pivot_max_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_pivot_max_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_pivot_max_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lt_pivot_max_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lt_pivot_max_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_pivot_max_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_pivot_max_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_pivot_max_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_pivot_mid_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_pivot_mid_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lt_pivot_mid_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lt_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_pivot_mid_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_pivot_mid_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_pivot_mid_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_pivot_min_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_pivot_min_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lte_pivot_min_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lte_pivot_min_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_pivot_min_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_pivot_min_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_pivot_min_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_pivot_max_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_pivot_max_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_pivot_max_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lte_pivot_max_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lte_pivot_max_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_pivot_max_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_pivot_max_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_pivot_max_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_pivot_mid_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_pivot_mid_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lte_pivot_mid_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lte_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_pivot_mid_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    "<=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, "<=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_pivot_mid_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_pivot_mid_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_pivot_min_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_pivot_min_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gt_pivot_min_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gt_pivot_min_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_pivot_min_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    ">",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_pivot_min_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_pivot_min_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_pivot_max_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_pivot_max_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_pivot_max_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gt_pivot_max_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gt_pivot_max_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_pivot_max_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    ">",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_pivot_max_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_pivot_max_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_pivot_mid_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_pivot_mid_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gt_pivot_mid_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gt_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_pivot_mid_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    ">",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, ">", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_pivot_mid_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_pivot_mid_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_pivot_min_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_pivot_min_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_pivot_min_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gte_pivot_min_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gte_pivot_min_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_pivot_min_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    ">=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_pivot_min_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_pivot_min_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_pivot_max_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_pivot_max_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_pivot_max_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gte_pivot_max_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gte_pivot_max_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_pivot_max_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    ">=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_pivot_max_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_pivot_max_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_pivot_mid_correctness"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_pivot_mid_correctness: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_pivot_mid_correctness",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 868usize,
+            start_col: 22usize,
+            end_line: 868usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gte_pivot_mid_correctness(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gte_pivot_mid_correctness() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_pivot_mid_correctness(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let predicate = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "({0})::{1} {2} {3}::jsonb::{1}",
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">=",
+                            lit,
+                        ),
+                    )
+                });
+                let expected = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                    ">=",
+                    pivot,
+                );
+                ::eql_tests::scalar_domains::assert_scalar_plaintexts::<
+                    String,
+                >(&pool, &spec.sql_domain, ">=", &predicate, &expected)
+                    .await
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_pivot_mid_correctness",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_pivot_mid_correctness;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_eq_eq_pivot_min_cross_shape"]
     #[doc(hidden)]
     pub const matrix_text_eq_eq_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
@@ -6396,9 +8311,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6564,9 +8479,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6732,9 +8647,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -6900,9 +8815,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7068,9 +8983,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7236,9 +9151,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7404,9 +9319,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7572,9 +9487,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7740,9 +9655,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -7908,9 +9823,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8076,9 +9991,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8244,9 +10159,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8412,9 +10327,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8580,9 +10495,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8748,9 +10663,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -8916,9 +10831,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9084,9 +10999,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9252,9 +11167,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9420,9 +11335,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9588,9 +11503,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9756,9 +11671,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -9924,9 +11839,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10092,9 +12007,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10260,9 +12175,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10418,6 +12333,1026 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_pivot_min_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_pivot_min_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eq_pivot_min_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eq_pivot_min_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_pivot_min_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_pivot_min_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_pivot_min_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_pivot_max_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_pivot_max_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_pivot_max_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eq_pivot_max_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eq_pivot_max_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_pivot_max_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_pivot_max_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_pivot_max_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_pivot_mid_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_pivot_mid_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eq_pivot_mid_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_pivot_mid_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_pivot_mid_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_pivot_mid_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_pivot_min_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_pivot_min_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_neq_pivot_min_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_neq_pivot_min_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_pivot_min_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<>",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<>"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<>",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<>",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_pivot_min_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_pivot_min_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_pivot_max_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_pivot_max_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_pivot_max_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_neq_pivot_max_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_neq_pivot_max_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_pivot_max_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<>",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<>"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<>",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<>",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_pivot_max_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_pivot_max_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_pivot_mid_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_pivot_mid_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_neq_pivot_mid_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_neq_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_pivot_mid_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<>",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<>"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<>",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<>", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<>", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<>",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_pivot_mid_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_pivot_mid_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_lt_pivot_min_cross_shape"]
     #[doc(hidden)]
     pub const matrix_text_ord_lt_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
@@ -10428,9 +13363,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10596,9 +13531,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10764,9 +13699,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -10932,9 +13867,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11100,9 +14035,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11268,9 +14203,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11436,9 +14371,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11604,9 +14539,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11772,9 +14707,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -11940,9 +14875,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12108,9 +15043,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12276,9 +15211,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12444,9 +15379,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12612,9 +15547,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12780,9 +15715,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -12948,9 +15883,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13116,9 +16051,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13284,9 +16219,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13452,9 +16387,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13620,9 +16555,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13788,9 +16723,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -13956,9 +16891,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14124,9 +17059,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14292,9 +17227,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14460,9 +17395,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14628,9 +17563,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14796,9 +17731,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -14964,9 +17899,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15132,9 +18067,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15300,9 +18235,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15468,9 +18403,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15636,9 +18571,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15804,9 +18739,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -15972,9 +18907,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -16140,9 +19075,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -16308,9 +19243,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 902usize,
+            start_line: 909usize,
             start_col: 22usize,
-            end_line: 902usize,
+            end_line: 909usize,
             end_col: 96usize,
             compile_fail: false,
             no_run: false,
@@ -16466,6 +19401,2046 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_pivot_min_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_pivot_min_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lt_pivot_min_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lt_pivot_min_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_pivot_min_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_pivot_min_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_pivot_min_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_pivot_max_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_pivot_max_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_pivot_max_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lt_pivot_max_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lt_pivot_max_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_pivot_max_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_pivot_max_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_pivot_max_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_pivot_mid_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_pivot_mid_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lt_pivot_mid_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lt_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_pivot_mid_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_pivot_mid_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_pivot_mid_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_pivot_min_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_pivot_min_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lte_pivot_min_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lte_pivot_min_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_pivot_min_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_pivot_min_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_pivot_min_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_pivot_max_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_pivot_max_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_pivot_max_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lte_pivot_max_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lte_pivot_max_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_pivot_max_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_pivot_max_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_pivot_max_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_pivot_mid_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_pivot_mid_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_lte_pivot_mid_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_lte_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_pivot_mid_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        "<=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op("<="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    "<=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", "<=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", "<=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            "<=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_pivot_mid_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_pivot_mid_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_pivot_min_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_pivot_min_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gt_pivot_min_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gt_pivot_min_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_pivot_min_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ">",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op(">"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    ">",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            ">",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_pivot_min_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_pivot_min_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_pivot_max_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_pivot_max_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_pivot_max_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gt_pivot_max_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gt_pivot_max_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_pivot_max_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ">",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op(">"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    ">",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            ">",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_pivot_max_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_pivot_max_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_pivot_mid_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_pivot_mid_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gt_pivot_mid_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gt_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_pivot_mid_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ">",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op(">"),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    ">",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            ">",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_pivot_mid_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_pivot_mid_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_pivot_min_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_pivot_min_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_pivot_min_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gte_pivot_min_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gte_pivot_min_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_pivot_min_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::min_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ">=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op(">="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    ">=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            ">=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_pivot_min_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_pivot_min_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_pivot_max_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_pivot_max_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_pivot_max_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gte_pivot_max_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gte_pivot_max_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_pivot_max_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::max_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ">=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op(">="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    ">=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            ">=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_pivot_max_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_pivot_max_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_pivot_mid_cross_shape"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_pivot_mid_cross_shape: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_pivot_mid_cross_shape",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 909usize,
+            start_col: 22usize,
+            end_line: 909usize,
+            end_col: 96usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_gte_pivot_mid_cross_shape(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_gte_pivot_mid_cross_shape() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_pivot_mid_cross_shape(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let pivot: String = <String as ::eql_tests::scalar_domains::OrderedScalar>::mid_pivot();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot.clone())
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let forward_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ">=",
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let commuted_count = <String as ::eql_tests::scalar_domains::ScalarType>::expected_forward(
+                        ::eql_tests::scalar_domains::commute_op(">="),
+                        pivot.clone(),
+                    )
+                    .len() as i64;
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let shapes = [
+                    (
+                        "d_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "({1})::{2} {0} {3}::jsonb::{2}",
+                                    ">=",
+                                    col,
+                                    d,
+                                    lit,
+                                ),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "d_j",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("({1})::{2} {0} {3}::jsonb", ">=", col, d, lit),
+                            )
+                        }),
+                        forward_count,
+                    ),
+                    (
+                        "j_d",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{1}::jsonb {0} ({2})::{3}", ">=", lit, col, d),
+                            )
+                        }),
+                        commuted_count,
+                    ),
+                ];
+                let table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                for (shape_label, predicate, expected_count) in shapes {
+                    let count_sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT count(*) FROM {0} WHERE {1}",
+                                table,
+                                predicate,
+                            ),
+                        )
+                    });
+                    let count: i64 = sqlx::query_scalar(&count_sql)
+                        .fetch_one(&pool)
+                        .await?;
+                    match (&count, &expected_count) {
+                        (left_val, right_val) => {
+                            if !(*left_val == *right_val) {
+                                let kind = ::core::panicking::AssertKind::Eq;
+                                ::core::panicking::assert_failed(
+                                    kind,
+                                    &*left_val,
+                                    &*right_val,
+                                    ::core::option::Option::Some(
+                                        format_args!(
+                                            "domain={0} op={1} pivot={2:?} shape={3} SQL={4} expected {5} rows, got {6}",
+                                            d,
+                                            ">=",
+                                            pivot,
+                                            shape_label,
+                                            count_sql,
+                                            expected_count,
+                                            count,
+                                        ),
+                                    ),
+                                );
+                            }
+                        }
+                    };
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_pivot_mid_cross_shape",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_pivot_mid_cross_shape;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_eq_eq_supported_null"]
     #[doc(hidden)]
     pub const matrix_text_eq_eq_supported_null: test::TestDescAndFn = test::TestDescAndFn {
@@ -16476,9 +21451,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16569,9 +21544,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16662,9 +21637,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16755,9 +21730,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16848,9 +21823,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -16941,9 +21916,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17034,9 +22009,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17127,9 +22102,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17210,6 +22185,192 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eq_supported_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eq_supported_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eq_supported_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 966usize,
+            start_col: 22usize,
+            end_line: 966usize,
+            end_col: 79usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_eq_supported_null()),
+        ),
+    };
+    fn matrix_text_search_ore_eq_supported_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eq_supported_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let payload = spec.placeholder_payload;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                            &spec.sql_domain,
+                            "=",
+                        ),
+                    )
+                });
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[Some(payload), None],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[None, Some(payload)],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                    .await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eq_supported_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_eq_supported_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_neq_supported_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_neq_supported_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_neq_supported_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 966usize,
+            start_col: 22usize,
+            end_line: 966usize,
+            end_col: 79usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_neq_supported_null()),
+        ),
+    };
+    fn matrix_text_search_ore_neq_supported_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_neq_supported_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let payload = spec.placeholder_payload;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                            &spec.sql_domain,
+                            "<>",
+                        ),
+                    )
+                });
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[Some(payload), None],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[None, Some(payload)],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                    .await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_neq_supported_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_neq_supported_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_lt_supported_null"]
     #[doc(hidden)]
     pub const matrix_text_ord_lt_supported_null: test::TestDescAndFn = test::TestDescAndFn {
@@ -17220,9 +22381,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17313,9 +22474,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17406,9 +22567,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17499,9 +22660,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17592,9 +22753,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17685,9 +22846,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17778,9 +22939,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17871,9 +23032,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -17964,9 +23125,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -18057,9 +23218,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -18150,9 +23311,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -18243,9 +23404,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 959usize,
+            start_line: 966usize,
             start_col: 22usize,
-            end_line: 959usize,
+            end_line: 966usize,
             end_col: 79usize,
             compile_fail: false,
             no_run: false,
@@ -18326,6 +23487,378 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lt_supported_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lt_supported_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lt_supported_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 966usize,
+            start_col: 22usize,
+            end_line: 966usize,
+            end_col: 79usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_lt_supported_null()),
+        ),
+    };
+    fn matrix_text_search_ore_lt_supported_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lt_supported_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let payload = spec.placeholder_payload;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                            &spec.sql_domain,
+                            "<",
+                        ),
+                    )
+                });
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[Some(payload), None],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[None, Some(payload)],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                    .await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lt_supported_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_lt_supported_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_lte_supported_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_lte_supported_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_lte_supported_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 966usize,
+            start_col: 22usize,
+            end_line: 966usize,
+            end_col: 79usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_lte_supported_null()),
+        ),
+    };
+    fn matrix_text_search_ore_lte_supported_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_lte_supported_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let payload = spec.placeholder_payload;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                            &spec.sql_domain,
+                            "<=",
+                        ),
+                    )
+                });
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[Some(payload), None],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[None, Some(payload)],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                    .await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_lte_supported_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_lte_supported_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gt_supported_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gt_supported_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gt_supported_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 966usize,
+            start_col: 22usize,
+            end_line: 966usize,
+            end_col: 79usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_gt_supported_null()),
+        ),
+    };
+    fn matrix_text_search_ore_gt_supported_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gt_supported_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let payload = spec.placeholder_payload;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                            &spec.sql_domain,
+                            ">",
+                        ),
+                    )
+                });
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[Some(payload), None],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[None, Some(payload)],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                    .await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gt_supported_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_gt_supported_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_gte_supported_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_gte_supported_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_gte_supported_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 966usize,
+            start_col: 22usize,
+            end_line: 966usize,
+            end_col: 79usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_gte_supported_null()),
+        ),
+    };
+    fn matrix_text_search_ore_gte_supported_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_gte_supported_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let payload = spec.placeholder_payload;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                            &spec.sql_domain,
+                            ">=",
+                        ),
+                    )
+                });
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[Some(payload), None],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(
+                        &pool,
+                        &sql,
+                        &[None, Some(payload)],
+                    )
+                    .await?;
+                ::eql_tests::scalar_domains::assert_null(&pool, &sql, &[None, None])
+                    .await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_gte_supported_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_gte_supported_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_eq_blocker"]
     #[doc(hidden)]
     pub const matrix_text_storage_eq_blocker: test::TestDescAndFn = test::TestDescAndFn {
@@ -18334,9 +23867,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18469,9 +24002,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18604,9 +24137,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18739,9 +24272,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -18874,9 +24407,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19009,9 +24542,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19146,9 +24679,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19283,9 +24816,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19418,9 +24951,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19551,9 +25084,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19684,9 +25217,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19817,9 +25350,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -19950,9 +25483,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20087,9 +25620,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20224,9 +25757,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20361,9 +25894,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20498,9 +26031,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20635,9 +26168,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1023usize,
+            start_line: 1030usize,
             start_col: 22usize,
-            end_line: 1023usize,
+            end_line: 1030usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -20772,9 +26305,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -20912,9 +26445,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -21050,9 +26583,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -21192,9 +26725,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -21334,9 +26867,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1090usize,
+            start_line: 1097usize,
             start_col: 22usize,
-            end_line: 1090usize,
+            end_line: 1097usize,
             end_col: 67usize,
             compile_fail: false,
             no_run: false,
@@ -21466,6 +26999,148 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_payload_check"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_payload_check: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_payload_check",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 1097usize,
+            start_col: 22usize,
+            end_line: 1097usize,
+            end_col: 67usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_payload_check()),
+        ),
+    };
+    fn matrix_text_search_ore_payload_check() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_payload_check(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let baseline = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                for key in spec.payload_required_keys() {
+                    let sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT (\'{0}\'::jsonb - \'{1}\')::{2}",
+                                baseline,
+                                key,
+                                d,
+                            ),
+                        )
+                    });
+                    let err = sqlx::query(&sql)
+                        .fetch_one(&pool)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "{0} must reject payload missing `{1}`: {2}",
+                                        d,
+                                        key,
+                                        sql,
+                                    ),
+                                )
+                            }),
+                        )
+                        .to_string();
+                    if ::anyhow::__private::not(
+                        err.contains("violates check constraint"),
+                    ) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "expected check-constraint violation for missing `{0}` on {1}, got: {2}",
+                                    key,
+                                    d,
+                                    err,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                }
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!("SELECT \'[\"v\",\"i\",\"c\"]\'::jsonb::{0}", d),
+                    )
+                });
+                let err = sqlx::query(&sql)
+                    .fetch_one(&pool)
+                    .await
+                    .expect_err(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("{0} must reject non-object payload", d),
+                            )
+                        }),
+                    )
+                    .to_string();
+                if ::anyhow::__private::not(err.contains("violates check constraint")) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "expected check-constraint violation for non-object on {0}, got: {1}",
+                                d,
+                                err,
+                            ),
+                        );
+                        error
+                    });
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_payload_check",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_payload_check;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_path_op_blockers"]
     #[doc(hidden)]
     pub const matrix_text_storage_path_op_blockers: test::TestDescAndFn = test::TestDescAndFn {
@@ -21476,9 +27151,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21577,9 +27252,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21680,9 +27355,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21783,9 +27458,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21886,9 +27561,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1163usize,
+            start_line: 1170usize,
             start_col: 22usize,
-            end_line: 1163usize,
+            end_line: 1170usize,
             end_col: 70usize,
             compile_fail: false,
             no_run: false,
@@ -21979,6 +27654,109 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_path_op_blockers"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_path_op_blockers: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_path_op_blockers",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 1170usize,
+            start_col: 22usize,
+            end_line: 1170usize,
+            end_col: 70usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_path_op_blockers()),
+        ),
+    };
+    fn matrix_text_search_ore_path_op_blockers() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_path_op_blockers(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                for op in ["->", "->>"] {
+                    let msg = ::eql_tests::scalar_domains::blocker_msg(d, op);
+                    for sql in [
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT $1::jsonb::{0} {1} \'field\'::text",
+                                    d,
+                                    op,
+                                ),
+                            )
+                        }),
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("SELECT $1::jsonb::{0} {1} 0::integer", d, op),
+                            )
+                        }),
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("SELECT $1::jsonb {0} $1::jsonb::{1}", op, d),
+                            )
+                        }),
+                    ] {
+                        ::eql_tests::scalar_domains::assert_raises(
+                                &pool,
+                                &sql,
+                                &[Some(payload)],
+                                &msg,
+                            )
+                            .await?;
+                    }
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_path_op_blockers",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_path_op_blockers;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_native_absent_ops"]
     #[doc(hidden)]
     pub const matrix_text_storage_native_absent_ops: test::TestDescAndFn = test::TestDescAndFn {
@@ -21989,9 +27767,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22078,9 +27856,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22167,9 +27945,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22256,9 +28034,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22345,9 +28123,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1220usize,
+            start_line: 1227usize,
             start_col: 22usize,
-            end_line: 1220usize,
+            end_line: 1227usize,
             end_col: 71usize,
             compile_fail: false,
             no_run: false,
@@ -22424,6 +28202,95 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_native_absent_ops"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_native_absent_ops: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_native_absent_ops",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 1227usize,
+            start_col: 22usize,
+            end_line: 1227usize,
+            end_col: 71usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_native_absent_ops()),
+        ),
+    };
+    fn matrix_text_search_ore_native_absent_ops() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_native_absent_ops(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                for op in ["~~", "~~*"] {
+                    let sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT $1::jsonb::{0} {1} $2::jsonb::{0}",
+                                d,
+                                op,
+                            ),
+                        )
+                    });
+                    ::eql_tests::scalar_domains::assert_raises(
+                            &pool,
+                            &sql,
+                            &[Some(payload), Some(payload)],
+                            "operator does not exist",
+                        )
+                        .await?;
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_native_absent_ops",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_native_absent_ops;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_native_jsonb_blockers"]
     #[doc(hidden)]
     pub const matrix_text_storage_native_jsonb_blockers: test::TestDescAndFn = test::TestDescAndFn {
@@ -22434,9 +28301,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -22658,9 +28525,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -22882,9 +28749,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -23106,9 +28973,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -23330,9 +29197,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1295usize,
+            start_line: 1302usize,
             start_col: 22usize,
-            end_line: 1295usize,
+            end_line: 1302usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -23544,6 +29411,230 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_native_jsonb_blockers"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_native_jsonb_blockers: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_native_jsonb_blockers",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 1302usize,
+            start_col: 22usize,
+            end_line: 1302usize,
+            end_col: 75usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_native_jsonb_blockers()),
+        ),
+    };
+    fn matrix_text_search_ore_native_jsonb_blockers() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_native_jsonb_blockers(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let single: &[(&str, String)] = &[
+                    (
+                        "?",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} ? \'c\'::text", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "?|",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} ?| ARRAY[\'c\']", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "?&",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} ?& ARRAY[\'c\']", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "#>",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} #> ARRAY[\'i\']", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "#>>",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} #>> ARRAY[\'i\', \'c\']", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "@?",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} @? \'$.c\'::jsonpath", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "@@",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "$1::jsonb::{0} @@ \'$.c == \"placeholder\"\'::jsonpath",
+                                    d,
+                                ),
+                            )
+                        }),
+                    ),
+                    (
+                        "-",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} - \'c\'::text", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "-",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0} - 0", d))
+                        }),
+                    ),
+                    (
+                        "-",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} - ARRAY[\'c\']", d),
+                            )
+                        }),
+                    ),
+                    (
+                        "#-",
+                        ::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("$1::jsonb::{0} #- ARRAY[\'i\']", d),
+                            )
+                        }),
+                    ),
+                ];
+                for (op, expr) in single {
+                    let sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("SELECT {0}", expr))
+                    });
+                    let msg = ::eql_tests::scalar_domains::blocker_msg(d, op);
+                    ::eql_tests::scalar_domains::assert_raises(
+                            &pool,
+                            &sql,
+                            &[Some(payload)],
+                            &msg,
+                        )
+                        .await?;
+                }
+                let concat: &[String] = &[
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("$1::jsonb::{0} || $2::jsonb", d),
+                        )
+                    }),
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("$1::jsonb || $2::jsonb::{0}", d),
+                        )
+                    }),
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!("$1::jsonb::{0} || $2::jsonb::{0}", d),
+                        )
+                    }),
+                ];
+                let concat_msg = ::eql_tests::scalar_domains::blocker_msg(d, "||");
+                for expr in concat {
+                    let sql = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("SELECT {0}", expr))
+                    });
+                    ::eql_tests::scalar_domains::assert_raises(
+                            &pool,
+                            &sql,
+                            &[Some(payload), Some(payload)],
+                            &concat_msg,
+                        )
+                        .await?;
+                }
+                let mut swept: Vec<&str> = single.iter().map(|(op, _)| *op).collect();
+                swept.push("||");
+                swept.sort_unstable();
+                swept.dedup();
+                let mut pinned: Vec<&str> = ::eql_tests::matrix::NATIVE_JSONB_BLOCKER_ARM_SYMBOLS
+                    .to_vec();
+                pinned.sort_unstable();
+                if ::anyhow::__private::not(swept == pinned) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "native-jsonb-blocker arm swept {0:?} but pinned set is {1:?}",
+                                swept,
+                                pinned,
+                            ),
+                        );
+                        error
+                    });
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_native_jsonb_blockers",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_native_jsonb_blockers;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_typed_column_blocker"]
     #[doc(hidden)]
     pub const matrix_text_storage_typed_column_blocker: test::TestDescAndFn = test::TestDescAndFn {
@@ -23554,9 +29645,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -23925,9 +30016,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -24226,9 +30317,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -24387,9 +30478,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1398usize,
+            start_line: 1405usize,
             start_col: 22usize,
-            end_line: 1398usize,
+            end_line: 1405usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -24548,9 +30639,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24593,14 +30684,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -24712,9 +30803,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24757,14 +30848,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -24876,9 +30967,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -24921,14 +31012,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -25040,9 +31131,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25085,14 +31176,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -25194,6 +31285,170 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_planner_metadata_eq"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_planner_metadata_eq: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_planner_metadata_eq",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 1486usize,
+            start_col: 22usize,
+            end_line: 1486usize,
+            end_col: 78usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_planner_metadata_eq()),
+        ),
+    };
+    fn matrix_text_search_ore_planner_metadata_eq() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_planner_metadata_eq(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let ops: &[&str] = &["=", "<>"];
+                let op_list = ops
+                    .iter()
+                    .map(|o| ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("\'{0}\'", o))
+                    }))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                            op_list,
+                            d,
+                        ),
+                    )
+                });
+                let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
+                        &sql,
+                    )
+                    .fetch_all(&pool)
+                    .await?;
+                let expected = ops.len() * 5;
+                if ::anyhow::__private::not(rows.len() == expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
+                                        ops.len(),
+                                        rows.len(),
+                                        expected,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                for (op, lhs, rhs, has_com, has_neg, has_rest, has_join) in &rows {
+                    if ::anyhow::__private::not(*has_com) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare COMMUTATOR",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(*has_neg) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare NEGATOR",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(*has_rest) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare RESTRICT",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(*has_join) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare JOIN",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_planner_metadata_eq",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_planner_metadata_eq;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_planner_metadata_ord"]
     #[doc(hidden)]
     pub const matrix_text_ord_planner_metadata_ord: test::TestDescAndFn = test::TestDescAndFn {
@@ -25204,9 +31459,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25249,14 +31504,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -25368,9 +31623,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25413,14 +31668,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -25532,9 +31787,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1479usize,
+            start_line: 1486usize,
             start_col: 22usize,
-            end_line: 1479usize,
+            end_line: 1486usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -25577,14 +31832,14 @@ pub mod text {
                     )
                     .fetch_all(&pool)
                     .await?;
-                let expected = ops.len() * 3;
+                let expected = ops.len() * 5;
                 if ::anyhow::__private::not(rows.len() == expected) {
                     return ::anyhow::__private::Err(
                         ::anyhow::Error::msg(
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "expected {2} rows ({0} ops x 3 arg shapes) on {3}, got {1}",
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
                                         ops.len(),
                                         rows.len(),
                                         expected,
@@ -25686,6 +31941,170 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_planner_metadata_ord"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_planner_metadata_ord: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_planner_metadata_ord",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 1486usize,
+            start_col: 22usize,
+            end_line: 1486usize,
+            end_col: 78usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_planner_metadata_ord()),
+        ),
+    };
+    fn matrix_text_search_ore_planner_metadata_ord() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_planner_metadata_ord(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let ops: &[&str] = &["<", "<=", ">", ">="];
+                let op_list = ops
+                    .iter()
+                    .map(|o| ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("\'{0}\'", o))
+                    }))
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "\n                    SELECT o.oprname,\n                           lt.typname AS lhs,\n                           rt.typname AS rhs,\n                           o.oprcom <> 0       AS has_commutator,\n                           o.oprnegate <> 0    AS has_negator,\n                           o.oprrest::oid <> 0 AS has_restrict,\n                           o.oprjoin::oid <> 0 AS has_join\n                    FROM pg_catalog.pg_operator o\n                    JOIN pg_catalog.pg_type lt ON lt.oid = o.oprleft\n                    JOIN pg_catalog.pg_type rt ON rt.oid = o.oprright\n                    WHERE o.oprname IN ({0})\n                      AND (\'{1}\'::regtype = o.oprleft OR \'{1}\'::regtype = o.oprright)\n                    ",
+                            op_list,
+                            d,
+                        ),
+                    )
+                });
+                let rows: Vec<(String, String, String, bool, bool, bool, bool)> = sqlx::query_as(
+                        &sql,
+                    )
+                    .fetch_all(&pool)
+                    .await?;
+                let expected = ops.len() * 5;
+                if ::anyhow::__private::not(rows.len() == expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "expected {2} rows ({0} ops x 5 arg shapes: 3 storage + 2 query) on {3}, got {1}",
+                                        ops.len(),
+                                        rows.len(),
+                                        expected,
+                                        d,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                for (op, lhs, rhs, has_com, has_neg, has_rest, has_join) in &rows {
+                    if ::anyhow::__private::not(*has_com) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare COMMUTATOR",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(*has_neg) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare NEGATOR",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(*has_rest) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare RESTRICT",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(*has_join) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "operator {0}({1},{2}) must declare JOIN",
+                                    op,
+                                    lhs,
+                                    rhs,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_planner_metadata_ord",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_planner_metadata_ord;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_eq_index_engages_btree"]
     #[doc(hidden)]
     pub const matrix_text_eq_index_engages_btree: test::TestDescAndFn = test::TestDescAndFn {
@@ -25696,9 +32115,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -25876,9 +32295,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26056,9 +32475,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26326,9 +32745,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26506,9 +32925,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26776,9 +33195,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -26956,9 +33375,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -27226,9 +33645,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2442usize,
+            start_line: 2460usize,
             start_col: 22usize,
-            end_line: 2442usize,
+            end_line: 2460usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -27396,6 +33815,458 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_index_engages_btree"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_index_engages_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_index_engages_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2460usize,
+            start_col: 22usize,
+            end_line: 2460usize,
+            end_col: 75usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_index_engages_btree()),
+        ),
+    };
+    fn matrix_text_search_ore_index_engages_btree() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_index_engages_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["<", "<=", ">", ">="],
+                )?;
+                let table = "matrix_text_search_ore_idx_btree";
+                let index = "matrix_text_search_ore_idx_btree_idx";
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <String as ::eql_tests::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: String = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                "<",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        "<",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                "<=",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        "<=",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                ">",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        ">",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                ">=",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        ">=",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_index_engages_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_index_engages_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_eqidx_index_engages_btree"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_eqidx_index_engages_btree: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_eqidx_index_engages_btree",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2460usize,
+            start_col: 22usize,
+            end_line: 2460usize,
+            end_col: 75usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_eqidx_index_engages_btree(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_eqidx_index_engages_btree() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_eqidx_index_engages_btree(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let extractor = ::eql_tests::scalar_domains::combo_extractor(
+                    &spec,
+                    &["="],
+                )?;
+                let table = "matrix_text_search_ore_eqidx_idx_btree";
+                let index = "matrix_text_search_ore_eqidx_idx_btree_idx";
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {2} (plaintext {0}, value {1}) ON COMMIT DROP",
+                                    <String as ::eql_tests::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE,
+                                    &spec.sql_domain,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {3}(plaintext, value) SELECT plaintext, ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    &spec.sql_domain,
+                                    fixture_table,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {2} ON {3} USING {0} ({1}(value))",
+                                    "btree",
+                                    extractor,
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot: String = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_values()[0]
+                    .clone();
+                let payload = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, pivot)
+                    .await?;
+                let lit = ::eql_tests::scalar_domains::sql_string_literal(&payload);
+                let rhs_casts = [
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(format_args!("::{0}", &spec.sql_domain))
+                    }),
+                    String::new(),
+                ];
+                for rhs_cast in &rhs_casts {
+                    let query = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "SELECT * FROM {2} WHERE value {0} {3}::jsonb{1}",
+                                "=",
+                                rhs_cast,
+                                table,
+                                lit,
+                            ),
+                        )
+                    });
+                    ::eql_tests::matrix::assert_index_scan_uses(
+                            &mut *tx,
+                            &query,
+                            index,
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "domain={0} op={1} rhs_cast={2:?} must use index={3}",
+                                        &spec.sql_domain,
+                                        "=",
+                                        rhs_cast,
+                                        index,
+                                    ),
+                                )
+                            }),
+                        )
+                        .await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_eqidx_index_engages_btree",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_eqidx_index_engages_btree;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_scale_preference_default_btree"]
     #[doc(hidden)]
     pub const matrix_text_ord_scale_preference_default_btree: test::TestDescAndFn = test::TestDescAndFn {
@@ -27406,9 +34277,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1794usize,
+            start_line: 1806usize,
             start_col: 22usize,
-            end_line: 1794usize,
+            end_line: 1806usize,
             end_col: 86usize,
             compile_fail: false,
             no_run: false,
@@ -27608,9 +34479,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 1885usize,
+            start_line: 1897usize,
             start_col: 22usize,
-            end_line: 1885usize,
+            end_line: 1897usize,
             end_col: 55usize,
             compile_fail: false,
             no_run: false,
@@ -28004,20 +34875,20 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_ord_ord_routes_through_ob"]
+    #[rustc_test_marker = "scalars::text::matrix_text_ord_ord_routes_through_ordering_term"]
     #[doc(hidden)]
-    pub const matrix_text_ord_ord_routes_through_ob: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_ord_ord_routes_through_ordering_term: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::text::matrix_text_ord_ord_routes_through_ob",
+                "scalars::text::matrix_text_ord_ord_routes_through_ordering_term",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2066usize,
+            start_line: 2080usize,
             start_col: 22usize,
-            end_line: 2066usize,
-            end_col: 75usize,
+            end_line: 2080usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -28025,11 +34896,13 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_ord_ord_routes_through_ob()),
+            || test::assert_test_result(
+                matrix_text_ord_ord_routes_through_ordering_term(),
+            ),
         ),
     };
-    fn matrix_text_ord_ord_routes_through_ob() -> anyhow::Result<()> {
-        async fn matrix_text_ord_ord_routes_through_ob(
+    fn matrix_text_ord_ord_routes_through_ordering_term() -> anyhow::Result<()> {
+        async fn matrix_text_ord_ord_routes_through_ordering_term(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -28049,19 +34922,30 @@ pub mod text {
                     .terms_for(token)
                     .iter()
                     .any(|t| t.json_key() == "hm");
-                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
-                        "eql_v3.eq_term",
+                        "eql_v3.eq_term".to_string(),
                         "payload",
-                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term"
+                            .to_string(),
                     )
                 } else {
-                    (
-                        "eql_v3.ord_term",
-                        "(payload - 'hm')",
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
-                    )
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect(
+                            "an ordered domain resolves `=` to its ordering extractor",
+                        );
+                    let caveat = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "= must engage the {0} functional btree with no hm",
+                                ord,
+                            ),
+                        )
+                    });
+                    (ord, "(payload - 'hm')", caveat)
                 };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -28225,7 +35109,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_ord_ord_routes_through_ob",
+            "encrypted_domain::scalars::text::matrix_text_ord_ord_routes_through_ordering_term",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -28261,24 +35145,24 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_ord_ord_routes_through_ob;
+        let f: fn(_) -> _ = matrix_text_ord_ord_routes_through_ordering_term;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_ord_ore_ord_routes_through_ob"]
+    #[rustc_test_marker = "scalars::text::matrix_text_ord_ore_ord_routes_through_ordering_term"]
     #[doc(hidden)]
-    pub const matrix_text_ord_ore_ord_routes_through_ob: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_ord_ore_ord_routes_through_ordering_term: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::text::matrix_text_ord_ore_ord_routes_through_ob",
+                "scalars::text::matrix_text_ord_ore_ord_routes_through_ordering_term",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2066usize,
+            start_line: 2080usize,
             start_col: 22usize,
-            end_line: 2066usize,
-            end_col: 75usize,
+            end_line: 2080usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -28286,11 +35170,13 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_ord_ore_ord_routes_through_ob()),
+            || test::assert_test_result(
+                matrix_text_ord_ore_ord_routes_through_ordering_term(),
+            ),
         ),
     };
-    fn matrix_text_ord_ore_ord_routes_through_ob() -> anyhow::Result<()> {
-        async fn matrix_text_ord_ore_ord_routes_through_ob(
+    fn matrix_text_ord_ore_ord_routes_through_ordering_term() -> anyhow::Result<()> {
+        async fn matrix_text_ord_ore_ord_routes_through_ordering_term(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -28310,19 +35196,30 @@ pub mod text {
                     .terms_for(token)
                     .iter()
                     .any(|t| t.json_key() == "hm");
-                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
-                        "eql_v3.eq_term",
+                        "eql_v3.eq_term".to_string(),
                         "payload",
-                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term"
+                            .to_string(),
                     )
                 } else {
-                    (
-                        "eql_v3.ord_term",
-                        "(payload - 'hm')",
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
-                    )
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect(
+                            "an ordered domain resolves `=` to its ordering extractor",
+                        );
+                    let caveat = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "= must engage the {0} functional btree with no hm",
+                                ord,
+                            ),
+                        )
+                    });
+                    (ord, "(payload - 'hm')", caveat)
                 };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -28486,7 +35383,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_ord_ore_ord_routes_through_ob",
+            "encrypted_domain::scalars::text::matrix_text_ord_ore_ord_routes_through_ordering_term",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -28522,24 +35419,24 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_ord_ore_ord_routes_through_ob;
+        let f: fn(_) -> _ = matrix_text_ord_ore_ord_routes_through_ordering_term;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_search_ord_routes_through_ob"]
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ord_routes_through_ordering_term"]
     #[doc(hidden)]
-    pub const matrix_text_search_ord_routes_through_ob: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_search_ord_routes_through_ordering_term: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::text::matrix_text_search_ord_routes_through_ob",
+                "scalars::text::matrix_text_search_ord_routes_through_ordering_term",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2066usize,
+            start_line: 2080usize,
             start_col: 22usize,
-            end_line: 2066usize,
-            end_col: 75usize,
+            end_line: 2080usize,
+            end_col: 86usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -28547,11 +35444,13 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_search_ord_routes_through_ob()),
+            || test::assert_test_result(
+                matrix_text_search_ord_routes_through_ordering_term(),
+            ),
         ),
     };
-    fn matrix_text_search_ord_routes_through_ob() -> anyhow::Result<()> {
-        async fn matrix_text_search_ord_routes_through_ob(
+    fn matrix_text_search_ord_routes_through_ordering_term() -> anyhow::Result<()> {
+        async fn matrix_text_search_ord_routes_through_ordering_term(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -28571,19 +35470,30 @@ pub mod text {
                     .terms_for(token)
                     .iter()
                     .any(|t| t.json_key() == "hm");
-                let (extractor, value_expr, caveat): (&str, &str, &str) = if carries_hm {
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
-                        "eql_v3.eq_term",
+                        "eql_v3.eq_term".to_string(),
                         "payload",
-                        "= must engage the eql_v3.eq_term functional btree (exact hm), never ORE",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term"
+                            .to_string(),
                     )
                 } else {
-                    (
-                        "eql_v3.ord_term",
-                        "(payload - 'hm')",
-                        "= must engage the eql_v3.ord_term functional btree with no hm",
-                    )
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect(
+                            "an ordered domain resolves `=` to its ordering extractor",
+                        );
+                    let caveat = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "= must engage the {0} functional btree with no hm",
+                                ord,
+                            ),
+                        )
+                    });
+                    (ord, "(payload - 'hm')", caveat)
                 };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
                 let mut tx = pool.begin().await?;
                 sqlx::query(
                         &::alloc::__export::must_use({
@@ -28747,7 +35657,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_search_ord_routes_through_ob",
+            "encrypted_domain::scalars::text::matrix_text_search_ord_routes_through_ordering_term",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -28783,7 +35693,281 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_search_ord_routes_through_ob;
+        let f: fn(_) -> _ = matrix_text_search_ord_routes_through_ordering_term;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_ord_routes_through_ordering_term"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_ord_routes_through_ordering_term: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_ord_routes_through_ordering_term",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2080usize,
+            start_col: 22usize,
+            end_line: 2080usize,
+            end_col: 86usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_ord_routes_through_ordering_term(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_ord_routes_through_ordering_term() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_ord_routes_through_ordering_term(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let token = <String as ScalarType>::PG_TYPE;
+                let table = "matrix_text_search_ore_routing";
+                let index = "matrix_text_search_ore_routing_idx";
+                let fixture_table = <String as ScalarType>::fixture_table_name();
+                let pivot: String = <String as ScalarType>::fixture_values()[0].clone();
+                let pivot_lit = <String as ScalarType>::to_sql_literal(&pivot);
+                let carries_hm = spec
+                    .variant
+                    .terms_for(token)
+                    .iter()
+                    .any(|t| t.json_key() == "hm");
+                let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
+                    (
+                        "eql_v3.eq_term".to_string(),
+                        "payload",
+                        "= must engage the eql_v3.eq_term functional btree (exact hm), never an ordering term"
+                            .to_string(),
+                    )
+                } else {
+                    let ord = spec
+                        .extractor_for_op("=")
+                        .expect(
+                            "an ordered domain resolves `=` to its ordering extractor",
+                        );
+                    let caveat = ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                "= must engage the {0} functional btree with no hm",
+                                ord,
+                            ),
+                        )
+                    });
+                    (ord, "(payload - 'hm')", caveat)
+                };
+                let (extractor, caveat) = (extractor.as_str(), caveat.as_str());
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {1} (plaintext {0}, value {2}) ON COMMIT DROP",
+                                    <String as ScalarType>::PLAINTEXT_SQL_TYPE,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT plaintext, {2}::{3} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    value_expr,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                if !carries_hm {
+                    let with_hm: i64 = sqlx::query_scalar(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "SELECT count(*) FROM {0} WHERE jsonb_exists(value::jsonb, \'hm\')",
+                                        table,
+                                    ),
+                                )
+                            }),
+                        )
+                        .fetch_one(&mut *tx)
+                        .await?;
+                    if ::anyhow::__private::not(with_hm == 0) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!("test rows must not carry hm"),
+                            );
+                            error
+                        });
+                    }
+                }
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {0} ON {1} USING btree ({2}(value))",
+                                    index,
+                                    table,
+                                    extractor,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let pivot_payload: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT {2}::text FROM {0} WHERE plaintext = {1}",
+                                    fixture_table,
+                                    pivot_lit,
+                                    value_expr,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let eq_count: i64 = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE value = $1::jsonb::{1}",
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&pivot_payload)
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(eq_count == 1) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "= must match exactly the pivot row (want 1, got {0})",
+                                eq_count,
+                            ),
+                        );
+                        error
+                    });
+                }
+                let expected_neq = <String as ScalarType>::fixture_values().len() as i64
+                    - eq_count;
+                let neq_count: i64 = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} WHERE value <> $1::jsonb::{1}",
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&pivot_payload)
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(neq_count == expected_neq) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "<> must match every non-pivot fixture row (want {0}, got {1})",
+                                expected_neq,
+                                neq_count,
+                            ),
+                        );
+                        error
+                    });
+                }
+                let lit = pivot_payload.replace('\'', "''");
+                ::eql_tests::matrix::assert_index_scan_uses(
+                        &mut *tx,
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT * FROM {0} WHERE value = \'{1}\'::jsonb::{2}",
+                                    table,
+                                    lit,
+                                    d,
+                                ),
+                            )
+                        }),
+                        index,
+                        caveat,
+                    )
+                    .await?;
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_ord_routes_through_ordering_term",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_ord_routes_through_ordering_term;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -28797,9 +35981,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2240usize,
+            start_line: 2258usize,
             start_col: 22usize,
-            end_line: 2240usize,
+            end_line: 2258usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -28903,9 +36087,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2256usize,
+            start_line: 2274usize,
             start_col: 22usize,
-            end_line: 2256usize,
+            end_line: 2274usize,
             end_col: 75usize,
             compile_fail: false,
             no_run: false,
@@ -29014,9 +36198,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2275usize,
+            start_line: 2293usize,
             start_col: 22usize,
-            end_line: 2275usize,
+            end_line: 2293usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -29125,9 +36309,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2301usize,
+            start_line: 2319usize,
             start_col: 22usize,
-            end_line: 2301usize,
+            end_line: 2319usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -29267,6 +36451,486 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_contains_self"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_match_contains_self: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_match_contains_self",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2258usize,
+            start_col: 22usize,
+            end_line: 2258usize,
+            end_col: 73usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_match_contains_self()),
+        ),
+    };
+    fn matrix_text_search_ore_match_contains_self() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_match_contains_self(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::MatchScalar;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let hay = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, <String as MatchScalar>::haystack())
+                    .await?;
+                let hit: bool = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT ($1::jsonb::{0}) @> ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&hay)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(hit) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "{0}: a value\'s bloom filter must contain itself",
+                                d,
+                            ),
+                        );
+                        error
+                    });
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_match_contains_self",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_match_contains_self;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_contains_needle"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_match_contains_needle: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_match_contains_needle",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2274usize,
+            start_col: 22usize,
+            end_line: 2274usize,
+            end_col: 75usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_match_contains_needle()),
+        ),
+    };
+    fn matrix_text_search_ore_match_contains_needle() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_match_contains_needle(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::MatchScalar;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let hay = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, <String as MatchScalar>::haystack())
+                    .await?;
+                let needle = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, <String as MatchScalar>::needle())
+                    .await?;
+                let hit: bool = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT ($1::jsonb::{0}) @> ($2::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&hay)
+                    .bind(&needle)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(hit) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "{0}: haystack bloom must contain its shared-ngram needle",
+                                d,
+                            ),
+                        );
+                        error
+                    });
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_match_contains_needle",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_match_contains_needle;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_disjoint_miss"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_match_disjoint_miss: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_match_disjoint_miss",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2293usize,
+            start_col: 22usize,
+            end_line: 2293usize,
+            end_col: 73usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_match_disjoint_miss()),
+        ),
+    };
+    fn matrix_text_search_ore_match_disjoint_miss() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_match_disjoint_miss(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::MatchScalar;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let needle = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, <String as MatchScalar>::needle())
+                    .await?;
+                let disjoint = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, <String as MatchScalar>::disjoint())
+                    .await?;
+                let hit: bool = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT ($1::jsonb::{0}) @> ($2::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&needle)
+                    .bind(&disjoint)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(!hit) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "{0}: needle bloom must NOT contain an ngram-disjoint value",
+                                d,
+                            ),
+                        );
+                        error
+                    });
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_match_disjoint_miss",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_match_disjoint_miss;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_index_engages_gin"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_match_index_engages_gin: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_match_index_engages_gin",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2319usize,
+            start_col: 22usize,
+            end_line: 2319usize,
+            end_col: 77usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_match_index_engages_gin()),
+        ),
+    };
+    fn matrix_text_search_ore_match_index_engages_gin() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_match_index_engages_gin(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::{MatchScalar, ScalarType};
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_text_search_ore_match";
+                let index = "matrix_text_search_ore_match_idx";
+                let fixture_table = <String as ScalarType>::fixture_table_name();
+                let needle = ::eql_tests::scalar_domains::fetch_fixture_payload::<
+                    String,
+                >(&pool, <String as MatchScalar>::needle())
+                    .await?;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (value {1}) ON COMMIT DROP",
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(value) SELECT payload::{2} FROM {0}",
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE INDEX {0} ON {1} USING gin (eql_v3.match_term(value))",
+                                    index,
+                                    table,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("ANALYZE {0}", table))
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query("SET LOCAL enable_seqscan = off").execute(&mut *tx).await?;
+                let lit = needle.replace('\'', "''");
+                ::eql_tests::matrix::assert_index_scan_uses(
+                        &mut *tx,
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT * FROM {0} WHERE value @> \'{1}\'::jsonb::{2}",
+                                    table,
+                                    lit,
+                                    d,
+                                ),
+                            )
+                        }),
+                        index,
+                        "bare @> must engage the eql_v3.match_term functional GIN index",
+                    )
+                    .await?;
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_match_index_engages_gin",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_match_index_engages_gin;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_ore_ore_injectivity"]
     #[doc(hidden)]
     pub const matrix_text_ord_ore_ore_injectivity: test::TestDescAndFn = test::TestDescAndFn {
@@ -29277,9 +36941,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2379usize,
+            start_line: 2397usize,
             start_col: 22usize,
-            end_line: 2379usize,
+            end_line: 2397usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -29369,6 +37033,108 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_ore_injectivity"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_ore_injectivity: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_ore_injectivity",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2397usize,
+            start_col: 22usize,
+            end_line: 2397usize,
+            end_col: 69usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_ore_injectivity()),
+        ),
+    };
+    fn matrix_text_search_ore_ore_injectivity() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_ore_injectivity(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let collisions: i64 = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT count(*) FROM {0} a JOIN {0} b ON a.id < b.id WHERE a.payload::{1} = b.payload::{1}",
+                                    fixture_table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(collisions == 0) {
+                    return ::anyhow::__private::Err({
+                        let error = ::anyhow::__private::format_err(
+                            format_args!(
+                                "no two distinct plaintexts may share an ORE term on {0}",
+                                d,
+                            ),
+                        );
+                        error
+                    });
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_ore_injectivity",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_ore_injectivity;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_aggregate_min"]
     #[doc(hidden)]
     pub const matrix_text_ord_aggregate_min: test::TestDescAndFn = test::TestDescAndFn {
@@ -29377,9 +37143,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -29460,20 +37226,20 @@ pub mod text {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -29495,7 +37261,7 @@ pub mod text {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "min",
                                         d,
                                         extremum,
@@ -29559,9 +37325,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -29671,9 +37437,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -29770,9 +37536,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -29956,9 +37722,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -30039,20 +37805,20 @@ pub mod text {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -30074,7 +37840,7 @@ pub mod text {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "max",
                                         d,
                                         extremum,
@@ -30138,9 +37904,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -30250,9 +38016,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30349,9 +38115,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -30537,9 +38303,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -30620,20 +38386,20 @@ pub mod text {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -30655,7 +38421,7 @@ pub mod text {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "min",
                                         d,
                                         extremum,
@@ -30719,9 +38485,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -30831,9 +38597,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -30930,9 +38696,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -31118,9 +38884,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -31201,20 +38967,20 @@ pub mod text {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -31236,7 +39002,7 @@ pub mod text {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "max",
                                         d,
                                         extremum,
@@ -31300,9 +39066,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -31412,9 +39178,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -31511,9 +39277,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -31699,9 +39465,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -31782,20 +39548,20 @@ pub mod text {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -31817,7 +39583,7 @@ pub mod text {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "min",
                                         d,
                                         extremum,
@@ -31881,9 +39647,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -31993,9 +39759,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -32092,9 +39858,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -32280,9 +40046,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2922usize,
+            start_line: 2940usize,
             start_col: 22usize,
-            end_line: 2922usize,
+            end_line: 2940usize,
             end_col: 73usize,
             compile_fail: false,
             no_run: false,
@@ -32363,20 +40129,20 @@ pub mod text {
                         }
                     }
                 };
-                let lhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(
-                            format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
-                        )
-                    }),
-                );
-                let rhs_ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
-                    }),
-                );
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
                 let ord_terms_match: bool = sqlx::query_scalar(
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
@@ -32398,7 +40164,7 @@ pub mod text {
                             ::alloc::__export::must_use({
                                 ::alloc::fmt::format(
                                     format_args!(
-                                        "eql_v3.ord_term(eql_v3.{0}({1})) must equal eql_v3.ord_term(<expected payload>) for plaintext={2:?}",
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
                                         "max",
                                         d,
                                         extremum,
@@ -32462,9 +40228,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2982usize,
+            start_line: 3002usize,
             start_col: 22usize,
-            end_line: 2982usize,
+            end_line: 3002usize,
             end_col: 80usize,
             compile_fail: false,
             no_run: false,
@@ -32574,9 +40340,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3007usize,
+            start_line: 3027usize,
             start_col: 22usize,
-            end_line: 3007usize,
+            end_line: 3027usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -32673,9 +40439,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3033usize,
+            start_line: 3053usize,
             start_col: 22usize,
-            end_line: 3033usize,
+            end_line: 3053usize,
             end_col: 85usize,
             compile_fail: false,
             no_run: false,
@@ -32851,6 +40617,1172 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_min"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2940usize,
+            start_col: 22usize,
+            end_line: 2940usize,
+            end_col: 73usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_min()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_min() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let extremum: String = <String as ScalarType>::fixture_values()
+                    .iter()
+                    .cloned()
+                    .min()
+                    .expect("FIXTURE_VALUES must be non-empty");
+                let extremum_lit = <String as ScalarType>::to_sql_literal(&extremum);
+                let expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    extremum_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&pool)
+                    .await?;
+                let actual: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT eql_v3.{0}(({1})::{2})::text FROM {3}",
+                                    "min",
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&pool)
+                    .await?;
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "eql_v3.{0}({1}) must return the payload of plaintext={2:?} (the fixture {3})",
+                                        "min",
+                                        d,
+                                        extremum,
+                                        "min",
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "min", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
+                let ord_terms_match: bool = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT {0} = {1} FROM {2}",
+                                    lhs_ord,
+                                    rhs_ord,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&expected)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(ord_terms_match) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
+                                        "min",
+                                        d,
+                                        extremum,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_min_empty"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_min_empty: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_min_empty",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3002usize,
+            start_col: 22usize,
+            end_line: 3002usize,
+            end_col: 80usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_min_empty()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_min_empty() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_min_empty(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE empty_agg (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let result: Option<String> = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT eql_v3.{0}(value)::text FROM empty_agg",
+                                    "min",
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(result.is_none()) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "empty rowset to eql_v3.{0} on {1} must return NULL, got {2:?}",
+                                        "min",
+                                        d,
+                                        result,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_min_empty",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_min_empty;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_min_all_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_min_all_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_min_all_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3027usize,
+            start_col: 22usize,
+            end_line: 3027usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_min_all_null()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_min_all_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_min_all_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(NULL::{1})::text FROM generate_series(1, 3)",
+                            "min",
+                            d,
+                        ),
+                    )
+                });
+                let result: Option<String> = sqlx::query_scalar(&sql)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(result.is_none()) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "all-NULL input to eql_v3.{0} on {1} must return NULL, got {2:?}; SQL={3}",
+                                        "min",
+                                        d,
+                                        result,
+                                        sql,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_min_all_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_min_all_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_min_mixed_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_min_mixed_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_min_mixed_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3053usize,
+            start_col: 22usize,
+            end_line: 3053usize,
+            end_col: 85usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_aggregate_min_mixed_null(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_min_mixed_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_min_mixed_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let values: &[String] = <String as ScalarType>::fixture_values();
+                if ::anyhow::__private::not(values.len() >= 2) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "mixed-NULL test needs >= 2 fixture values; got {0}",
+                                        values.len(),
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                let mut sorted: Vec<String> = values.to_vec();
+                sorted.sort();
+                let low: String = sorted
+                    .first()
+                    .expect("non-empty after len check")
+                    .clone();
+                let high: String = sorted
+                    .last()
+                    .expect("non-empty after len check")
+                    .clone();
+                let expected_plaintext: String = low.clone().min(high.clone());
+                let low_lit = <String as ScalarType>::to_sql_literal(&low);
+                let high_lit = <String as ScalarType>::to_sql_literal(&high);
+                let expected_lit = <String as ScalarType>::to_sql_literal(
+                    &expected_plaintext,
+                );
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE mixed_null (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
+                                    low_lit,
+                                    high_lit,
+                                    d,
+                                    col,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    expected_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let actual: Option<String> = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT eql_v3.{0}(value)::text FROM mixed_null",
+                                    "min",
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(
+                    actual.as_deref() == Some(expected.as_str()),
+                ) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on mixed NULL/non-NULL must return the {1} non-NULL value (plaintext={2:?}); want {3:?}, got {4:?}",
+                                        "min",
+                                        "min",
+                                        expected_plaintext,
+                                        expected,
+                                        actual,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_min_mixed_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_min_mixed_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_max"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2940usize,
+            start_col: 22usize,
+            end_line: 2940usize,
+            end_col: 73usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_max()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_max() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let extremum: String = <String as ScalarType>::fixture_values()
+                    .iter()
+                    .cloned()
+                    .max()
+                    .expect("FIXTURE_VALUES must be non-empty");
+                let extremum_lit = <String as ScalarType>::to_sql_literal(&extremum);
+                let expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    extremum_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&pool)
+                    .await?;
+                let actual: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT eql_v3.{0}(({1})::{2})::text FROM {3}",
+                                    "max",
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&pool)
+                    .await?;
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "eql_v3.{0}({1}) must return the payload of plaintext={2:?} (the fixture {3})",
+                                        "max",
+                                        d,
+                                        extremum,
+                                        "max",
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                let lhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!("eql_v3.{0}(({1})::{2})", "max", col, d),
+                            )
+                        }),
+                    );
+                let rhs_ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("$1::jsonb::{0}", d))
+                        }),
+                    );
+                let ord_terms_match: bool = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT {0} = {1} FROM {2}",
+                                    lhs_ord,
+                                    rhs_ord,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(&expected)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(ord_terms_match) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "the ordering extractor over eql_v3.{0}({1}) must equal it over the <expected payload> for plaintext={2:?}",
+                                        "max",
+                                        d,
+                                        extremum,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_max_empty"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_max_empty: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_max_empty",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3002usize,
+            start_col: 22usize,
+            end_line: 3002usize,
+            end_col: 80usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_max_empty()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_max_empty() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_max_empty(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE empty_agg (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let result: Option<String> = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT eql_v3.{0}(value)::text FROM empty_agg",
+                                    "max",
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(result.is_none()) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "empty rowset to eql_v3.{0} on {1} must return NULL, got {2:?}",
+                                        "max",
+                                        d,
+                                        result,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_max_empty",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_max_empty;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_max_all_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_max_all_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_max_all_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3027usize,
+            start_col: 22usize,
+            end_line: 3027usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_max_all_null()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_max_all_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_max_all_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(NULL::{1})::text FROM generate_series(1, 3)",
+                            "max",
+                            d,
+                        ),
+                    )
+                });
+                let result: Option<String> = sqlx::query_scalar(&sql)
+                    .fetch_one(&pool)
+                    .await?;
+                if ::anyhow::__private::not(result.is_none()) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "all-NULL input to eql_v3.{0} on {1} must return NULL, got {2:?}; SQL={3}",
+                                        "max",
+                                        d,
+                                        result,
+                                        sql,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_max_all_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_max_all_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_max_mixed_null"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_max_mixed_null: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_max_mixed_null",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3053usize,
+            start_col: 22usize,
+            end_line: 3053usize,
+            end_col: 85usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_aggregate_max_mixed_null(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_max_mixed_null() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_max_mixed_null(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let values: &[String] = <String as ScalarType>::fixture_values();
+                if ::anyhow::__private::not(values.len() >= 2) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "mixed-NULL test needs >= 2 fixture values; got {0}",
+                                        values.len(),
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                let mut sorted: Vec<String> = values.to_vec();
+                sorted.sort();
+                let low: String = sorted
+                    .first()
+                    .expect("non-empty after len check")
+                    .clone();
+                let high: String = sorted
+                    .last()
+                    .expect("non-empty after len check")
+                    .clone();
+                let expected_plaintext: String = low.clone().max(high.clone());
+                let low_lit = <String as ScalarType>::to_sql_literal(&low);
+                let high_lit = <String as ScalarType>::to_sql_literal(&high);
+                let expected_lit = <String as ScalarType>::to_sql_literal(
+                    &expected_plaintext,
+                );
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE mixed_null (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO mixed_null(value) SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {0} UNION ALL SELECT NULL::{2} UNION ALL SELECT ({3})::{2} FROM {4} WHERE plaintext = {1} UNION ALL SELECT NULL::{2}",
+                                    low_lit,
+                                    high_lit,
+                                    d,
+                                    col,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    expected_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let actual: Option<String> = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT eql_v3.{0}(value)::text FROM mixed_null",
+                                    "max",
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(
+                    actual.as_deref() == Some(expected.as_str()),
+                ) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on mixed NULL/non-NULL must return the {1} non-NULL value (plaintext={2:?}); want {3:?}, got {4:?}",
+                                        "max",
+                                        "max",
+                                        expected_plaintext,
+                                        expected,
+                                        actual,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_max_mixed_null",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_max_mixed_null;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_aggregate_group_by_min"]
     #[doc(hidden)]
     pub const matrix_text_ord_aggregate_group_by_min: test::TestDescAndFn = test::TestDescAndFn {
@@ -32861,9 +41793,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -33114,9 +42046,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -33367,9 +42299,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -33620,9 +42552,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -33873,9 +42805,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -34126,9 +43058,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3214usize,
+            start_line: 3234usize,
             start_col: 22usize,
-            end_line: 3214usize,
+            end_line: 3234usize,
             end_col: 82usize,
             compile_fail: false,
             no_run: false,
@@ -34369,6 +43301,512 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_group_by_min"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_group_by_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_group_by_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3234usize,
+            start_col: 22usize,
+            end_line: 3234usize,
+            end_col: 82usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_group_by_min()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_group_by_min() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_group_by_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let values: &[String] = <String as ScalarType>::fixture_values();
+                if ::anyhow::__private::not(values.len() >= 5) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "GROUP BY test needs >= 5 fixture values; got {0}",
+                                        values.len(),
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                let group1: &[String] = &values[..3];
+                let group2: &[String] = &values[3..5];
+                let group1_extremum: String = group1
+                    .iter()
+                    .cloned()
+                    .min()
+                    .expect("group 1 is non-empty");
+                let group2_extremum: String = group2
+                    .iter()
+                    .cloned()
+                    .min()
+                    .expect("group 2 is non-empty");
+                let g1_lit = <String as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <String as ScalarType>::to_sql_literal(&group2_extremum);
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE group_test (group_key int, value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                for v in group1 {
+                    let lit = <String as ScalarType>::to_sql_literal(v);
+                    sqlx::query(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO group_test(group_key, value) SELECT 1, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
+                                        d,
+                                        fixture,
+                                        lit,
+                                    ),
+                                )
+                            }),
+                        )
+                        .execute(&mut *tx)
+                        .await?;
+                }
+                for v in group2 {
+                    let lit = <String as ScalarType>::to_sql_literal(v);
+                    sqlx::query(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO group_test(group_key, value) SELECT 2, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
+                                        d,
+                                        fixture,
+                                        lit,
+                                    ),
+                                )
+                            }),
+                        )
+                        .execute(&mut *tx)
+                        .await?;
+                }
+                let g1_expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    g1_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let g2_expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    g2_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let rows: Vec<(i32, String)> = sqlx::query_as(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT group_key, eql_v3.{0}(value)::text FROM group_test GROUP BY group_key ORDER BY group_key",
+                                    "min",
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_all(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(rows.len() == 2) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "GROUP BY must return 2 rows, got {0}",
+                                        rows.len(),
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                if ::anyhow::__private::not(rows[0].0 == 1 && rows[0].1 == g1_expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "group 1 eql_v3.{0}({1}) must yield payload for plaintext={2:?}; want ({3}, {4:?}), got {5:?}",
+                                        "min",
+                                        d,
+                                        group1_extremum,
+                                        1,
+                                        g1_expected,
+                                        rows[0],
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                if ::anyhow::__private::not(rows[1].0 == 2 && rows[1].1 == g2_expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "group 2 eql_v3.{0}({1}) must yield payload for plaintext={2:?}; want ({3}, {4:?}), got {5:?}",
+                                        "min",
+                                        d,
+                                        group2_extremum,
+                                        2,
+                                        g2_expected,
+                                        rows[1],
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_group_by_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_group_by_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_group_by_max"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_group_by_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_group_by_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3234usize,
+            start_col: 22usize,
+            end_line: 3234usize,
+            end_col: 82usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_group_by_max()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_group_by_max() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_group_by_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let col = &spec.column_expr;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let values: &[String] = <String as ScalarType>::fixture_values();
+                if ::anyhow::__private::not(values.len() >= 5) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "GROUP BY test needs >= 5 fixture values; got {0}",
+                                        values.len(),
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                let group1: &[String] = &values[..3];
+                let group2: &[String] = &values[3..5];
+                let group1_extremum: String = group1
+                    .iter()
+                    .cloned()
+                    .max()
+                    .expect("group 1 is non-empty");
+                let group2_extremum: String = group2
+                    .iter()
+                    .cloned()
+                    .max()
+                    .expect("group 2 is non-empty");
+                let g1_lit = <String as ScalarType>::to_sql_literal(&group1_extremum);
+                let g2_lit = <String as ScalarType>::to_sql_literal(&group2_extremum);
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE group_test (group_key int, value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                for v in group1 {
+                    let lit = <String as ScalarType>::to_sql_literal(v);
+                    sqlx::query(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO group_test(group_key, value) SELECT 1, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
+                                        d,
+                                        fixture,
+                                        lit,
+                                    ),
+                                )
+                            }),
+                        )
+                        .execute(&mut *tx)
+                        .await?;
+                }
+                for v in group2 {
+                    let lit = <String as ScalarType>::to_sql_literal(v);
+                    sqlx::query(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "INSERT INTO group_test(group_key, value) SELECT 2, ({0})::{1} FROM {2} WHERE plaintext = {3}",
+                                        col,
+                                        d,
+                                        fixture,
+                                        lit,
+                                    ),
+                                )
+                            }),
+                        )
+                        .execute(&mut *tx)
+                        .await?;
+                }
+                let g1_expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    g1_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let g2_expected: String = sqlx::query_scalar(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT (({1})::{2})::text FROM {3} WHERE plaintext = {0}",
+                                    g2_lit,
+                                    col,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                let rows: Vec<(i32, String)> = sqlx::query_as(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "SELECT group_key, eql_v3.{0}(value)::text FROM group_test GROUP BY group_key ORDER BY group_key",
+                                    "max",
+                                ),
+                            )
+                        }),
+                    )
+                    .fetch_all(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(rows.len() == 2) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "GROUP BY must return 2 rows, got {0}",
+                                        rows.len(),
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                if ::anyhow::__private::not(rows[0].0 == 1 && rows[0].1 == g1_expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "group 1 eql_v3.{0}({1}) must yield payload for plaintext={2:?}; want ({3}, {4:?}), got {5:?}",
+                                        "max",
+                                        d,
+                                        group1_extremum,
+                                        1,
+                                        g1_expected,
+                                        rows[0],
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                if ::anyhow::__private::not(rows[1].0 == 2 && rows[1].1 == g2_expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "group 2 eql_v3.{0}({1}) must yield payload for plaintext={2:?}; want ({3}, {4:?}), got {5:?}",
+                                        "max",
+                                        d,
+                                        group2_extremum,
+                                        2,
+                                        g2_expected,
+                                        rows[1],
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_group_by_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_group_by_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_aggregate_parallel_safe"]
     #[doc(hidden)]
     pub const matrix_text_ord_aggregate_parallel_safe: test::TestDescAndFn = test::TestDescAndFn {
@@ -34379,9 +43817,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3129usize,
+            start_line: 3149usize,
             start_col: 22usize,
-            end_line: 3129usize,
+            end_line: 3149usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -34488,9 +43926,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3129usize,
+            start_line: 3149usize,
             start_col: 22usize,
-            end_line: 3129usize,
+            end_line: 3149usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -34597,9 +44035,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3129usize,
+            start_line: 3149usize,
             start_col: 22usize,
-            end_line: 3129usize,
+            end_line: 3149usize,
             end_col: 77usize,
             compile_fail: false,
             no_run: false,
@@ -34696,6 +44134,115 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_parallel_safe"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_parallel_safe: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_parallel_safe",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3149usize,
+            start_col: 22usize,
+            end_line: 3149usize,
+            end_col: 77usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_parallel_safe()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_parallel_safe() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_parallel_safe(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                for agg in ["min", "max"] {
+                    let (proparallel, has_combine): (String, bool) = sqlx::query_as(
+                            "SELECT p.proparallel::text, a.aggcombinefn <> 0 \
+                         FROM pg_proc p \
+                         JOIN pg_aggregate a ON a.aggfnoid = p.oid \
+                         WHERE p.proname = $1 \
+                           AND p.pronamespace = 'eql_v3'::regnamespace \
+                           AND p.proargtypes[0]::regtype = $2::regtype",
+                        )
+                        .bind(agg)
+                        .bind(d)
+                        .fetch_one(&pool)
+                        .await?;
+                    if ::anyhow::__private::not(proparallel == "s") {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "eql_v3.{0}({1}) must be PARALLEL SAFE (proparallel=\'s\'), got {2:?}",
+                                    agg,
+                                    d,
+                                    proparallel,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                    if ::anyhow::__private::not(has_combine) {
+                        return ::anyhow::__private::Err({
+                            let error = ::anyhow::__private::format_err(
+                                format_args!(
+                                    "eql_v3.{0}({1}) must declare a combinefunc for partial aggregation",
+                                    agg,
+                                    d,
+                                ),
+                            );
+                            error
+                        });
+                    }
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_parallel_safe",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_parallel_safe;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_aggregate_typecheck_min"]
     #[doc(hidden)]
     pub const matrix_text_storage_aggregate_typecheck_min: test::TestDescAndFn = test::TestDescAndFn {
@@ -34706,9 +44253,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -34874,9 +44421,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -35042,9 +44589,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -35210,9 +44757,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -35378,9 +44925,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -35546,9 +45093,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -35714,9 +45261,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -35882,9 +45429,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -36050,9 +45597,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -36218,9 +45765,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3373usize,
+            start_line: 3393usize,
             start_col: 22usize,
-            end_line: 3373usize,
+            end_line: 3393usize,
             end_col: 83usize,
             compile_fail: false,
             no_run: false,
@@ -36376,6 +45923,342 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_typecheck_min"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_typecheck_min: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_typecheck_min",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3393usize,
+            start_col: 22usize,
+            end_line: 3393usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_typecheck_min()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_typecheck_min() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_typecheck_min(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "min",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "min",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "min",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "min",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_typecheck_min",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_typecheck_min;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_aggregate_typecheck_max"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_aggregate_typecheck_max: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_aggregate_typecheck_max",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3393usize,
+            start_col: 22usize,
+            end_line: 3393usize,
+            end_col: 83usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_aggregate_typecheck_max()),
+        ),
+    };
+    fn matrix_text_search_ore_aggregate_typecheck_max() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_aggregate_typecheck_max(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let payload = ::eql_tests::helpers::PLACEHOLDER_PAYLOAD;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typecheck_table (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typecheck_table(value) VALUES ($1::jsonb::{0})",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .bind(payload)
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT eql_v3.{0}(value) FROM typecheck_table",
+                            "max",
+                        ),
+                    )
+                });
+                if spec.supports_ord() {
+                    let res = sqlx::query_scalar::<_, serde_json::Value>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await;
+                    if ::anyhow::__private::not(res.is_ok()) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "eql_v3.{0}({1}) on ord-capable variant must resolve, got {2:?}",
+                                            "max",
+                                            d,
+                                            res.err(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                } else {
+                    sqlx::query("SAVEPOINT probe").execute(&mut *tx).await?;
+                    let err = sqlx::query_scalar::<_, String>(&sql)
+                        .fetch_one(&mut *tx)
+                        .await
+                        .expect_err(
+                            &::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "eql_v3.{0} on non-ord variant {1} must raise but succeeded",
+                                        "max",
+                                        d,
+                                    ),
+                                )
+                            }),
+                        );
+                    let db_err = err
+                        .as_database_error()
+                        .expect("expected database error from typecheck probe");
+                    let code = db_err.code();
+                    if ::anyhow::__private::not(
+                        code.as_deref() == Some("42883")
+                            || code.as_deref() == Some("42725"),
+                    ) {
+                        return ::anyhow::__private::Err(
+                            ::anyhow::Error::msg(
+                                ::alloc::__export::must_use({
+                                    ::alloc::fmt::format(
+                                        format_args!(
+                                            "expected SQLSTATE 42883 (undefined_function) or 42725 (ambiguous_function) for eql_v3.{0}({1}), got {2:?} (message: {3})",
+                                            "max",
+                                            d,
+                                            code,
+                                            db_err.message(),
+                                        ),
+                                    )
+                                }),
+                            ),
+                        );
+                    }
+                    sqlx::query("ROLLBACK TO SAVEPOINT probe").execute(&mut *tx).await?;
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_aggregate_typecheck_max",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(&[]);
+        let f: fn(_) -> _ = matrix_text_search_ore_aggregate_typecheck_max;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_storage_count_typed_column"]
     #[doc(hidden)]
     pub const matrix_text_storage_count_typed_column: test::TestDescAndFn = test::TestDescAndFn {
@@ -36386,9 +46269,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -36515,9 +46398,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -36625,9 +46508,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -36763,9 +46646,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -36890,9 +46773,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -37000,9 +46883,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -37138,9 +47021,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -37265,9 +47148,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -37375,9 +47258,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -37513,9 +47396,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -37642,9 +47525,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -37752,9 +47635,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -37890,9 +47773,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3487usize,
+            start_line: 3507usize,
             start_col: 22usize,
-            end_line: 3487usize,
+            end_line: 3507usize,
             end_col: 72usize,
             compile_fail: false,
             no_run: false,
@@ -38019,9 +47902,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3521usize,
+            start_line: 3541usize,
             start_col: 22usize,
-            end_line: 3521usize,
+            end_line: 3541usize,
             end_col: 69usize,
             compile_fail: false,
             no_run: false,
@@ -38129,9 +48012,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 3565usize,
+            start_line: 3585usize,
             start_col: 22usize,
-            end_line: 3565usize,
+            end_line: 3585usize,
             end_col: 78usize,
             compile_fail: false,
             no_run: false,
@@ -38257,6 +48140,385 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_count_typed_column"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_count_typed_column: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_count_typed_column",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3507usize,
+            start_col: 22usize,
+            end_line: 3507usize,
+            end_col: 72usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_count_typed_column()),
+        ),
+    };
+    fn matrix_text_search_ore_count_typed_column() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_count_typed_column(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let expected = <String as ScalarType>::fixture_values().len() as i64;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE typed_count (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO typed_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let actual: i64 = sqlx::query_scalar(
+                        "SELECT COUNT(value) FROM typed_count",
+                    )
+                    .fetch_one(&mut *tx)
+                    .await?;
+                if ::anyhow::__private::not(actual == expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "COUNT(value) on typed {0} column: want {1}, got {2}",
+                                        d,
+                                        expected,
+                                        actual,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_count_typed_column",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_count_typed_column;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_count_path_cast"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_count_path_cast: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_count_path_cast",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3541usize,
+            start_col: 22usize,
+            end_line: 3541usize,
+            end_col: 69usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_count_path_cast()),
+        ),
+    };
+    fn matrix_text_search_ore_count_path_cast() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_count_path_cast(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let expected = <String as ScalarType>::fixture_values().len() as i64;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT COUNT(({0})::{1}) FROM {2}",
+                            &spec.column_expr,
+                            d,
+                            fixture,
+                        ),
+                    )
+                });
+                let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&pool).await?;
+                if ::anyhow::__private::not(actual == expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "COUNT(({0})::{1}) on {2}: want {3}, got {4}; SQL={5}",
+                                        &spec.column_expr,
+                                        d,
+                                        fixture,
+                                        expected,
+                                        actual,
+                                        sql,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_count_path_cast",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_count_path_cast;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_count_distinct_extractor"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_count_distinct_extractor: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_count_distinct_extractor",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 3585usize,
+            start_col: 22usize,
+            end_line: 3585usize,
+            end_col: 78usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_count_distinct_extractor(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_count_distinct_extractor() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_count_distinct_extractor(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::ScalarType;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let Some(extractor) = spec.extractor_expr("value") else {
+                    return Ok(());
+                };
+                let fixture = <String as ScalarType>::fixture_table_name();
+                let expected = <String as ScalarType>::fixture_values().len() as i64;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE distinct_count (value {0}) ON COMMIT DROP",
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO distinct_count(value) SELECT ({0})::{1} FROM {2}",
+                                    &spec.column_expr,
+                                    d,
+                                    fixture,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT COUNT(DISTINCT {0}) FROM distinct_count",
+                            extractor,
+                        ),
+                    )
+                });
+                let actual: i64 = sqlx::query_scalar(&sql).fetch_one(&mut *tx).await?;
+                if ::anyhow::__private::not(actual == expected) {
+                    return ::anyhow::__private::Err(
+                        ::anyhow::Error::msg(
+                            ::alloc::__export::must_use({
+                                ::alloc::fmt::format(
+                                    format_args!(
+                                        "COUNT(DISTINCT {0}) on {1}: want {2} (one per FIXTURE_VALUES row), got {3}; SQL={4}",
+                                        extractor,
+                                        d,
+                                        expected,
+                                        actual,
+                                        sql,
+                                    ),
+                                )
+                            }),
+                        ),
+                    );
+                }
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_count_distinct_extractor",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_count_distinct_extractor;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_order_by_asc_no_where"]
     #[doc(hidden)]
     pub const matrix_text_ord_order_by_asc_no_where: test::TestDescAndFn = test::TestDescAndFn {
@@ -38267,9 +48529,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -38307,12 +48569,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -38412,9 +48674,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -38452,12 +48714,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -38557,9 +48819,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -38597,12 +48859,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -38702,9 +48964,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -38742,12 +49004,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -38847,9 +49109,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -38887,12 +49149,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -38992,9 +49254,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39032,12 +49294,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39137,9 +49399,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39177,12 +49439,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39282,9 +49544,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39322,12 +49584,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39427,9 +49689,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39467,12 +49729,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39572,9 +49834,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39612,12 +49874,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39717,9 +49979,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39757,12 +50019,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39862,9 +50124,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2592usize,
+            start_line: 2610usize,
             start_col: 22usize,
-            end_line: 2592usize,
+            end_line: 2610usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -39902,12 +50164,12 @@ pub mod text {
                 };
                 let col = &spec.column_expr;
                 let d = &spec.sql_domain;
-                let ord = (spec
-                    .ord_extractor)(
-                    &::alloc::__export::must_use({
-                        ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
-                    }),
-                );
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -39997,6 +50259,588 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_asc_no_where"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_asc_no_where: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_asc_no_where",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2610usize,
+            start_col: 22usize,
+            end_line: 2610usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_order_by_asc_no_where()),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_asc_no_where() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_asc_no_where(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ScalarType>::fixture_table_name();
+                let mid: String = <String as OrderedScalar>::mid_pivot();
+                let gt_mid = "all" == "gt_mid";
+                let where_clause = if gt_mid {
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                " WHERE plaintext > {0}",
+                                <String as ScalarType>::to_sql_literal(&mid),
+                            ),
+                        )
+                    })
+                } else {
+                    String::new()
+                };
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                            fixture_table,
+                            "ASC",
+                            where_clause,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<String> = sqlx::query_scalar(&sql)
+                    .fetch_all(&pool)
+                    .await?;
+                let mut expected: Vec<String> = <String as ScalarType>::fixture_values()
+                    .to_vec();
+                expected.sort();
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
+                }
+                if "ASC" == "DESC" {
+                    expected.reverse();
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        &spec.sql_domain,
+                                        "asc_no_where",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_asc_no_where",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_asc_no_where;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_desc_no_where"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_desc_no_where: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_desc_no_where",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2610usize,
+            start_col: 22usize,
+            end_line: 2610usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_order_by_desc_no_where()),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_desc_no_where() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_desc_no_where(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ScalarType>::fixture_table_name();
+                let mid: String = <String as OrderedScalar>::mid_pivot();
+                let gt_mid = "all" == "gt_mid";
+                let where_clause = if gt_mid {
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                " WHERE plaintext > {0}",
+                                <String as ScalarType>::to_sql_literal(&mid),
+                            ),
+                        )
+                    })
+                } else {
+                    String::new()
+                };
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                            fixture_table,
+                            "DESC",
+                            where_clause,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<String> = sqlx::query_scalar(&sql)
+                    .fetch_all(&pool)
+                    .await?;
+                let mut expected: Vec<String> = <String as ScalarType>::fixture_values()
+                    .to_vec();
+                expected.sort();
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
+                }
+                if "DESC" == "DESC" {
+                    expected.reverse();
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        &spec.sql_domain,
+                                        "desc_no_where",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_desc_no_where",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_desc_no_where;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_asc_with_where"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_asc_with_where: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_asc_with_where",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2610usize,
+            start_col: 22usize,
+            end_line: 2610usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_order_by_asc_with_where()),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_asc_with_where() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_asc_with_where(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ScalarType>::fixture_table_name();
+                let mid: String = <String as OrderedScalar>::mid_pivot();
+                let gt_mid = "gt_mid" == "gt_mid";
+                let where_clause = if gt_mid {
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                " WHERE plaintext > {0}",
+                                <String as ScalarType>::to_sql_literal(&mid),
+                            ),
+                        )
+                    })
+                } else {
+                    String::new()
+                };
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                            fixture_table,
+                            "ASC",
+                            where_clause,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<String> = sqlx::query_scalar(&sql)
+                    .fetch_all(&pool)
+                    .await?;
+                let mut expected: Vec<String> = <String as ScalarType>::fixture_values()
+                    .to_vec();
+                expected.sort();
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
+                }
+                if "ASC" == "DESC" {
+                    expected.reverse();
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        &spec.sql_domain,
+                                        "asc_with_where",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_asc_with_where",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_asc_with_where;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_desc_with_where"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_desc_with_where: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_desc_with_where",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2610usize,
+            start_col: 22usize,
+            end_line: 2610usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_desc_with_where(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_desc_with_where() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_desc_with_where(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                use ::eql_tests::scalar_domains::{OrderedScalar, ScalarType};
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ScalarType>::fixture_table_name();
+                let mid: String = <String as OrderedScalar>::mid_pivot();
+                let gt_mid = "gt_mid" == "gt_mid";
+                let where_clause = if gt_mid {
+                    ::alloc::__export::must_use({
+                        ::alloc::fmt::format(
+                            format_args!(
+                                " WHERE plaintext > {0}",
+                                <String as ScalarType>::to_sql_literal(&mid),
+                            ),
+                        )
+                    })
+                } else {
+                    String::new()
+                };
+                let col = &spec.column_expr;
+                let d = &spec.sql_domain;
+                let ord = spec
+                    .ord_extractor_expr(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(format_args!("({0})::{1}", col, d))
+                        }),
+                    );
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0}{2} ORDER BY {3} {1}",
+                            fixture_table,
+                            "DESC",
+                            where_clause,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<String> = sqlx::query_scalar(&sql)
+                    .fetch_all(&pool)
+                    .await?;
+                let mut expected: Vec<String> = <String as ScalarType>::fixture_values()
+                    .to_vec();
+                expected.sort();
+                if gt_mid {
+                    expected.retain(|v| *v > mid);
+                }
+                if "DESC" == "DESC" {
+                    expected.reverse();
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        &spec.sql_domain,
+                                        "desc_with_where",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_desc_with_where",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_desc_with_where;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_order_by_asc_nulls_first"]
     #[doc(hidden)]
     pub const matrix_text_ord_order_by_asc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
@@ -40007,9 +50851,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -40079,7 +50923,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -40186,9 +51030,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -40258,7 +51102,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -40365,9 +51209,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -40437,7 +51281,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -40544,9 +51388,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -40616,7 +51460,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -40723,9 +51567,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -40795,7 +51639,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -40902,9 +51746,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -40974,7 +51818,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -41081,9 +51925,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -41153,7 +51997,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -41260,9 +52104,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -41332,7 +52176,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -41439,9 +52283,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -41511,7 +52355,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -41618,9 +52462,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -41690,7 +52534,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -41797,9 +52641,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -41869,7 +52713,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -41976,9 +52820,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2706usize,
+            start_line: 2724usize,
             start_col: 22usize,
-            end_line: 2706usize,
+            end_line: 2724usize,
             end_col: 74usize,
             compile_fail: false,
             no_run: false,
@@ -42048,7 +52892,7 @@ pub mod text {
                     )
                     .execute(&mut *tx)
                     .await?;
-                let ord = (spec.ord_extractor)("value");
+                let ord = spec.ord_extractor_expr("value");
                 let sql = ::alloc::__export::must_use({
                     ::alloc::fmt::format(
                         format_args!(
@@ -42145,6 +52989,728 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_asc_nulls_first"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_asc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_asc_nulls_first",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2724usize,
+            start_col: 22usize,
+            end_line: 2724usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_asc_nulls_first(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_asc_nulls_first() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_asc_nulls_first(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_text_search_ore_order_by_asc_nulls_first";
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <String as ::eql_tests::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                    &spec.column_expr,
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = spec.ord_extractor_expr("value");
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                            "ASC",
+                            "FIRST",
+                            table,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<String>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<String> = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_values()
+                    .to_vec();
+                non_null.sort();
+                if "ASC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<String>> = Vec::new();
+                if "FIRST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "asc_nulls_first",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_asc_nulls_first",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_asc_nulls_first;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_asc_nulls_last"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_asc_nulls_last: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_asc_nulls_last",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2724usize,
+            start_col: 22usize,
+            end_line: 2724usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(matrix_text_search_ore_order_by_asc_nulls_last()),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_asc_nulls_last() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_asc_nulls_last(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_text_search_ore_order_by_asc_nulls_last";
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <String as ::eql_tests::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                    &spec.column_expr,
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = spec.ord_extractor_expr("value");
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                            "ASC",
+                            "LAST",
+                            table,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<String>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<String> = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_values()
+                    .to_vec();
+                non_null.sort();
+                if "ASC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<String>> = Vec::new();
+                if "LAST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "asc_nulls_last",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_asc_nulls_last",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_asc_nulls_last;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_desc_nulls_first"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_desc_nulls_first: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_desc_nulls_first",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2724usize,
+            start_col: 22usize,
+            end_line: 2724usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_desc_nulls_first(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_desc_nulls_first() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_desc_nulls_first(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_text_search_ore_order_by_desc_nulls_first";
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <String as ::eql_tests::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                    &spec.column_expr,
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = spec.ord_extractor_expr("value");
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                            "DESC",
+                            "FIRST",
+                            table,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<String>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<String> = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_values()
+                    .to_vec();
+                non_null.sort();
+                if "DESC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<String>> = Vec::new();
+                if "FIRST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "desc_nulls_first",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_desc_nulls_first",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_desc_nulls_first;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_desc_nulls_last"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_desc_nulls_last: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_desc_nulls_last",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2724usize,
+            start_col: 22usize,
+            end_line: 2724usize,
+            end_col: 74usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_desc_nulls_last(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_desc_nulls_last() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_desc_nulls_last(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                const NULL_ROWS: usize = 3;
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let d = &spec.sql_domain;
+                let table = "matrix_text_search_ore_order_by_desc_nulls_last";
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let pg = <String as ::eql_tests::scalar_domains::ScalarType>::PLAINTEXT_SQL_TYPE;
+                let mut tx = pool.begin().await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "CREATE TEMP TABLE {0} (plaintext {1}, value {2}) ON COMMIT DROP",
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {2}(plaintext, value) SELECT plaintext, ({0})::{3} FROM {1}",
+                                    &spec.column_expr,
+                                    fixture_table,
+                                    table,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                sqlx::query(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "INSERT INTO {1}(plaintext, value) SELECT NULL::{2}, NULL::{3} FROM generate_series(1, {0})",
+                                    NULL_ROWS,
+                                    table,
+                                    pg,
+                                    d,
+                                ),
+                            )
+                        }),
+                    )
+                    .execute(&mut *tx)
+                    .await?;
+                let ord = spec.ord_extractor_expr("value");
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {2} ORDER BY {3} {0} NULLS {1}",
+                            "DESC",
+                            "LAST",
+                            table,
+                            ord,
+                        ),
+                    )
+                });
+                let actual: Vec<Option<String>> = sqlx::query_scalar(&sql)
+                    .fetch_all(&mut *tx)
+                    .await?;
+                let mut non_null: Vec<String> = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_values()
+                    .to_vec();
+                non_null.sort();
+                if "DESC" == "DESC" {
+                    non_null.reverse();
+                }
+                let sorted = non_null.into_iter().map(Some);
+                let mut expected: Vec<Option<String>> = Vec::new();
+                if "LAST" == "FIRST" {
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                    expected.extend(sorted);
+                } else {
+                    expected.extend(sorted);
+                    expected.extend(std::iter::repeat(None).take(NULL_ROWS));
+                }
+                match (&actual, &expected) {
+                    (left_val, right_val) => {
+                        if !(*left_val == *right_val) {
+                            let kind = ::core::panicking::AssertKind::Eq;
+                            ::core::panicking::assert_failed(
+                                kind,
+                                &*left_val,
+                                &*right_val,
+                                ::core::option::Option::Some(
+                                    format_args!(
+                                        "domain={0} mode={1} SQL={2} expected {3:?}, got {4:?}",
+                                        d,
+                                        "desc_nulls_last",
+                                        sql,
+                                        expected,
+                                        actual,
+                                    ),
+                                ),
+                            );
+                        }
+                    }
+                };
+                tx.commit().await?;
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_desc_nulls_last",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_desc_nulls_last;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
     #[rustc_test_marker = "scalars::text::matrix_text_ord_order_by_using_lt_rejects"]
     #[doc(hidden)]
     pub const matrix_text_ord_order_by_using_lt_rejects: test::TestDescAndFn = test::TestDescAndFn {
@@ -42155,9 +53721,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42259,9 +53825,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42363,9 +53929,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42467,9 +54033,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42571,9 +54137,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42675,9 +54241,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42779,9 +54345,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42883,9 +54449,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -42987,9 +54553,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -43091,9 +54657,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -43195,9 +54761,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -43299,9 +54865,9 @@ pub mod text {
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
-            start_line: 2832usize,
+            start_line: 2850usize,
             start_col: 22usize,
-            end_line: 2832usize,
+            end_line: 2850usize,
             end_col: 87usize,
             compile_fail: false,
             no_run: false,
@@ -43390,6 +54956,430 @@ pub mod text {
             ],
         );
         let f: fn(_) -> _ = matrix_text_search_order_by_using_gte_rejects;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_using_lt_rejects"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_using_lt_rejects: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_using_lt_rejects",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2850usize,
+            start_col: 22usize,
+            end_line: 2850usize,
+            end_col: 87usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_using_lt_rejects(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_using_lt_rejects() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_using_lt_rejects(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
+                            fixture_table,
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<",
+                        ),
+                    )
+                });
+                let err = sqlx::query_scalar::<_, String>(&sql)
+                    .fetch_all(&pool)
+                    .await
+                    .expect_err(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "domain={0} op={1} SQL={2} must reject ORDER BY USING (no opclass on domain by design) but succeeded",
+                                    &spec.sql_domain,
+                                    "<",
+                                    sql,
+                                ),
+                            )
+                        }),
+                    );
+                ::eql_tests::assert_db_error(&err, "42809", None);
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_using_lt_rejects",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_using_lt_rejects;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_using_lte_rejects"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_using_lte_rejects: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_using_lte_rejects",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2850usize,
+            start_col: 22usize,
+            end_line: 2850usize,
+            end_col: 87usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_using_lte_rejects(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_using_lte_rejects() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_using_lte_rejects(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
+                            fixture_table,
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            "<=",
+                        ),
+                    )
+                });
+                let err = sqlx::query_scalar::<_, String>(&sql)
+                    .fetch_all(&pool)
+                    .await
+                    .expect_err(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "domain={0} op={1} SQL={2} must reject ORDER BY USING (no opclass on domain by design) but succeeded",
+                                    &spec.sql_domain,
+                                    "<=",
+                                    sql,
+                                ),
+                            )
+                        }),
+                    );
+                ::eql_tests::assert_db_error(&err, "42809", None);
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_using_lte_rejects",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_using_lte_rejects;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_using_gt_rejects"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_using_gt_rejects: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_using_gt_rejects",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2850usize,
+            start_col: 22usize,
+            end_line: 2850usize,
+            end_col: 87usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_using_gt_rejects(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_using_gt_rejects() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_using_gt_rejects(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
+                            fixture_table,
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">",
+                        ),
+                    )
+                });
+                let err = sqlx::query_scalar::<_, String>(&sql)
+                    .fetch_all(&pool)
+                    .await
+                    .expect_err(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "domain={0} op={1} SQL={2} must reject ORDER BY USING (no opclass on domain by design) but succeeded",
+                                    &spec.sql_domain,
+                                    ">",
+                                    sql,
+                                ),
+                            )
+                        }),
+                    );
+                ::eql_tests::assert_db_error(&err, "42809", None);
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_using_gt_rejects",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_using_gt_rejects;
+        ::sqlx::testing::TestFn::run_test(f, args)
+    }
+    extern crate test;
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_order_by_using_gte_rejects"]
+    #[doc(hidden)]
+    pub const matrix_text_search_ore_order_by_using_gte_rejects: test::TestDescAndFn = test::TestDescAndFn {
+        desc: test::TestDesc {
+            name: test::StaticTestName(
+                "scalars::text::matrix_text_search_ore_order_by_using_gte_rejects",
+            ),
+            ignore: false,
+            ignore_message: ::core::option::Option::None,
+            source_file: "tests/sqlx/src/matrix.rs",
+            start_line: 2850usize,
+            start_col: 22usize,
+            end_line: 2850usize,
+            end_col: 87usize,
+            compile_fail: false,
+            no_run: false,
+            should_panic: test::ShouldPanic::No,
+            test_type: test::TestType::IntegrationTest,
+        },
+        testfn: test::StaticTestFn(
+            #[coverage(off)]
+            || test::assert_test_result(
+                matrix_text_search_ore_order_by_using_gte_rejects(),
+            ),
+        ),
+    };
+    fn matrix_text_search_ore_order_by_using_gte_rejects() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_order_by_using_gte_rejects(
+            pool: sqlx::PgPool,
+        ) -> anyhow::Result<()> {
+            {
+                let spec = ::eql_tests::scalar_domains::ScalarDomainSpec::new::<
+                    String,
+                >(::eql_tests::scalar_domains::Variant::SearchOre);
+                let fixture_table = <String as ::eql_tests::scalar_domains::ScalarType>::fixture_table_name();
+                let sql = ::alloc::__export::must_use({
+                    ::alloc::fmt::format(
+                        format_args!(
+                            "SELECT plaintext FROM {0} ORDER BY ({1})::{2} USING {3}",
+                            fixture_table,
+                            &spec.column_expr,
+                            &spec.sql_domain,
+                            ">=",
+                        ),
+                    )
+                });
+                let err = sqlx::query_scalar::<_, String>(&sql)
+                    .fetch_all(&pool)
+                    .await
+                    .expect_err(
+                        &::alloc::__export::must_use({
+                            ::alloc::fmt::format(
+                                format_args!(
+                                    "domain={0} op={1} SQL={2} must reject ORDER BY USING (no opclass on domain by design) but succeeded",
+                                    &spec.sql_domain,
+                                    ">=",
+                                    sql,
+                                ),
+                            )
+                        }),
+                    );
+                ::eql_tests::assert_db_error(&err, "42809", None);
+                Ok(())
+            }
+        }
+        let mut args = ::sqlx::testing::TestArgs::new(
+            "encrypted_domain::scalars::text::matrix_text_search_ore_order_by_using_gte_rejects",
+        );
+        args.migrator(
+            &::sqlx::migrate::Migrator {
+                migrations: ::std::borrow::Cow::Borrowed(
+                    &[
+                        ::sqlx::migrate::Migration {
+                            version: 1i64,
+                            description: ::std::borrow::Cow::Borrowed("placeholder"),
+                            migration_type: ::sqlx::migrate::MigrationType::Simple,
+                            sql: ::std::borrow::Cow::Borrowed(""),
+                            no_tx: false,
+                            checksum: ::std::borrow::Cow::Borrowed(
+                                &[
+                                    56u8, 176u8, 96u8, 167u8, 81u8, 172u8, 150u8, 56u8, 76u8,
+                                    217u8, 50u8, 126u8, 177u8, 177u8, 227u8, 106u8, 33u8, 253u8,
+                                    183u8, 17u8, 20u8, 190u8, 7u8, 67u8, 76u8, 12u8, 199u8,
+                                    191u8, 99u8, 246u8, 225u8, 218u8, 39u8, 78u8, 222u8, 191u8,
+                                    231u8, 111u8, 101u8, 251u8, 213u8, 26u8, 210u8, 241u8, 72u8,
+                                    152u8, 185u8, 91u8,
+                                ],
+                            ),
+                        },
+                    ],
+                ),
+                ..::sqlx::migrate::Migrator::DEFAULT
+            },
+        );
+        args.fixtures(
+            &[
+                ::sqlx::testing::TestFixture {
+                    path: "../../../fixtures/eql_v3_text.sql",
+                    contents: "",
+                },
+            ],
+        );
+        let f: fn(_) -> _ = matrix_text_search_ore_order_by_using_gte_rejects;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
 }

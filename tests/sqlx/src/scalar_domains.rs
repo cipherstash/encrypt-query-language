@@ -1210,12 +1210,13 @@ pub enum Variant {
     Ord,
     OrdOre,
     Search,
+    SearchOre,
 }
 
 impl Variant {
     /// Every variant the family can materialise, in declaration order. Not
-    /// every scalar declares every variant (only `text` declares `_search`),
-    /// so iteration sites that span scalars must filter with
+    /// every scalar declares every variant (only `text` declares `_search` /
+    /// `_search_ore`), so iteration sites that span scalars must filter with
     /// [`Variant::is_declared_for`].
     pub const ALL: &'static [Variant] = &[
         Variant::Storage,
@@ -1223,6 +1224,7 @@ impl Variant {
         Variant::Ord,
         Variant::OrdOre,
         Variant::Search,
+        Variant::SearchOre,
     ];
 
     pub const fn suffix(self) -> &'static str {
@@ -1232,6 +1234,7 @@ impl Variant {
             Variant::Ord => "_ord",
             Variant::OrdOre => "_ord_ore",
             Variant::Search => "_search",
+            Variant::SearchOre => "_search_ore",
         }
     }
 
@@ -1246,6 +1249,7 @@ impl Variant {
             Variant::Ord => "ord",
             Variant::OrdOre => "ord_ore",
             Variant::Search => "search",
+            Variant::SearchOre => "search_ore",
         }
     }
 
@@ -1281,10 +1285,11 @@ impl Variant {
 
     /// Top-level JSONB keys the variant's domain CHECK requires for `token`:
     /// the EQL envelope (`v`, `i`, `c`) plus each term's payload key
-    /// (`hm`/`ob`/`bf`), in term order. Catalog-derived — `text_ord` yields
-    /// `[v, i, c, hm, ob]`; `text_search` yields `[v, i, c, hm, ob, bf]`. The
-    /// matrix `payload_check` arm iterates this to assert each key's absence is
-    /// rejected at the cast.
+    /// (`hm`/`ob`/`op`/`bf`), in term order. Catalog-derived — `text_ord` yields
+    /// `[v, i, c, hm, op]`; `text_search` yields `[v, i, c, hm, op, bf]`, and
+    /// its block-ORE sibling `text_search_ore` yields `[v, i, c, hm, ob, bf]`.
+    /// The matrix `payload_check` arm iterates this to assert each key's absence
+    /// is rejected at the cast.
     pub fn payload_required_keys(self, token: &str) -> Vec<&'static str> {
         let mut keys = vec!["v", "i", "c"];
         keys.extend(Term::term_json_keys(self.terms_for(token)));
@@ -1305,7 +1310,8 @@ impl Variant {
     /// provides ordering — or `None` if the domain is not ordered.
     ///
     /// This is what makes the ordering surface catalog-driven rather than
-    /// hardcoded to one SEM. `_ord` is backed by `Term::Ope` and `_ord_ore` by
+    /// hardcoded to one SEM. `_ord` / `_search` are backed by `Term::Ope` and
+    /// `_ord_ore` / `_search_ore` by
     /// `Term::Ore`, so the extractor name (`ord_term` vs `ord_term_ore`), the
     /// payload key (`op` vs `ob`), and the returned SEM type (a `bytea`-backed
     /// domain vs an ORE composite) all differ between them. Callers that need
@@ -1419,17 +1425,18 @@ impl ScalarDomainSpec {
     /// Extractor expression for the variant's discriminating term applied to
     /// `value_expr`. Routes through the per-type `eq_extractor` / `ord_extractor`
     /// seams, so scalars produce `eql_v3.eq_term(...)` and the ordering
-    /// extractor their catalog term names (`eql_v3.ord_term(...)` for `_ord`,
-    /// `eql_v3.ord_term_ore(...)` for `_ord_ore` / `_search`), while a SteVec-entry
+    /// extractor their catalog term names (`eql_v3.ord_term(...)` for `_ord` /
+    /// `_search`, `eql_v3.ord_term_ore(...)` for `_ord_ore` / `_search_ore`),
+    /// while a SteVec-entry
     /// view produces `eql_v3.eq_term(...)` / `eql_v3.ore_cllw(...)`.
-    /// `Storage` has no discriminating term and returns `None`. `Search` (the
-    /// combined `_search` domain, which provides ordering) routes through the
-    /// ordered extractor like `Ord`/`OrdOre`.
+    /// `Storage` has no discriminating term and returns `None`. `Search` /
+    /// `SearchOre` (the combined domains, which provide ordering) route through
+    /// the ordered extractor like `Ord`/`OrdOre`.
     pub fn extractor_expr(&self, value_expr: &str) -> Option<String> {
         match self.variant {
             Variant::Storage => None,
             Variant::Eq => Some((self.eq_extractor)(value_expr)),
-            Variant::Ord | Variant::OrdOre | Variant::Search => {
+            Variant::Ord | Variant::OrdOre | Variant::Search | Variant::SearchOre => {
                 Some(self.ord_extractor_expr(value_expr))
             }
         }

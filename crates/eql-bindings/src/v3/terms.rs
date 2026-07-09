@@ -43,7 +43,8 @@ pub struct OreCllw(pub String);
 pub struct Selector(pub String);
 
 /// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the
-/// default ordering domain) and `_ord_ope` domains, and their `query_` operands
+/// default ordering domain), `_ord_ope`, and `text_search` domains, and their
+/// `query_` operands
 /// (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,
 /// sortable via native bytea comparison after hex-decode — unlike `ob`
 /// (block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. Extracted by
@@ -55,7 +56,7 @@ pub struct Selector(pub String);
 pub struct OpeCllw(pub String);
 
 /// Block-ORE order term — the `ob` wire key. Backs the `_ord_ore` domains and
-/// `text_search` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
+/// `text_search_ore` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
 /// domain, so it serves equality too. The block count is width-agnostic on the
 /// wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
 /// array just carries more block strings. Extracted by `eql_v3.ord_term_ore`;

@@ -2,7 +2,7 @@
 
 /**
  * Block-ORE order term — the `ob` wire key. Backs the `_ord_ore` domains and
- * `text_search` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
+ * `text_search_ore` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
  * domain, so it serves equality too. The block count is width-agnostic on the
  * wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
  * array just carries more block strings. Extracted by `eql_v3.ord_term_ore`;

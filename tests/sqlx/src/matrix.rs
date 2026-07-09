@@ -247,15 +247,17 @@ macro_rules! scalar_matrix {
             eql_type = $eql_type,
             // See the `caps = [eq, ord]` arm for the fixed-path rationale.
             fixture_path = "../../../fixtures",
-            // `_search` (combined `[Hm, Ore, Bloom]`) rides the eq + ord arms
-            // like any ordered domain, plus the bloom-match arms below. `_match`
+            // `_search` (combined `[Hm, Ope, Bloom]`) and its block-ORE sibling
+            // `_search_ore` (`[Hm, Ore, Bloom]`) ride the eq + ord arms like any
+            // ordered domain, plus the bloom-match arms below. `_match`
             // is deliberately absent: it supports only `@>`/`<@`, so it cannot
             // ride the eq/ord arms, and its behaviour is covered by the sibling
             // `encrypted_domain/text/text_match` suite.
-            all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search)],
-            eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search)],
-            ord_domains = [(ord, Ord), (ord_ore, OrdOre), (search, Search)],
-            ord_ore_domains = [(ord_ore, OrdOre)],
+            all_domains = [(storage, Storage), (eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search), (search_ore, SearchOre)],
+            eq_domains = [(eq, Eq), (ord, Ord), (ord_ore, OrdOre), (search, Search), (search_ore, SearchOre)],
+            ord_domains = [(ord, Ord), (ord_ore, OrdOre), (search, Search), (search_ore, SearchOre)],
+            // Both block-ORE-bearing domains get the ORE injectivity arm.
+            ord_ore_domains = [(ord_ore, OrdOre), (search_ore, SearchOre)],
             pivots = [
                 (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
                 (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
@@ -270,7 +272,8 @@ macro_rules! scalar_matrix {
             // ordering ops — they cannot share an index. The extractor itself is
             // NOT restated; `combo_extractor` derives it from each combo's ops at
             // runtime (and asserts the combo is single-extractor). The `_search`
-            // domain gets both an ordering combo and an `_eqidx` combo.
+            // and `_search_ore` domains each get both an ordering combo and an
+            // `_eqidx` combo.
             index_combos = [
                 (eq, Eq, "btree", [(eq, "=")]),
                 (eq, Eq, "hash", [(eq, "=")]),
@@ -283,6 +286,9 @@ macro_rules! scalar_matrix {
                 (search, Search, "btree",
                     [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
                 (search_eqidx, Search, "btree", [(eq, "=")]),
+                (search_ore, SearchOre, "btree",
+                    [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")]),
+                (search_ore_eqidx, SearchOre, "btree", [(eq, "=")]),
             ],
             blocker_combos = [
                 (storage, Storage, [
@@ -295,8 +301,9 @@ macro_rules! scalar_matrix {
                     (contains, "@>"), (contained_by, "<@"),
                 ]),
                 // Ordered text domains block bloom containment (no Bloom term);
-                // `_search` is omitted — it SUPPORTS `@>`/`<@`, proven by the
-                // match arms below (they would raise if `@>` were blocked).
+                // `_search` / `_search_ore` are omitted — they SUPPORT `@>`/`<@`,
+                // proven by the match arms below (they would raise if `@>` were
+                // blocked).
                 (ord, Ord, [(contains, "@>"), (contained_by, "<@")]),
                 (ord_ore, OrdOre, [(contains, "@>"), (contained_by, "<@")]),
             ],
@@ -306,9 +313,9 @@ macro_rules! scalar_matrix {
             scale_default_combos = [
                 (ord, Ord, "btree"),
             ],
-            // `_search` carries the Bloom term: prove `@>`/`<@` containment
-            // behaviour + GIN index engagement through the matrix.
-            match_domains = [(search, Search)],
+            // `_search` / `_search_ore` carry the Bloom term: prove `@>`/`<@`
+            // containment behaviour + GIN index engagement through the matrix.
+            match_domains = [(search, Search), (search_ore, SearchOre)],
         }
     };
     (
