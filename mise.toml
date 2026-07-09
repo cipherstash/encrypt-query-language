@@ -106,7 +106,7 @@ cargo test --features proptest-e2e
 """
 
 [tasks."test:sqlx:e2e"]
-description = "Run the fresh-encryption suites (e2e oracle + float specials) — needs ZeroKMS creds"
+description = "Run the fresh-encryption suites (e2e oracle + float specials + query operands) — needs ZeroKMS creds"
 # Prep builds + migrates + regenerates fixtures (the latter needs CS_* creds,
 # which the dedicated CI `e2e` job supplies). These suites are the only ones that
 # encrypt fresh values through ZeroKMS at run time, so they cannot run from the
@@ -114,13 +114,15 @@ description = "Run the fresh-encryption suites (e2e oracle + float specials) —
 # DOES run in the shards) is intentionally excluded here via the name filters
 # below, so this job does not duplicate sharded work.
 #
-# BOTH `proptest-e2e`-gated suites must be named explicitly. A bare
+# EVERY `proptest-e2e`-gated suite must be named explicitly. A bare
 # `cargo test --features proptest-e2e` would re-run the whole sharded fixture
 # suite; conversely a lone `e2e_oracle` filter silently skipped `float_special`
 # from the day it was written — it is `#[cfg(feature = "proptest-e2e")]` too, so
 # the default-feature shards never compiled it either, and it ran nowhere.
-# Adding a new `proptest-e2e`-gated module means adding a line here; no glob
-# catches it for you.
+# `v3_scalar_query_operand_tests` was orphaned the same way, and is a whole test
+# TARGET rather than a module: no name filter reaches it, so it is invoked with
+# `--test`. Adding a new `proptest-e2e`-gated suite means adding a line here; no
+# glob catches it for you.
 depends = ["test:sqlx:prep"]
 dir = "{{config_root}}/tests/sqlx"
 run = """
@@ -130,6 +132,8 @@ echo "Running e2e property suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e e2e_oracle
 echo "Running float special-value suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e float_special
+echo "Running scalar query-operand conformance suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e --test v3_scalar_query_operand_tests
 """
 
 [tasks."test:known-failures"]
