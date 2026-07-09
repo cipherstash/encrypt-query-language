@@ -17,6 +17,7 @@ pub mod assertions;
 pub mod fixtures;
 pub mod helpers;
 pub mod jsonb_entry;
+pub mod known_failure;
 pub mod matrix;
 pub mod property;
 pub mod scalar_domains;
@@ -38,6 +39,7 @@ pub use eql_tests_macros;
 
 pub use assertions::{assert_db_error, QueryAssertion};
 pub use helpers::PLACEHOLDER_PAYLOAD;
+pub use known_failure::known_failure;
 pub use scalar_domains::{
     assert_null, assert_raises, assert_scalar_plaintexts, blocker_msg, commute_op,
     fetch_fixture_payload, sql_string_literal, ScalarDomainSpec, ScalarType, Variant,

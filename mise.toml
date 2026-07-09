@@ -106,20 +106,41 @@ cargo test --features proptest-e2e
 """
 
 [tasks."test:sqlx:e2e"]
-description = "Run ONLY the e2e (fresh-encryption) property suite — needs ZeroKMS creds"
+description = "Run the fresh-encryption suites (e2e oracle + float specials) — needs ZeroKMS creds"
 # Prep builds + migrates + regenerates fixtures (the latter needs CS_* creds,
-# which the dedicated CI `e2e` job supplies). The e2e suite is the only one that
-# encrypts fresh values through ZeroKMS at run time, so it cannot run from the
-# credential-free sharded archive; it gets its own job. The fixture suite (which
-# DOES run in the shards) is intentionally excluded here via the `e2e_oracle`
-# filter so this job does not duplicate sharded work — it only compiles the
-# `proptest-e2e`-gated binaries and runs the fresh-encryption oracle.
+# which the dedicated CI `e2e` job supplies). These suites are the only ones that
+# encrypt fresh values through ZeroKMS at run time, so they cannot run from the
+# credential-free sharded archive; they get their own job. The fixture suite (which
+# DOES run in the shards) is intentionally excluded here via the name filters
+# below, so this job does not duplicate sharded work.
+#
+# BOTH `proptest-e2e`-gated suites must be named explicitly. A bare
+# `cargo test --features proptest-e2e` would re-run the whole sharded fixture
+# suite; conversely a lone `e2e_oracle` filter silently skipped `float_special`
+# from the day it was written — it is `#[cfg(feature = "proptest-e2e")]` too, so
+# the default-feature shards never compiled it either, and it ran nowhere.
+# Adding a new `proptest-e2e`-gated module means adding a line here; no glob
+# catches it for you.
 depends = ["test:sqlx:prep"]
 dir = "{{config_root}}/tests/sqlx"
 run = """
+#!/usr/bin/env bash
+set -euo pipefail
 echo "Running e2e property suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e e2e_oracle
+echo "Running float special-value suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e float_special
 """
+
+[tasks."test:known-failures"]
+description = "Drift gate: every known_failure marker must name a real, OPEN issue (needs gh)"
+# The Rust-side marker is self-expiring — `known_failure()` fails once the
+# wrapped assertion starts passing, so it cannot outlive its bug. This is the
+# other half of the contract: the issue it names must exist, still be open, and
+# the constant must actually be referenced by a test.
+# See tests/sqlx/src/known_failure.rs.
+dir = "{{config_root}}"
+run = "bash tasks/test/known-failures.sh"
 
 [tasks."test:sqlx:watch"]
 description = "Run SQLx tests in watch mode (rebuild EQL on changes)"

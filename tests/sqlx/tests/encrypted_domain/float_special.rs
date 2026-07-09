@@ -23,6 +23,8 @@
 use anyhow::Result;
 use eql_tests::fixtures::cipherstash::encrypt_store;
 use eql_tests::fixtures::index_kind::IndexKind;
+use eql_tests::known_failure;
+use eql_tests::known_failure::ISSUE_FLOAT_SIGNED_ZERO_EQ;
 use eql_tests::property::{connect_pool, ensure_eql_installed};
 use eql_tests::scalar_domains::F8;
 use sqlx::PgPool;
@@ -172,20 +174,40 @@ async fn negative_zero_orders_below_positive_zero_under_ope() -> Result<()> {
 
 /// `-0.0` and `+0.0` are IEEE-equal, so encrypted `=` on `_eq` must agree.
 ///
-/// It does not: `hm` hashes the raw `f64` bytes, sign bit included, so the two
-/// zeroes hash differently. Unrelated to the `_ord` ordering SEM — it reproduces
-/// identically on the block-ORE default. This test therefore FAILS; it is not
-/// run by any CI job today. See the follow-up commit, which wires `float_special`
-/// into CI behind a self-expiring known-failure marker.
+/// KNOWN FAILURE ([#387]): it does not. `cipherstash-client` feeds the raw
+/// `f64::to_be_bytes()` — sign bit included — into the `hm` HMAC, so the two
+/// zeroes hash differently and `WHERE col = 0.0` misses rows stored as `-0.0`.
+/// The `orderable-bytes` ORE encoder canonicalizes `-0.0 -> +0.0`, so `ob`
+/// disagrees with `hm` about the same pair. Unrelated to the `_ord` ordering
+/// SEM: it reproduces identically on the block-ORE default.
+///
+/// The assertion below is written the way it SHOULD pass. [`known_failure`]
+/// inverts it: this test goes green while #387 reproduces, and turns RED the
+/// moment the bug is fixed — at which point delete the marker and keep the
+/// assertion.
 ///
 /// Split out of the ordering assertions because it used to run first and abort
 /// the test, so the ORE ordering canary below it had never actually executed.
+///
+/// [#387]: https://github.com/cipherstash/encrypt-query-language/issues/387
 #[tokio::test]
 async fn negative_zero_and_positive_zero_compare_equal_under_eq() -> Result<()> {
     let pool = setup().await?;
     let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
-    assert!(eq_cmp(&pool, &p[0], &p[1]).await?, "-0.0 == +0.0");
-    Ok(())
+
+    let equal = eq_cmp(&pool, &p[0], &p[1]).await?;
+    let assertion = if equal {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!(
+            "encrypted `=` on public.double_eq returned false for -0.0 vs +0.0"
+        ))
+    };
+    known_failure(
+        ISSUE_FLOAT_SIGNED_ZERO_EQ,
+        "-0.0 == +0.0 under public.double_eq",
+        assertion,
+    )
 }
 
 #[tokio::test]
