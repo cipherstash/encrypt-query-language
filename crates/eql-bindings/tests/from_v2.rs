@@ -370,12 +370,18 @@ fn ste_vec_entry_with_ore_term_is_unconvertible() {
     let mut v2 = v2_sv();
     v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "oc": HEX_LONG });
     let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(err, FromV2Error::UnconvertibleOreTerm { entry: 1 }));
+    assert!(matches!(
+        err,
+        FromV2Error::UnconvertibleOreTerm { entry: 1 }
+    ));
     // Even alongside a valid term: `oc` presence alone is disqualifying.
     let mut v2 = v2_sv();
     v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG });
     let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(err, FromV2Error::UnconvertibleOreTerm { entry: 1 }));
+    assert!(matches!(
+        err,
+        FromV2Error::UnconvertibleOreTerm { entry: 1 }
+    ));
 }
 
 #[test]
