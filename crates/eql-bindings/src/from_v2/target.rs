@@ -16,7 +16,7 @@ pub enum TargetDomain {
     /// A flat scalar domain (`integer`, `text_eq`, `integer_ord_ope`, …): the v2
     /// payload must be the `k: "ct"` form.
     Scalar(ScalarTarget),
-    /// The SteVec document domain `public.json`: the v2 payload must be the
+    /// The SteVec document domain `public.eql_v3_json`: the v2 payload must be the
     /// `k: "sv"` form.
     Json,
 }
@@ -44,8 +44,8 @@ impl ScalarTarget {
 }
 
 impl TargetDomain {
-    /// Resolve an unqualified v3 domain name (`"integer_ord_ope"`,
-    /// `"text_search"`, `"float8"`, `"json"`, …) against the inventory.
+    /// Resolve an unqualified v3 domain name (`"eql_v3_integer_ord_ope"`,
+    /// `"text_search"`, `"float8"`, `"eql_v3_json"`, …) against the inventory.
     ///
     /// Shape-aware: scalar domains resolve to [`TargetDomain::Scalar`] with
     /// their catalog term keys; the SteVec document domain `json` resolves to
@@ -61,7 +61,7 @@ impl TargetDomain {
                     domain: d.domain(),
                     term_keys,
                 })),
-                None if name == "json" => Ok(Self::Json),
+                None if name == "eql_v3_json" => Ok(Self::Json),
                 None => Err(FromV2Error::UnknownDomain { name: name.into() }),
             },
             None => Err(FromV2Error::UnknownDomain { name: name.into() }),
@@ -69,11 +69,11 @@ impl TargetDomain {
     }
 
     /// The target's name for error messages: the scalar domain name, or
-    /// `"json"`.
+    /// `"eql_v3_json"`.
     pub(super) fn describe(&self) -> &'static str {
         match self {
             Self::Scalar(t) => t.domain(),
-            Self::Json => "json",
+            Self::Json => "eql_v3_json",
         }
     }
 }

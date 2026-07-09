@@ -43,11 +43,13 @@ async fn eq_term_only_operand_matches_exactly_the_equal_rows(pool: PgPool) -> Re
         &[IndexKind::Unique],
     )
     .await?;
-    sqlx::query("CREATE TABLE q (id int GENERATED ALWAYS AS IDENTITY, val public.integer_eq)")
-        .execute(&pool)
-        .await?;
+    sqlx::query(
+        "CREATE TABLE q (id int GENERATED ALWAYS AS IDENTITY, val public.eql_v3_integer_eq)",
+    )
+    .execute(&pool)
+    .await?;
     for p in &stored {
-        sqlx::query("INSERT INTO q (val) VALUES ($1::jsonb::public.integer_eq)")
+        sqlx::query("INSERT INTO q (val) VALUES ($1::jsonb::public.eql_v3_integer_eq)")
             .bind(p.to_string())
             .execute(&pool)
             .await?;
@@ -85,11 +87,13 @@ async fn eq_term_only_operand_matches_exactly_the_equal_rows(pool: PgPool) -> Re
 async fn ord_term_only_operand_orders_via_the_ore_operator(pool: PgPool) -> Result<()> {
     // Store 10, 20, 30 as `integer_ord` (ORE block term).
     let stored = encrypt_store("qtest", "payload", &[10i32, 20, 30], &[IndexKind::Ore]).await?;
-    sqlx::query("CREATE TABLE q (id int GENERATED ALWAYS AS IDENTITY, val public.integer_ord)")
-        .execute(&pool)
-        .await?;
+    sqlx::query(
+        "CREATE TABLE q (id int GENERATED ALWAYS AS IDENTITY, val public.eql_v3_integer_ord)",
+    )
+    .execute(&pool)
+    .await?;
     for p in &stored {
-        sqlx::query("INSERT INTO q (val) VALUES ($1::jsonb::public.integer_ord)")
+        sqlx::query("INSERT INTO q (val) VALUES ($1::jsonb::public.eql_v3_integer_ord)")
             .bind(p.to_string())
             .execute(&pool)
             .await?;

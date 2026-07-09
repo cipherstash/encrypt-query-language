@@ -6,7 +6,7 @@
 --! Domain type representing a CLLW (Copyless Logarithmic Width)
 --! Order-Preserving Encryption term. The ciphertext is stored hex-encoded in
 --! the `op` field of encrypted payloads — the scalar `_ord_ope` domains and
---! the ordered entries of a SteVec document (`public.jsonb_entry`); the
+--! the ordered entries of a SteVec document (`public.eql_v3_jsonb_entry`); the
 --! domain carries the hex-decoded bytes.
 --!
 --! A DOMAIN over bytea, not a composite: the OPE ciphertext is

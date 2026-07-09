@@ -4,7 +4,7 @@ use super::domain_type::DomainType;
 use serde::{Deserialize, Serialize};
 /// Every stored-payload v3 domain in one type: one variant per flat
 /// scalar domain in `eql-domains::CATALOG` plus the SteVec document
-/// (`public.json`). Generated from the catalog, so it cannot drift
+/// (`public.eql_v3_json`). Generated from the catalog, so it cannot drift
 /// when the catalog grows.
 ///
 /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -17,111 +17,111 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, PartialEq, Serialize)]
 #[serde(untagged)]
 pub enum DomainPayload {
-    /// The `public.integer` payload.
+    /// The `public.eql_v3_integer` payload.
     Integer(super::integer::Integer),
-    /// The `public.integer_eq` payload.
+    /// The `public.eql_v3_integer_eq` payload.
     IntegerEq(super::integer::IntegerEq),
-    /// The `public.integer_ord_ore` payload.
+    /// The `public.eql_v3_integer_ord_ore` payload.
     IntegerOrdOre(super::integer::IntegerOrdOre),
-    /// The `public.integer_ord` payload.
+    /// The `public.eql_v3_integer_ord` payload.
     IntegerOrd(super::integer::IntegerOrd),
-    /// The `public.integer_ord_ope` payload.
+    /// The `public.eql_v3_integer_ord_ope` payload.
     IntegerOrdOpe(super::integer::IntegerOrdOpe),
-    /// The `public.smallint` payload.
+    /// The `public.eql_v3_smallint` payload.
     Smallint(super::smallint::Smallint),
-    /// The `public.smallint_eq` payload.
+    /// The `public.eql_v3_smallint_eq` payload.
     SmallintEq(super::smallint::SmallintEq),
-    /// The `public.smallint_ord_ore` payload.
+    /// The `public.eql_v3_smallint_ord_ore` payload.
     SmallintOrdOre(super::smallint::SmallintOrdOre),
-    /// The `public.smallint_ord` payload.
+    /// The `public.eql_v3_smallint_ord` payload.
     SmallintOrd(super::smallint::SmallintOrd),
-    /// The `public.smallint_ord_ope` payload.
+    /// The `public.eql_v3_smallint_ord_ope` payload.
     SmallintOrdOpe(super::smallint::SmallintOrdOpe),
-    /// The `public.bigint` payload.
+    /// The `public.eql_v3_bigint` payload.
     Bigint(super::bigint::Bigint),
-    /// The `public.bigint_eq` payload.
+    /// The `public.eql_v3_bigint_eq` payload.
     BigintEq(super::bigint::BigintEq),
-    /// The `public.bigint_ord_ore` payload.
+    /// The `public.eql_v3_bigint_ord_ore` payload.
     BigintOrdOre(super::bigint::BigintOrdOre),
-    /// The `public.bigint_ord` payload.
+    /// The `public.eql_v3_bigint_ord` payload.
     BigintOrd(super::bigint::BigintOrd),
-    /// The `public.bigint_ord_ope` payload.
+    /// The `public.eql_v3_bigint_ord_ope` payload.
     BigintOrdOpe(super::bigint::BigintOrdOpe),
-    /// The `public.date` payload.
+    /// The `public.eql_v3_date` payload.
     Date(super::date::Date),
-    /// The `public.date_eq` payload.
+    /// The `public.eql_v3_date_eq` payload.
     DateEq(super::date::DateEq),
-    /// The `public.date_ord_ore` payload.
+    /// The `public.eql_v3_date_ord_ore` payload.
     DateOrdOre(super::date::DateOrdOre),
-    /// The `public.date_ord` payload.
+    /// The `public.eql_v3_date_ord` payload.
     DateOrd(super::date::DateOrd),
-    /// The `public.date_ord_ope` payload.
+    /// The `public.eql_v3_date_ord_ope` payload.
     DateOrdOpe(super::date::DateOrdOpe),
-    /// The `public.timestamp` payload.
+    /// The `public.eql_v3_timestamp` payload.
     Timestamp(super::timestamp::Timestamp),
-    /// The `public.timestamp_eq` payload.
+    /// The `public.eql_v3_timestamp_eq` payload.
     TimestampEq(super::timestamp::TimestampEq),
-    /// The `public.timestamp_ord_ore` payload.
+    /// The `public.eql_v3_timestamp_ord_ore` payload.
     TimestampOrdOre(super::timestamp::TimestampOrdOre),
-    /// The `public.timestamp_ord` payload.
+    /// The `public.eql_v3_timestamp_ord` payload.
     TimestampOrd(super::timestamp::TimestampOrd),
-    /// The `public.timestamp_ord_ope` payload.
+    /// The `public.eql_v3_timestamp_ord_ope` payload.
     TimestampOrdOpe(super::timestamp::TimestampOrdOpe),
-    /// The `public.numeric` payload.
+    /// The `public.eql_v3_numeric` payload.
     Numeric(super::numeric::Numeric),
-    /// The `public.numeric_eq` payload.
+    /// The `public.eql_v3_numeric_eq` payload.
     NumericEq(super::numeric::NumericEq),
-    /// The `public.numeric_ord_ore` payload.
+    /// The `public.eql_v3_numeric_ord_ore` payload.
     NumericOrdOre(super::numeric::NumericOrdOre),
-    /// The `public.numeric_ord` payload.
+    /// The `public.eql_v3_numeric_ord` payload.
     NumericOrd(super::numeric::NumericOrd),
-    /// The `public.numeric_ord_ope` payload.
+    /// The `public.eql_v3_numeric_ord_ope` payload.
     NumericOrdOpe(super::numeric::NumericOrdOpe),
-    /// The `public.text` payload.
+    /// The `public.eql_v3_text` payload.
     Text(super::text::Text),
-    /// The `public.text_eq` payload.
+    /// The `public.eql_v3_text_eq` payload.
     TextEq(super::text::TextEq),
-    /// The `public.text_match` payload.
+    /// The `public.eql_v3_text_match` payload.
     TextMatch(super::text::TextMatch),
-    /// The `public.text_ord_ore` payload.
+    /// The `public.eql_v3_text_ord_ore` payload.
     TextOrdOre(super::text::TextOrdOre),
-    /// The `public.text_ord` payload.
+    /// The `public.eql_v3_text_ord` payload.
     TextOrd(super::text::TextOrd),
-    /// The `public.text_ord_ope` payload.
+    /// The `public.eql_v3_text_ord_ope` payload.
     TextOrdOpe(super::text::TextOrdOpe),
-    /// The `public.text_search` payload.
+    /// The `public.eql_v3_text_search` payload.
     TextSearch(super::text::TextSearch),
-    /// The `public.boolean` payload.
+    /// The `public.eql_v3_boolean` payload.
     Boolean(super::boolean::Boolean),
-    /// The `public.real` payload.
+    /// The `public.eql_v3_real` payload.
     Real(super::real::Real),
-    /// The `public.real_eq` payload.
+    /// The `public.eql_v3_real_eq` payload.
     RealEq(super::real::RealEq),
-    /// The `public.real_ord_ore` payload.
+    /// The `public.eql_v3_real_ord_ore` payload.
     RealOrdOre(super::real::RealOrdOre),
-    /// The `public.real_ord` payload.
+    /// The `public.eql_v3_real_ord` payload.
     RealOrd(super::real::RealOrd),
-    /// The `public.real_ord_ope` payload.
+    /// The `public.eql_v3_real_ord_ope` payload.
     RealOrdOpe(super::real::RealOrdOpe),
-    /// The `public.double` payload.
+    /// The `public.eql_v3_double` payload.
     Double(super::double::Double),
-    /// The `public.double_eq` payload.
+    /// The `public.eql_v3_double_eq` payload.
     DoubleEq(super::double::DoubleEq),
-    /// The `public.double_ord_ore` payload.
+    /// The `public.eql_v3_double_ord_ore` payload.
     DoubleOrdOre(super::double::DoubleOrdOre),
-    /// The `public.double_ord` payload.
+    /// The `public.eql_v3_double_ord` payload.
     DoubleOrd(super::double::DoubleOrd),
-    /// The `public.double_ord_ope` payload.
+    /// The `public.eql_v3_double_ord_ope` payload.
     DoubleOrdOpe(super::double::DoubleOrdOpe),
-    /// The `public.json` payload.
+    /// The `public.eql_v3_json` payload.
     SteVecDocument(super::jsonb::SteVecDocument),
 }
 impl DomainPayload {
     /// Strictly parse `value` as `domain`'s payload, KEEPING the
     /// parsed value — the constructor counterpart of
     /// [`DomainType::parse_value`] (which validates and discards).
-    /// `domain` is the unqualified name (`"integer_eq"`, `"json"`,
-    /// …). `None` when `domain` is not a stored-payload domain (the
+    /// `domain` is the unqualified installed name (`"eql_v3_integer_eq"`,
+    /// `"eql_v3_json"`, …). `None` when `domain` is not a stored-payload domain (the
     /// SteVec entry/query shapes included); `Some(Err)` when the
     /// strict parse fails (`deny_unknown_fields`, the
     /// `SchemaVersion`/`SteVecForm` pins).
@@ -130,111 +130,129 @@ impl DomainPayload {
         value: &serde_json::Value,
     ) -> Option<Result<Self, serde_json::Error>> {
         match domain {
-            "integer" => Some(super::integer::Integer::deserialize(value).map(Self::Integer)),
-            "integer_eq" => {
+            "eql_v3_integer" => {
+                Some(super::integer::Integer::deserialize(value).map(Self::Integer))
+            }
+            "eql_v3_integer_eq" => {
                 Some(super::integer::IntegerEq::deserialize(value).map(Self::IntegerEq))
             }
-            "integer_ord_ore" => {
+            "eql_v3_integer_ord_ore" => {
                 Some(super::integer::IntegerOrdOre::deserialize(value).map(Self::IntegerOrdOre))
             }
-            "integer_ord" => {
+            "eql_v3_integer_ord" => {
                 Some(super::integer::IntegerOrd::deserialize(value).map(Self::IntegerOrd))
             }
-            "integer_ord_ope" => {
+            "eql_v3_integer_ord_ope" => {
                 Some(super::integer::IntegerOrdOpe::deserialize(value).map(Self::IntegerOrdOpe))
             }
-            "smallint" => Some(super::smallint::Smallint::deserialize(value).map(Self::Smallint)),
-            "smallint_eq" => {
+            "eql_v3_smallint" => {
+                Some(super::smallint::Smallint::deserialize(value).map(Self::Smallint))
+            }
+            "eql_v3_smallint_eq" => {
                 Some(super::smallint::SmallintEq::deserialize(value).map(Self::SmallintEq))
             }
-            "smallint_ord_ore" => {
+            "eql_v3_smallint_ord_ore" => {
                 Some(super::smallint::SmallintOrdOre::deserialize(value).map(Self::SmallintOrdOre))
             }
-            "smallint_ord" => {
+            "eql_v3_smallint_ord" => {
                 Some(super::smallint::SmallintOrd::deserialize(value).map(Self::SmallintOrd))
             }
-            "smallint_ord_ope" => {
+            "eql_v3_smallint_ord_ope" => {
                 Some(super::smallint::SmallintOrdOpe::deserialize(value).map(Self::SmallintOrdOpe))
             }
-            "bigint" => Some(super::bigint::Bigint::deserialize(value).map(Self::Bigint)),
-            "bigint_eq" => Some(super::bigint::BigintEq::deserialize(value).map(Self::BigintEq)),
-            "bigint_ord_ore" => {
+            "eql_v3_bigint" => Some(super::bigint::Bigint::deserialize(value).map(Self::Bigint)),
+            "eql_v3_bigint_eq" => {
+                Some(super::bigint::BigintEq::deserialize(value).map(Self::BigintEq))
+            }
+            "eql_v3_bigint_ord_ore" => {
                 Some(super::bigint::BigintOrdOre::deserialize(value).map(Self::BigintOrdOre))
             }
-            "bigint_ord" => Some(super::bigint::BigintOrd::deserialize(value).map(Self::BigintOrd)),
-            "bigint_ord_ope" => {
+            "eql_v3_bigint_ord" => {
+                Some(super::bigint::BigintOrd::deserialize(value).map(Self::BigintOrd))
+            }
+            "eql_v3_bigint_ord_ope" => {
                 Some(super::bigint::BigintOrdOpe::deserialize(value).map(Self::BigintOrdOpe))
             }
-            "date" => Some(super::date::Date::deserialize(value).map(Self::Date)),
-            "date_eq" => Some(super::date::DateEq::deserialize(value).map(Self::DateEq)),
-            "date_ord_ore" => {
+            "eql_v3_date" => Some(super::date::Date::deserialize(value).map(Self::Date)),
+            "eql_v3_date_eq" => Some(super::date::DateEq::deserialize(value).map(Self::DateEq)),
+            "eql_v3_date_ord_ore" => {
                 Some(super::date::DateOrdOre::deserialize(value).map(Self::DateOrdOre))
             }
-            "date_ord" => Some(super::date::DateOrd::deserialize(value).map(Self::DateOrd)),
-            "date_ord_ope" => {
+            "eql_v3_date_ord" => Some(super::date::DateOrd::deserialize(value).map(Self::DateOrd)),
+            "eql_v3_date_ord_ope" => {
                 Some(super::date::DateOrdOpe::deserialize(value).map(Self::DateOrdOpe))
             }
-            "timestamp" => {
+            "eql_v3_timestamp" => {
                 Some(super::timestamp::Timestamp::deserialize(value).map(Self::Timestamp))
             }
-            "timestamp_eq" => {
+            "eql_v3_timestamp_eq" => {
                 Some(super::timestamp::TimestampEq::deserialize(value).map(Self::TimestampEq))
             }
-            "timestamp_ord_ore" => Some(
+            "eql_v3_timestamp_ord_ore" => Some(
                 super::timestamp::TimestampOrdOre::deserialize(value).map(Self::TimestampOrdOre),
             ),
-            "timestamp_ord" => {
+            "eql_v3_timestamp_ord" => {
                 Some(super::timestamp::TimestampOrd::deserialize(value).map(Self::TimestampOrd))
             }
-            "timestamp_ord_ope" => Some(
+            "eql_v3_timestamp_ord_ope" => Some(
                 super::timestamp::TimestampOrdOpe::deserialize(value).map(Self::TimestampOrdOpe),
             ),
-            "numeric" => Some(super::numeric::Numeric::deserialize(value).map(Self::Numeric)),
-            "numeric_eq" => {
+            "eql_v3_numeric" => {
+                Some(super::numeric::Numeric::deserialize(value).map(Self::Numeric))
+            }
+            "eql_v3_numeric_eq" => {
                 Some(super::numeric::NumericEq::deserialize(value).map(Self::NumericEq))
             }
-            "numeric_ord_ore" => {
+            "eql_v3_numeric_ord_ore" => {
                 Some(super::numeric::NumericOrdOre::deserialize(value).map(Self::NumericOrdOre))
             }
-            "numeric_ord" => {
+            "eql_v3_numeric_ord" => {
                 Some(super::numeric::NumericOrd::deserialize(value).map(Self::NumericOrd))
             }
-            "numeric_ord_ope" => {
+            "eql_v3_numeric_ord_ope" => {
                 Some(super::numeric::NumericOrdOpe::deserialize(value).map(Self::NumericOrdOpe))
             }
-            "text" => Some(super::text::Text::deserialize(value).map(Self::Text)),
-            "text_eq" => Some(super::text::TextEq::deserialize(value).map(Self::TextEq)),
-            "text_match" => Some(super::text::TextMatch::deserialize(value).map(Self::TextMatch)),
-            "text_ord_ore" => {
+            "eql_v3_text" => Some(super::text::Text::deserialize(value).map(Self::Text)),
+            "eql_v3_text_eq" => Some(super::text::TextEq::deserialize(value).map(Self::TextEq)),
+            "eql_v3_text_match" => {
+                Some(super::text::TextMatch::deserialize(value).map(Self::TextMatch))
+            }
+            "eql_v3_text_ord_ore" => {
                 Some(super::text::TextOrdOre::deserialize(value).map(Self::TextOrdOre))
             }
-            "text_ord" => Some(super::text::TextOrd::deserialize(value).map(Self::TextOrd)),
-            "text_ord_ope" => {
+            "eql_v3_text_ord" => Some(super::text::TextOrd::deserialize(value).map(Self::TextOrd)),
+            "eql_v3_text_ord_ope" => {
                 Some(super::text::TextOrdOpe::deserialize(value).map(Self::TextOrdOpe))
             }
-            "text_search" => {
+            "eql_v3_text_search" => {
                 Some(super::text::TextSearch::deserialize(value).map(Self::TextSearch))
             }
-            "boolean" => Some(super::boolean::Boolean::deserialize(value).map(Self::Boolean)),
-            "real" => Some(super::real::Real::deserialize(value).map(Self::Real)),
-            "real_eq" => Some(super::real::RealEq::deserialize(value).map(Self::RealEq)),
-            "real_ord_ore" => {
+            "eql_v3_boolean" => {
+                Some(super::boolean::Boolean::deserialize(value).map(Self::Boolean))
+            }
+            "eql_v3_real" => Some(super::real::Real::deserialize(value).map(Self::Real)),
+            "eql_v3_real_eq" => Some(super::real::RealEq::deserialize(value).map(Self::RealEq)),
+            "eql_v3_real_ord_ore" => {
                 Some(super::real::RealOrdOre::deserialize(value).map(Self::RealOrdOre))
             }
-            "real_ord" => Some(super::real::RealOrd::deserialize(value).map(Self::RealOrd)),
-            "real_ord_ope" => {
+            "eql_v3_real_ord" => Some(super::real::RealOrd::deserialize(value).map(Self::RealOrd)),
+            "eql_v3_real_ord_ope" => {
                 Some(super::real::RealOrdOpe::deserialize(value).map(Self::RealOrdOpe))
             }
-            "double" => Some(super::double::Double::deserialize(value).map(Self::Double)),
-            "double_eq" => Some(super::double::DoubleEq::deserialize(value).map(Self::DoubleEq)),
-            "double_ord_ore" => {
+            "eql_v3_double" => Some(super::double::Double::deserialize(value).map(Self::Double)),
+            "eql_v3_double_eq" => {
+                Some(super::double::DoubleEq::deserialize(value).map(Self::DoubleEq))
+            }
+            "eql_v3_double_ord_ore" => {
                 Some(super::double::DoubleOrdOre::deserialize(value).map(Self::DoubleOrdOre))
             }
-            "double_ord" => Some(super::double::DoubleOrd::deserialize(value).map(Self::DoubleOrd)),
-            "double_ord_ope" => {
+            "eql_v3_double_ord" => {
+                Some(super::double::DoubleOrd::deserialize(value).map(Self::DoubleOrd))
+            }
+            "eql_v3_double_ord_ope" => {
                 Some(super::double::DoubleOrdOpe::deserialize(value).map(Self::DoubleOrdOpe))
             }
-            "json" => {
+            "eql_v3_json" => {
                 Some(super::jsonb::SteVecDocument::deserialize(value).map(Self::SteVecDocument))
             }
             _ => None,
@@ -294,11 +312,11 @@ impl DomainPayload {
             Self::SteVecDocument(payload) => payload,
         }
     }
-    /// Fully-qualified SQL domain name, e.g. `"public.integer_eq"`.
+    /// Fully-qualified SQL domain name, e.g. `"public.eql_v3_integer_eq"`.
     pub fn sql_domain(&self) -> &'static str {
         self.as_domain_type().sql_domain()
     }
-    /// Unqualified SQL domain name, e.g. `"integer_eq"` — the name
+    /// Unqualified SQL domain name, e.g. `"eql_v3_integer_eq"` — the name
     /// [`DomainPayload::parse`] accepts.
     pub fn domain(&self) -> &'static str {
         self.as_domain_type().domain()

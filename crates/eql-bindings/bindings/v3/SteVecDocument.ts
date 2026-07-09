@@ -5,7 +5,7 @@ import type { SteVecEntry } from "./SteVecEntry";
 import type { SteVecForm } from "./SteVecForm";
 
 /**
- * `public.json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
+ * `public.eql_v3_json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
  * no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
  * [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
  */

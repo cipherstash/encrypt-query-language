@@ -79,7 +79,7 @@ fn parse_resolves_every_catalog_scalar_domain_and_json() {
                     matches!(parsed, Ok(TargetDomain::Scalar(_))),
                     "{name} must parse to Scalar, got {parsed:?}"
                 );
-            } else if name == "json" {
+            } else if name == "eql_v3_json" {
                 assert_eq!(parsed.unwrap(), TargetDomain::Json);
             } else {
                 assert!(
@@ -93,7 +93,7 @@ fn parse_resolves_every_catalog_scalar_domain_and_json() {
 
 #[test]
 fn parse_rejects_unknown_domain_names() {
-    for name in ["int5", "text_like", "public.integer_eq", "", "jsonb"] {
+    for name in ["int5", "text_like", "public.eql_v3_integer_eq", "", "jsonb"] {
         let parsed = TargetDomain::parse(name);
         assert!(
             matches!(parsed, Err(FromV2Error::UnknownDomain { .. })),
@@ -104,10 +104,10 @@ fn parse_rejects_unknown_domain_names() {
 
 #[test]
 fn target_domain_is_copy_and_comparable() {
-    let a = target("integer_eq");
+    let a = target("eql_v3_integer_eq");
     let b = a; // Copy
     assert_eq!(a, b);
-    assert_ne!(a, target("integer"));
+    assert_ne!(a, target("eql_v3_integer"));
     assert_ne!(a, TargetDomain::Json);
 }
 
@@ -117,14 +117,14 @@ fn target_domain_is_copy_and_comparable() {
 
 #[test]
 fn storage_only_scalar_drops_k_and_all_terms() {
-    let out = from_v2(&v2_ct_full(), target("integer")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("eql_v3_integer")).unwrap();
     assert_eq!(out, json!({ "v": 3, "i": ident(), "c": CIPHERTEXT }));
     assert!(is_v3_payload(&out));
 }
 
 #[test]
 fn text_eq_copies_hm_and_drops_the_rest() {
-    let out = from_v2(&v2_ct_full(), target("text_eq")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("eql_v3_text_eq")).unwrap();
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "hm": HEX })
@@ -134,7 +134,7 @@ fn text_eq_copies_hm_and_drops_the_rest() {
 
 #[test]
 fn integer_ord_ore_copies_ob_verbatim() {
-    let out = from_v2(&v2_ct_full(), target("integer_ord_ore")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("eql_v3_integer_ord_ore")).unwrap();
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "ob": [HEX, HEX_LONG] })
@@ -144,7 +144,7 @@ fn integer_ord_ore_copies_ob_verbatim() {
 
 #[test]
 fn integer_ord_ope_copies_op_verbatim() {
-    let out = from_v2(&v2_ct_full(), target("integer_ord_ope")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("eql_v3_integer_ord_ope")).unwrap();
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "op": HEX })
@@ -153,7 +153,7 @@ fn integer_ord_ope_copies_op_verbatim() {
 
 #[test]
 fn text_ord_ope_requires_both_hm_and_op() {
-    let out = from_v2(&v2_ct_full(), target("text_ord_ope")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("eql_v3_text_ord_ope")).unwrap();
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "hm": HEX, "op": HEX })
@@ -162,7 +162,7 @@ fn text_ord_ope_requires_both_hm_and_op() {
 
 #[test]
 fn text_search_copies_hm_ob_and_bf() {
-    let out = from_v2(&v2_ct_full(), target("text_search")).unwrap();
+    let out = from_v2(&v2_ct_full(), target("eql_v3_text_search")).unwrap();
     assert_eq!(
         out,
         json!({
@@ -179,10 +179,10 @@ fn text_search_copies_hm_ob_and_bf() {
 
 #[test]
 fn missing_required_term_fails_closed() {
-    let err = from_v2(&v2_ct_minimal(), target("text_eq")).unwrap_err();
+    let err = from_v2(&v2_ct_minimal(), target("eql_v3_text_eq")).unwrap_err();
     match err {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "text_eq");
+            assert_eq!(domain, "eql_v3_text_eq");
             assert_eq!(key, "hm");
             // Scalar payloads have no sv entries to index.
             assert_eq!(entry, None);
@@ -190,7 +190,7 @@ fn missing_required_term_fails_closed() {
         other => panic!("expected MissingTerm, got {other:?}"),
     }
     // Multi-term domain reports its first absent key.
-    let err = from_v2(&v2_ct_minimal(), target("text_search")).unwrap_err();
+    let err = from_v2(&v2_ct_minimal(), target("eql_v3_text_search")).unwrap_err();
     assert!(matches!(err, FromV2Error::MissingTerm { .. }));
 }
 
@@ -200,7 +200,7 @@ fn bloom_filter_upper_half_reinterprets_as_negative_i16() {
     // 65536-wide filter wraps to negative i16 — 40000 - 65536 = -25536.
     let mut v2 = v2_ct_full();
     v2["bf"] = json!([0, 32767, 32768, 40000, 65535]);
-    let out = from_v2(&v2, target("text_search")).unwrap();
+    let out = from_v2(&v2, target("eql_v3_text_search")).unwrap();
     assert_eq!(out["bf"], json!([0, 32767, -32768, -25536, -1]));
 }
 
@@ -210,7 +210,7 @@ fn bloom_filter_already_signed_values_pass_through() {
     // through unchanged rather than double-wrapping.
     let mut v2 = v2_ct_full();
     v2["bf"] = json!([-1, -32768, 12]);
-    let out = from_v2(&v2, target("text_search")).unwrap();
+    let out = from_v2(&v2, target("eql_v3_text_search")).unwrap();
     assert_eq!(out["bf"], json!([-1, -32768, 12]));
 }
 
@@ -218,7 +218,7 @@ fn bloom_filter_already_signed_values_pass_through() {
 fn bloom_filter_element_above_u16_is_out_of_range() {
     let mut v2 = v2_ct_full();
     v2["bf"] = json!([12, 70000]);
-    let err = from_v2(&v2, target("text_search")).unwrap_err();
+    let err = from_v2(&v2, target("eql_v3_text_search")).unwrap_err();
     match err {
         FromV2Error::BloomOutOfRange { index, value } => {
             assert_eq!(index, 1);
@@ -230,7 +230,7 @@ fn bloom_filter_element_above_u16_is_out_of_range() {
     let mut v2 = v2_ct_full();
     v2["bf"] = json!([-32769]);
     assert!(matches!(
-        from_v2(&v2, target("text_search")).unwrap_err(),
+        from_v2(&v2, target("eql_v3_text_search")).unwrap_err(),
         FromV2Error::BloomOutOfRange { .. }
     ));
 }
@@ -245,7 +245,7 @@ fn bloom_filter_reinterpretation_is_exhaustively_correct() {
     let inputs: Vec<i64> = (i64::from(i16::MIN)..=i64::from(u16::MAX)).collect();
     let mut v2 = v2_ct_full();
     v2["bf"] = json!(inputs);
-    let out = from_v2(&v2, target("text_search")).unwrap();
+    let out = from_v2(&v2, target("eql_v3_text_search")).unwrap();
     let out_bf = out["bf"].as_array().unwrap();
     assert_eq!(out_bf.len(), inputs.len());
     for (n, o) in inputs.iter().zip(out_bf) {
@@ -263,7 +263,7 @@ fn bloom_filter_reinterpretation_is_exhaustively_correct() {
         let mut v2 = v2_ct_full();
         v2["bf"] = json!([bad]);
         assert!(matches!(
-            from_v2(&v2, target("text_search")).unwrap_err(),
+            from_v2(&v2, target("eql_v3_text_search")).unwrap_err(),
             FromV2Error::BloomOutOfRange { index: 0, value } if value == bad
         ));
     }
@@ -272,18 +272,18 @@ fn bloom_filter_reinterpretation_is_exhaustively_correct() {
 #[test]
 fn already_v3_input_is_rejected() {
     let v3 = json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "hm": HEX });
-    let err = from_v2(&v3, target("text_eq")).unwrap_err();
+    let err = from_v2(&v3, target("eql_v3_text_eq")).unwrap_err();
     assert!(
         matches!(err, FromV2Error::UnsupportedVersion { found: Some(3) }),
         "got {err:?}"
     );
     // Non-envelope inputs (no `v` at all) are also unsupported-version.
-    let err = from_v2(&json!({ "hello": "world" }), target("text_eq")).unwrap_err();
+    let err = from_v2(&json!({ "hello": "world" }), target("eql_v3_text_eq")).unwrap_err();
     assert!(matches!(
         err,
         FromV2Error::UnsupportedVersion { found: None }
     ));
-    let err = from_v2(&json!("plaintext"), target("text_eq")).unwrap_err();
+    let err = from_v2(&json!("plaintext"), target("eql_v3_text_eq")).unwrap_err();
     assert!(matches!(err, FromV2Error::UnsupportedVersion { .. }));
 }
 
@@ -292,13 +292,13 @@ fn unknown_or_missing_kind_is_rejected() {
     let mut v2 = v2_ct_full();
     v2["k"] = json!("xx");
     assert!(matches!(
-        from_v2(&v2, target("text_eq")).unwrap_err(),
+        from_v2(&v2, target("eql_v3_text_eq")).unwrap_err(),
         FromV2Error::UnknownKind { .. }
     ));
     let mut v2 = v2_ct_full();
     v2.as_object_mut().unwrap().remove("k");
     assert!(matches!(
-        from_v2(&v2, target("text_eq")).unwrap_err(),
+        from_v2(&v2, target("eql_v3_text_eq")).unwrap_err(),
         FromV2Error::UnknownKind { found: None }
     ));
 }
@@ -307,7 +307,7 @@ fn unknown_or_missing_kind_is_rejected() {
 fn kind_mismatch_is_rejected_in_both_directions() {
     // sv payload for a scalar target.
     assert!(matches!(
-        from_v2(&v2_sv(), target("integer_eq")).unwrap_err(),
+        from_v2(&v2_sv(), target("eql_v3_integer_eq")).unwrap_err(),
         FromV2Error::KindMismatch { .. }
     ));
     // ct payload for the Json target.
@@ -322,7 +322,7 @@ fn v2_query_payload_without_ciphertext_is_rejected_by_from_v2() {
     // A v2 QUERY payload omits `c`; `from_v2` converts STORED payloads only,
     // and the final validation through the binding struct fails closed.
     let query = json!({ "v": 2, "k": "ct", "i": ident(), "hm": HEX });
-    let err = from_v2(&query, target("text_eq")).unwrap_err();
+    let err = from_v2(&query, target("eql_v3_text_eq")).unwrap_err();
     assert!(matches!(err, FromV2Error::Invalid(_)), "got {err:?}");
 }
 
@@ -393,7 +393,7 @@ fn ste_vec_entry_with_neither_term_is_missing() {
     let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
     match err {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "json");
+            assert_eq!(domain, "eql_v3_json");
             assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }
@@ -460,16 +460,17 @@ fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
     // the stored `c`/`k`. A storage-only target has no operators, so it stays
     // UnsupportedQueryTarget.
     let query = json!({ "v": 2, "k": "ct", "i": ident(), "c": CIPHERTEXT, "hm": HEX });
-    let out = from_v2_query(&query, target("text_eq")).expect("text_eq query hoist succeeds");
+    let out =
+        from_v2_query(&query, target("eql_v3_text_eq")).expect("text_eq query hoist succeeds");
     assert_eq!(
         out,
         json!({ "v": 3, "i": ident(), "hm": HEX }),
         "hoist keeps v/i + the hm term, drops c/k"
     );
 
-    let err = from_v2_query(&query, target("boolean")).unwrap_err();
+    let err = from_v2_query(&query, target("eql_v3_boolean")).unwrap_err();
     match err {
-        FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, "boolean"),
+        FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, "eql_v3_boolean"),
         other => panic!("expected UnsupportedQueryTarget for storage-only, got {other:?}"),
     }
 }
@@ -512,12 +513,15 @@ fn is_v3_payload_is_a_lenient_envelope_probe() {
 fn errors_display_and_implement_std_error() {
     // Hand-rolled Display/Error (no thiserror): every variant renders a
     // non-empty, informative message, and Invalid exposes its serde source.
-    let err = from_v2(&v2_ct_minimal(), target("text_eq")).unwrap_err();
+    let err = from_v2(&v2_ct_minimal(), target("eql_v3_text_eq")).unwrap_err();
     let msg = err.to_string();
-    assert!(msg.contains("text_eq") && msg.contains("hm"), "got {msg:?}");
+    assert!(
+        msg.contains("eql_v3_text_eq") && msg.contains("hm"),
+        "got {msg:?}"
+    );
 
     let query = json!({ "v": 2, "k": "ct", "i": ident(), "hm": HEX });
-    let invalid = from_v2(&query, target("text_eq")).unwrap_err();
+    let invalid = from_v2(&query, target("eql_v3_text_eq")).unwrap_err();
     let source = std::error::Error::source(&invalid);
     assert!(
         source.is_some(),

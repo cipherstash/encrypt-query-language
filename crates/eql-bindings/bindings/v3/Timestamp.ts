@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.timestamp` — storage-only domain.
+ * `public.eql_v3_timestamp` — storage-only domain.
  *
  * Operators: none. Required keys: `v` `i` `c`.
  */

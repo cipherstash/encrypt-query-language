@@ -5,7 +5,7 @@
 //! (`ob: []`, verified against cipherstash-client) — the only value that does.
 //! Rather than ordering such a degenerate term, the ORE-bearing domains reject
 //! it at the boundary: their `CHECK` requires `ob` to be a non-empty array, so
-//! casting an empty-`ob` payload to `public.text_ord` / `public.text_ord_ore`
+//! casting an empty-`ob` payload to `public.eql_v3_text_ord` / `public.eql_v3_text_ord_ore`
 //! fails with a check violation (SQLSTATE `23514`). The comparator's
 //! "empty sorts first" cardinality guard remains in place as defense-in-depth
 //! for any path that bypasses the domain (e.g. a composite built directly).
@@ -21,40 +21,42 @@ use anyhow::Result;
 use eql_tests::assert_db_error;
 use sqlx::PgPool;
 
-/// Casting the empty-string row (`id = 1`, `ob: []`) to `public.text_ord` is
+/// Casting the empty-string row (`id = 1`, `ob: []`) to `public.eql_v3_text_ord` is
 /// rejected by the domain's non-empty-`ob` CHECK.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_text_empty")))]
 async fn empty_string_rejected_by_text_ord(pool: PgPool) -> Result<()> {
-    let err =
-        sqlx::query("SELECT payload::public.text_ord FROM fixtures.v3_text_empty WHERE id = 1")
-            .fetch_all(&pool)
-            .await
-            .expect_err("empty ORE term (ob: []) must violate the text_ord CHECK");
+    let err = sqlx::query(
+        "SELECT payload::public.eql_v3_text_ord FROM fixtures.v3_text_empty WHERE id = 1",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect_err("empty ORE term (ob: []) must violate the text_ord CHECK");
     // Auto-generated domain constraint name is not pinned — only the SQLSTATE.
     assert_db_error(&err, "23514", None);
     Ok(())
 }
 
-/// Same rejection for the `public.text_ord_ore` domain.
+/// Same rejection for the `public.eql_v3_text_ord_ore` domain.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_text_empty")))]
 async fn empty_string_rejected_by_text_ord_ore(pool: PgPool) -> Result<()> {
-    let err =
-        sqlx::query("SELECT payload::public.text_ord_ore FROM fixtures.v3_text_empty WHERE id = 1")
-            .fetch_all(&pool)
-            .await
-            .expect_err("empty ORE term (ob: []) must violate the text_ord_ore CHECK");
+    let err = sqlx::query(
+        "SELECT payload::public.eql_v3_text_ord_ore FROM fixtures.v3_text_empty WHERE id = 1",
+    )
+    .fetch_all(&pool)
+    .await
+    .expect_err("empty ORE term (ob: []) must violate the text_ord_ore CHECK");
     assert_db_error(&err, "23514", None);
     Ok(())
 }
 
 /// The non-empty controls (`"frank"`, `"zebra"`) carry a real `ob` array, so
-/// they cast cleanly into `public.text_ord` — the CHECK only rejects the empty
+/// they cast cleanly into `public.eql_v3_text_ord` — the CHECK only rejects the empty
 /// term, not ordered text in general.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_text_empty")))]
 async fn non_empty_controls_accepted_by_text_ord(pool: PgPool) -> Result<()> {
     let plaintexts: Vec<String> = sqlx::query_scalar(
         "SELECT plaintext FROM fixtures.v3_text_empty \
-         WHERE id IN (2, 3) AND payload::public.text_ord IS NOT NULL \
+         WHERE id IN (2, 3) AND payload::public.eql_v3_text_ord IS NOT NULL \
          ORDER BY id",
     )
     .fetch_all(&pool)
@@ -74,7 +76,7 @@ async fn non_empty_controls_order_under_text_ord(pool: PgPool) -> Result<()> {
     let plaintexts: Vec<String> = sqlx::query_scalar(
         "SELECT plaintext FROM fixtures.v3_text_empty \
          WHERE id IN (2, 3) \
-         ORDER BY eql_v3.ord_term(payload::public.text_ord) ASC",
+         ORDER BY eql_v3.ord_term(payload::public.eql_v3_text_ord) ASC",
     )
     .fetch_all(&pool)
     .await?;

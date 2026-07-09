@@ -562,12 +562,12 @@ fn from_v2_scalar_outputs_validate_against_published_v3_schemas() {
     // schema's signed int16 bounds are exercised on the converted value.
     let v2 = v2_ct_full();
     for domain in [
-        "integer",
-        "text_eq",
-        "integer_ord_ore",
-        "text_search",
-        "integer_ord_ope",
-        "text_ord_ope",
+        "eql_v3_integer",
+        "eql_v3_text_eq",
+        "eql_v3_integer_ord_ore",
+        "eql_v3_text_search",
+        "eql_v3_integer_ord_ope",
+        "eql_v3_text_ord_ope",
     ] {
         assert_converts_to_valid_v3(&v2, domain);
     }
@@ -584,7 +584,7 @@ fn from_v2_ste_vec_output_validates_against_published_v3_schema() {
             { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
         ]
     });
-    assert_converts_to_valid_v3(&v2, "json");
+    assert_converts_to_valid_v3(&v2, "eql_v3_json");
 }
 
 #[test]
@@ -610,12 +610,12 @@ fn published_v3_schemas_reject_the_unconverted_v2_payloads() {
     // (v: 2 envelope, stray k/terms), proving the schema validation above is
     // not vacuously green.
     assert_invalid(
-        &load_v3_schema("text_eq"),
+        &load_v3_schema("eql_v3_text_eq"),
         &v2_ct_full(),
         "raw v2 ct payload",
     );
     assert_invalid(
-        &load_v3_schema("json"),
+        &load_v3_schema("eql_v3_json"),
         &json!({
             "v": 2, "k": "sv", "i": ident(),
             "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX }]

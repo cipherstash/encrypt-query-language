@@ -137,18 +137,18 @@ pub trait ScalarType:
 
     /// SQL domain the comparable value is cast to. Default: the generated
     /// scalar domain `public.<pg_type><variant_suffix>`. A non-scalar surface
-    /// (e.g. a SteVec entry, whose single domain `public.jsonb_entry` is
+    /// (e.g. a SteVec entry, whose single domain `public.eql_v3_jsonb_entry` is
     /// variant-independent) overrides this to ignore the suffix.
     fn sql_domain(variant: Variant) -> String {
-        format!("public.{}{}", Self::PG_TYPE, variant.suffix())
+        format!("public.eql_v3_{}{}", Self::PG_TYPE, variant.suffix())
     }
 
     /// SQL expression that yields the comparable value from a fixture row.
     /// Default: the bare `payload` column (a whole encrypted-scalar payload).
     /// A SteVec-entry view overrides this with an extraction expression such
     /// as `(payload -> '<selector>')`, which already has type
-    /// `public.jsonb_entry`. The expression is cast to `sql_domain(variant)`
-    /// at every call site, so a redundant `::public.jsonb_entry` cast on an
+    /// `public.eql_v3_jsonb_entry`. The expression is cast to `sql_domain(variant)`
+    /// at every call site, so a redundant `::public.eql_v3_jsonb_entry` cast on an
     /// already-entry expression is a harmless no-op.
     fn column_expr() -> String {
         "payload".to_string()
@@ -1307,7 +1307,7 @@ impl Variant {
 /// Runtime spec built from `(T, Variant)`. The matrix macro consumes
 /// this; nothing here is `const` because `sql_domain` is derived via
 /// `format!` from `T::PG_TYPE`. The domains live in the `public` schema,
-/// so `sql_domain` is schema-qualified (e.g. `public.integer_eq`).
+/// so `sql_domain` is schema-qualified (e.g. `public.eql_v3_integer_eq`).
 #[derive(Debug, Clone)]
 pub struct ScalarDomainSpec {
     pub sql_domain: String,
@@ -1626,7 +1626,7 @@ mod seam_tests {
     fn scalar_defaults_reproduce_today_sql() {
         let spec = ScalarDomainSpec::new::<i32>(Variant::Ord);
         assert_eq!(spec.column_expr, "payload");
-        assert_eq!(spec.sql_domain, "public.integer_ord");
+        assert_eq!(spec.sql_domain, "public.eql_v3_integer_ord");
         assert_eq!(
             spec.extractor_expr("value"),
             Some("eql_v3.ord_term(value)".to_string()),
@@ -1645,14 +1645,14 @@ mod seam_tests {
     #[test]
     fn scalar_eq_and_storage_extractor_routes() {
         let eq = ScalarDomainSpec::new::<i32>(Variant::Eq);
-        assert_eq!(eq.sql_domain, "public.integer_eq");
+        assert_eq!(eq.sql_domain, "public.eql_v3_integer_eq");
         assert_eq!(
             eq.extractor_expr("value"),
             Some("eql_v3.eq_term(value)".to_string())
         );
 
         let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
-        assert_eq!(storage.sql_domain, "public.integer");
+        assert_eq!(storage.sql_domain, "public.eql_v3_integer");
         assert_eq!(storage.extractor_expr("value"), None);
     }
 }

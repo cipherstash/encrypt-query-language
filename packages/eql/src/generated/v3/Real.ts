@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.real` — storage-only domain.
+ * `public.eql_v3_real` — storage-only domain.
  *
  * Operators: none. Required keys: `v` `i` `c`.
  */

@@ -2,7 +2,7 @@
 //! the one test that ties eql-bindings to real cipherstash crypto AND to the
 //! hand-written src/v3/jsonb/types.sql domain CHECK simultaneously.
 //!
-//! The fixture (`fixtures.v3_ste_vec`, column `payload public.json`) is GENERATED
+//! The fixture (`fixtures.v3_ste_vec`, column `payload public.eql_v3_json`) is GENERATED
 //! by encrypting JSON documents through cipherstash-client's SteVec pipeline
 //! (`mise run fixture:generate:all`), so this exercises the bindings against the
 //! same wire shape the domain CHECK (`is_valid_ste_vec_document_payload`)

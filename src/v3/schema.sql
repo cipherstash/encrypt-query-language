@@ -2,7 +2,7 @@
 --! @brief EQL v3 schema creation
 --!
 --! Creates the eql_v3 and eql_v3_internal schemas. User-column encrypted
---! domains (public.integer, public.bigint, and future scalar domains) live in
+--! domains (public.eql_v3_integer, public.eql_v3_bigint, and future scalar domains) live in
 --! public so application tables survive EQL schema uninstall. eql_v3 is the
 --! public API for index-term extractors, aggregates, AND the operator-backing
 --! comparison wrappers

@@ -58,8 +58,8 @@ needs `USAGE` on it anyway. The exact requirement is path-dependent:
 | Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | ✅ |
 | `MIN` / `MAX` aggregates | ✅ | ✅ | ✅ |
 | jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
-| Cast/write raw JSON → `public.json` | ✅ | ✅ | — |
-| Cast/write raw JSON → a scalar domain (`public.integer`…) | ✅ | — | — |
+| Cast/write raw JSON → `public.eql_v3_json` | ✅ | ✅ | — |
+| Cast/write raw JSON → a scalar domain (`public.eql_v3_integer`…) | ✅ | — | — |
 | Cast a query operand → `eql_v3.query_<name>` / `eql_v3.query_jsonb` | ✅ | — | — |
 
 Why the internal grant is needed even though you only call public objects:
@@ -74,9 +74,9 @@ Why the internal grant is needed even though you only call public objects:
 - The **ORE comparison** behind ordering and `MIN`/`MAX` calls pgcrypto
   `encrypt()`, which the installer places in the `extensions` schema — hence the
   `USAGE` there.
-- **Casting raw jsonb to `public.json` or `eql_v3.query_jsonb`** fires a
+- **Casting raw jsonb to `public.eql_v3_json` or `eql_v3.query_jsonb`** fires a
   domain `CHECK` that calls an `eql_v3_internal.is_valid_*` validator. (Scalar
-  domain CHECKs — and, since issue #354, the `public.jsonb_entry` CHECK — are
+  domain CHECKs — and, since issue #354, the `public.eql_v3_jsonb_entry` CHECK — are
   pure structural jsonb tests, so casting to those domains needs no internal
   grant.)
 

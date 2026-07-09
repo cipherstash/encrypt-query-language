@@ -44,6 +44,22 @@ pub use fixtures::{
 /// drift between the SQL and the canonical types.
 pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
+/// The version prefix every PUBLIC-SCHEMA EQL type name carries:
+/// `public.eql_v3_integer_eq`, `public.eql_v3_json`, … (CIP-3472). The prefix
+/// keeps EQL domains from shadowing PostgreSQL built-in type names
+/// (`integer`, `text`, `json`, …) and gives each EQL version a distinct
+/// column-type namespace so multiple EQL versions can coexist in one
+/// database. Query-operand domains are NOT prefixed — they live in the
+/// `eql_v3` schema, which already versions them.
+///
+/// Lives here — in the catalog — because it is cross-crate contract data:
+/// `eql-codegen` renders every public domain name through it, and
+/// `eql-bindings`' parity tests re-derive the expected names from it. The
+/// catalog's own names stay bare — the prefix is applied only at SQL-name
+/// construction ([`Domain::sql_typname`]); file names, struct identifiers,
+/// and matrix test names all keep the bare name.
+pub const PUBLIC_TYPNAME_PREFIX: &str = "eql_v3_";
+
 /// A fixed index term known to the scalar materializer.
 ///
 /// `Hm` provides equality; `Ore` and `Ope` provide equality plus ordering —
@@ -133,8 +149,8 @@ impl Role {
 pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
-    /// A `jsonb` family payload: `public.json` (`{v, i, sv: [entry]}`),
-    /// `public.jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
+    /// A `jsonb` family payload: `public.eql_v3_json` (`{v, i, sv: [entry]}`),
+    /// `public.eql_v3_jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
     /// `public.query_jsonb` (`{sv: [query-entry]}`). The three differ in
     /// payload body but share the non-flat-scalar shape, so a single variant
     /// covers them; `Domain.name` (`"json"`/`"entry"`/`"query"`) already
@@ -358,7 +374,7 @@ const STORAGE_ONLY_DOMAINS: &[Domain] = &[Domain {
 }];
 
 /// `bool` — an **encryption-only / storage-only** scalar (`ScalarKind::Bool`).
-/// One term-less storage domain (`public.boolean`), no `_eq`/`_ord`: a two-value
+/// One term-less storage domain (`public.eql_v3_boolean`), no `_eq`/`_ord`: a two-value
 /// column has too little cardinality for any searchable index without leaking the
 /// plaintext, so the value is encrypted at rest and decrypted by the proxy,
 /// never searched server-side. Public so the SQLx harness reads
@@ -411,7 +427,7 @@ pub const DOUBLE: DomainFamily = DomainFamily {
 /// from the catalog); the catalog drives only their inventory membership + order.
 const JSONB_DOMAINS: &[Domain] = &[
     Domain {
-        // The established document name `public.json` predates the catalog and
+        // The established document name `public.eql_v3_json` predates the catalog and
         // does not follow the family+suffix convention (family is "jsonb", not
         // "json") — an explicit literal name, not the empty-suffix
         // bare-family-name convention every scalar storage domain uses.
@@ -433,8 +449,8 @@ const JSONB_DOMAINS: &[Domain] = &[
     },
 ];
 
-/// `jsonb` — the encrypted-JSONB (SteVec) family: `public.json` (document, the
-/// one explicit-name exception — see `JSONB_DOMAINS`), `public.jsonb_entry`
+/// `jsonb` — the encrypted-JSONB (SteVec) family: `public.eql_v3_json` (document, the
+/// one explicit-name exception — see `JSONB_DOMAINS`), `public.eql_v3_jsonb_entry`
 /// (one sv element), `public.query_jsonb` (containment needle). The Rust
 /// struct *bodies* are hand-written (`crates/eql-bindings/src/v3/jsonb.rs`,
 /// not derivable from the catalog); `Domain::rust_struct_name` derives their

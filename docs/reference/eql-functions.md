@@ -1,6 +1,6 @@
 # EQL Functions Reference
 
-A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`public.<T>` and variants) and the encrypted-JSON document type (`public.json`).
+A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`public.<T>` and variants) and the encrypted-JSON document type (`public.eql_v3_json`).
 
 > **There is no database-side configuration API.** Which index terms a value carries is chosen by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); a column's capability is fixed by the **domain variant** you type it as. See [SQL support matrix](./sql-support.md) for the variant/operator table.
 
@@ -9,7 +9,7 @@ A reference for the functions and operators EQL exposes for querying encrypted d
 - [Operators](#operators)
 - [Function Equivalents](#function-equivalents)
 - [Index Term Extraction](#index-term-extraction)
-- [Encrypted JSON (`public.json`)](#encrypted-json-eql_v3json)
+- [Encrypted JSON (`public.eql_v3_json`)](#encrypted-json-eql_v3json)
 - [Aggregate Functions](#aggregate-functions)
 
 ---
@@ -20,21 +20,21 @@ EQL overloads standard PostgreSQL operators on the encrypted-domain types. Type 
 
 ### Equality — `=` `<>`
 
-On `public.<T>_eq`, `public.<T>_ord` / `_ord_ore`, and `public.text_search` (carry an `hm` term):
+On `public.<T>_eq`, `public.<T>_ord` / `_ord_ore`, and `public.eql_v3_text_search` (carry an `hm` term):
 
 ```sql
 SELECT * FROM users WHERE encrypted_email = $1;
-SELECT * FROM users WHERE encrypted_email = $1::public.text_eq;
+SELECT * FROM users WHERE encrypted_email = $1::public.eql_v3_text_eq;
 SELECT * FROM users WHERE encrypted_email <> $1;
 ```
 
 ### Range — `<` `<=` `>` `>=`
 
-On `public.<T>_ord` / `_ord_ore` and `public.text_search` (carry an `ob` ORE term):
+On `public.<T>_ord` / `_ord_ore` and `public.eql_v3_text_search` (carry an `ob` ORE term):
 
 ```sql
-SELECT * FROM events WHERE encrypted_at <  $1::public.timestamp_ord;
-SELECT * FROM events WHERE encrypted_at >= $1::public.timestamp_ord;
+SELECT * FROM events WHERE encrypted_at <  $1::public.eql_v3_timestamp_ord;
+SELECT * FROM events WHERE encrypted_at >= $1::public.eql_v3_timestamp_ord;
 
 -- Ordering (write the sort key as the extractor to engage the index — see Database Indexes)
 SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
@@ -42,17 +42,17 @@ SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 
 ### Text match — `@>` `<@`
 
-On `public.text_match` / `public.text_search` (carry a `bf` bloom term). This is **probabilistic ngram-bloom containment**, not SQL `LIKE` and not JSONB containment:
+On `public.eql_v3_text_match` / `public.eql_v3_text_search` (carry a `bf` bloom term). This is **probabilistic ngram-bloom containment**, not SQL `LIKE` and not JSONB containment:
 
 ```sql
-SELECT * FROM docs WHERE encrypted_content @> $1::public.text_match;
+SELECT * FROM docs WHERE encrypted_content @> $1::public.eql_v3_text_match;
 ```
 
 `LIKE` / `ILIKE` (`~~` / `~~*`) are **not** part of the `eql_v3` surface — use `@>`.
 
-### JSON containment / path — `public.json`
+### JSON containment / path — `public.eql_v3_json`
 
-`@>` / `<@`, `->` / `->>`, and the path functions on `public.json` are documented in [EQL with JSON and JSONB](./json-support.md).
+`@>` / `<@`, `->` / `->>`, and the path functions on `public.eql_v3_json` are documented in [EQL with JSON and JSONB](./json-support.md).
 
 ---
 
@@ -67,15 +67,15 @@ eql_v3.lt(a, b)   -- <        (on _ord / _ord_ore / text_search)
 eql_v3.lte(a, b)  -- <=
 eql_v3.gt(a, b)   -- >
 eql_v3.gte(a, b)  -- >=
-eql_v3.contains(a, b)       -- @>  (on text_match / text_search / public.json)
+eql_v3.contains(a, b)       -- @>  (on text_match / text_search / public.eql_v3_json)
 eql_v3.contained_by(a, b)   -- <@
 ```
 
 **Example:**
 
 ```sql
-SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.text_eq);
-SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::public.timestamp_ord);
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.eql_v3_text_eq);
+SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::public.eql_v3_timestamp_ord);
 ```
 
 There are no `like` / `ilike` function forms — text matching is `eql_v3.contains` (`@>`) on a `text_match` value.
@@ -88,12 +88,12 @@ These extract the index term from an encrypted-domain value. They are generated 
 
 ```sql
 -- Equality term (hm)
-eql_v3.eq_term(a public.integer_eq)        RETURNS eql_v3_internal.hmac_256
+eql_v3.eq_term(a public.eql_v3_integer_eq)        RETURNS eql_v3_internal.hmac_256
 -- Ordering term (ob)
-eql_v3.ord_term(a public.integer_ord)      RETURNS eql_v3_internal.ore_block_256
-eql_v3.ord_term(a public.integer_ord_ore)  RETURNS eql_v3_internal.ore_block_256
+eql_v3.ord_term(a public.eql_v3_integer_ord)      RETURNS eql_v3_internal.ore_block_256
+eql_v3.ord_term(a public.eql_v3_integer_ord_ore)  RETURNS eql_v3_internal.ore_block_256
 -- Text-match term (bf)
-eql_v3.match_term(a public.text_match)  RETURNS eql_v3_internal.bloom_filter
+eql_v3.match_term(a public.eql_v3_text_match)  RETURNS eql_v3_internal.bloom_filter
 ```
 
 **Example — functional indexes on the extracted terms** (see [Database Indexes](./database-indexes.md)):
@@ -106,11 +106,11 @@ CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 
 > The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
-The `public.json` document type extracts entry-level terms with `eql_v3.eq_term(public.jsonb_entry)` and `eql_v3.ord_ope_term(public.jsonb_entry)` — see [json-support.md](./json-support.md).
+The `public.eql_v3_json` document type extracts entry-level terms with `eql_v3.eq_term(public.eql_v3_jsonb_entry)` and `eql_v3.ord_ope_term(public.eql_v3_jsonb_entry)` — see [json-support.md](./json-support.md).
 
 ---
 
-## Encrypted JSON (`public.json`)
+## Encrypted JSON (`public.eql_v3_json`)
 
 The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements` / `_elements_text`, `eql_v3.to_ste_vec_query`, `eql_v3.ste_vec_contains`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**.
 
@@ -124,10 +124,10 @@ Returns the minimum or maximum encrypted value on an ordered encrypted-domain co
 
 ```sql
 -- integer — generated for every ordered variant of every scalar type.
-eql_v3.min(public.integer_ord)      RETURNS public.integer_ord
-eql_v3.max(public.integer_ord)      RETURNS public.integer_ord
-eql_v3.min(public.integer_ord_ore)  RETURNS public.integer_ord_ore
-eql_v3.max(public.integer_ord_ore)  RETURNS public.integer_ord_ore
+eql_v3.min(public.eql_v3_integer_ord)      RETURNS public.eql_v3_integer_ord
+eql_v3.max(public.eql_v3_integer_ord)      RETURNS public.eql_v3_integer_ord
+eql_v3.min(public.eql_v3_integer_ord_ore)  RETURNS public.eql_v3_integer_ord_ore
+eql_v3.max(public.eql_v3_integer_ord_ore)  RETURNS public.eql_v3_integer_ord_ore
 ```
 
 Comparison routes through the variant's `<` / `>` operator, which uses the ORE block term — no decryption. The state function is `STRICT`, so `NULL` inputs are skipped and an all-`NULL` input set returns `NULL`.
@@ -135,15 +135,15 @@ Comparison routes through the variant's `<` / `>` operator, which uses the ORE b
 **Example:**
 
 ```sql
--- ord-capable column (e.g. price_encrypted typed as public.integer_ord)
+-- ord-capable column (e.g. price_encrypted typed as public.eql_v3_integer_ord)
 SELECT eql_v3.min(price_encrypted) FROM products;
 SELECT eql_v3.max(price_encrypted) FROM products WHERE category = 'electronics';
 
 -- On a generic jsonb column, cast to the right domain
-SELECT eql_v3.min(price_jsonb::public.integer_ord) FROM products;
+SELECT eql_v3.min(price_jsonb::public.eql_v3_integer_ord) FROM products;
 ```
 
-`MIN` / `MAX` over a value extracted from an `public.json` document use `eql_v3.min(public.jsonb_entry)` / `max` — see [json-support.md](./json-support.md).
+`MIN` / `MAX` over a value extracted from an `public.eql_v3_json` document use `eql_v3.min(public.eql_v3_jsonb_entry)` / `max` — see [json-support.md](./json-support.md).
 
 `SUM` / `AVG` and other arithmetic aggregates are **not** supported on encrypted columns (they would require homomorphic encryption) — decrypt at the application boundary. `MIN` / `MAX` only need comparator-revealing terms.
 
@@ -155,7 +155,7 @@ SELECT eql_v3.min(price_jsonb::public.integer_ord) FROM products;
 
 - [EQL Configuration Tutorial](../tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 - [Database Indexes](./database-indexes.md) — functional-index recipes and performance.
-- [JSON/JSONB Support](./json-support.md) — `public.json` worked examples.
+- [JSON/JSONB Support](./json-support.md) — `public.eql_v3_json` worked examples.
 - [SQL support matrix](./sql-support.md) — operators by domain variant.
 - [Payload / wire format](../../crates/eql-bindings/README.md) — canonical encrypted-payload wire types (envelope + index terms).
 - Client-side index configuration — [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).

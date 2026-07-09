@@ -306,7 +306,7 @@ async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
             (SELECT payload FROM fixtures.eql_v3_numeric WHERE plaintext = (-1000000)::numeric) \
-            ::public.numeric_ord)).terms)[1]).bytes)",
+            ::public.eql_v3_numeric_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
     .await?;
@@ -343,7 +343,7 @@ async fn numeric_terms_order_like_decimal_ord(pool: PgPool) -> Result<()> {
     .iter()
     .map(|v| format!("({v})::numeric"))
     .collect();
-    assert_orders_like_oracle(&pool, "eql_v3_numeric", "numeric_ord", &ascending).await
+    assert_orders_like_oracle(&pool, "eql_v3_numeric", "eql_v3_numeric_ord", &ascending).await
 }
 
 /// Width + single-pair sanity for the 12-block (timestamp, N=12 => 604 bytes)
@@ -353,7 +353,7 @@ async fn timestamp_term_is_12_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
         "SELECT octet_length((((eql_v3.ord_term( \
             (SELECT payload FROM fixtures.eql_v3_timestamp WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
-            ::public.timestamp_ord)).terms)[1]).bytes)",
+            ::public.eql_v3_timestamp_ord)).terms)[1]).bytes)",
     )
     .fetch_one(&pool)
     .await?;
@@ -392,7 +392,13 @@ async fn timestamp_terms_order_like_datetime_ord(pool: PgPool) -> Result<()> {
     .iter()
     .map(|v| format!("'{v}'::timestamptz"))
     .collect();
-    assert_orders_like_oracle(&pool, "eql_v3_timestamp", "timestamp_ord", &ascending).await
+    assert_orders_like_oracle(
+        &pool,
+        "eql_v3_timestamp",
+        "eql_v3_timestamp_ord",
+        &ascending,
+    )
+    .await
 }
 
 /// A real wide-block term must compare equal to itself — the reflexive
@@ -404,7 +410,7 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
     let numeric = compare_fixture_pair(
         &pool,
         "eql_v3_numeric",
-        "numeric_ord",
+        "eql_v3_numeric_ord",
         "(1)::numeric",
         "(1)::numeric",
     )
@@ -414,7 +420,7 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
     let timestamp = compare_fixture_pair(
         &pool,
         "eql_v3_timestamp",
-        "timestamp_ord",
+        "eql_v3_timestamp_ord",
         "'2000-01-01T00:00:00Z'::timestamptz",
         "'2000-01-01T00:00:00Z'::timestamptz",
     )
@@ -430,8 +436,8 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
 async fn compare_collision_ids(pool: &PgPool, a: i64, b: i64) -> Result<i32> {
     let sql = format!(
         "SELECT eql_v3_internal.compare_ore_block_256_terms( \
-            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::public.numeric_ord), \
-            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::public.numeric_ord))"
+            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::public.eql_v3_numeric_ord), \
+            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::public.eql_v3_numeric_ord))"
     );
     Ok(sqlx::query_scalar::<_, i32>(&sql).fetch_one(pool).await?)
 }

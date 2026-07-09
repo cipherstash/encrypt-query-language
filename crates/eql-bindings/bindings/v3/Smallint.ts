@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.smallint` — storage-only domain.
+ * `public.eql_v3_smallint` — storage-only domain.
  *
  * Operators: none. Required keys: `v` `i` `c`.
  */

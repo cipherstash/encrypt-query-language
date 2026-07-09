@@ -8,24 +8,24 @@
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.text_eq, RIGHTARG = eql_v3.query_text_eq,
+  LEFTARG = public.eql_v3_text_eq, RIGHTARG = eql_v3.query_text_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = eql_v3.query_text_eq, RIGHTARG = public.text_eq,
+  LEFTARG = eql_v3.query_text_eq, RIGHTARG = public.eql_v3_text_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.text_eq, RIGHTARG = eql_v3.query_text_eq,
+  LEFTARG = public.eql_v3_text_eq, RIGHTARG = eql_v3.query_text_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = eql_v3.query_text_eq, RIGHTARG = public.text_eq,
+  LEFTARG = eql_v3.query_text_eq, RIGHTARG = public.eql_v3_text_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );

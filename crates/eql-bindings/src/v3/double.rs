@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `public.double` — storage-only domain.
+/// `public.eql_v3_double` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Double {
 }
 impl DomainType for Double {
     fn sql_domain_static() -> &'static str {
-        "public.double"
+        "public.eql_v3_double"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -37,7 +37,7 @@ impl DomainType for Double {
         schema_for!(Double)
     }
 }
-/// `public.double_eq` — equality domain.
+/// `public.eql_v3_double_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -51,7 +51,7 @@ pub struct DoubleEq {
 }
 impl DomainType for DoubleEq {
     fn sql_domain_static() -> &'static str {
-        "public.double_eq"
+        "public.eql_v3_double_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -69,7 +69,7 @@ impl DomainType for DoubleEq {
         schema_for!(DoubleEq)
     }
 }
-/// `public.double_ord_ore` — ordering domain.
+/// `public.eql_v3_double_ord_ore` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -83,7 +83,7 @@ pub struct DoubleOrdOre {
 }
 impl DomainType for DoubleOrdOre {
     fn sql_domain_static() -> &'static str {
-        "public.double_ord_ore"
+        "public.eql_v3_double_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -101,7 +101,7 @@ impl DomainType for DoubleOrdOre {
         schema_for!(DoubleOrdOre)
     }
 }
-/// `public.double_ord` — ordering domain.
+/// `public.eql_v3_double_ord` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -115,7 +115,7 @@ pub struct DoubleOrd {
 }
 impl DomainType for DoubleOrd {
     fn sql_domain_static() -> &'static str {
-        "public.double_ord"
+        "public.eql_v3_double_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -133,7 +133,7 @@ impl DomainType for DoubleOrd {
         schema_for!(DoubleOrd)
     }
 }
-/// `public.double_ord_ope` — ordering domain.
+/// `public.eql_v3_double_ord_ope` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -147,7 +147,7 @@ pub struct DoubleOrdOpe {
 }
 impl DomainType for DoubleOrdOpe {
     fn sql_domain_static() -> &'static str {
-        "public.double_ord_ope"
+        "public.eql_v3_double_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

@@ -105,8 +105,10 @@ def load_domains(catalog_path: Path) -> list:
             ops = dom.get("supported_ops", [])
             domains.append({
                 # v3 user domains live in the `public` schema (public-domain
-                # migration on eql_v3); the catalog dump emits the bare token.
-                "name": f"public.{token}{suffix}",
+                # migration on eql_v3); the dump's `typname` is the installed
+                # unqualified name, carrying the eql_v3_ version prefix
+                # (CIP-3472).
+                "name": f"public.{dom['typname']}",
                 "type": token,
                 "variant": suffix.lstrip("_"),
                 "base": "jsonb",
@@ -122,7 +124,7 @@ def load_domains(catalog_path: Path) -> list:
     for entry in catalog.get("stevec", []):
         schema = "eql_v3" if entry["full_name"].startswith("query_") else "public"
         domains.append({
-            "name": f"{schema}.{entry['full_name']}",
+            "name": f"{schema}.{entry['typname']}",
             "type": "jsonb",
             "variant": "",
             "base": "jsonb",

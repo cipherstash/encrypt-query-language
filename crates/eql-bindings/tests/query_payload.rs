@@ -165,8 +165,12 @@ fn scalar_query_hoist_and_storage_only_unsupported() {
 
             let typed =
                 from_v2_query_typed(&v2, t).unwrap_or_else(|e| panic!("{name} typed hoist: {e:?}"));
-            assert_eq!(typed.domain(), format!("query_{name}"), "{name} domain");
-            assert_eq!(typed.sql_domain(), format!("eql_v3.query_{name}"));
+            // The query twin joins `query_` to the BARE name: the stored
+            // domain's `eql_v3_` version prefix (CIP-3472) never applies to
+            // query operands (the `eql_v3` schema already versions them).
+            let query_name = domain.query_name(family.name);
+            assert_eq!(typed.domain(), query_name, "{name} domain");
+            assert_eq!(typed.sql_domain(), format!("eql_v3.{query_name}"));
             assert_eq!(
                 serde_json::to_value(&typed).unwrap(),
                 out,
@@ -247,9 +251,9 @@ fn parse_returns_none_for_non_query_domains() {
     // Stored-payload domains (DomainPayload territory), the entry shape, and
     // unknown names are not query payloads.
     for name in [
-        "json",
-        "jsonb_entry",
-        "integer_eq",
+        "eql_v3_json",
+        "eql_v3_jsonb_entry",
+        "eql_v3_integer_eq",
         "eql_v3.query_jsonb",
         "",
     ] {

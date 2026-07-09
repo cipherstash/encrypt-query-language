@@ -4,248 +4,248 @@
 -- REQUIRE: src/v3/scalars/text/text_search_functions.sql
 
 --! @file encrypted_domain/text/text_search_operators.sql
---! @brief Operators for public.text_search.
+--! @brief Operators for public.eql_v3_text_search.
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR <= (
   FUNCTION = eql_v3.lte,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR > (
   FUNCTION = eql_v3.gt,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
 CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.text_search, RIGHTARG = public.text_search,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.text_search, RIGHTARG = jsonb,
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = jsonb, RIGHTARG = public.text_search,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = public.text_search, RIGHTARG = text
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = public.text_search, RIGHTARG = integer
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = integer
 );
 
 CREATE OPERATOR -> (
   FUNCTION = eql_v3_internal."->",
-  LEFTARG = jsonb, RIGHTARG = public.text_search
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = public.text_search, RIGHTARG = text
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = public.text_search, RIGHTARG = integer
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = integer
 );
 
 CREATE OPERATOR ->> (
   FUNCTION = eql_v3_internal."->>",
-  LEFTARG = jsonb, RIGHTARG = public.text_search
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search
 );
 
 CREATE OPERATOR ? (
   FUNCTION = eql_v3_internal."?",
-  LEFTARG = public.text_search, RIGHTARG = text
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text
 );
 
 CREATE OPERATOR ?| (
   FUNCTION = eql_v3_internal."?|",
-  LEFTARG = public.text_search, RIGHTARG = text[]
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text[]
 );
 
 CREATE OPERATOR ?& (
   FUNCTION = eql_v3_internal."?&",
-  LEFTARG = public.text_search, RIGHTARG = text[]
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text[]
 );
 
 CREATE OPERATOR @? (
   FUNCTION = eql_v3_internal."@?",
-  LEFTARG = public.text_search, RIGHTARG = jsonpath
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR @@ (
   FUNCTION = eql_v3_internal."@@",
-  LEFTARG = public.text_search, RIGHTARG = jsonpath
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonpath
 );
 
 CREATE OPERATOR #> (
   FUNCTION = eql_v3_internal."#>",
-  LEFTARG = public.text_search, RIGHTARG = text[]
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #>> (
   FUNCTION = eql_v3_internal."#>>",
-  LEFTARG = public.text_search, RIGHTARG = text[]
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text[]
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = public.text_search, RIGHTARG = text
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = public.text_search, RIGHTARG = integer
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = integer
 );
 
 CREATE OPERATOR - (
   FUNCTION = eql_v3_internal."-",
-  LEFTARG = public.text_search, RIGHTARG = text[]
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text[]
 );
 
 CREATE OPERATOR #- (
   FUNCTION = eql_v3_internal."#-",
-  LEFTARG = public.text_search, RIGHTARG = text[]
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = text[]
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = public.text_search, RIGHTARG = public.text_search
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = public.eql_v3_text_search
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = public.text_search, RIGHTARG = jsonb
+  LEFTARG = public.eql_v3_text_search, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR || (
   FUNCTION = eql_v3_internal."||",
-  LEFTARG = jsonb, RIGHTARG = public.text_search
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_search
 );

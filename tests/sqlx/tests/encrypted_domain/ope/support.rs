@@ -267,10 +267,15 @@ macro_rules! ope_ord_fixture_smoke {
                 if let Some(o) = v.as_object_mut() {
                     o.remove("c");
                 }
+                // The query twin joins `query_` to the BARE name — the
+                // `eql_v3_` version prefix (CIP-3472) applies to public-schema
+                // column types only, not the eql_v3-schema query operands.
                 format!(
                     "'{}'::jsonb::eql_v3.query_{}",
                     v.to_string().replace('\'', "''"),
                     $domain
+                        .strip_prefix(eql_domains::PUBLIC_TYPNAME_PREFIX)
+                        .unwrap_or($domain)
                 )
             };
 

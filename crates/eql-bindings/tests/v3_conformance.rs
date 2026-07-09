@@ -17,7 +17,7 @@ fn integer_storage_round_trips() {
     });
     let parsed: Integer = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(Integer::sql_domain_static(), "public.integer");
+    assert_eq!(Integer::sql_domain_static(), "public.eql_v3_integer");
 }
 
 #[test]
@@ -30,7 +30,7 @@ fn integer_eq_round_trips() {
     });
     let parsed: IntegerEq = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(IntegerEq::sql_domain_static(), "public.integer_eq");
+    assert_eq!(IntegerEq::sql_domain_static(), "public.eql_v3_integer_eq");
 }
 
 #[test]
@@ -46,7 +46,10 @@ fn integer_ord_round_trips() {
     // `_ord_ore` is the same shape under the scheme-explicit domain name.
     let parsed: IntegerOrdOre = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(IntegerOrdOre::sql_domain_static(), "public.integer_ord_ore");
+    assert_eq!(
+        IntegerOrdOre::sql_domain_static(),
+        "public.eql_v3_integer_ord_ore"
+    );
 }
 
 #[test]
@@ -61,7 +64,10 @@ fn integer_ord_ope_round_trips() {
     });
     let parsed: IntegerOrdOpe = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(IntegerOrdOpe::sql_domain_static(), "public.integer_ord_ope");
+    assert_eq!(
+        IntegerOrdOpe::sql_domain_static(),
+        "public.eql_v3_integer_ord_ope"
+    );
 }
 
 #[test]
@@ -234,54 +240,54 @@ fn non_integer_tokens_round_trip_every_domain() {
         }};
     }
 
-    round_trip!(Smallint, storage("a"), "public.smallint");
-    round_trip!(SmallintEq, eq("a"), "public.smallint_eq");
-    round_trip!(SmallintOrd, ord("a"), "public.smallint_ord");
-    round_trip!(SmallintOrdOre, ord("a"), "public.smallint_ord_ore");
-    round_trip!(SmallintOrdOpe, ope("a"), "public.smallint_ord_ope");
+    round_trip!(Smallint, storage("a"), "public.eql_v3_smallint");
+    round_trip!(SmallintEq, eq("a"), "public.eql_v3_smallint_eq");
+    round_trip!(SmallintOrd, ord("a"), "public.eql_v3_smallint_ord");
+    round_trip!(SmallintOrdOre, ord("a"), "public.eql_v3_smallint_ord_ore");
+    round_trip!(SmallintOrdOpe, ope("a"), "public.eql_v3_smallint_ord_ope");
 
-    round_trip!(Bigint, storage("a"), "public.bigint");
-    round_trip!(BigintEq, eq("a"), "public.bigint_eq");
-    round_trip!(BigintOrd, ord("a"), "public.bigint_ord");
-    round_trip!(BigintOrdOre, ord("a"), "public.bigint_ord_ore");
-    round_trip!(BigintOrdOpe, ope("a"), "public.bigint_ord_ope");
+    round_trip!(Bigint, storage("a"), "public.eql_v3_bigint");
+    round_trip!(BigintEq, eq("a"), "public.eql_v3_bigint_eq");
+    round_trip!(BigintOrd, ord("a"), "public.eql_v3_bigint_ord");
+    round_trip!(BigintOrdOre, ord("a"), "public.eql_v3_bigint_ord_ore");
+    round_trip!(BigintOrdOpe, ope("a"), "public.eql_v3_bigint_ord_ope");
 
-    round_trip!(Date, storage("a"), "public.date");
-    round_trip!(DateEq, eq("a"), "public.date_eq");
-    round_trip!(DateOrd, ord("a"), "public.date_ord");
-    round_trip!(DateOrdOre, ord("a"), "public.date_ord_ore");
-    round_trip!(DateOrdOpe, ope("a"), "public.date_ord_ope");
+    round_trip!(Date, storage("a"), "public.eql_v3_date");
+    round_trip!(DateEq, eq("a"), "public.eql_v3_date_eq");
+    round_trip!(DateOrd, ord("a"), "public.eql_v3_date_ord");
+    round_trip!(DateOrdOre, ord("a"), "public.eql_v3_date_ord_ore");
+    round_trip!(DateOrdOpe, ope("a"), "public.eql_v3_date_ord_ope");
 
     // numeric is the first scalar whose native ORE term exceeds 8 blocks (14);
     // the wire shape is identical, so the same `ord` builder applies.
-    round_trip!(Numeric, storage("a"), "public.numeric");
-    round_trip!(NumericEq, eq("a"), "public.numeric_eq");
-    round_trip!(NumericOrd, ord("a"), "public.numeric_ord");
-    round_trip!(NumericOrdOre, ord("a"), "public.numeric_ord_ore");
-    round_trip!(NumericOrdOpe, ope("a"), "public.numeric_ord_ope");
+    round_trip!(Numeric, storage("a"), "public.eql_v3_numeric");
+    round_trip!(NumericEq, eq("a"), "public.eql_v3_numeric_eq");
+    round_trip!(NumericOrd, ord("a"), "public.eql_v3_numeric_ord");
+    round_trip!(NumericOrdOre, ord("a"), "public.eql_v3_numeric_ord_ore");
+    round_trip!(NumericOrdOpe, ope("a"), "public.eql_v3_numeric_ord_ope");
 
     // real/double are the float scalars (renamed from float4/float8); they carry
     // the same ordered-token wire shape as the int scalars (`hm` eq, `ob` ord).
-    round_trip!(Real, storage("a"), "public.real");
-    round_trip!(RealEq, eq("a"), "public.real_eq");
-    round_trip!(RealOrd, ord("a"), "public.real_ord");
-    round_trip!(RealOrdOre, ord("a"), "public.real_ord_ore");
+    round_trip!(Real, storage("a"), "public.eql_v3_real");
+    round_trip!(RealEq, eq("a"), "public.eql_v3_real_eq");
+    round_trip!(RealOrd, ord("a"), "public.eql_v3_real_ord");
+    round_trip!(RealOrdOre, ord("a"), "public.eql_v3_real_ord_ore");
 
-    round_trip!(Double, storage("a"), "public.double");
-    round_trip!(DoubleEq, eq("a"), "public.double_eq");
-    round_trip!(DoubleOrd, ord("a"), "public.double_ord");
-    round_trip!(DoubleOrdOre, ord("a"), "public.double_ord_ore");
+    round_trip!(Double, storage("a"), "public.eql_v3_double");
+    round_trip!(DoubleEq, eq("a"), "public.eql_v3_double_eq");
+    round_trip!(DoubleOrd, ord("a"), "public.eql_v3_double_ord");
+    round_trip!(DoubleOrdOre, ord("a"), "public.eql_v3_double_ord_ore");
 
     // boolean is storage-only (no eq/ord term) — just the shared envelope.
-    round_trip!(Boolean, storage("a"), "public.boolean");
+    round_trip!(Boolean, storage("a"), "public.eql_v3_boolean");
 
     // text_match is covered by `text_match_round_trips_signed_bloom_filter`.
-    round_trip!(Text, storage("a"), "public.text");
-    round_trip!(TextEq, eq("a"), "public.text_eq");
-    round_trip!(TextOrd, text_ord("a"), "public.text_ord");
-    round_trip!(TextOrdOre, text_ord("a"), "public.text_ord_ore");
-    round_trip!(TextOrdOpe, text_ope("a"), "public.text_ord_ope");
-    round_trip!(TextSearch, text_search("a"), "public.text_search");
+    round_trip!(Text, storage("a"), "public.eql_v3_text");
+    round_trip!(TextEq, eq("a"), "public.eql_v3_text_eq");
+    round_trip!(TextOrd, text_ord("a"), "public.eql_v3_text_ord");
+    round_trip!(TextOrdOre, text_ord("a"), "public.eql_v3_text_ord_ore");
+    round_trip!(TextOrdOpe, text_ope("a"), "public.eql_v3_text_ord_ope");
+    round_trip!(TextSearch, text_search("a"), "public.eql_v3_text_search");
 }
 
 #[test]
@@ -304,7 +310,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     });
     let parsed: Timestamp = serde_json::from_value(storage.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), storage);
-    assert_eq!(Timestamp::sql_domain_static(), "public.timestamp");
+    assert_eq!(Timestamp::sql_domain_static(), "public.eql_v3_timestamp");
 
     // Equality: envelope + hm.
     let with_hm = json!({
@@ -315,7 +321,10 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     });
     let parsed: TimestampEq = serde_json::from_value(with_hm.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_hm);
-    assert_eq!(TimestampEq::sql_domain_static(), "public.timestamp_eq");
+    assert_eq!(
+        TimestampEq::sql_domain_static(),
+        "public.eql_v3_timestamp_eq"
+    );
 
     // Ordered: envelope + ob (a 12-block array on the wire; shape is the same).
     let with_ob = json!({
@@ -326,12 +335,15 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     });
     let parsed: TimestampOrd = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
-    assert_eq!(TimestampOrd::sql_domain_static(), "public.timestamp_ord");
+    assert_eq!(
+        TimestampOrd::sql_domain_static(),
+        "public.eql_v3_timestamp_ord"
+    );
     let parsed: TimestampOrdOre = serde_json::from_value(with_ob.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_ob);
     assert_eq!(
         TimestampOrdOre::sql_domain_static(),
-        "public.timestamp_ord_ore"
+        "public.eql_v3_timestamp_ord_ore"
     );
 
     // OPE ordered: envelope + op (a single CLLW-OPE hex string).
@@ -345,7 +357,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
     assert_eq!(serde_json::to_value(&parsed).unwrap(), with_op);
     assert_eq!(
         TimestampOrdOpe::sql_domain_static(),
-        "public.timestamp_ord_ope"
+        "public.eql_v3_timestamp_ord_ope"
     );
 
     // The searchable domains cannot let their term silently become optional.
@@ -386,7 +398,7 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     });
     let parsed: SteVecDocument = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(SteVecDocument::sql_domain_static(), "public.json");
+    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json");
 
     // Envelope negatives (parity with the scalar integer tests) — now including `k`.
     for missing in ["v", "k", "i", "sv"] {
@@ -515,7 +527,7 @@ fn stevec_document_and_query_schemas_are_strict() {
     let sq = serde_json::to_value(q.schema()).unwrap();
     assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
     // SteVecDocument/Query domain names.
-    assert_eq!(SteVecDocument::sql_domain_static(), "public.json");
+    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json");
     assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_jsonb");
 }
 

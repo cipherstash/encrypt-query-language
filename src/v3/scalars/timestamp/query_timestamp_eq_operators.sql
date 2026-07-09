@@ -8,24 +8,24 @@
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = public.timestamp_eq, RIGHTARG = eql_v3.query_timestamp_eq,
+  LEFTARG = public.eql_v3_timestamp_eq, RIGHTARG = eql_v3.query_timestamp_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
-  LEFTARG = eql_v3.query_timestamp_eq, RIGHTARG = public.timestamp_eq,
+  LEFTARG = eql_v3.query_timestamp_eq, RIGHTARG = public.eql_v3_timestamp_eq,
   COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = public.timestamp_eq, RIGHTARG = eql_v3.query_timestamp_eq,
+  LEFTARG = public.eql_v3_timestamp_eq, RIGHTARG = eql_v3.query_timestamp_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
-  LEFTARG = eql_v3.query_timestamp_eq, RIGHTARG = public.timestamp_eq,
+  LEFTARG = eql_v3.query_timestamp_eq, RIGHTARG = public.eql_v3_timestamp_eq,
   COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );

@@ -12,7 +12,7 @@
 //! Not every path crosses the boundary, and the tests below pin the difference:
 //! the hand-written jsonb (SteVec) `ste_vec_contains` read path is `plpgsql`
 //! (never inlined) and runs under the public grant alone. Casting raw jsonb to
-//! `public.json` also stays outside `eql_v3_internal`: the domain CHECK calls
+//! `public.eql_v3_json` also stays outside `eql_v3_internal`: the domain CHECK calls
 //! public validators so application table columns can survive EQL schema
 //! uninstall without dependency edges back into the droppable schemas.
 //!
@@ -31,22 +31,22 @@ use sqlx::PgPool;
 /// constructor — inlined into the query, that constructor call requires the
 /// caller to hold `eql_v3_internal`, so the path exercises BOTH schemas.
 const EQ_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_integer \
-     WHERE payload::public.integer_eq = payload::public.integer_eq";
+     WHERE payload::public.eql_v3_integer_eq = payload::public.eql_v3_integer_eq";
 
 /// A real ordering query using the `<` *operator* on `integer_ord`, which dispatches
 /// through `eql_v3.lt` → `eql_v3.ord_term` → the `eql_v3_internal.ore_block_256`
-/// constructor + comparator. NB: `ORDER BY payload::public.integer_ord` alone does
+/// constructor + comparator. NB: `ORDER BY payload::public.eql_v3_integer_ord` alone does
 /// NOT work here — a bare domain has no ORE opclass, so it silently falls back to
 /// built-in jsonb ordering and never crosses into `eql_v3_internal`. The `<`
 /// operator is what genuinely exercises the encrypted ordering path.
 const ORD_QUERY: &str =
     "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
-     WHERE a.payload::public.integer_ord < b.payload::public.integer_ord";
+     WHERE a.payload::public.eql_v3_integer_ord < b.payload::public.eql_v3_integer_ord";
 
 /// A real aggregate (`eql_v3.min` on `integer_ord`). The public aggregate dispatches
 /// into its state function `eql_v3_internal.min_sfunc`, so it requires the
 /// internal grant.
-const AGG_QUERY: &str = "SELECT eql_v3.min(payload::public.integer_ord) \
+const AGG_QUERY: &str = "SELECT eql_v3.min(payload::public.eql_v3_integer_ord) \
      FROM fixtures.eql_v3_integer";
 
 /// A real jsonb (SteVec) containment READ path. `eql_v3.ste_vec_contains` is
@@ -55,10 +55,10 @@ const AGG_QUERY: &str = "SELECT eql_v3.min(payload::public.integer_ord) \
 const JSONB_READ_QUERY: &str = "SELECT eql_v3.ste_vec_contains(payload, payload) \
      FROM fixtures.v3_ste_vec LIMIT 1";
 
-/// A real jsonb WRITE path: casting raw jsonb to the `public.json` domain fires
+/// A real jsonb WRITE path: casting raw jsonb to the `public.eql_v3_json` domain fires
 /// the domain CHECK, which calls public validators and does not cross into
 /// `eql_v3_internal`.
-const JSONB_WRITE_QUERY: &str = "SELECT (payload::jsonb)::public.json \
+const JSONB_WRITE_QUERY: &str = "SELECT (payload::jsonb)::public.eql_v3_json \
      FROM fixtures.v3_ste_vec LIMIT 1";
 
 /// Derive a unique, valid role name from the per-test database name so parallel
@@ -245,7 +245,7 @@ async fn runtime_role_without_internal_grant_is_denied(pool: PgPool) -> Result<(
 // ============================================================================
 
 /// Positive (jsonb): a runtime role granted USAGE + EXECUTE on BOTH schemas can
-/// run both the SteVec containment read and the `public.json` cast (write) path.
+/// run both the SteVec containment read and the `public.eql_v3_json` cast (write) path.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn runtime_role_with_both_schema_grants_can_query_jsonb(pool: PgPool) -> Result<()> {
     let mut conn = pool.acquire().await?;
@@ -278,7 +278,7 @@ async fn runtime_role_with_both_schema_grants_can_query_jsonb(pool: PgPool) -> R
 
 /// Boundary (jsonb): a runtime role granted only the PUBLIC schema (`eql_v3`)
 /// characterises the SteVec split precisely — both the `plpgsql` containment
-/// READ and the `public.json` domain CHECK validator path run without the
+/// READ and the `public.eql_v3_json` domain CHECK validator path run without the
 /// internal grant.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn runtime_role_without_internal_grant_jsonb_boundary(pool: PgPool) -> Result<()> {

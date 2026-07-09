@@ -6,390 +6,390 @@
 -- REQUIRE: src/v3/sem/ore_block_256/operators.sql
 
 --! @file encrypted_domain/timestamp/timestamp_ord_functions.sql
---! @brief Functions for public.timestamp_ord.
+--! @brief Functions for public.eql_v3_timestamp_ord.
 
---! @brief Index extractor for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Index extractor for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @return eql_v3_internal.ore_block_256
-CREATE FUNCTION eql_v3.ord_term(a public.timestamp_ord)
+CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_timestamp_ord)
 RETURNS eql_v3_internal.ore_block_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.eq(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3.eq(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b::public.timestamp_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b::public.eql_v3_timestamp_ord) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.eq(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.timestamp_ord) = eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_timestamp_ord) = eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.neq(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3.neq(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b::public.timestamp_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) <> eql_v3.ord_term(b::public.eql_v3_timestamp_ord) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.neq(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.timestamp_ord) <> eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_timestamp_ord) <> eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::public.timestamp_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::public.eql_v3_timestamp_ord) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.lt(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.timestamp_ord) < eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_timestamp_ord) < eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::public.timestamp_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::public.eql_v3_timestamp_ord) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.lte(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.timestamp_ord) <= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_timestamp_ord) <= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::public.timestamp_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::public.eql_v3_timestamp_ord) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.gt(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.timestamp_ord) > eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_timestamp_ord) > eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::public.timestamp_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::public.eql_v3_timestamp_ord) $$;
 
---! @brief Operator wrapper for public.timestamp_ord.
+--! @brief Operator wrapper for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3.gte(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.timestamp_ord) >= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_timestamp_ord) >= eql_v3.ord_term(b) $$;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param selector text
---! @return public.timestamp_ord
-CREATE FUNCTION eql_v3_internal."->"(a public.timestamp_ord, selector text)
-RETURNS public.timestamp_ord IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.timestamp_ord'; END; $$
+--! @return public.eql_v3_timestamp_ord
+CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_timestamp_ord, selector text)
+RETURNS public.eql_v3_timestamp_ord IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param selector integer
---! @return public.timestamp_ord
-CREATE FUNCTION eql_v3_internal."->"(a public.timestamp_ord, selector integer)
-RETURNS public.timestamp_ord IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.timestamp_ord'; END; $$
+--! @return public.eql_v3_timestamp_ord
+CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_timestamp_ord, selector integer)
+RETURNS public.eql_v3_timestamp_ord IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param selector public.timestamp_ord
---! @return public.timestamp_ord
-CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.timestamp_ord)
-RETURNS public.timestamp_ord IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.timestamp_ord'; END; $$
+--! @param selector public.eql_v3_timestamp_ord
+--! @return public.eql_v3_timestamp_ord
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.eql_v3_timestamp_ord)
+RETURNS public.eql_v3_timestamp_ord IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a public.timestamp_ord, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_timestamp_ord, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a public.timestamp_ord, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_timestamp_ord, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param selector public.timestamp_ord
+--! @param selector public.eql_v3_timestamp_ord
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.eql_v3_timestamp_ord)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?"(a public.timestamp_ord, b text)
+CREATE FUNCTION eql_v3_internal."?"(a public.eql_v3_timestamp_ord, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?|"(a public.timestamp_ord, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a public.eql_v3_timestamp_ord, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?&"(a public.timestamp_ord, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a public.eql_v3_timestamp_ord, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@?"(a public.timestamp_ord, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a public.eql_v3_timestamp_ord, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@@"(a public.timestamp_ord, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_timestamp_ord, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#>"(a public.timestamp_ord, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a public.eql_v3_timestamp_ord, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3_internal."#>>"(a public.timestamp_ord, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a public.eql_v3_timestamp_ord, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a public.timestamp_ord, b text)
+CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_timestamp_ord, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a public.timestamp_ord, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_timestamp_ord, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a public.timestamp_ord, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_timestamp_ord, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#-"(a public.timestamp_ord, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a public.eql_v3_timestamp_ord, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
---! @param b public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a public.timestamp_ord, b public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal."||"(a public.eql_v3_timestamp_ord, b public.eql_v3_timestamp_ord)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
---! @param a public.timestamp_ord
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
+--! @param a public.eql_v3_timestamp_ord
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a public.timestamp_ord, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a public.eql_v3_timestamp_ord, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.timestamp_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_ord.
 --! @param a jsonb
---! @param b public.timestamp_ord
+--! @param b public.eql_v3_timestamp_ord
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.timestamp_ord)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.eql_v3_timestamp_ord)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.timestamp_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_timestamp_ord'; END; $$
 LANGUAGE plpgsql;

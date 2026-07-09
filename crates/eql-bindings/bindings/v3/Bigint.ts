@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.bigint` — storage-only domain.
+ * `public.eql_v3_bigint` — storage-only domain.
  *
  * Operators: none. Required keys: `v` `i` `c`.
  */

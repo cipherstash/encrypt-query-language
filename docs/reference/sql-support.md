@@ -4,8 +4,8 @@ This page summarises which SQL operators and language features work against EQL-
 
 EQL ships its searchable-encryption surface as PostgreSQL **domains in the `public` schema**:
 
-- **per-scalar encrypted-domain types** — `public.integer`, `public.text`, `public.timestamp`, … — one family of domain *variants* per scalar; and
-- **an encrypted-JSON document type** — `public.json` — for structured-encryption (ste_vec) JSONB.
+- **per-scalar encrypted-domain types** — `public.eql_v3_integer`, `public.eql_v3_text`, `public.eql_v3_timestamp`, … — one family of domain *variants* per scalar; and
+- **an encrypted-JSON document type** — `public.eql_v3_json` — for structured-encryption (ste_vec) JSONB.
 
 The capability of a column is fixed by the **domain variant you type it as**. There is no database-side `add_search_config` / `add_column` step: which index terms travel in a value's payload is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)), and the column's domain variant is what makes the matching operators resolve. Unsupported operators are not silent no-ops — they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises; the blockers are deliberately not `STRICT`).
 
@@ -27,18 +27,18 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | `public.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
 | `public.<T>_ord` / `_ord_ore` | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
 | `public.<T>_ord_ope`          | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
-| `public.text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
-| `public.text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
+| `public.eql_v3_text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
+| `public.eql_v3_text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
 \* On `text_match` / `text_search`, `@>` / `<@` are **bloom-filter token containment** (probabilistic ngram match), **not** JSONB containment and **not** SQL `LIKE`. See [Indexing](#indexing).
 
 Notes:
 
-- The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.integer_ord`) when you need to query.
+- The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.eql_v3_integer_ord`) when you need to query.
 - `_ord` and `_ord_ore` are **twins**: byte-identical surfaces backed by the ORE block term. Pick the name that documents intent ("ordered" vs "ordered via ORE block"); both support the full ordered surface and the `MIN` / `MAX` aggregates.
 - `_ord_ope` exposes the **same ordered surface** backed by the CLLW-OPE term instead: `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol). On `text_ord_ope`, `=` / `<>` route through `hm` (exact HMAC), like `text_ord` — OPE over text is not equality-lossless.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
-- `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `public.boolean` (no `_eq` / `_ord`).
+- `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `public.eql_v3_boolean` (no `_eq` / `_ord`).
 - `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@>` on `text_match`, not `LIKE`.
 - `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(public.<T>_ord)` / `eql_v3.max(...)` (and the `_ord_ore` twin) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
 
@@ -73,11 +73,11 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col = …` / `<>`               |                                                                                        | `_eq`, `_ord`, `text_search` |
 | `WHERE col <` / `<=` / `>` / `>=`    |                                                                                        | `_ord`, `text_search` |
 | `WHERE col BETWEEN … AND …`          | desugars to `>=` and `<=`                                                               | `_ord`, `text_search` |
-| `WHERE col @> …`                     | bloom-filter token containment (text), or document containment (`public.json`)         | `text_match`, `text_search`, `public.json` |
+| `WHERE col @> …`                     | bloom-filter token containment (text), or document containment (`public.eql_v3_json`)         | `text_match`, `text_search`, `public.eql_v3_json` |
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
 | `ORDER BY col`                       | meaningful only with an ORE term                                                        | `_ord`, `text_search` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |
-| `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.integer_ord)`) | `_ord` |
+| `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.eql_v3_integer_ord)`) | `_ord` |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | plain `COUNT(col)` needs no term; `DISTINCT` needs an equality term                     | any / `_eq` for `DISTINCT` |
 | `JOIN … ON lhs.col = rhs.col`        | both sides must share the same keyset and a matching variant                            | `_eq`, `_ord`, `text_search` |
 
@@ -86,7 +86,7 @@ Notes:
 - **Cross-column / cross-table comparisons** (joins, `IN (subquery)`, set-operation dedup) require both sides to have been encrypted with the *same* keyset and a matching variant.
 - **`ORDER BY`** without an ORE term will not produce a meaningful order — type the column as an `_ord` variant when ordering matters.
 - **Aggregates beyond `MIN` / `MAX`** (`SUM`, `AVG`, …) are not supported on encrypted values — decrypt at the application boundary and aggregate client-side.
-- **Parameter binding**: CipherStash Proxy rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter (`$1::public.integer_ord`) so the encrypted operator resolves rather than the native `jsonb` one.
+- **Parameter binding**: CipherStash Proxy rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter (`$1::public.eql_v3_integer_ord`) so the encrypted operator resolves rather than the native `jsonb` one.
 
 ---
 
@@ -109,9 +109,9 @@ See [Database Indexes for Encrypted Columns](./database-indexes.md) for the full
 
 ---
 
-## `public.json`: structured encryption for JSON
+## `public.eql_v3_json`: structured encryption for JSON
 
-`public.json` is the encrypted-JSON document domain (built on the structured-encryption "ste_vec" model). A JSONB document is encrypted into a searchable vector (`sv`) of terms — one element per path inside the document — each carrying:
+`public.eql_v3_json` is the encrypted-JSON document domain (built on the structured-encryption "ste_vec" model). A JSONB document is encrypted into a searchable vector (`sv`) of terms — one element per path inside the document — each carrying:
 
 - `s` — a deterministic **selector** hash for the JSON path (always present); and
 - one or more **value terms** depending on the JSON type of the leaf at that path.
@@ -132,24 +132,24 @@ The search capabilities available on a value extracted via `->` or `eql_v3.jsonb
 
 `hm` supports equality only; `op` is a CLLW OPE term that preserves order *and* collapses to equality on matching keys. JSON `null` here refers to a `null` literal *inside* the document — a SQL `NULL` column is not encrypted at all.
 
-### Operators and functions on `public.json`
+### Operators and functions on `public.eql_v3_json`
 
 | SQL form                         | Resolves to                                        | Returns / notes |
 | -------------------------------- | -------------------------------------------------- | --------------- |
-| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.query_jsonb`, another `public.json`, or an `public.jsonb_entry`). |
-| `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.jsonb_entry`. |
+| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.query_jsonb`, another `public.eql_v3_json`, or an `public.eql_v3_jsonb_entry`). |
+| `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.eql_v3_jsonb_entry`. |
 | `doc ->> 'sel'::text`            | `eql_v3."->>"`                                     | the matching entry serialized as `text` (ciphertext JSON, **not** decrypted plaintext). |
-| extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.jsonb_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
-| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_ope_term(public.jsonb_entry)`       | ordered comparison on an extracted String / Number leaf. |
-| `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.jsonb_entry)` / `max`         | over an extracted ordered leaf. |
+| extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.eql_v3_jsonb_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
+| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_ope_term(public.eql_v3_jsonb_entry)`       | ordered comparison on an extracted String / Number leaf. |
+| `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.eql_v3_jsonb_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |
 | `eql_v3.jsonb_array_length/elements/elements_text(doc)` | array helpers                  | length / set-returning elements / element text. |
 
-> **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.query_jsonb`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `public.json` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
+> **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.query_jsonb`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `public.eql_v3_json` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
 
 ### Blocked JSONB operators
 
-These native PostgreSQL JSONB operators are **blocked** on `public.json` (they `RAISE`, rather than falling through to native whole-document semantics): root-document `=` `<>` `<` `<=` `>` `>=`, and `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`. Use containment (`@>`), field access (`->` / `->>`), or the `eql_v3.jsonb_path_*` functions instead.
+These native PostgreSQL JSONB operators are **blocked** on `public.eql_v3_json` (they `RAISE`, rather than falling through to native whole-document semantics): root-document `=` `<>` `<` `<=` `>` `>=`, and `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`. Use containment (`@>`), field access (`->` / `->>`), or the `eql_v3.jsonb_path_*` functions instead.
 
 See [EQL with JSON and JSONB](./json-support.md) for worked examples.
 
@@ -159,7 +159,7 @@ See [EQL with JSON and JSONB](./json-support.md) for worked examples.
 
 - [EQL Functions Reference](./eql-functions.md) — full list of functions and operators.
 - [Database Indexes for Encrypted Columns](./database-indexes.md) — functional-index and GIN recipes, plus performance guidance.
-- [EQL with JSON and JSONB](./json-support.md) — end-to-end `public.json` examples.
+- [EQL with JSON and JSONB](./json-support.md) — end-to-end `public.eql_v3_json` examples.
 - Client-side searchable-encryption configuration — [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema) and [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
 ---

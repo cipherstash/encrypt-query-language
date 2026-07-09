@@ -15,33 +15,33 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.bloom_filter(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_match.
---! @param a public.text_match
+--! @param a public.eql_v3_text_match
 --! @param b eql_v3.query_text_match
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.text_match, b eql_v3.query_text_match)
+CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_match, b eql_v3.query_text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_match.
 --! @param a eql_v3.query_text_match
---! @param b public.text_match
+--! @param b public.eql_v3_text_match
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.query_text_match, b public.text_match)
+CREATE FUNCTION eql_v3.contains(a eql_v3.query_text_match, b public.eql_v3_text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_match.
---! @param a public.text_match
+--! @param a public.eql_v3_text_match
 --! @param b eql_v3.query_text_match
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.text_match, b eql_v3.query_text_match)
+CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_match, b eql_v3.query_text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_match.
 --! @param a eql_v3.query_text_match
---! @param b public.text_match
+--! @param b public.eql_v3_text_match
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.query_text_match, b public.text_match)
+CREATE FUNCTION eql_v3.contained_by(a eql_v3.query_text_match, b public.eql_v3_text_match)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;

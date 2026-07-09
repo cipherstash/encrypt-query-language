@@ -138,7 +138,7 @@ pub fn from_v2_typed(v2: &Value, target: TargetDomain) -> Result<DomainPayload, 
     let out = convert(v2, target)?;
     DomainPayload::parse(target.describe(), &out)
         .unwrap_or_else(|| {
-            // Every conversion target (all scalar domains + "json") has a
+            // Every conversion target (all scalar domains + "eql_v3_json") has a
             // generated DomainPayload variant; TargetDomain::parse resolved
             // `target` against the same catalog.
             unreachable!(
@@ -223,7 +223,22 @@ pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayl
 fn query_domain_name(target: TargetDomain) -> String {
     match target {
         TargetDomain::Json => "query_jsonb".to_string(),
-        TargetDomain::Scalar(t) => format!("query_{}", t.domain()),
+        // The query twin joins `query_` to the BARE domain name: the stored
+        // domain's `eql_v3_` version prefix (CIP-3472) applies to public-schema
+        // column types only — query operands live in the already-versioned
+        // `eql_v3` schema, so `eql_v3_text_eq` twins `query_text_eq`.
+        TargetDomain::Scalar(t) => {
+            let bare = t
+                .domain()
+                .strip_prefix(crate::v3::domain_type::PUBLIC_TYPNAME_PREFIX)
+                .unwrap_or_else(|| {
+                    unreachable!(
+                        "stored scalar domain {} must carry the version prefix",
+                        t.domain()
+                    )
+                });
+            format!("query_{bare}")
+        }
     }
 }
 
@@ -343,7 +358,7 @@ fn validate_as(domain: &str, value: &Value) -> Result<(), FromV2Error> {
         .find(|d| d.domain() == domain)
         .unwrap_or_else(|| {
             // `domain` always came from the same inventory via
-            // `TargetDomain::parse` (or is the literal "json"/"query_jsonb").
+            // `TargetDomain::parse` (or is the literal "eql_v3_json"/"query_jsonb").
             unreachable!("domain {domain} resolved by parse must be in the inventory")
         });
     entry.parse_value(value).map_err(FromV2Error::Invalid)
@@ -451,7 +466,7 @@ fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
         Some(kind) => {
             return Err(FromV2Error::KindMismatch {
                 kind: kind.into(),
-                target: "json".into(),
+                target: "eql_v3_json".into(),
             })
         }
     }
@@ -490,7 +505,7 @@ impl EntryShape {
     /// context.
     fn domain(self) -> &'static str {
         match self {
-            Self::Document => "json",
+            Self::Document => "eql_v3_json",
             Self::Query => "query_jsonb",
         }
     }

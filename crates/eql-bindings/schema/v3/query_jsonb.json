@@ -9,7 +9,7 @@
       "type": "string"
     },
     "Selector": {
-      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`public.json`); present on every entry and query element.",
+      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`public.eql_v3_json`); present on every entry and query element.",
       "type": "string"
     },
     "SteVecQueryEntry": {

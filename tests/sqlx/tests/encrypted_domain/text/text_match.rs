@@ -1,4 +1,4 @@
-//! Match-containment coverage for `public.text_match` — separate from the
+//! Match-containment coverage for `public.eql_v3_text_match` — separate from the
 //! ordered matrix because `@>` is asymmetric/probabilistic, not a total order.
 //! Asserts against the generated `eql_v3_text` fixtures (which carry `bf`).
 use sqlx::PgPool;
@@ -18,7 +18,7 @@ async fn payload_for(pool: &PgPool, plaintext: &str) -> anyhow::Result<serde_jso
 async fn value_matches_itself(pool: PgPool) -> anyhow::Result<()> {
     let p = payload_for(&pool, "aardvark").await?;
     let hit: bool = sqlx::query_scalar(
-        "SELECT ($1::jsonb::public.text_match) @> ($1::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) @> ($1::jsonb::public.eql_v3_text_match)",
     )
     .bind(&p)
     .fetch_one(&pool)
@@ -32,7 +32,7 @@ async fn haystack_contains_substring_needle(pool: PgPool) -> anyhow::Result<()> 
     let hay = payload_for(&pool, "aardvark").await?;
     let needle = payload_for(&pool, "aard").await?;
     let hit: bool = sqlx::query_scalar(
-        "SELECT ($1::jsonb::public.text_match) @> ($2::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) @> ($2::jsonb::public.eql_v3_text_match)",
     )
     .bind(&hay)
     .bind(&needle)
@@ -52,7 +52,7 @@ async fn disjoint_value_does_not_match(pool: PgPool) -> anyhow::Result<()> {
     let hay = payload_for(&pool, "aard").await?;
     let needle = payload_for(&pool, "zzzz").await?;
     let hit: bool = sqlx::query_scalar(
-        "SELECT ($1::jsonb::public.text_match) @> ($2::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) @> ($2::jsonb::public.eql_v3_text_match)",
     )
     .bind(&hay)
     .bind(&needle)
@@ -76,7 +76,7 @@ async fn match_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
         .execute(&mut *tx)
         .await?;
     sqlx::query(&format!(
-        "CREATE INDEX text_match_idx ON {TABLE} USING gin (eql_v3.match_term(payload::public.text_match))"
+        "CREATE INDEX text_match_idx ON {TABLE} USING gin (eql_v3.match_term(payload::public.eql_v3_text_match))"
     ))
     .execute(&mut *tx)
     .await?;
@@ -85,8 +85,8 @@ async fn match_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
     // hardcoded query (it interpolates directly and takes no binds).
     let query = format!(
         "SELECT 1 FROM {TABLE} \
-         WHERE eql_v3.match_term(payload::public.text_match) \
-           @> eql_v3.match_term((SELECT payload::jsonb FROM {TABLE} WHERE plaintext = 'aard')::public.text_match)"
+         WHERE eql_v3.match_term(payload::public.eql_v3_text_match) \
+           @> eql_v3.match_term((SELECT payload::jsonb FROM {TABLE} WHERE plaintext = 'aard')::public.eql_v3_text_match)"
     );
     eql_tests::matrix::assert_index_scan_uses(
         &mut *tx,
@@ -112,7 +112,7 @@ async fn bare_operator_uses_functional_index(pool: PgPool) -> anyhow::Result<()>
         .execute(&mut *tx)
         .await?;
     sqlx::query(&format!(
-        "CREATE INDEX text_match_idx ON {TABLE} USING gin (eql_v3.match_term(payload::public.text_match))"
+        "CREATE INDEX text_match_idx ON {TABLE} USING gin (eql_v3.match_term(payload::public.eql_v3_text_match))"
     ))
     .execute(&mut *tx)
     .await?;
@@ -121,8 +121,8 @@ async fn bare_operator_uses_functional_index(pool: PgPool) -> anyhow::Result<()>
     // a hardcoded query string (it interpolates directly and takes no binds).
     let query = format!(
         "SELECT 1 FROM {TABLE} \
-         WHERE (payload::public.text_match) \
-           @> ((SELECT payload::jsonb FROM {TABLE} WHERE plaintext = 'aard')::public.text_match)"
+         WHERE (payload::public.eql_v3_text_match) \
+           @> ((SELECT payload::jsonb FROM {TABLE} WHERE plaintext = 'aard')::public.eql_v3_text_match)"
     );
     eql_tests::matrix::assert_index_scan_uses(
         &mut *tx,
@@ -142,7 +142,7 @@ async fn needle_contained_by_haystack(pool: PgPool) -> anyhow::Result<()> {
     let needle = payload_for(&pool, "aard").await?;
     let hay = payload_for(&pool, "aardvark").await?;
     let hit: bool = sqlx::query_scalar(
-        "SELECT ($1::jsonb::public.text_match) <@ ($2::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) <@ ($2::jsonb::public.eql_v3_text_match)",
     )
     .bind(&needle)
     .bind(&hay)
@@ -165,7 +165,7 @@ async fn disjoint_value_not_contained_by(pool: PgPool) -> anyhow::Result<()> {
     let needle = payload_for(&pool, "zzzz").await?;
     let hay = payload_for(&pool, "aard").await?;
     let hit: bool = sqlx::query_scalar(
-        "SELECT ($1::jsonb::public.text_match) <@ ($2::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) <@ ($2::jsonb::public.eql_v3_text_match)",
     )
     .bind(&needle)
     .bind(&hay)
@@ -186,8 +186,8 @@ async fn contains_and_contained_by_are_commutative(pool: PgPool) -> anyhow::Resu
     let sup = payload_for(&pool, "aardvark").await?;
     let sub = payload_for(&pool, "aard").await?;
     let (contains, contained_by): (bool, bool) = sqlx::query_as(
-        "SELECT ($1::jsonb::public.text_match) @> ($2::jsonb::public.text_match),
-                ($2::jsonb::public.text_match) <@ ($1::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) @> ($2::jsonb::public.eql_v3_text_match),
+                ($2::jsonb::public.eql_v3_text_match) <@ ($1::jsonb::public.eql_v3_text_match)",
     )
     .bind(&sup)
     .bind(&sub)
@@ -214,9 +214,9 @@ async fn direct_contains_function_matches_operator(pool: PgPool) -> anyhow::Resu
     let zzzz = payload_for(&pool, "zzzz").await?;
 
     let (fn_hit, op_hit, fn_miss): (bool, bool, bool) = sqlx::query_as(
-        "SELECT eql_v3.contains($1::jsonb::public.text_match, $2::jsonb::public.text_match),
-                ($1::jsonb::public.text_match) @> ($2::jsonb::public.text_match),
-                eql_v3.contains($1::jsonb::public.text_match, $3::jsonb::public.text_match)",
+        "SELECT eql_v3.contains($1::jsonb::public.eql_v3_text_match, $2::jsonb::public.eql_v3_text_match),
+                ($1::jsonb::public.eql_v3_text_match) @> ($2::jsonb::public.eql_v3_text_match),
+                eql_v3.contains($1::jsonb::public.eql_v3_text_match, $3::jsonb::public.eql_v3_text_match)",
     )
     .bind(&hay)
     .bind(&aard)
@@ -245,9 +245,9 @@ async fn direct_contained_by_function_matches_operator(pool: PgPool) -> anyhow::
     let zzzz = payload_for(&pool, "zzzz").await?;
 
     let (fn_hit, op_hit, fn_miss): (bool, bool, bool) = sqlx::query_as(
-        "SELECT eql_v3.contained_by($1::jsonb::public.text_match, $2::jsonb::public.text_match),
-                ($1::jsonb::public.text_match) <@ ($2::jsonb::public.text_match),
-                eql_v3.contained_by($3::jsonb::public.text_match, $1::jsonb::public.text_match)",
+        "SELECT eql_v3.contained_by($1::jsonb::public.eql_v3_text_match, $2::jsonb::public.eql_v3_text_match),
+                ($1::jsonb::public.eql_v3_text_match) <@ ($2::jsonb::public.eql_v3_text_match),
+                eql_v3.contained_by($3::jsonb::public.eql_v3_text_match, $1::jsonb::public.eql_v3_text_match)",
     )
     .bind(&aard)
     .bind(&hay)
@@ -282,11 +282,11 @@ async fn mixed_jsonb_domain_overloads_agree(pool: PgPool) -> anyhow::Result<()> 
     // DIFFERENT overload resolves; all must equal the all-domain baseline.
     let row: (bool, bool, bool, bool, bool) = sqlx::query_as(
         "SELECT
-           eql_v3.contains($1::jsonb::public.text_match, $2::jsonb::public.text_match), -- baseline (domain,domain)
-           eql_v3.contains($1::jsonb::public.text_match, $2::jsonb),                    -- (domain, jsonb)
-           eql_v3.contains($1::jsonb, $2::jsonb::public.text_match),                    -- (jsonb, domain)
-           eql_v3.contained_by($2::jsonb::public.text_match, $1::jsonb),                -- (domain, jsonb)
-           eql_v3.contained_by($2::jsonb, $1::jsonb::public.text_match)                 -- (jsonb, domain)
+           eql_v3.contains($1::jsonb::public.eql_v3_text_match, $2::jsonb::public.eql_v3_text_match), -- baseline (domain,domain)
+           eql_v3.contains($1::jsonb::public.eql_v3_text_match, $2::jsonb),                    -- (domain, jsonb)
+           eql_v3.contains($1::jsonb, $2::jsonb::public.eql_v3_text_match),                    -- (jsonb, domain)
+           eql_v3.contained_by($2::jsonb::public.eql_v3_text_match, $1::jsonb),                -- (domain, jsonb)
+           eql_v3.contained_by($2::jsonb, $1::jsonb::public.eql_v3_text_match)                 -- (jsonb, domain)
         ",
     )
     .bind(&hay)
@@ -328,9 +328,9 @@ async fn direct_functions_propagate_null(pool: PgPool) -> anyhow::Result<()> {
     // $1 NULL, $2 a real payload — and the reverse — across both functions, both
     // operand positions, and a mixed jsonb overload.
     for sql in [
-        "SELECT eql_v3.contains($1::jsonb::public.text_match, $2::jsonb::public.text_match)",
-        "SELECT eql_v3.contained_by($1::jsonb::public.text_match, $2::jsonb::public.text_match)",
-        "SELECT eql_v3.contains($1::jsonb::public.text_match, $2::jsonb)", // mixed (domain, jsonb)
+        "SELECT eql_v3.contains($1::jsonb::public.eql_v3_text_match, $2::jsonb::public.eql_v3_text_match)",
+        "SELECT eql_v3.contained_by($1::jsonb::public.eql_v3_text_match, $2::jsonb::public.eql_v3_text_match)",
+        "SELECT eql_v3.contains($1::jsonb::public.eql_v3_text_match, $2::jsonb)", // mixed (domain, jsonb)
     ] {
         eql_tests::assert_null(&pool, sql, &[None, Some(BF)]).await?;
         eql_tests::assert_null(&pool, sql, &[Some(BF), None]).await?;
@@ -351,7 +351,7 @@ async fn bloom_matches_where_like_would_not(pool: PgPool) -> anyhow::Result<()> 
 
     // 1. bloom DOES match.
     let bloom_hit: bool = sqlx::query_scalar(
-        "SELECT ($1::jsonb::public.text_match) @> ($2::jsonb::public.text_match)",
+        "SELECT ($1::jsonb::public.eql_v3_text_match) @> ($2::jsonb::public.eql_v3_text_match)",
     )
     .bind(&hay)
     .bind(&needle)
