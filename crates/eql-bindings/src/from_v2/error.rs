@@ -30,22 +30,32 @@ pub enum FromV2Error {
         name: String,
     },
     /// A term key the target domain requires is absent from the input. For
-    /// SteVec entries `key` is `"hm|oc"`: an entry must carry exactly one of
+    /// SteVec entries `key` is `"hm|op"`: an entry must carry exactly one of
     /// the two, and this variant reports the "neither" half (the "both" half
     /// is [`FromV2Error::AmbiguousTerm`]) with `entry` locating the offender.
     MissingTerm {
         /// The (unqualified) target domain name, e.g. `text_eq`, or the
         /// SteVec shape (`json` / `query_jsonb`) for per-entry terms.
         domain: String,
-        /// The missing wire key (`hm`/`ob`/`bf`/`op`, or `hm|oc` for entries).
+        /// The missing wire key (`hm`/`ob`/`bf`/`op`, or `hm|op` for entries).
         key: String,
         /// Zero-based index of the term-less `sv` entry; `None` for flat
         /// scalar payloads, which have no entries to index.
         entry: Option<usize>,
     },
-    /// A SteVec entry carries BOTH `hm` and `oc`; the v2 and v3 contracts
+    /// A SteVec entry carries BOTH `hm` and `op`; the v2 and v3 contracts
     /// both require exactly one, and picking one would silently drop a term.
     AmbiguousTerm {
+        /// Zero-based index of the offending `sv` entry.
+        entry: usize,
+    },
+    /// A SteVec entry carries a CLLW-ORE ordering term (`oc`), which v3
+    /// cannot represent: v3 orders SteVec entries by the CLLW-OPE `op` term
+    /// (native byte order), and CLLW-ORE ciphertext bytes do not order under
+    /// byte comparison — passing them through would silently misorder. An
+    /// `oc`-bearing v2 document must be re-encrypted through a client that
+    /// emits OPE SteVec terms; no mechanical conversion exists.
+    UnconvertibleOreTerm {
         /// Zero-based index of the offending `sv` entry.
         entry: usize,
     },
@@ -128,7 +138,15 @@ impl fmt::Display for FromV2Error {
             Self::AmbiguousTerm { entry } => {
                 write!(
                     f,
-                    "sv entry {entry} carries both `hm` and `oc` (exactly one is required)"
+                    "sv entry {entry} carries both `hm` and `op` (exactly one is required)"
+                )
+            }
+            Self::UnconvertibleOreTerm { entry } => {
+                write!(
+                    f,
+                    "sv entry {entry} carries a CLLW-ORE ordering term `oc`; v3 orders SteVec \
+                     entries by the CLLW-OPE `op` term, and ORE ciphertext bytes cannot be \
+                     converted — re-encrypt through a client that emits OPE SteVec terms"
                 )
             }
             Self::KindMismatch { kind, target } => {

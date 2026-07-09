@@ -33,17 +33,17 @@ const PAYLOAD_TYPE: &str = "public.eql_v3_json";
 /// path is pinned in `SELECTOR` below.
 const FIELD: &str = "field";
 
-/// The SteVec selector hash for the `$.field` **ORE-CLLW (`oc`)** entry,
+/// The SteVec selector hash for the `$.field` **CLLW-OPE (`op`)** entry,
 /// constant across every row (same path + index → same selector). SteVec emits
-/// two sv entries per ordered field — an `hm` entry (equality only) and an `oc`
+/// two sv entries per ordered field — an `hm` entry (equality only) and an `op`
 /// entry — under distinct selectors. The matrix needs the entry that supports
-/// BOTH comparisons: `eql_v3.eq_term` reads `coalesce(hm, oc)` (so it works on
-/// the `oc` entry, injective on distinct plaintexts) and `eql_v3.ore_cllw`
-/// requires `oc`. The `hm` entry would have no `oc`, breaking ordering.
+/// BOTH comparisons: `eql_v3.eq_term` reads `coalesce(hm, op)` (so it works on
+/// the `op` entry, injective on distinct plaintexts) and `eql_v3.ord_ope_term`
+/// requires `op`. The `hm` entry would have no `op`, breaking ordering.
 ///
 /// Read from the generated fixture and pinned here so a future selector drift
 /// fails loudly: the integration `jsonb_entry` suite extracts the entry at
-/// `payload -> SELECTOR` and asserts it is non-NULL and `oc`-carrying for every
+/// `payload -> SELECTOR` and asserts it is non-NULL and `op`-carrying for every
 /// row, which only holds if this matches the emitted selector. The selector is
 /// derived from the workspace keyset + the fixed STE_VEC_PREFIX + the `field`
 /// path, so it is stable for a given CipherStash workspace; if it drifts,

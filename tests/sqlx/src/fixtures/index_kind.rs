@@ -27,7 +27,7 @@ pub enum IndexKind {
     /// `match` — drives `LIKE` / `ILIKE` via the bloom filter.
     Match,
     /// `ste_vec` — drives the encrypted-JSONB (SteVec) document surface:
-    /// per-leaf HMAC (`hm`, equality) + ORE-CLLW (`oc`, ordered) terms. Used
+    /// per-leaf HMAC (`hm`, equality) + CLLW-OPE (`op`, ordered) terms. Used
     /// by the `v3_ste_vec` document fixture, not the scalar matrix.
     SteVec,
 }

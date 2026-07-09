@@ -1,7 +1,7 @@
 -- REQUIRE: src/v3/schema.sql
 -- REQUIRE: src/v3/jsonb/types.sql
--- REQUIRE: src/v3/sem/ore_cllw/types.sql
--- REQUIRE: src/v3/sem/ore_cllw/functions.sql
+-- REQUIRE: src/v3/sem/ope_cllw/types.sql
+-- REQUIRE: src/v3/sem/ope_cllw/functions.sql
 
 --! @file v3/jsonb/functions.sql
 --! @brief Extractors, containment engine, and path/array functions for the
@@ -79,55 +79,50 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Equality-term extractor (XOR-aware: coalesce(hm, oc))
+-- Equality-term extractor (XOR-aware: coalesce(hm, op))
 ------------------------------------------------------------------------------
 
 --! @brief XOR-aware equality term extractor for public.eql_v3_jsonb_entry.
 --!
 --! Returns the bytea of whichever deterministic term the sv entry carries —
---! `hm` (HMAC-256) or `oc` (CLLW ORE). The two byte distributions are disjoint
+--! `hm` (HMAC-256) or `op` (CLLW OPE). The two byte distributions are disjoint
 --! by construction, so byte equality on the coalesce is unambiguous. Canonical
 --! equality extractor used by `=` / `<>` on jsonb_entry.
 --!
 --! @param entry public.eql_v3_jsonb_entry
---! @return bytea Decoded `hm` or `oc` bytes (NULL if entry is NULL).
+--! @return bytea Decoded `hm` or `op` bytes (NULL if entry is NULL).
 CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_jsonb_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT decode(coalesce(entry ->> 'hm', entry ->> 'oc'), 'hex')
+  SELECT decode(coalesce(entry ->> 'hm', entry ->> 'op'), 'hex')
 $$;
 
 ------------------------------------------------------------------------------
--- ORE CLLW per-entry overloads (live here so sem/ore_cllw stays a leaf)
+-- CLLW OPE per-entry overload (converged with the scalar ord_ope_term)
 ------------------------------------------------------------------------------
 
---! @brief Extract CLLW ORE index term from a ste_vec entry.
+--! @brief Extract the CLLW OPE index term from a ste_vec entry.
 --!
---! `oc` is only ever present on an sv element, never at a root encrypted value,
---! so the typed overload accepts public.eql_v3_jsonb_entry. Returns SQL NULL when
---! `oc` is absent (btree NULL-filters such rows from range queries).
+--! An sv-element `op` term is only ever present on an sv element, never at a
+--! root encrypted value, so the typed overload accepts public.eql_v3_jsonb_entry —
+--! the jsonb_entry twin of the generated scalar `eql_v3.ord_ope_term`
+--! extractors. Returns SQL NULL when `op` is absent (the strict `->>` /
+--! `decode` chain propagates it), so btree NULL-filters such rows from range
+--! queries. The returned eql_v3_internal.ope_cllw is a bytea domain: it orders
+--! under native byte comparison with the DEFAULT btree opclass, so a
+--! functional index on `eql_v3.ord_ope_term(col -> 'selector')` engages
+--! structurally with no custom operator class (Supabase/managed-Postgres
+--! safe).
 --!
 --! @param entry public.eql_v3_jsonb_entry
---! @return eql_v3_internal.ore_cllw Composite carrying the CLLW ciphertext, or NULL.
---! @see eql_v3.has_ore_cllw
-CREATE FUNCTION eql_v3.ore_cllw(entry public.eql_v3_jsonb_entry)
-  RETURNS eql_v3_internal.ore_cllw
+--! @return eql_v3_internal.ope_cllw Hex-decoded CLLW OPE term, or NULL when
+--!         `op` is absent.
+CREATE FUNCTION eql_v3.ord_ope_term(entry public.eql_v3_jsonb_entry)
+  RETURNS eql_v3_internal.ope_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT CASE WHEN entry ->> 'oc' IS NULL THEN NULL
-              ELSE ROW(decode(entry ->> 'oc', 'hex'))::eql_v3_internal.ore_cllw
-         END
-$$;
-
---! @brief Check if a ste_vec entry contains a CLLW ORE index term.
---! @param entry public.eql_v3_jsonb_entry
---! @return boolean True if `oc` is present and non-null.
-CREATE FUNCTION eql_v3.has_ore_cllw(entry public.eql_v3_jsonb_entry)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT entry ->> 'oc' IS NOT NULL
+  SELECT eql_v3_internal.ope_cllw(entry::jsonb)
 $$;
 
 ------------------------------------------------------------------------------
@@ -184,7 +179,7 @@ $$ LANGUAGE plpgsql;
 -- Deterministic-fields array for GIN containment
 ------------------------------------------------------------------------------
 
---! @brief Extract deterministic search fields (s, hm, oc, op) per sv element.
+--! @brief Extract deterministic search fields (s, hm, op) per sv element.
 --!
 --! Excludes non-deterministic ciphertext so PostgreSQL's native jsonb `@>` can
 --! compare for containment. Use for GIN indexes and containment queries.
@@ -202,7 +197,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'hm', 'oc', 'op')
+    WHERE kv.key IN ('s', 'hm', 'op')
     GROUP BY elem
   );
 $$;
@@ -258,18 +253,19 @@ COMMENT ON FUNCTION eql_v3.jsonb_contained_by(jsonb, jsonb) IS
 --! @brief Check if an sv array contains a specific sv element.
 --!
 --! Match = selector equal AND eq_term equal (byte-equality over coalesce(hm,
---! oc)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
+--! op)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
 --! are deterministic and byte-disjoint, so either one is a valid equality
 --! discriminator and a single byte comparison is correct.
 --!
---! ASSUMPTION (locked by a negative test in v3_jsonb_tests.rs): hm and oc byte
+--! ASSUMPTION (locked by a negative test in v3_jsonb_tests.rs): hm and op byte
 --! distributions never collide at a given selector. The crypto layer configures
 --! a selector for eq XOR ordered, so both sides of a real comparison carry the
---! same term type; and an oc value carries a leading domain-tag byte an hm never
---! has. Unlike v2's explicit `has_hmac(both)`/`has_ore_cllw(both)`/`ELSE false`
---! CASE, this collapse would wrongly match an hm needle against an oc leaf if
---! their hex bytes were ever identical — which the contract prevents. The
---! negative-containment test guards against regression.
+--! same term type — an hm needle never meets an op leaf at the same selector.
+--! This collapse would wrongly match an hm needle against an op leaf if their
+--! hex bytes were ever identical — which the contract prevents (an hm is a
+--! fixed 32-byte HMAC; an op is a CLLW OPE ciphertext whose length is a
+--! function of the plaintext bit width, never 32 bytes for the supported
+--! domains). The negative-containment test guards against regression.
 --!
 --! @param a jsonb[] sv array to search within.
 --! @param b jsonb sv element to search for.

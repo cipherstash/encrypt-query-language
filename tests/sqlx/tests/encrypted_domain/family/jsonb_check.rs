@@ -74,14 +74,14 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
     let candidates: &[Option<&str>] = &[
         // SQL NULL — accepted by both forms (STRICT / VALUE IS NULL OR).
         None,
-        // Valid: hm entry, oc entry, extra fields allowed.
+        // Valid: hm entry, op entry, extra fields allowed.
         Some(r#"{"s":"sel","c":"ct","hm":"h"}"#),
-        Some(r#"{"s":"sel","c":"ct","oc":"o"}"#),
+        Some(r#"{"s":"sel","c":"ct","op":"o"}"#),
         Some(r#"{"s":"sel","c":"ct","hm":"h","a":true,"i":{},"v":3}"#),
         // Invalid: missing s / missing c / both terms / neither term.
         Some(r#"{"c":"ct","hm":"h"}"#),
         Some(r#"{"s":"sel","hm":"h"}"#),
-        Some(r#"{"s":"sel","c":"ct","hm":"h","oc":"o"}"#),
+        Some(r#"{"s":"sel","c":"ct","hm":"h","op":"o"}"#),
         Some(r#"{"s":"sel","c":"ct"}"#),
         // Invalid: non-string term / non-string s / wrong jsonb types.
         Some(r#"{"s":"sel","c":"ct","hm":1}"#),
@@ -110,14 +110,14 @@ async fn query_jsonb_check_behaviour(pool: PgPool) -> Result<()> {
         // Valid: single- and multi-entry needles; empty sv is valid.
         (Some(r#"{"sv":[{"s":"sel","hm":"h"}]}"#), true),
         (
-            Some(r#"{"sv":[{"s":"a","hm":"h"},{"s":"b","oc":"o"}]}"#),
+            Some(r#"{"sv":[{"s":"a","hm":"h"},{"s":"b","op":"o"}]}"#),
             true,
         ),
         (Some(r#"{"sv":[]}"#), true),
         // Invalid: element carries a ciphertext / both terms / neither term /
         // missing s.
         (Some(r#"{"sv":[{"s":"sel","hm":"h","c":"ct"}]}"#), false),
-        (Some(r#"{"sv":[{"s":"sel","hm":"h","oc":"o"}]}"#), false),
+        (Some(r#"{"sv":[{"s":"sel","hm":"h","op":"o"}]}"#), false),
         (Some(r#"{"sv":[{"s":"sel"}]}"#), false),
         (Some(r#"{"sv":[{"hm":"h"}]}"#), false),
         // Invalid: sv not an array / missing sv / non-object roots.

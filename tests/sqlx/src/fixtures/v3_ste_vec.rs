@@ -36,11 +36,11 @@ const ROW_COUNT: i64 = 10;
 /// The ten plaintext documents — the source of truth for the fixture.
 ///
 /// `hello` VARIES across all rows (10 distinct values → 10 distinct `$.hello`
-/// `oc` leaves) so the W1 containment oracle (`fwd == expected`, where
-/// `expected` = rows whose `$.hello` oc equals the row-1 self-needle) and the
-/// D11 ORE-btree test have real discrimination — a constant `$.hello` would
+/// `op` leaves) so the W1 containment oracle (`fwd == expected`, where
+/// `expected` = rows whose `$.hello` op equals the row-1 self-needle) and the
+/// D11 OPE-btree test have real discrimination — a constant `$.hello` would
 /// make `expected == ROW_COUNT` and silently hollow the oracle. `number` also
-/// varies (its own `$.number` oc). `nested` is a constant object so `$` and
+/// varies (its own `$.number` op). `nested` is a constant object so `$` and
 /// `$.nested` carry stable `hm` leaves across all rows (LB2 / LB4).
 fn documents() -> Vec<Value> {
     (1..=ROW_COUNT)

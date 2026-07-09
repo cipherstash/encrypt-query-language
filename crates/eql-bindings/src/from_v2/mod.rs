@@ -42,11 +42,18 @@
 //! (the v3 document models the `"sv"` form discriminator — required on the
 //! wire), sets `v: 3`, keeps `i`; per entry keeps `s`, `c`, the optional
 //! array-membership marker `a` (the v3 [`crate::v3::jsonb::SteVecEntry`]
-//! retains it), and exactly one of `hm` XOR `oc`
+//! retains it), and exactly one of `hm` XOR `op`
 //! ([`FromV2Error::AmbiguousTerm`] / [`FromV2Error::MissingTerm`] on
-//! both/neither). v3 sv entries carry no per-entry `v`/`i`/`k` — the
-//! envelope lives only at the root `{v, k, i, sv}`, exactly the
-//! [`crate::v3::jsonb::SteVecDocument`] shape.
+//! both/neither). Like scalar `op`, the sv-level `op` term predates the
+//! v2.3 schema file: cipherstash-client emits it for OPE-mode SteVec columns
+//! ahead of the v3 envelope. A CLLW-*ORE* `oc` entry term is
+//! [`FromV2Error::UnconvertibleOreTerm`] — v3 orders SteVec entries by the
+//! CLLW-OPE `op` term (native byte order), ORE ciphertext bytes would
+//! silently misorder, and whether older Compat-mode `oc` bytes are really
+//! OPE cannot be determined from the payload alone. Fail closed;
+//! re-encryption is the only conversion. v3 sv entries carry no per-entry
+//! `v`/`i`/`k` — the envelope lives only at the root `{v, k, i, sv}`,
+//! exactly the [`crate::v3::jsonb::SteVecDocument`] shape.
 //!
 //! Every converted payload is validated by a final strict parse through the
 //! target's binding struct (`deny_unknown_fields` + [`crate::SchemaVersion`])
@@ -61,7 +68,7 @@
 //! ## Query payloads
 //!
 //! [`from_v2_query`] covers both query shapes. The jsonb containment needle
-//! (`{sv: [{s, hm|oc}]}` → [`crate::v3::jsonb::SteVecQuery`]) normalizes
+//! (`{sv: [{s, hm|op}]}` → [`crate::v3::jsonb::SteVecQuery`]) normalizes
 //! entries down to `s` + one term exactly as the SQL cast
 //! `eql_v3.to_ste_vec_query` does (stray `a` markers and `c` ciphertexts are
 //! stripped). A term-bearing scalar target hoists the target's required terms
@@ -165,7 +172,7 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
 
 /// Convert an EQL v2.3 QUERY payload into the v3 query operand for `target`.
 ///
-/// [`TargetDomain::Json`]: the v2 containment needle (`{sv: [{s, hm|oc}]}`, the
+/// [`TargetDomain::Json`]: the v2 containment needle (`{sv: [{s, hm|op}]}`, the
 /// v2.3 `SteVecQueryPayload`) converts to the [`crate::v3::jsonb::SteVecQuery`]
 /// shape — entries normalized to `s` + exactly one term (mirroring
 /// `eql_v3.to_ste_vec_query`; stray `a`/`c` keys are stripped, so a stored
@@ -412,7 +419,7 @@ fn convert_bloom(bf: &Value) -> Result<Value, FromV2Error> {
     Ok(Value::Array(out))
 }
 
-/// v2 `k: "sv"` → SteVec document `{v: 3, k: "sv", i, sv: [{s, c, a?, hm|oc}]}`.
+/// v2 `k: "sv"` → SteVec document `{v: 3, k: "sv", i, sv: [{s, c, a?, hm|op}]}`.
 /// Entry order is preserved verbatim — `sv[0]` is the decryption root (see
 /// the module docs).
 fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
@@ -440,7 +447,7 @@ fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
     Ok(Value::Object(out))
 }
 
-/// v2 query needle `{sv: [{s, hm|oc, …}]}` → v3 `SteVecQuery` shape. Like the
+/// v2 query needle `{sv: [{s, hm|op, …}]}` → v3 `SteVecQuery` shape. Like the
 /// stored-payload converters, does NOT run the final strict parse — that is
 /// the entry points' job, exactly once.
 fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
@@ -505,11 +512,16 @@ impl EntryShape {
 }
 
 /// Convert one v2 sv element: copy the shape's keys and exactly one of
-/// `hm` XOR `oc`.
+/// `hm` XOR `op`. A CLLW-ORE `oc` term is unconvertible (see
+/// [`FromV2Error::UnconvertibleOreTerm`]) — fail loudly rather than emit a
+/// term v3 would misorder.
 fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, FromV2Error> {
     let obj = entry
         .as_object()
         .ok_or_else(|| invalid("`sv` entries must be JSON objects"))?;
+    if obj.contains_key("oc") {
+        return Err(FromV2Error::UnconvertibleOreTerm { entry: idx });
+    }
     let mut out = Map::new();
     for &key in shape.kept_keys() {
         if let Some(v) = obj.get(key) {
@@ -517,18 +529,18 @@ fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, 
         }
         // A missing `s`/`c` fails the final document/query validation.
     }
-    match (obj.get("hm"), obj.get("oc")) {
+    match (obj.get("hm"), obj.get("op")) {
         (Some(_), Some(_)) => return Err(FromV2Error::AmbiguousTerm { entry: idx }),
         (Some(hm), None) => {
             out.insert("hm".into(), hm.clone());
         }
-        (None, Some(oc)) => {
-            out.insert("oc".into(), oc.clone());
+        (None, Some(op)) => {
+            out.insert("op".into(), op.clone());
         }
         (None, None) => {
             return Err(FromV2Error::MissingTerm {
                 domain: shape.domain().into(),
-                key: "hm|oc".into(),
+                key: "hm|op".into(),
                 entry: Some(idx),
             })
         }

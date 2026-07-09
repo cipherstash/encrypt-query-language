@@ -82,9 +82,9 @@ impl ScalarType for JsonbEntryInteger {
 
     /// Valid `public.eql_v3_jsonb_entry` literal for tests that only need a non-NULL
     /// operand shape (NULL propagation). Must satisfy the domain CHECK: string
-    /// `s`, string `c`, exactly one of `hm`/`oc`.
+    /// `s`, string `c`, exactly one of `hm`/`op`.
     fn placeholder_payload() -> &'static str {
-        r#"{"s":"placeholder","c":"sample","oc":"00"}"#
+        r#"{"s":"placeholder","c":"sample","op":"00"}"#
     }
 
     fn eq_extractor_expr(value_expr: &str) -> String {
@@ -92,7 +92,7 @@ impl ScalarType for JsonbEntryInteger {
     }
 
     fn ord_extractor_expr(value_expr: &str) -> String {
-        format!("eql_v3.ore_cllw({value_expr})")
+        format!("eql_v3.ord_ope_term({value_expr})")
     }
 
     // Not an e2e/property-oracle type (the entry suite runs the jsonb_entry
@@ -143,7 +143,7 @@ mod tests {
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::ord_extractor_expr("value"),
-            "eql_v3.ore_cllw(value)",
+            "eql_v3.ord_ope_term(value)",
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::eq_extractor_expr("value"),
@@ -174,7 +174,7 @@ mod tests {
     }
 
     /// The placeholder must satisfy the `public.eql_v3_jsonb_entry` CHECK shape:
-    /// string `s`, string `c`, exactly one of `hm`/`oc`. (SQL-level validity is
+    /// string `s`, string `c`, exactly one of `hm`/`op`. (SQL-level validity is
     /// asserted in the integration `jsonb_entry` suite against the live domain.)
     #[test]
     fn placeholder_is_a_valid_entry_shape() {
@@ -183,7 +183,7 @@ mod tests {
         assert!(v.get("s").and_then(|x| x.as_str()).is_some());
         assert!(v.get("c").and_then(|x| x.as_str()).is_some());
         let has_hm = v.get("hm").is_some();
-        let has_oc = v.get("oc").is_some();
-        assert!(has_hm ^ has_oc, "exactly one of hm/oc must be present");
+        let has_op = v.get("op").is_some();
+        assert!(has_hm ^ has_op, "exactly one of hm/op must be present");
     }
 }

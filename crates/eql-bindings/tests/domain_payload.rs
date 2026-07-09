@@ -46,7 +46,7 @@ fn v2_sv() -> Value {
         "i": ident(),
         "sv": [
             { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
-            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "oc": HEX_LONG }
+            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
         ]
     })
 }

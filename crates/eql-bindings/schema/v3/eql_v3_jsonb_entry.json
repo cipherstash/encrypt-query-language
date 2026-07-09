@@ -8,8 +8,8 @@
       "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.",
       "type": "string"
     },
-    "OreCllw": {
-      "description": "CLLW-ORE ordered term — the `oc` wire key of a SteVec entry. Backs entry\nordering (`<` `<=` `>` `>=`) and equality on ordered leaves. SQL-side\nconstructor: `eql_v3.ore_cllw`. A SteVec entry carries exactly one of `hm`\n(equality) XOR `oc` (ordering) — enforced by the SQL domain CHECK.",
+    "OpeCllw": {
+      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`\ndomains (`=` `<>` `<` `<=` `>` `>=`) and the ordered entries of a SteVec\ndocument (exactly one of `hm` (equality) XOR `op` (ordering) per entry —\nenforced by the SQL domain CHECK): a hex-encoded CLLW OPE ciphertext,\nsortable via native bytea comparison after hex-decode — unlike `ob`\n(block-ORE) it needs no custom comparator. SQL-side constructor:\n`eql_v3_internal.ope_cllw`; per-entry extractor: `eql_v3.ord_ope_term`.",
       "type": "string"
     },
     "Selector": {
@@ -33,17 +33,17 @@
     },
     {
       "properties": {
-        "oc": {
-          "$ref": "#/$defs/OreCllw"
+        "op": {
+          "$ref": "#/$defs/OpeCllw"
         }
       },
       "required": [
-        "oc"
+        "op"
       ],
       "type": "object"
     }
   ],
-  "description": "`public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector\n`s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of\n`hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the\nroot `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.",
+  "description": "`public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector\n`s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of\n`hm` XOR `op`. LAX (flatten precludes `deny_unknown_fields`): tolerates the\nroot `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.",
   "properties": {
     "a": {
       "type": [

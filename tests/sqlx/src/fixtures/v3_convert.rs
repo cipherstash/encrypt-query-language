@@ -38,7 +38,16 @@
 //!
 //! The SteVec document fixtures (`v3_ste_vec`, `v3_doc_integer`) convert with
 //! the single [`TargetDomain::Json`] target — the v3 document keeps
-//! `k: "sv"` (the #336 wire shape) and its per-entry `hm` XOR `oc` terms.
+//! `k: "sv"` (the #336 wire shape) and its per-entry `hm` XOR `op` terms.
+//! Their payloads first pass through [`ste_vec_oc_to_op`], a TEMPORARY shim:
+//! the pinned 0.38.1 client serializes Compat-mode (CLLW-OPE) sv terms under
+//! the v2.3 `oc` key, because the v2.3 schema predates a distinct sv-level
+//! `op`. The bytes ARE OPE ciphertexts (the fixture config pins
+//! `SteVecMode::Compat` in cipherstash.rs), so the rename is lossless;
+//! `from_v2` itself rejects `oc` (`UnconvertibleOreTerm`), so dropping the
+//! shim without a client that emits sv-level `op` natively fails loudly
+//! rather than producing ORE-looking fixtures. REMOVE the shim when the
+//! client emits sv-level `op` (CIP-3469).
 
 use anyhow::{anyhow, bail, Context, Result};
 use eql_bindings::from_v2::{from_v2, TargetDomain};
@@ -65,10 +74,44 @@ pub fn to_v3_payloads(
         .into_iter()
         .enumerate()
         .map(|(i, payload)| {
+            let payload = if kind == ScalarKind::Jsonb {
+                ste_vec_oc_to_op(payload)
+                    .with_context(|| format!("remapping payload #{i} sv terms oc -> op"))?
+            } else {
+                payload
+            };
             convert_one(&payload, &targets)
                 .with_context(|| format!("converting payload #{i} to the v3 envelope"))
         })
         .collect()
+}
+
+/// TEMPORARY (CIP-3469): rename each sv entry's `oc` key to `op`.
+///
+/// The fixture SteVec index is pinned to `SteVecMode::Compat`
+/// (cipherstash.rs), so the ordering bytes the client emits ARE CLLW-OPE
+/// ciphertexts — but the pinned 0.38.1 client serializes them under the
+/// v2.3 `oc` key (the v2.3 schema has no sv-level `op`). v3 names the term
+/// `op`, and `from_v2` rejects `oc` outright, so the rename must happen
+/// before conversion. Fails closed on an entry carrying both keys (that
+/// payload is malformed whatever the mode). Remove once the client emits
+/// sv-level `op` natively.
+fn ste_vec_oc_to_op(mut payload: Value) -> Result<Value> {
+    let Some(entries) = payload.get_mut("sv").and_then(Value::as_array_mut) else {
+        return Ok(payload);
+    };
+    for (i, entry) in entries.iter_mut().enumerate() {
+        let Some(obj) = entry.as_object_mut() else {
+            continue;
+        };
+        if let Some(oc) = obj.remove("oc") {
+            if obj.contains_key("op") {
+                bail!("sv entry {i} carries both `oc` and `op`");
+            }
+            obj.insert("op".to_string(), oc);
+        }
+    }
+    Ok(payload)
 }
 
 /// The wire term key an `IndexKind` makes the client emit on a scalar
@@ -318,9 +361,11 @@ mod tests {
 
     #[test]
     fn ste_vec_document_converts_to_v3_keeping_k_and_entry_order() {
-        // SteVec emits one `hm` (equality) and one `oc` (ordered) entry per
-        // ordered leaf, under distinct selectors; sv[0] is the decryption
-        // root and order must survive conversion.
+        // SteVec emits one `hm` (equality) and one ordered entry per ordered
+        // leaf, under distinct selectors; sv[0] is the decryption root and
+        // order must survive conversion. The pinned Compat-mode client
+        // serializes the OPE ordering bytes under the v2.3 `oc` key; the
+        // conversion remaps them to the v3 `op` key (see ste_vec_oc_to_op).
         let payload = json!({
             "v": 2,
             "k": "sv",
@@ -342,7 +387,12 @@ mod tests {
             "sv[0] (the decryption root) must stay first"
         );
         assert!(sv[0].get("hm").is_some(), "sv[0] must keep its hm term");
-        assert_eq!(sv[1].get("oc"), Some(&json!("00010203")));
+        assert_eq!(
+            sv[1].get("op"),
+            Some(&json!("00010203")),
+            "the Compat-mode `oc` bytes must come out under the v3 `op` key"
+        );
+        assert!(sv[1].get("oc").is_none(), "no `oc` may survive conversion");
         assert_eq!(sv[1].get("a"), Some(&json!(false)));
     }
 

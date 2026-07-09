@@ -101,7 +101,7 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
 /// extractors from `src/v3/jsonb/{functions,operators}.sql`.
 ///
 /// Terms live on `jsonb_entry` — the sv *element* type — ONLY: `eql_v3.eq_term`
-/// reads `coalesce(hm, oc)` for `=`/`<>`, and `eql_v3.ore_cllw` reads `oc` for
+/// reads `coalesce(hm, op)` for `=`/`<>`, and `eql_v3.ord_ope_term` reads `op` for
 /// `<`/`<=`/`>`/`>=`. The `json` container and `query_jsonb` domains carry no
 /// term extractors (their surface is containment `@>`/`<@` and path navigation),
 /// so they return no terms. Keyed on the catalog domain name (`json`/`entry`/
@@ -117,9 +117,9 @@ fn stevec_terms(name: &str) -> Vec<TermInfo> {
             ctor: "hmac_256",
         },
         TermInfo {
-            key: "oc",
-            extractor: "ore_cllw",
-            ctor: "ore_cllw",
+            key: "op",
+            extractor: "ord_ope_term",
+            ctor: "ope_cllw",
         },
     ]
 }
@@ -239,13 +239,13 @@ mod tests {
         };
 
         // Term extractors live on `jsonb_entry` (the sv element type) ONLY:
-        // `eq_term` (hm/oc equality) + `ore_cllw` (oc ordering).
+        // `eq_term` (hm/op equality) + `ord_ope_term` (op ordering).
         let entry_extractors: Vec<&str> = by_name("jsonb_entry")
             .terms
             .iter()
             .map(|t| t.extractor)
             .collect();
-        assert_eq!(entry_extractors, ["eq_term", "ore_cllw"]);
+        assert_eq!(entry_extractors, ["eq_term", "ord_ope_term"]);
 
         // The `json` container and `query_jsonb` domains carry no term
         // extractors — their surface is containment (@>, <@) and path nav.

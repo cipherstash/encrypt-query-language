@@ -10,10 +10,10 @@
 --! satisfying Supabase splinter's `function_search_path_mutable` lint.
 --!
 --! @note A SET clause disables SQL-function inlining. The inline-critical SEM
---!       helpers (ore_block_256_*, ore_cllw_*, ore_cllw/has_ore_cllw,
---!       ope_cllw, hmac_256, bloom_filter over jsonb) and the
---!       encrypted-domain family (recognised structurally, including public
---!       user-column domains) are deliberately left unpinned.
+--!       helpers (ore_block_256_*, ope_cllw, hmac_256, bloom_filter over
+--!       jsonb) and the encrypted-domain family (recognised structurally,
+--!       including public user-column domains) are deliberately left
+--!       unpinned.
 --! @see tasks/test/splinter.sh
 --! @see tasks/build.sh
 
@@ -44,13 +44,6 @@ BEGIN
         AND p.proname IN ('ore_block_256_eq', 'ore_block_256_neq',
                           'ore_block_256_lt', 'ore_block_256_lte',
                           'ore_block_256_gt', 'ore_block_256_gte'))
-      OR (p.pronargs = 2
-        AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
-                          'ore_cllw_lt', 'ore_cllw_lte',
-                          'ore_cllw_gt', 'ore_cllw_gte'))
-      OR (p.pronargs = 1
-        AND p.proname IN ('ore_cllw', 'has_ore_cllw')
-        AND p.proargtypes[0] = jsonb_oid)
       -- The CLLW-OPE surface is the extractor alone: eql_v3_internal.ope_cllw is a
       -- domain over bytea (native comparison operators and btree opclass),
       -- so there are no ope-specific comparison functions to keep inlinable.

@@ -169,7 +169,7 @@ pub trait ScalarType:
 
     /// Ordering extractor expression for a domain-typed value expression.
     /// Default scalar Ord/OrdOre path is `eql_v3.ord_term(value)`.
-    /// SteVec entries override this to `eql_v3.ore_cllw(value)`.
+    /// SteVec entries override this to `eql_v3.ord_ope_term(value)`.
     fn ord_extractor_expr(value_expr: &str) -> String {
         format!("eql_v3.ord_term({value_expr})")
     }
@@ -1363,7 +1363,7 @@ impl ScalarDomainSpec {
     /// Extractor expression for the variant's discriminating term applied to
     /// `value_expr`. Routes through the per-type `eq_extractor` / `ord_extractor`
     /// seams, so scalars produce `eql_v3.eq_term(...)` / `eql_v3.ord_term(...)`
-    /// and a SteVec-entry view produces `eql_v3.eq_term(...)` / `eql_v3.ore_cllw(...)`.
+    /// and a SteVec-entry view produces `eql_v3.eq_term(...)` / `eql_v3.ord_ope_term(...)`.
     /// `Storage` has no discriminating term and returns `None`. `Search` (the
     /// combined `_search` domain, which provides ordering) routes through the
     /// ordered extractor like `Ord`/`OrdOre`.

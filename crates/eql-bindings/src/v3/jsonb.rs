@@ -11,7 +11,7 @@ use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::v3::terms::{Ciphertext, Hmac256, OreCllw, Selector};
+use crate::v3::terms::{Ciphertext, Hmac256, OpeCllw, Selector};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 
@@ -86,7 +86,7 @@ pub struct SteVecDocument {
 
 /// `public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector
 /// `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
-/// `hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
+/// `hm` XOR `op`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
 /// root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
@@ -124,14 +124,14 @@ pub struct SteVecQueryEntry {
     pub term: SteVecTerm,
 }
 
-/// The per-entry deterministic term: exactly one of `hm` (HMAC equality) or `oc`
-/// (CLLW-ORE ordering). Untagged — a document mixes both across its `sv` array.
+/// The per-entry deterministic term: exactly one of `hm` (HMAC equality) or `op`
+/// (CLLW-OPE ordering). Untagged — a document mixes both across its `sv` array.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(untagged)]
 pub enum SteVecTerm {
     Hmac { hm: Hmac256 },
-    OreCllw { oc: OreCllw },
+    OpeCllw { op: OpeCllw },
 }
 
 macro_rules! ste_vec_domain_type {
@@ -144,7 +144,7 @@ macro_rules! ste_vec_domain_type {
                 Self::sql_domain_static()
             }
             // `term_json_keys` keeps the trait default (`None`): SteVec index
-            // terms live per sv leaf (`hm` XOR `oc`), not as flat payload keys.
+            // terms live per sv leaf (`hm` XOR `op`), not as flat payload keys.
             fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
                 <$ty as Deserialize>::deserialize(value).map(|_| ())
             }

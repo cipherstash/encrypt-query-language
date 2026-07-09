@@ -39,7 +39,7 @@ CATALOG_JSON = """{
     { "full_name": "json", "typname": "eql_v3_json", "name": "json", "terms": [] },
     { "full_name": "jsonb_entry", "typname": "eql_v3_jsonb_entry", "name": "entry", "terms": [
       {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
-      {"key": "oc", "extractor": "ore_cllw", "ctor": "ore_cllw"}
+      {"key": "op", "extractor": "ord_ope_term", "ctor": "ope_cllw"}
     ] },
     { "full_name": "query_jsonb", "typname": "query_jsonb", "name": "query", "terms": [] }
   ]
@@ -124,12 +124,12 @@ def test_load_domains():
     assert by_name["public.eql_v3_text_search"]["capabilities"] == ["equality", "order", "match"]
     # SteVec (jsonb) domains come from the `stevec` section. Term extractors are
     # hardcoded on `jsonb_entry` (the sv element type) ONLY — hm -> eq_term,
-    # oc -> ore_cllw; the `json` container and `query_jsonb` carry none.
+    # op -> ord_ope_term; the `json` container and `query_jsonb` carry none.
     assert by_name["public.eql_v3_json"]["termFunctions"] == []
     assert by_name["eql_v3.query_jsonb"]["termFunctions"] == []
     assert by_name["public.eql_v3_jsonb_entry"]["capabilities"] == ["json"]
     assert by_name["public.eql_v3_jsonb_entry"]["shape"] == "stevec"
-    assert by_name["public.eql_v3_jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ore_cllw"]
+    assert by_name["public.eql_v3_jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ord_ope_term"]
 
 
 if __name__ == "__main__":

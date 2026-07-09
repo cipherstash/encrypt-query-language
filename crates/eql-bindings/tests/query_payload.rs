@@ -59,11 +59,11 @@ fn assert_serialization_pin(v2: &Value) -> QueryPayload {
 
 #[test]
 fn typed_needle_yields_the_ste_vec_variant() {
-    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|oc}]}` — no envelope.
+    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope.
     let v2 = json!({
         "sv": [
             { "s": SELECTOR, "hm": HEX },
-            { "s": SELECTOR, "oc": HEX_LONG }
+            { "s": SELECTOR, "op": HEX_LONG }
         ]
     });
     let typed = assert_serialization_pin(&v2);
@@ -182,7 +182,7 @@ fn scalar_query_hoist_and_storage_only_unsupported() {
 
 #[test]
 fn typed_entry_term_errors_match_from_v2_query() {
-    let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "oc": HEX_LONG } ] });
+    let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] });
     assert!(matches!(
         from_v2_query_typed(&both, TargetDomain::Json).unwrap_err(),
         FromV2Error::AmbiguousTerm { entry: 0 }
@@ -191,7 +191,7 @@ fn typed_entry_term_errors_match_from_v2_query() {
     match from_v2_query_typed(&neither, TargetDomain::Json).unwrap_err() {
         FromV2Error::MissingTerm { domain, key, entry } => {
             assert_eq!(domain, "query_jsonb");
-            assert_eq!(key, "hm|oc");
+            assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }
         other => panic!("expected MissingTerm, got {other:?}"),

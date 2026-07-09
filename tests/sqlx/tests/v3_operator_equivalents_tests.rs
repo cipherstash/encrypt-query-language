@@ -202,7 +202,7 @@ async fn internal_only_helpers_stay_out_of_eql_v3(pool: PgPool) -> Result<()> {
         "jsonb_entry_min_sfunc",
         "jsonb_entry_max_sfunc",
         "is_ste_vec_array",
-        "compare_ore_cllw_term",
+        "ope_cllw",
         "ore_block_256_eq",
     ];
 
