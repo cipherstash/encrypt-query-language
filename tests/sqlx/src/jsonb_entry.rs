@@ -155,6 +155,30 @@ mod tests {
         );
     }
 
+    /// Pins the `ord_extractor_expr` OVERRIDE as load-bearing.
+    ///
+    /// Under `Variant::Ord` the override is indistinguishable from the
+    /// catalog-derived default: `PG_TYPE` is `"integer"`, whose `_ord` is
+    /// `Term::Ope`, which yields `ord_term` — the same string. Asserting only
+    /// that case would pass with the override deleted.
+    ///
+    /// `Variant::OrdOre` is where they diverge. The default would consult the
+    /// catalog, find `Term::Ore`, and emit `ord_term_ore` — wrong for an entry,
+    /// whose ordering term is structurally `op` regardless of variant. So this
+    /// fails the moment the override stops ignoring the variant.
+    #[test]
+    fn ord_extractor_override_ignores_the_variant() {
+        for variant in [Variant::Ord, Variant::OrdOre] {
+            assert_eq!(
+                <JsonbEntryInteger as ScalarType>::ord_extractor_expr(variant, "value"),
+                "eql_v3.ord_term(value)",
+                "a SteVec entry always orders by its structural `op` term, but \
+                 {variant:?} resolved to a different extractor — the override in \
+                 `impl ScalarType for JsonbEntryInteger` was bypassed or removed",
+            );
+        }
+    }
+
     #[test]
     fn fixture_values_wrap_integer_values_in_order() {
         let got: Vec<i32> = <JsonbEntryInteger as ScalarType>::fixture_values()
