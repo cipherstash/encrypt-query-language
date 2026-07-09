@@ -393,13 +393,7 @@ async fn public_user_domain_constraints_do_not_depend_on_eql_owned_schemas(
 /// detail into type pickers.
 #[sqlx::test]
 async fn sem_index_term_types_remain_internal(pool: PgPool) -> Result<()> {
-    let expected = [
-        "bloom_filter",
-        "hmac_256",
-        "ope_cllw",
-        "ore_block_256",
-        "ore_cllw",
-    ];
+    let expected = ["bloom_filter", "hmac_256", "ope_cllw", "ore_block_256"];
     let present: Vec<String> = sqlx::query_scalar(
         r#"
         SELECT t.typname::text

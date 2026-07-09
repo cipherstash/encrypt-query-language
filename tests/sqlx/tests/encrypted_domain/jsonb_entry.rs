@@ -1,7 +1,7 @@
 //! Behaviour matrix for SteVec jsonb-entry comparisons, reusing the scalar
 //! matrix generators via `jsonb_entry_matrix!`. Covers the positive behaviours
 //! (correctness / ordering / NULL / ORDER BY / COUNT / index engagement, plus
-//! entry-specific fixture-shape and ORE-CLLW injectivity tests) that the
+//! entry-specific fixture-shape and CLLW-OPE injectivity tests) that the
 //! hand-written `v3_jsonb_tests` suite does not. Document-specific behaviours
 //! (containment / path query / array ops / the operator-surface guard) remain
 //! in `v3_jsonb_tests` / `v3_jsonb_operator_surface_tests`.
@@ -23,7 +23,7 @@ eql_tests::jsonb_entry_matrix! {
 
 // ----------------------------------------------------------------------------
 // Entry-specific structural invariant. Pins that the pinned SELECTOR extracts a
-// real, `oc`-carrying entry from every fixture row — a wrong selector would make
+// real, `op`-carrying entry from every fixture row — a wrong selector would make
 // every matrix comparison vacuous via NULL extraction rather than failing.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
@@ -59,31 +59,32 @@ async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result
         "{null_entries} rows have a NULL entry at SELECTOR — wrong selector for $.field?",
     );
 
-    // Every extracted entry is a valid jsonb_entry payload AND carries `oc`
-    // (the ordered term the matrix's ore_cllw paths require).
+    // Every extracted entry is a valid jsonb_entry payload AND carries `op`
+    // (the ordered term the matrix's ord_ope_term paths require —
+    // `eql_v3.ord_ope_term` returns SQL NULL for an op-less entry).
     let invalid: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(*) FROM fixtures.v3_doc_integer \
          WHERE NOT public.eql_v3_is_valid_ste_vec_entry_payload((payload -> '{SELECTOR}'::text)::jsonb) \
-            OR NOT eql_v3.has_ore_cllw((payload -> '{SELECTOR}'::text)::public.jsonb_entry)",
+            OR eql_v3.ord_ope_term((payload -> '{SELECTOR}'::text)::public.jsonb_entry) IS NULL",
     ))
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(
         invalid == 0,
-        "{invalid} rows have an invalid or oc-less entry at SELECTOR",
+        "{invalid} rows have an invalid or op-less entry at SELECTOR",
     );
 
-    // Distinct oc terms == row count (distinct plaintexts → distinct ORE-CLLW
+    // Distinct op terms == row count (distinct plaintexts → distinct CLLW-OPE
     // leaves), so the correctness/ordering oracle has real discrimination.
-    let distinct_oc: i64 = sqlx::query_scalar(&format!(
-        "SELECT COUNT(DISTINCT ((payload -> '{SELECTOR}'::text)::jsonb ->> 'oc')) \
+    let distinct_op: i64 = sqlx::query_scalar(&format!(
+        "SELECT COUNT(DISTINCT ((payload -> '{SELECTOR}'::text)::jsonb ->> 'op')) \
          FROM fixtures.v3_doc_integer",
     ))
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(
-        distinct_oc == n,
-        "{n} distinct plaintexts must yield {n} distinct oc terms; got {distinct_oc}",
+        distinct_op == n,
+        "{n} distinct plaintexts must yield {n} distinct op terms; got {distinct_op}",
     );
 
     Ok(())
@@ -103,26 +104,26 @@ async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow::Result<()> {
-    // The `$.field` ORE-CLLW entry is the sv element carrying `oc`. Cast the
+    // The `$.field` CLLW-OPE entry is the sv element carrying `op`. Cast the
     // `public.json` payload to bare jsonb FIRST so `-> 'sv'` is the native array
     // accessor, not the custom `public.json -> text` selector-lookup operator.
     let live: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT elem ->> 's' \
          FROM fixtures.v3_doc_integer, \
               jsonb_array_elements(payload::jsonb -> 'sv') AS elem \
-         WHERE elem ? 'oc'",
+         WHERE elem ? 'op'",
     )
     .fetch_all(&pool)
     .await?;
 
     anyhow::ensure!(
         live.len() == 1,
-        "expected exactly one distinct $.field oc-selector in v3_doc_integer, got {live:?}",
+        "expected exactly one distinct $.field op-selector in v3_doc_integer, got {live:?}",
     );
     let live = &live[0];
     anyhow::ensure!(
         live == SELECTOR,
-        "v3_doc_integer $.field oc-selector drifted from the pinned constant.\n  \
+        "v3_doc_integer $.field op-selector drifted from the pinned constant.\n  \
          pinned v3_doc_integer::SELECTOR = {SELECTOR}\n  \
          live fixture selector        = {live}\n\
          The SteVec selector is keyed by the CipherStash workspace; if the \
@@ -133,25 +134,25 @@ async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> any
 }
 
 // ----------------------------------------------------------------------------
-// ORE-CLLW injectivity. Distinct plaintexts must produce distinct ore_cllw
-// terms. Compares `eql_v3.ore_cllw(...)` outputs directly — NOT entry `=`, which
+// CLLW-OPE injectivity. Distinct plaintexts must produce distinct ord_ope_term
+// terms. Compares `eql_v3.ord_ope_term(...)` outputs directly — NOT entry `=`, which
 // tests `eq_term`, not ORE.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
-async fn jsonb_entry_integer_ore_cllw_injectivity(pool: sqlx::PgPool) -> anyhow::Result<()> {
+async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::Result<()> {
     let collisions: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(*) \
          FROM fixtures.v3_doc_integer a \
          JOIN fixtures.v3_doc_integer b ON a.id < b.id \
          WHERE a.plaintext <> b.plaintext \
-           AND eql_v3.ore_cllw((a.payload -> '{SELECTOR}'::text)::public.jsonb_entry) \
-             = eql_v3.ore_cllw((b.payload -> '{SELECTOR}'::text)::public.jsonb_entry)",
+           AND eql_v3.ord_ope_term((a.payload -> '{SELECTOR}'::text)::public.jsonb_entry) \
+             = eql_v3.ord_ope_term((b.payload -> '{SELECTOR}'::text)::public.jsonb_entry)",
     ))
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(
         collisions == 0,
-        "no two distinct plaintexts may share an ORE-CLLW term ($.field); got {collisions} collisions",
+        "no two distinct plaintexts may share an CLLW-OPE term ($.field); got {collisions} collisions",
     );
     Ok(())
 }
@@ -159,16 +160,16 @@ async fn jsonb_entry_integer_ore_cllw_injectivity(pool: sqlx::PgPool) -> anyhow:
 // ----------------------------------------------------------------------------
 // Index engagement — hand-written (not via the shared `__scalar_matrix_index`
 // driver, which sweeps a bare-jsonb RHS that flattens to native `jsonb < jsonb`
-// for entries). Builds the ore_cllw functional btree and asserts each ORDERING
-// op (which inlines to `ore_cllw(value) <op> ore_cllw(const)`) engages it, using
+// for entries). Builds the ord_ope_term functional btree and asserts each ORDERING
+// op (which inlines to `ord_ope_term(value) <op> ord_ope_term(const)`) engages it, using
 // the domain-cast RHS (`'<lit>'::public.jsonb_entry`) so the entry operator
 // resolves rather than native jsonb.
 //
 // VALIDITY ONLY: forces `enable_seqscan = off` on the ~17-row fixture, so a
 // green assertion proves the index is USABLE, not that the planner would PREFER
 // it at scale (mirrors the scalar index-engagement caveat). Equality is
-// excluded: entry `=` reduces through `eql_v3.eq_term`, not `ore_cllw`, so the
-// ore_cllw btree cannot serve it.
+// excluded: entry `=` reduces through `eql_v3.eq_term`, not `ord_ope_term`, so the
+// ord_ope_term btree cannot serve it.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()> {
@@ -188,7 +189,7 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
     ))
     .execute(&mut *tx)
     .await?;
-    sqlx::query("CREATE INDEX entry_idx_ore ON entry_idx USING btree (eql_v3.ore_cllw(value))")
+    sqlx::query("CREATE INDEX entry_idx_ope ON entry_idx USING btree (eql_v3.ord_ope_term(value))")
         .execute(&mut *tx)
         .await?;
     sqlx::query("ANALYZE entry_idx").execute(&mut *tx).await?;
@@ -202,8 +203,8 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
         eql_tests::matrix::assert_index_scan_uses(
             &mut *tx,
             &query,
-            "entry_idx_ore",
-            &format!("entry op {op} (domain-cast RHS) must engage the ore_cllw functional btree"),
+            "entry_idx_ope",
+            &format!("entry op {op} (domain-cast RHS) must engage the ord_ope_term functional btree"),
         )
         .await?;
     }
@@ -213,24 +214,24 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
 }
 
 // ----------------------------------------------------------------------------
-// Aggregate robustness over non-orderable (oc-less) entries. `eql_v3.ore_cllw`
-// is NULL for an entry without an `oc` term, so a naive `ore_cllw(value) <
-// ore_cllw(state)` would be NULL whenever the running extremum is oc-less —
+// Aggregate robustness over non-orderable (op-less) entries. `eql_v3.ord_ope_term`
+// is NULL for an entry without an `op` term, so a naive `ord_ope_term(value) <
+// ord_ope_term(state)` would be NULL whenever the running extremum is op-less —
 // pinning a wrong result when the FIRST aggregated row (the STRICT seed) is
-// oc-less. The min/max sfuncs explicitly skip oc-less entries. This feeds a
-// forged hm-only (oc-less) entry in the SEED position alongside real oc-carrying
+// op-less. The min/max sfuncs explicitly skip op-less entries. This feeds a
+// forged hm-only (op-less) entry in the SEED position alongside real op-carrying
 // entries and asserts the extremum is the correct ORDERABLE entry, never the
-// oc-less seed. The whole-suite matrix never exercises this (every v3_doc_integer
-// entry carries oc).
+// op-less seed. The whole-suite matrix never exercises this (every v3_doc_integer
+// entry carries op).
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
-async fn jsonb_entry_integer_aggregate_ignores_oc_less_entries(
+async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
     pool: sqlx::PgPool,
 ) -> anyhow::Result<()> {
     let sel = SELECTOR;
     // A valid public.jsonb_entry that is NOT orderable: string s, string c,
-    // exactly one of hm/oc — here `hm`, so `eql_v3.ore_cllw(entry)` is NULL.
-    let oc_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
+    // exactly one of hm/op — here `hm`, so `eql_v3.ord_ope_term(entry)` is NULL.
+    let op_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
 
     let mut sorted: Vec<i32> = <JsonbEntryInteger as ScalarType>::fixture_values()
         .iter()
@@ -241,17 +242,17 @@ async fn jsonb_entry_integer_aggregate_ignores_oc_less_entries(
     let high = *sorted.last().expect("fixture is non-empty");
 
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TEMP TABLE oc_mix (value public.jsonb_entry) ON COMMIT DROP")
+    sqlx::query("CREATE TEMP TABLE op_mix (value public.jsonb_entry) ON COMMIT DROP")
         .execute(&mut *tx)
         .await?;
-    // SEED position: the oc-less entry is inserted FIRST, so the STRICT seed is
+    // SEED position: the op-less entry is inserted FIRST, so the STRICT seed is
     // non-orderable — the exact case the sfunc guard must survive.
-    sqlx::query("INSERT INTO oc_mix(value) VALUES ($1::jsonb::public.jsonb_entry)")
-        .bind(oc_less)
+    sqlx::query("INSERT INTO op_mix(value) VALUES ($1::jsonb::public.jsonb_entry)")
+        .bind(op_less)
         .execute(&mut *tx)
         .await?;
     sqlx::query(&format!(
-        "INSERT INTO oc_mix(value) \
+        "INSERT INTO op_mix(value) \
          SELECT (payload -> '{sel}'::text)::public.jsonb_entry \
          FROM fixtures.v3_doc_integer WHERE plaintext IN ({low}, {high})",
     ))
@@ -259,7 +260,7 @@ async fn jsonb_entry_integer_aggregate_ignores_oc_less_entries(
     .await?;
 
     // Expected extrema: the orderable entries for the smallest / largest integer,
-    // NOT the oc-less seed.
+    // NOT the op-less seed.
     let expect_min: String = sqlx::query_scalar(&format!(
         "SELECT ((payload -> '{sel}'::text)::public.jsonb_entry)::text \
          FROM fixtures.v3_doc_integer WHERE plaintext = {low}",
@@ -273,21 +274,21 @@ async fn jsonb_entry_integer_aggregate_ignores_oc_less_entries(
     .fetch_one(&mut *tx)
     .await?;
 
-    let got_min: String = sqlx::query_scalar("SELECT eql_v3.min(value)::text FROM oc_mix")
+    let got_min: String = sqlx::query_scalar("SELECT eql_v3.min(value)::text FROM op_mix")
         .fetch_one(&mut *tx)
         .await?;
-    let got_max: String = sqlx::query_scalar("SELECT eql_v3.max(value)::text FROM oc_mix")
+    let got_max: String = sqlx::query_scalar("SELECT eql_v3.max(value)::text FROM op_mix")
         .fetch_one(&mut *tx)
         .await?;
 
     anyhow::ensure!(
         got_min == expect_min,
-        "eql_v3.min must ignore the oc-less seed and return the smallest orderable entry;\n  \
+        "eql_v3.min must ignore the op-less seed and return the smallest orderable entry;\n  \
          want {expect_min}\n  got  {got_min}",
     );
     anyhow::ensure!(
         got_max == expect_max,
-        "eql_v3.max must ignore the oc-less entry and return the largest orderable entry;\n  \
+        "eql_v3.max must ignore the op-less entry and return the largest orderable entry;\n  \
          want {expect_max}\n  got  {got_max}",
     );
 

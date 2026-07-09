@@ -126,11 +126,11 @@ The search capabilities available on a value extracted via `->` or `eql_v3.jsonb
 | ------------------------ | ------------------------------------------------- | :------------------------------: | :--------------------------------------------: |
 | Object `{ … }`           | `hm`                                              | ✅                               | ❌                                             |
 | Array `[ … ]`            | `hm` on the container; each element also appears as its own `sv` entry with its own leaf terms | ✅ | ❌                          |
-| String `"…"`             | `hm`, `ocv` (variable-width CLLW ORE)             | ✅                               | ✅                                             |
-| Number (integer/numeric) | `hm`, `ocf` (fixed-width CLLW ORE)                | ✅                               | ✅                                             |
+| String `"…"`             | `hm`, `op` (variable-width CLLW OPE)              | ✅                               | ✅                                             |
+| Number (integer/numeric) | `hm`, `op` (CLLW OPE)                             | ✅                               | ✅                                             |
 | Boolean / JSON null      | `hm`                                              | ✅                               | ❌                                             |
 
-`hm` supports equality only; `ocv` / `ocf` are CLLW ORE terms that preserve order *and* collapse to equality on matching keys. JSON `null` here refers to a `null` literal *inside* the document — a SQL `NULL` column is not encrypted at all.
+`hm` supports equality only; `op` is a CLLW OPE term that preserves order *and* collapses to equality on matching keys. JSON `null` here refers to a `null` literal *inside* the document — a SQL `NULL` column is not encrypted at all.
 
 ### Operators and functions on `public.json`
 
@@ -140,7 +140,7 @@ The search capabilities available on a value extracted via `->` or `eql_v3.jsonb
 | `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.jsonb_entry`. |
 | `doc ->> 'sel'::text`            | `eql_v3."->>"`                                     | the matching entry serialized as `text` (ciphertext JSON, **not** decrypted plaintext). |
 | extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.jsonb_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
-| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ore_cllw(public.jsonb_entry)`            | ordered comparison on an extracted String / Number leaf. |
+| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_ope_term(public.jsonb_entry)`       | ordered comparison on an extracted String / Number leaf. |
 | `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.jsonb_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |
 | `eql_v3.jsonb_array_length/elements/elements_text(doc)` | array helpers                  | length / set-returning elements / element text. |

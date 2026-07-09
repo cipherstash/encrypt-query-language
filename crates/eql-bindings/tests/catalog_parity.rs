@@ -263,8 +263,8 @@ fn schemas_are_strict() {
 ///   form discriminator, required by the canonical SteVecPayload and carried on
 ///   every real payload — the SQL CHECK is laxer and only mandates `v`/`i`/`sv`,
 ///   but the binding models the real wire, which always carries `k`)
-/// - `public.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `oc`
-/// - `eql_v3.query_jsonb`  requires `sv`; each element `s` + `hm` XOR `oc`, no `c`
+/// - `public.jsonb_entry` requires `s` `c` + exactly one of `hm` XOR `op`
+/// - `eql_v3.query_jsonb`  requires `sv`; each element `s` + `hm` XOR `op`, no `c`
 #[test]
 fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     let entries = v3::all();
@@ -296,8 +296,8 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         "public.json required keys must match the SteVec document wire contract"
     );
 
-    // Entry: {s, c} + hm XOR oc. The XOR is expressed as an untagged `anyOf`
-    // over {hm} | {oc} (serde/schemars cannot express exclusivity; the SQL CHECK
+    // Entry: {s, c} + hm XOR op. The XOR is expressed as an untagged `anyOf`
+    // over {hm} | {op} (serde/schemars cannot express exclusivity; the SQL CHECK
     // owns the XOR). Assert both the base required set and that BOTH term
     // alternatives are reachable.
     let entry = schema_of("jsonb_entry");
@@ -311,7 +311,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         .and_then(|v| v.as_array())
         .expect("jsonb_entry schema must carry an anyOf term union");
     // Assert each arm *independently* — a flat union of required keys would let a
-    // mixed/invalid arm (e.g. one requiring both `hm` and `oc`) slip through.
+    // mixed/invalid arm (e.g. one requiring both `hm` and `op`) slip through.
     let entry_alt_required: Vec<BTreeSet<String>> = entry_alts
         .iter()
         .map(|alt| required(alt, "/required", "jsonb_entry anyOf"))
@@ -319,12 +319,12 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     assert!(
         entry_alt_required.len() == 2
             && entry_alt_required.contains(&set(&["hm"]))
-            && entry_alt_required.contains(&set(&["oc"])),
-        "public.jsonb_entry anyOf must offer exactly the hm-only and oc-only term \
+            && entry_alt_required.contains(&set(&["op"])),
+        "public.jsonb_entry anyOf must offer exactly the hm-only and op-only term \
          alternatives (each arm a singleton), got {entry_alt_required:?}"
     );
 
-    // Query: {sv}. The element (SteVecQueryEntry) requires `s` + hm XOR oc and
+    // Query: {sv}. The element (SteVecQueryEntry) requires `s` + hm XOR op and
     // carries NO ciphertext `c` — the "queries never carry ciphertext" rule.
     let query = schema_of("query_jsonb");
     assert_eq!(
@@ -346,7 +346,7 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         "query_jsonb element must NOT require a ciphertext c \
          (is_valid_ste_vec_query_payload forbids it), got {elem_required:?}"
     );
-    // Same arm-wise check as jsonb_entry: the query element's hm XOR oc union must
+    // Same arm-wise check as jsonb_entry: the query element's hm XOR op union must
     // be two singleton arms, not a flattened set that could mask a mixed branch.
     let query_alts = query
         .pointer("/$defs/SteVecQueryEntry/anyOf")
@@ -359,8 +359,8 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     assert!(
         query_alt_required.len() == 2
             && query_alt_required.contains(&set(&["hm"]))
-            && query_alt_required.contains(&set(&["oc"])),
+            && query_alt_required.contains(&set(&["op"])),
         "eql_v3.query_jsonb element anyOf must offer exactly the hm-only and \
-         oc-only term alternatives (each arm a singleton), got {query_alt_required:?}"
+         op-only term alternatives (each arm a singleton), got {query_alt_required:?}"
     );
 }

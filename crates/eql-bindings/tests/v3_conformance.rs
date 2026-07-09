@@ -381,7 +381,7 @@ fn stevec_document_round_trips_and_enforces_envelope() {
         "i": { "t": "users", "c": "profile" },
         "sv": [
             { "s": "sel_root", "c": "ct_root", "hm": "deadbeef" },
-            { "s": "sel_age", "c": "ct_age", "a": true, "oc": "cllw_ore" }
+            { "s": "sel_age", "c": "ct_age", "a": true, "op": "cllw_ope" }
         ]
     });
     let parsed: SteVecDocument = serde_json::from_value(wire.clone()).unwrap();
@@ -425,20 +425,20 @@ fn stevec_entry_untagged_term_and_neither_term_rejected() {
     let hm: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
     assert!(matches!(hm.term, SteVecTerm::Hmac { .. }));
-    // oc arm.
-    let oc: SteVecEntry =
-        serde_json::from_value(json!({ "s": "sel", "c": "ct", "oc": "cllw" })).unwrap();
-    assert!(matches!(oc.term, SteVecTerm::OreCllw { .. }));
+    // op arm.
+    let op: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "op": "cllw" })).unwrap();
+    assert!(matches!(op.term, SteVecTerm::OpeCllw { .. }));
     // Lax: tolerates root i/v merged in by `->`.
     let merged: SteVecEntry = serde_json::from_value(
         json!({ "s": "sel", "c": "ct", "hm": "x", "i": {"t":"a","c":"b"}, "v": 3 }),
     )
     .unwrap();
     assert!(matches!(merged.term, SteVecTerm::Hmac { .. }));
-    // MARQUEE NEGATIVE: neither hm nor oc must fail (untagged enum has no matching arm).
+    // MARQUEE NEGATIVE: neither hm nor op must fail (untagged enum has no matching arm).
     assert!(
         serde_json::from_value::<SteVecEntry>(json!({ "s": "sel", "c": "ct" })).is_err(),
-        "an entry with neither hm nor oc must be rejected"
+        "an entry with neither hm nor op must be rejected"
     );
 }
 
@@ -543,16 +543,16 @@ fn stevec_ts_exports_have_expected_shape() {
             .to_string()
     };
 
-    // SteVecTerm: the untagged `{ hm } | { oc }` union — both arms present, joined.
+    // SteVecTerm: the untagged `{ hm } | { op }` union — both arms present, joined.
     let term = export_line("SteVecTerm.ts", "SteVecTerm");
     assert!(
         term.contains("{ hm: Hmac256, }")
-            && term.contains("{ oc: OreCllw, }")
+            && term.contains("{ op: OpeCllw, }")
             && term.contains('|'),
-        "SteVecTerm.ts must be the `{{ hm }} | {{ oc }}` union, got: {term}"
+        "SteVecTerm.ts must be the `{{ hm }} | {{ op }}` union, got: {term}"
     );
 
-    // SteVecEntry: direct fields s/c, the flattened hm|oc term union, and the
+    // SteVecEntry: direct fields s/c, the flattened hm|op term union, and the
     // OPTIONAL nullable array marker `a`. `a?: boolean | null` (not `a: boolean |
     // null`) pins ts-rs optionality so the TS binding agrees with the JSON Schema,
     // which excludes `a` from `required` — the drift a bare `Option<bool>` without
@@ -563,7 +563,7 @@ fn stevec_ts_exports_have_expected_shape() {
         "c: Ciphertext",
         "a?: boolean | null",
         "{ hm: Hmac256, }",
-        "{ oc: OreCllw, }",
+        "{ op: OpeCllw, }",
     ] {
         assert!(
             entry.contains(needle),

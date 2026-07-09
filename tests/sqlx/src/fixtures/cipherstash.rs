@@ -68,7 +68,7 @@ pub const PAYLOAD_COLUMN: &str = "payload";
 /// forges its own ORE ladder, so the fixture only needs to be *internally
 /// consistent* — a single fixed prefix applied to all rows yields stable
 /// per-path selectors. Any well-formed prefix that produces extractor-
-/// compatible `hm`/`oc` leaves works.
+/// compatible `hm`/`op` leaves works.
 pub const STE_VEC_PREFIX: &str = "v3_ste_vec";
 
 /// Build a `ColumnConfig` from the fixture spec's index list + cast.
@@ -131,15 +131,21 @@ fn index_type_for(kind: IndexKind) -> IndexType {
         IndexKind::Ope => Index::new_ope().index_type,
         IndexKind::Match => Index::new_match().index_type,
         // No `Index::new_ste_vec()` constructor exists — SteVec is a struct
-        // variant. `mode: SteVecMode::Standard` (the default) yields the
-        // ORE-CLLW (`oc`) terms the `eql_v3.ore_cllw` extractor consumes;
+        // variant. `mode: SteVecMode::Compat` yields CLLW-OPE ordering terms
+        // — the ones the v3 `eql_v3.ord_ope_term` extractor consumes (order-
+        // preserving under native byte comparison). The pinned 0.38.1 client
+        // serializes Compat-mode OPE bytes under the v2.3 `oc` key (the v2.3
+        // schema has no sv-level `op`); the fixture converter remaps them to
+        // `op` — see `ste_vec_oc_to_op` in v3_convert.rs. NOT
+        // `SteVecMode::Standard`: Standard emits CLLW-*ORE* terms, which do
+        // not order under byte comparison and have no v3 representation.
         // `ArrayIndexMode::default()` (NONE) + no term filters keep the
         // document index minimal.
         IndexKind::SteVec => IndexType::SteVec {
             prefix: STE_VEC_PREFIX.to_string(),
             term_filters: vec![],
             array_index_mode: ArrayIndexMode::default(),
-            mode: SteVecMode::default(),
+            mode: SteVecMode::Compat,
         },
     }
 }

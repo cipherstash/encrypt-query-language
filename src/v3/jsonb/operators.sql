@@ -1,7 +1,7 @@
 -- REQUIRE: src/v3/schema.sql
 -- REQUIRE: src/v3/jsonb/types.sql
 -- REQUIRE: src/v3/jsonb/functions.sql
--- REQUIRE: src/v3/sem/ore_cllw/operators.sql
+-- REQUIRE: src/v3/sem/ope_cllw/types.sql
 
 --! @file v3/jsonb/operators.sql
 --! @brief Operators on public.json and public.jsonb_entry.
@@ -185,7 +185,7 @@ AS $$
                 jsonb_build_object(
                   's',  b -> 's',
                   'hm', b -> 'hm',
-                  'oc', b -> 'oc'
+                  'op', b -> 'op'
                 )
               )
             )
@@ -299,7 +299,7 @@ CREATE OPERATOR <> (
   JOIN     = neqjoinsel
 );
 
---! @brief Less-than on jsonb_entry via ore_cllw.
+--! @brief Less-than on jsonb_entry via the CLLW OPE term (native bytea order).
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is less than b
@@ -307,7 +307,7 @@ CREATE FUNCTION eql_v3.lt(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) < eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) < eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR < (
@@ -320,7 +320,7 @@ CREATE OPERATOR < (
   JOIN     = scalarltjoinsel
 );
 
---! @brief Less-than-or-equal on jsonb_entry via ore_cllw.
+--! @brief Less-than-or-equal on jsonb_entry via the CLLW OPE term.
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is less than or equal to b
@@ -328,7 +328,7 @@ CREATE FUNCTION eql_v3.lte(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) <= eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) <= eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR <= (
@@ -341,7 +341,7 @@ CREATE OPERATOR <= (
   JOIN     = scalarlejoinsel
 );
 
---! @brief Greater-than on jsonb_entry via ore_cllw.
+--! @brief Greater-than on jsonb_entry via the CLLW OPE term.
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is greater than b
@@ -349,7 +349,7 @@ CREATE FUNCTION eql_v3.gt(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) > eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) > eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR > (
@@ -362,7 +362,7 @@ CREATE OPERATOR > (
   JOIN     = scalargtjoinsel
 );
 
---! @brief Greater-than-or-equal on jsonb_entry via ore_cllw.
+--! @brief Greater-than-or-equal on jsonb_entry via the CLLW OPE term.
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is greater than or equal to b
@@ -370,7 +370,7 @@ CREATE FUNCTION eql_v3.gte(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) >= eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) >= eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR >= (

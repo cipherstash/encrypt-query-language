@@ -174,7 +174,7 @@ SELECT * FROM users
   WHERE data_encrypted -> '<selector-for-email>'::text = $1::public.jsonb_entry;
 ```
 
-For ordered field-level access, index `eql_v3.ore_cllw(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ore_cllw(doc -> '<selector>'::text)` — the same sort-key rule as above. The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
+For ordered field-level access, index `eql_v3.ord_ope_term(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ord_ope_term(doc -> '<selector>'::text)` — the same sort-key rule as above. The extracted CLLW-OPE term is a bytea domain that orders under the DEFAULT btree operator class, so this index needs no superuser-installed operator class (it works on Supabase / managed Postgres). The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
 
 ---
 
