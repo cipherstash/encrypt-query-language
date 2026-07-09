@@ -1,302 +1,184 @@
 # EQL with JSON and JSONB
 
-EQL supports encrypting, decrypting, and searching JSON and JSONB objects using structured encryption (ste_vec).
+EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json`** document domain. An `public.eql_v3_json` column stores an encrypted document whose every path is searchable — without decryption — via containment, field/array access, and entry-level equality / range on extracted leaves.
 
 ## On this page
 
-- [Configuring the index](#configuring-the-index)
-  - [Inserting JSON data](#inserting-json-data)
-  - [Reading JSON data](#reading-json-data)
-- [Querying JSONB data with EQL](#querying-jsonb-data-with-eql)
-  - [Containment queries (`@>`, `<@`)](#containment-queries---)
+- [Storing encrypted JSON](#storing-encrypted-json)
+- [Typed operands (important)](#typed-operands-important)
+- [Querying `public.eql_v3_json`](#querying-publicjson)
+  - [Containment queries (`@>`, `<@`)](#containment-queries)
   - [Field extraction (`jsonb_path_query`)](#field-extraction-jsonb_path_query)
-  - [JSON path operators (`->`, `->>`)](#json-path-operators---)
+  - [JSON path operators (`->`, `->>`)](#json-path-operators)
   - [Array operations](#array-operations)
   - [Grouping data](#grouping-data)
-- [EQL functions for JSONB and `ste_vec`](#eql-functions-for-jsonb-and-ste_vec)
+- [`eql_v3` functions for JSONB and ste_vec](#eql_v3-functions-for-jsonb-and-ste_vec)
 - [How ste_vec indexing works](#how-ste_vec-indexing-works)
 
-## Configuring the index
+## Storing encrypted JSON
 
-To enable searchable operations on encrypted JSONB data, configure an `ste_vec` index with the `jsonb` cast type.
+Type the column as `public.eql_v3_json`. There is no database-side `add_search_config` step — which terms a document carries is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); typing the column as `public.eql_v3_json` is what makes the encrypted operators and functions resolve.
 
 ```sql
-SELECT eql_v2.add_search_config(
-  'users',
-  'encrypted_json',
-  'ste_vec',
-  'jsonb',
-  '{"prefix": "users/encrypted_json"}'
+CREATE TABLE users (
+  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  encrypted_json public.eql_v3_json
 );
 ```
 
-The `prefix` option is required and should be unique per table/column combination (typically `"table/column"`).
-
-You can read more about the index configuration options [here](./index-config.md).
-
-### Inserting JSON data
-
-When inserting JSON data through CipherStash Proxy or Protect.js, wrap the data in the EQL payload format:
+Insert and read through CipherStash Proxy or CipherStash Stack, which encrypt the document into the ste_vec payload on write and decrypt it on read:
 
 ```sql
-INSERT INTO users (encrypted_json) VALUES (
-  '{"v":2,"k":"pt","p":"{\"name\":\"John Doe\",\"metadata\":{\"age\":42}}","i":{"t":"users","c":"encrypted_json"}}'
-);
+SELECT encrypted_json FROM users;   -- decrypted by the client on the way out
 ```
 
-Data is stored in the database with encrypted ste_vec indexes:
+The stored value is the encrypted ste_vec document — an envelope (`v`, `i`, `c`) plus the `sv` array of encrypted, per-path terms.
 
-```json
-{
-  "i": {
-    "c": "encrypted_json",
-    "t": "users"
-  },
-  "k": "sv",
-  "v": 2,
-  "sv": [["encrypted_term_1"], ["encrypted_term_2"], ...]
-}
-```
+## Typed operands (important)
 
-### Reading JSON data
+`public.eql_v3_json` is a PostgreSQL **domain over `jsonb`**. PostgreSQL resolves `domain OP untyped_literal` to the **native** `jsonb` operator, because it flattens the domain to its base type when the right-hand side is an unknown-typed literal. A bare literal therefore **bypasses the encrypted operator (and the blockers) and silently returns native jsonb semantics** — typically a root-key lookup that yields `NULL` — instead of querying the encrypted document or raising.
 
-When querying through CipherStash Proxy or Protect.js, the encrypted column is automatically decrypted:
+Always give the operand a known type:
 
 ```sql
-SELECT encrypted_json FROM users;
+-- ✅ correct — typed operand resolves to the eql_v3 operator
+WHERE doc -> 'email'::text = $1
+WHERE doc @> $1::eql_v3.query_jsonb
+WHERE doc -> $1            -- a text parameter (the CipherStash Proxy interface)
+
+-- ⚠ wrong — bare untyped literal resolves to native jsonb -> text, returns NULL
+WHERE doc -> 'email'
 ```
 
-## Querying JSONB data with EQL
+This is **intrinsic to the domain type-kind**, not a bug: the only way to remove it would be to make `public.eql_v3_json` a base type (losing free `jsonb` interop). The CipherStash Proxy always passes typed parameters, so applications routing through the Proxy are unaffected; the caveat matters only for hand-written ad-hoc SQL.
 
-EQL provides specialized functions and operators to work with encrypted JSONB data.
+## Querying `public.eql_v3_json`
 
 ### Containment queries (`@>`, `<@`)
 
-Use PostgreSQL's containment operators directly on `eql_v2_encrypted` columns to check if one JSONB structure contains another.
-
-**Example: Check if column contains structure**
-
-Suppose we have encrypted JSONB data:
-
-```json
-{
-  "top": {
-    "nested": ["a", "b", "c"]
-  }
-}
-```
-
-Query records that contain a specific structure:
+`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.eql_v3_json`, an `eql_v3.query_jsonb`, or an `public.eql_v3_jsonb_entry`:
 
 ```sql
 SELECT * FROM examples
-WHERE encrypted_json @> '{"v":2,"k":"pt","p":"{\"top\":{\"nested\":[\"a\"]}}","i":{"t":"examples","c":"encrypted_json"},"q":"ste_vec"}'::eql_v2_encrypted;
+WHERE encrypted_json @> $1::eql_v3.query_jsonb;
 ```
 
-Equivalent plaintext query:
+This is the encrypted equivalent of the plaintext `jsonb_column @> '{"top":{"nested":["a"]}}'`.
+
+For large tables, back containment with a GIN index. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
 
 ```sql
-SELECT * FROM examples
-WHERE jsonb_column @> '{"top":{"nested":["a"]}}';
-```
-
-**Note:** The `@>` operator checks if the left value contains the right value. The `<@` operator checks the reverse (if left is contained in right).
-
-#### Indexed Containment Queries
-
-For better performance on large tables, create a GIN index and use the `jsonb_array()` function:
-
-```sql
--- Create GIN index
-CREATE INDEX idx_encrypted_jsonb_gin
-ON examples USING GIN (eql_v2.jsonb_array(encrypted_json));
+CREATE INDEX examples_json_gin
+  ON examples USING gin (eql_v3.to_ste_vec_query(encrypted_json)::jsonb jsonb_path_ops);
 ANALYZE examples;
 
--- Query using the GIN index
-SELECT * FROM examples
-WHERE eql_v2.jsonb_array(encrypted_json) @>
-      eql_v2.jsonb_array($1::eql_v2_encrypted);
+SELECT * FROM examples WHERE encrypted_json @> $1::eql_v3.query_jsonb;
 ```
 
-See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for complete setup instructions.
+See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for the full setup.
 
 ### Field extraction (`jsonb_path_query`)
 
-Extract fields from encrypted JSONB using selector hashes. Selectors are generated during encryption and identify specific JSON paths.
-
-**Function signature:**
+Extract fields by **selector hash** — a deterministic identifier the crypto layer emits for a JSON path (not a path string like `$.field`). Selectors are generated during encryption by CipherStash Proxy / CipherStash Stack.
 
 ```sql
-eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text) RETURNS SETOF eql_v2_encrypted
+-- All entries matching a selector
+SELECT eql_v3.jsonb_path_query(encrypted_json, 'abc123def456...') FROM examples;
+
+-- First match only
+SELECT eql_v3.jsonb_path_query_first(encrypted_json, 'abc123def456...') FROM examples;
+
+-- Does the selector exist?
+SELECT eql_v3.jsonb_path_exists(encrypted_json, 'abc123def456...') FROM examples;
 ```
-
-**Example:**
-
-```sql
--- Extract all records where selector 'abc123...' exists
-SELECT eql_v2.jsonb_path_query(encrypted_json, 'abc123def456...')
-FROM examples;
-
--- Get first match only
-SELECT eql_v2.jsonb_path_query_first(encrypted_json, 'abc123def456...')
-FROM examples;
-
--- Check if selector exists
-SELECT eql_v2.jsonb_path_exists(encrypted_json, 'abc123def456...')
-FROM examples;
-```
-
-**Note:** Selectors are hash-based identifiers for JSON paths, not the actual path strings like `$.field`. They are generated during encryption by CipherStash Proxy/Protect.js.
 
 ### JSON path operators (`->`, `->>`)
 
-Use standard PostgreSQL JSON operators on encrypted columns:
+`->` returns the matched entry as an `public.eql_v3_jsonb_entry`; `->>` returns it serialized as `text` (ciphertext JSON, not decrypted plaintext). The selector operand must be typed:
 
 ```sql
--- Extract field by selector (returns eql_v2_encrypted)
-SELECT encrypted_json->'selector_hash' FROM examples;
+-- Field access by selector (returns public.eql_v3_jsonb_entry)
+SELECT encrypted_json -> 'selector_hash'::text FROM examples;
 
--- Extract field as text (returns encrypted value as text)
-SELECT encrypted_json->>'selector_hash' FROM examples;
+-- Field access as text (returns the entry as ciphertext text)
+SELECT encrypted_json ->> 'selector_hash'::text FROM examples;
 
--- Extract array element by index (0-based, returns eql_v2_encrypted)
-SELECT encrypted_array->0 FROM examples;
+-- Array element by 0-based index (returns public.eql_v3_jsonb_entry)
+SELECT encrypted_json -> 0 FROM examples;
 ```
 
-**Note:** The `->` operator supports integer array indexing (e.g., `encrypted_array->0`), but the `->>` operator does not. Use `->` to access array elements by index.
+The extracted `public.eql_v3_jsonb_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (on String / Number leaves):
+
+```sql
+SELECT * FROM examples
+WHERE encrypted_json -> 'email_selector'::text = $1::public.eql_v3_jsonb_entry;
+```
 
 ### Array operations
 
-EQL supports array operations on encrypted JSONB arrays:
-
-**Get array length:**
-
 ```sql
-SELECT eql_v2.jsonb_array_length(encrypted_array_field)
-FROM examples;
-```
+-- Length of an encrypted array node
+SELECT eql_v3.jsonb_array_length(encrypted_array_field) FROM examples;
 
-**Get array elements:**
+-- Elements as encrypted entries
+SELECT eql_v3.jsonb_array_elements(encrypted_array_field) FROM examples;
 
-```sql
--- Returns SETOF eql_v2_encrypted
-SELECT eql_v2.jsonb_array_elements(encrypted_array_field)
-FROM examples;
-
--- Returns SETOF text (ciphertext)
-SELECT eql_v2.jsonb_array_elements_text(encrypted_array_field)
-FROM examples;
-```
-
-**Example with jsonb_path_query:**
-
-```sql
--- First query the array field, then get its elements
-SELECT eql_v2.jsonb_array_elements(
-  eql_v2.jsonb_path_query(encrypted_json, 'array_selector_hash')
-)
-FROM examples;
+-- Elements as ciphertext text
+SELECT eql_v3.jsonb_array_elements_text(encrypted_array_field) FROM examples;
 ```
 
 ### Grouping data
 
-Use `eql_v2.grouped_value()` aggregate function to group encrypted JSONB results:
+Group on the extracted entry's equality term, `eql_v3.eq_term`. A functional hash index on the same expression engages the lookup (see [Field-level equality index](./database-indexes.md#field-level-equality-index-ste_vec-elements)):
 
 ```sql
-SELECT eql_v2.grouped_value(
-  eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector')::jsonb
-) AS color,
-COUNT(*)
+SELECT eql_v3.eq_term(encrypted_json -> 'color_selector'::text) AS color, COUNT(*)
 FROM examples
-GROUP BY eql_v2.jsonb_path_query_first(encrypted_json, 'color_selector');
+GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 ```
 
-**Result:**
+`MIN` / `MAX` over an extracted ordered leaf use the `eql_v3.min(public.eql_v3_jsonb_entry)` / `max` aggregates.
 
-| color | count |
-| ----- | ----- |
-| {"k":"pt","p":"blue",...} | 3     |
-| {"k":"pt","p":"green",...} | 2     |
-| {"k":"pt","p":"red",...} | 1     |
+## `eql_v3` functions for JSONB and ste_vec
 
-## EQL functions for JSONB and `ste_vec`
+### Core functions
 
-### Core Functions
+- **`eql_v3.ste_vec(val jsonb) RETURNS jsonb[]`** — extracts the ste_vec index array from an encrypted payload.
+- **`eql_v3.ste_vec_contains(a public.eql_v3_json, b public.eql_v3_json) RETURNS boolean`** — true if all ste_vec terms in `b` exist in `a`; backs the `@>` operator.
+- **`eql_v3.to_ste_vec_query(val public.eql_v3_json) RETURNS eql_v3.query_jsonb`** — the GIN-indexable query shape `@>` inlines to.
+- **`eql_v3.meta_data(val jsonb)`**, **`eql_v3.ciphertext(val jsonb)`**, **`eql_v3.selector(val jsonb)` / `(entry public.eql_v3_jsonb_entry)`** — envelope / ciphertext / selector accessors.
 
-- **`eql_v2.ste_vec(val jsonb) RETURNS eql_v2_encrypted[]`**
-  - Extracts the ste_vec index array from a JSONB payload
+### Path query functions
 
-- **`eql_v2.ste_vec(val eql_v2_encrypted) RETURNS eql_v2_encrypted[]`**
-  - Extracts the ste_vec index array from an encrypted value
+- **`eql_v3.jsonb_path_query(val jsonb, selector text)`** — entries matching the selector.
+- **`eql_v3.jsonb_path_query_first(val jsonb, selector text)`** — first match.
+- **`eql_v3.jsonb_path_exists(val jsonb, selector text) RETURNS boolean`** — selector presence.
 
-- **`eql_v2.ste_vec_contains(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean`**
-  - Returns true if all ste_vec terms in b exist in a
-  - This is the function backing the `@>` operator
+### Array functions
 
-### Path Query Functions
+- **`eql_v3.jsonb_array_length(val jsonb) RETURNS integer`**
+- **`eql_v3.jsonb_array_elements(val jsonb)`**
+- **`eql_v3.jsonb_array_elements_text(val jsonb) RETURNS SETOF text`**
 
-- **`eql_v2.jsonb_path_query(val eql_v2_encrypted, selector text) RETURNS SETOF eql_v2_encrypted`**
-  - Returns all encrypted elements matching the selector
+### Entry comparison / aggregate
 
-- **`eql_v2.jsonb_path_query_first(val eql_v2_encrypted, selector text) RETURNS eql_v2_encrypted`**
-  - Returns the first encrypted element matching the selector
+- **`eql_v3.eq_term(entry public.eql_v3_jsonb_entry)`** — equality term (backs `=` / `<>` / `GROUP BY`).
+- **`eql_v3.ord_term(entry public.eql_v3_jsonb_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
+- **`eql_v3.min(public.eql_v3_jsonb_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
-- **`eql_v2.jsonb_path_exists(val eql_v2_encrypted, selector text) RETURNS boolean`**
-  - Returns true if any element matches the selector
+For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops`).
 
-### Array Functions
+### Blocked operators
 
-- **`eql_v2.jsonb_array_length(val eql_v2_encrypted) RETURNS integer`**
-  - Returns the length of an encrypted array
-
-- **`eql_v2.jsonb_array_elements(val eql_v2_encrypted) RETURNS SETOF eql_v2_encrypted`**
-  - Returns each array element as an encrypted value
-
-- **`eql_v2.jsonb_array_elements_text(val eql_v2_encrypted) RETURNS SETOF text`**
-  - Returns each array element's ciphertext as text
-
-### Helper Functions
-
-- **`eql_v2.is_ste_vec_array(val eql_v2_encrypted) RETURNS boolean`**
-  - Returns true if the value represents an encrypted array
-
-- **`eql_v2.is_ste_vec_value(val eql_v2_encrypted) RETURNS boolean`**
-  - Returns true if the value is a single ste_vec element
-
-- **`eql_v2.to_ste_vec_value(val eql_v2_encrypted) RETURNS eql_v2_encrypted`**
-  - Converts a ste_vec array with a single element to a regular encrypted value
-
-- **`eql_v2.selector(val eql_v2_encrypted) RETURNS text`**
-  - Extracts the selector hash from an encrypted value
-
-### GIN-Indexable Functions
-
-These functions enable efficient GIN-indexed containment queries. See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for index setup.
-
-- **`eql_v2.jsonb_array(val eql_v2_encrypted) RETURNS jsonb[]`**
-  - Extracts encrypted JSONB as native PostgreSQL jsonb array for GIN indexing
-  - Create GIN indexes on this function for indexed containment queries
-
-- **`eql_v2.jsonb_contains(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean`**
-  - GIN-indexed containment check: returns true if a contains b
-  - Alternative to `jsonb_array(a) @> jsonb_array(b)`
-
-- **`eql_v2.jsonb_contained_by(a eql_v2_encrypted, b eql_v2_encrypted) RETURNS boolean`**
-  - GIN-indexed reverse containment: returns true if a is contained by b
-  - Alternative to `jsonb_array(a) <@ jsonb_array(b)`
-
-### Aggregate Functions
-
-- **`eql_v2.grouped_value(jsonb) RETURNS jsonb`**
-  - Aggregate function for grouping encrypted values (returns first non-null value in group)
+The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, and root-document `=` `<>` `<` `<=` `>` `>=` are **blocked** on `public.eql_v3_json` — they `RAISE` rather than running plaintext-jsonb semantics on the encrypted payload. Use containment, field access, or the `eql_v3.jsonb_path_*` functions instead.
 
 ## How ste_vec indexing works
 
-Structured Encryption (ste_vec) creates searchable indexes for JSONB by:
+Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
-1. **Flattening the JSON structure** - Each unique path to a leaf value gets a selector (hash)
-2. **Creating encrypted terms** - Each path prefix and value is encrypted separately
-3. **Storing as array** - All encrypted terms are stored in the `sv` (ste_vec) array
+1. **Flattening the structure** — each unique path to a leaf gets a deterministic selector hash.
+2. **Encrypting terms** — each path and value is encrypted into per-path terms (`hm` for equality; `op` CLLW OPE for ordered String / Number leaves).
+3. **Storing the `sv` array** — all encrypted terms live in the document's `sv` vector.
 
 **Example document:**
 
@@ -309,27 +191,16 @@ Structured Encryption (ste_vec) creates searchable indexes for JSONB by:
 }
 ```
 
-**Creates selectors for:**
-- `$` (root object)
-- `$.account` (account object)
-- `$.account.email` (email field)
-- `$.account.email` with value "alice@example.com"
-- `$.account.roles` (roles array)
-- `$.account.roles[]` (each role value)
+**Creates selectors for** `$` (root), `$.account`, `$.account.email` (and its value), `$.account.roles` (and each role value).
 
-**Querying:**
-
-Containment queries (`@>`) check if all required encrypted terms exist in the target's ste_vec array. This enables queries like:
+**Querying:** containment (`@>`) checks that all required encrypted terms exist in the target's `sv` array:
 
 ```sql
 -- Find records where account.email = "alice@example.com"
-WHERE encrypted_data @> '<encrypted_query_payload>'::eql_v2_encrypted
-
--- Find records where account.roles contains "admin"
-WHERE encrypted_data @> '<encrypted_query_payload>'::eql_v2_encrypted
+WHERE encrypted_data @> $1::eql_v3.query_jsonb;
 ```
 
-The actual encryption and selector generation is handled by CipherStash Proxy or Protect.js, not by EQL directly.
+Encryption and selector generation are handled by CipherStash Proxy or CipherStash Stack, not by EQL directly.
 
 ---
 

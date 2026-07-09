@@ -2,24 +2,48 @@
 //!
 //! Provides assertion builders and test helpers for EQL functionality tests.
 
+// Self-alias so this crate can be named `eql_tests::…` in paths that must resolve
+// identically whether they expand inside the lib (e.g. `scalar_types!(fixture_modules)`)
+// or inside an integration-test binary (e.g. `scalar_types!(matrix_suites)` in
+// `tests/encrypted_domain/scalars/mod.rs`). Local harness types like
+// `scalar_domains::F4`/`F8` are referenced from the `scalar_types.rs` dispatch list
+// via the absolute `eql_tests::scalar_domains::F4` path — `crate::…` would resolve to
+// the test binary's own crate root in the matrix-suite expansion, not to this lib.
+extern crate self as eql_tests;
+
 use sqlx::PgPool;
 
 pub mod assertions;
+pub mod fixtures;
 pub mod helpers;
-pub mod index_types;
+pub mod jsonb_entry;
+pub mod known_failure;
+pub mod matrix;
+pub mod property;
+pub mod scalar_domains;
+#[macro_use]
+pub mod scalar_types;
 pub mod selectors;
 
-pub use assertions::QueryAssertion;
-pub use helpers::{
-    analyze_table, assert_no_seq_scan, assert_sequential_ids, assert_uses_index,
-    assert_uses_seq_scan, create_jsonb_gin_index, ensure_pg_stat_statements, explain_analyze_avg,
-    explain_json, explain_query, get_bench_encrypted_int, get_bench_encrypted_text,
-    get_encrypted_term, get_ore_encrypted, get_ore_encrypted_as_jsonb, get_ore_text_encrypted,
-    get_ore_text_encrypted_as_jsonb, get_ste_vec_encrypted, get_ste_vec_encrypted_pair,
-    get_ste_vec_selector_term, get_ste_vec_sv_element, get_ste_vec_term_by_id,
-    read_pg_stat_statements, reset_pg_stat_statements, ExplainStats, PgStatEntry,
+// Re-export `paste` under a stable path so the `scalar_domain_matrix!` macro
+// can refer to `$crate::paste::paste!` without requiring callers to depend on
+// the `paste` crate directly.
+#[doc(hidden)]
+pub use paste;
+
+// Re-export the harness proc-macro crate under a stable path so the
+// `scalar_types!` macro can refer to `$crate::eql_tests_macros::<emitter>!`
+// without each call site depending on the proc-macro crate directly.
+#[doc(hidden)]
+pub use eql_tests_macros;
+
+pub use assertions::{assert_db_error, QueryAssertion};
+pub use helpers::PLACEHOLDER_PAYLOAD;
+pub use known_failure::known_failure;
+pub use scalar_domains::{
+    assert_null, assert_raises, assert_scalar_plaintexts, blocker_msg, commute_op,
+    fetch_fixture_payload, sql_string_literal, ScalarDomainSpec, ScalarType, Variant,
 };
-pub use index_types as IndexTypes;
 pub use selectors::Selectors;
 
 /// Reset pg_stat_user_functions tracking before tests

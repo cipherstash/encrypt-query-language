@@ -9,7 +9,7 @@ This page gives a high-level overview of CipherStash's encryption in use solutio
    - [Why use encryption in use?](#why-use-encryption-in-use)
 2. [CipherStash Proxy](#cipherstash-proxy)
    - [How it works](#how-it-works)
-3. [Protect.js](#protectjs)
+3. [CipherStash Stack](#cipherstash-stack)
    - [How it works](#how-it-works-1)
 4. [Encrypt Query Language (EQL)](#encrypt-query-language-eql)
 5. [Best practices](#best-practices)
@@ -53,15 +53,15 @@ This enables encryption in use without significant changes to your application c
 - **Decrypts data**: For read operations, it decrypts the encrypted data retrieved from the database before returning it to the client.
 - **Maintains searchability**: Ensures that the encrypted data is searchable and retrievable without sacrificing performance or application functionality.
 
-## Protect.js
+## CipherStash Stack
 
-Protect.js is an NPM package that provides a set of functions to encrypt and decrypt data.
+CipherStash Stack ([`@cipherstash/stack`](https://github.com/cipherstash/stack)) is an npm package that provides a set of functions to encrypt and decrypt data.
 It is a client-side library that can be used to encrypt and decrypt data in your JS/TS application.
 
 ### How it works
 
-- **Encrypts data**: Protect.js encrypts the plaintext data before sending it to the database.
-- **Decrypts data**: Protect.js decrypts the encrypted data retrieved from the database before returning it to the client.
+- **Encrypts data**: CipherStash Stack encrypts the plaintext data before sending it to the database.
+- **Decrypts data**: CipherStash Stack decrypts the encrypted data retrieved from the database before returning it to the client.
 - **Maintains searchability**: Ensures that the encrypted data is searchable and retrievable without sacrificing performance or application functionality.
 
 ## Encrypt Query Language (EQL)
@@ -72,7 +72,7 @@ EQL allows you to perform queries on encrypted data without decrypting it, suppo
 ## Best practices
 
 - **Use EQL functions** when interacting with encrypted data.
-- **Define database constraints**to maintain data integrity.
+- **Define database constraints** to maintain data integrity.
 - **Secure key management** of encryption keys.
 - **Monitor query performance** and optimize as needed.
 
@@ -80,7 +80,7 @@ EQL allows you to perform queries on encrypted data without decrypting it, suppo
 
 Use one of the CipherStash integrations using EQL to get started.
 
-- [Protect.js](https://github.com/cipherstash/protectjs)
+- [CipherStash Stack](https://github.com/cipherstash/stack)
 - [CipherStash Proxy](https://github.com/cipherstash/proxy)
 - [Protect.php](https://github.com/cipherstash/protectphp)
 

@@ -22,6 +22,11 @@ echo ""
 echo "Building EQL..."
 mise run --output prefix --force build
 
+# The encrypted-domain codegen drift suite (`test:codegen`) is the deprecated
+# Python generator's pytest and is intentionally not run here. The Rust
+# generator is gated against the hand-written reference by the dedicated
+# "Encrypted-domain codegen" CI job (`mise run codegen:parity`).
+
 # Run lints on sqlx tests
 echo ""
 echo "=============================================="

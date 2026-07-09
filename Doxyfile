@@ -45,7 +45,11 @@ XML_PROGRAMLISTING     = YES
 #---------------------------------------------------------------------------
 
 INPUT                  = src/
-FILE_PATTERNS          = *.sql *.template
+# Only the generated *.sql is documented. *.template files are build-time
+# sources (they still carry $RELEASE_VERSION placeholders and duplicate their
+# generated .sql), so documenting them produced a spurious second `version`
+# memberdef with placeholder text.
+FILE_PATTERNS          = *.sql
 RECURSIVE              = YES
 EXCLUDE_PATTERNS       = *_test.sql
 

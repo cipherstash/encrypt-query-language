@@ -1,0 +1,5 @@
+---
+'@cipherstash/eql': major
+---
+
+**Every public-schema EQL type name now carries an `eql_v3_` prefix** (CIP-3472): the encrypted-domain column types are now `public.eql_v3_integer`, `public.eql_v3_text_eq`, `public.eql_v3_json`, `public.eql_v3_jsonb_entry`, and so on — declare columns as `age public.eql_v3_integer_ord` instead of `age public.integer_ord`. EQL domains no longer shadow PostgreSQL built-in type names (`integer`, `text`, `json`), so unqualified references can never resolve to the wrong type through `search_path`, and each EQL version now owns a distinct column-type namespace, which lets multiple EQL versions coexist in one database during future version migrations. Query-operand domains are unchanged (`eql_v3.query_integer_eq`, `eql_v3.query_jsonb`) — the `eql_v3` schema already versions them. The bindings follow the SQL: `DomainType::sql_domain`/`domain()` report the prefixed names, `DomainPayload::parse` / `TargetDomain::parse` accept `"eql_v3_integer_eq"`-style names (bare names are no longer recognised), and the published JSON Schema `$id`s and file names now use the prefixed names (`…/eql/v3/eql_v3_integer_eq.json`).

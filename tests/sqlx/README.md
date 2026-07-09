@@ -13,12 +13,9 @@ This test crate provides:
 ## Architecture
 
 - **SQLx `#[sqlx::test]`**: Automatic test isolation (each test gets fresh database)
-- **Fixtures**: SQL files in `fixtures/` seed test data
-- **Migrations**: SQL files in `migrations/` install EQL extension and test infrastructure
-  - `001_install_eql.sql` - Installs EQL extension
-  - `002_install_ore_data.sql` - Loads ORE encryption data
-  - `003_install_ste_vec_data.sql` - Loads STE vector encryption data
-  - `004_install_test_helpers.sql` - Creates test helper functions
+- **Fixtures**: generated SQL files in `fixtures/` seed per-test data (see `fixtures/FIXTURE_SCHEMA.md`)
+- **Migrations**: a single generated migration in `migrations/`
+  - `001_install_eql.sql` - installs the EQL (`eql_v3`) extension (generated, gitignored)
 - **Assertions**: Builder pattern for common test assertions
 - **Helpers**: Centralized helper functions in `src/helpers.rs`
 
@@ -48,6 +45,24 @@ cargo test equality
 cargo test -- --nocapture
 ```
 
+### Generator credentials
+
+`mise run test:sqlx` regenerates the `eql_v3_int4` fixture before running the
+suite via `mise run fixture:generate eql_v3_int4`. The generator encrypts
+plaintexts in-process using `cipherstash-client` (no Proxy / no Docker
+sidecar), so the following CipherStash workspace credentials must be
+present in the shell environment when you run it locally or in CI:
+
+- `CS_CLIENT_ACCESS_KEY` + `CS_WORKSPACE_CRN` — preferred, single-token
+  bearer credential, picked up by `AutoStrategy::detect()`.
+- `CS_CLIENT_ID` + `CS_CLIENT_KEY` — the client-key pair used by
+  `EnvKeyProvider` to derive the per-call data keys.
+
+If either set is missing the first call into the generator fails fast
+during ZeroKMS handshake with a clear `anyhow` chain naming the missing
+variable. Other SQLx tests do not need the `CS_*` variables — only the
+fixture-regeneration step does.
+
 ## Test Data
 
 ### Fixtures
@@ -70,7 +85,7 @@ cargo test -- --nocapture
 **encryptindex_tables.sql**: Tables for encryption workflow tests
 - Table: `users` with plaintext columns for encryption testing
 
-**like_data.sql**: Test data for LIKE operator tests
+**match_data.sql**: Test data for LIKE operator tests
 - 3 encrypted records with bloom filter indexes
 
 
@@ -257,6 +272,12 @@ Tests connect to PostgreSQL database configured by SQLx:
 ## Future Work
 
 - ✅ ~~Convert remaining SQL tests~~ **COMPLETE!**
-- Property-based tests: Add encryption round-trip property tests
+- Property-based tests: implemented in `tests/encrypted_domain/property/` and
+  `crates/eql-domains/src/proptest_invariants.rs` (CIP-3141). One unit-level
+  **catalog** suite (no DB) plus two integration suites — **fixture** (operator +
+  function-double oracles, term-extractor identity, and bloom match smoke over the
+  committed real-ciphertext fixtures) and **e2e** (oracle over fresh end-to-end
+  encryption each run, `--features proptest-e2e`). See
+  `tests/encrypted_domain/property/README.md` for the full structure.
 - Performance benchmarks: Measure query performance with encrypted data
 - Integration tests: Test with CipherStash Proxy

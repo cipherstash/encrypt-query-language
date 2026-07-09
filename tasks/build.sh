@@ -1,13 +1,31 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/**/*.sql", "tasks/pin_search_path.sql", "tasks/uninstall.sql", "tasks/uninstall-protect.sql"]
-#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","release/cipherstash-encrypt-protect.sql","release/cipherstash-encrypt-protect-uninstall.sql"]
+#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
+#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
 
 set -euo pipefail
+
+# Regenerate encrypted-domain SQL from the Rust catalog before building.
+# Generated files (src/v3/scalars/<T>/<T>_*.sql) are gitignored; the
+# catalog at crates/eql-domains/src (eql-domains::CATALOG) is the source of
+# truth, rendered by the eql-codegen binary.
+#
+# eql-codegen owns orphan removal: it writes every current file first (each via
+# an atomic temp+rename), then prunes stale generated SQL across ALL
+# src/v3/scalars/* type dirs — marker-aware, so a type dropped from the catalog
+# can't leave orphans the `src/**/*.sql` build glob would pick up, and a
+# hand-written *_extensions.sql (no AUTO-GENERATED marker) is never deleted.
+# Because deletion happens only after every write succeeds, an aborted run never
+# leaves the tree stripped (unlike the old filename-pattern `find -delete`, which
+# deleted before regenerating and was blind to the AUTO-GENERATED marker).
+#
+# The plaintext fixture lists are not generated — the SQLx tests read them
+# straight from the catalog (eql_domains::INT4_VALUES / …).
+cargo run -p eql-codegen
 
 # Fail loudly if any file referenced in a tsorted dep list doesn't exist.
 # Without this, `xargs cat` would print `cat: foo.sql: No such file or directory`
@@ -27,119 +45,77 @@ verify_deps_exist() {
   fi
 }
 
+# Fail loudly if any v3 REQUIRE edge points OUTSIDE src/v3. The v3-only build
+# must be self-contained (no eql_v2 coupling); a stray `-- REQUIRE: src/...`
+# edge to a non-v3 file would silently pull eql_v2 SQL into the v3 artefact (or
+# tsort would drop it), breaking self-containment. Each line in deps-v3.txt is
+# "<file> <dep>"; self-edges (file == dep) are skipped, every other dep target
+# must start with src/v3/.
+verify_v3_self_contained() {
+  local dep_file=$1
+  local offending=0
+  while IFS=' ' read -r src dep; do
+    [[ -z "$dep" ]] && continue
+    [[ "$src" == "$dep" ]] && continue
+    if [[ "$dep" != src/v3/* ]]; then
+      echo "ERROR: v3 REQUIRE edge points outside src/v3: $src -- REQUIRE: $dep" >&2
+      offending=1
+    fi
+  done < "$dep_file"
+  if [[ $offending -ne 0 ]]; then
+    echo "ERROR: v3-only build is not self-contained — a -- REQUIRE: target lives outside src/v3 (see above)." >&2
+    exit 1
+  fi
+}
+
 mkdir -p release
 
-rm -f release/cipherstash-encrypt-uninstall.sql
 rm -f release/cipherstash-encrypt.sql
+rm -f release/cipherstash-encrypt-uninstall.sql
 
-rm -f release/cipherstash-encrypt-uninstall-supabase.sql
-rm -f release/cipherstash-encrypt-supabase.sql
-
-rm -f release/cipherstash-encrypt-protect.sql
-rm -f release/cipherstash-encrypt-protect-uninstall.sql
-
-rm -f dbdev/eql--0.0.0.sql
-
-rm -f src/version.sql
-rm -f src/deps.txt
-rm -f src/deps-ordered.txt
-rm -f src/deps-supabase.txt
-rm -f src/deps-ordered-supabase.txt
-rm -f src/deps-protect.txt
-rm -f src/deps-ordered-protect.txt
+rm -f src/deps-v3.txt
+rm -f src/deps-ordered-v3.txt
+rm -f src/v3/version.sql
 
 
+# Bake the release version into eql_v3.version() (and the eql_v3 schema
+# comment) before the glob below picks it up. The version is supplied via
+# `mise run build --version <semver>` (the `usage_version` env var mise derives
+# from the #USAGE flag); local builds with no flag fall back to DEV. The
+# generated src/v3/version.sql is gitignored, like the other generated v3 SQL.
 RELEASE_VERSION=${usage_version:-DEV}
-sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/version.template > src/version.sql
+sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/v3/version.template > src/v3/version.sql
 
 
-find src -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
-    echo $sql_file
+# The self-contained eql_v3 surface — schema, SEM types, scalar domains —
+# globbed from src/v3 ONLY. This is the sole EQL artifact: it owns no eql_v2
+# dependency (CI-gated by verify_v3_self_contained below + test:self_contained_v3),
+# and it is written under the canonical release name now that the combined v2
+# build that previously produced that name is gone.
+find src/v3 -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
+    echo "$sql_file"
 
-    echo "$sql_file $sql_file" >> src/deps.txt
-
-    while IFS= read -r line; do
-        # echo $line
-        # Check if the line contains "-- REQUIRE:"
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            # Extract the required file(s) after "-- REQUIRE:"
-            deps=${line#*-- REQUIRE: }
-
-            # Split multiple REQUIRE declarations if present
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps.txt
-            done
-        fi
-    done < "$sql_file"
-done
-
-
-cat src/deps.txt | tsort | tac > src/deps-ordered.txt
-verify_deps_exist src/deps-ordered.txt
-
-cat src/deps-ordered.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
-cat tasks/pin_search_path.sql >> release/cipherstash-encrypt.sql
-
-cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall.sql
-
-
-# Supabase specific build which excludes operator classes as they are not supported
-find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/*operator_class.sql" | while IFS= read -r sql_file; do
-    echo $sql_file
-
-    echo "$sql_file $sql_file" >> src/deps-supabase.txt
-
-    while IFS= read -r line; do
-        # echo $line
-        # Check if the line contains "-- REQUIRE:"
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            # Extract the required file(s) after "-- REQUIRE:"
-            deps=${line#*-- REQUIRE: }
-
-            # Split multiple REQUIRE declarations if present
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps-supabase.txt
-            done
-        fi
-    done < "$sql_file"
-done
-
-
-cat src/deps-supabase.txt | tsort | tac > src/deps-ordered-supabase.txt
-verify_deps_exist src/deps-ordered-supabase.txt
-
-cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-supabase.sql
-cat tasks/pin_search_path.sql >> release/cipherstash-encrypt-supabase.sql
-
-cat src/deps-ordered-supabase.txt | xargs cat | grep -v REQUIRE >> dbdev/eql--0.0.0.sql
-cat tasks/pin_search_path.sql >> dbdev/eql--0.0.0.sql
-
-cat tasks/uninstall.sql >> release/cipherstash-encrypt-uninstall-supabase.sql
-
-
-# Protect variant build - excludes config management and encryptindex
-find src -type f -path "*.sql" ! -path "*_test.sql" ! -path "**/config/*" ! -path "**/encryptindex/*" | while IFS= read -r sql_file; do
-    echo $sql_file
-
-    echo "$sql_file $sql_file" >> src/deps-protect.txt
+    echo "$sql_file $sql_file" >> src/deps-v3.txt
 
     while IFS= read -r line; do
         if [[ "$line" == *"-- REQUIRE:"* ]]; then
             deps=${line#*-- REQUIRE: }
             for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps-protect.txt
+                echo "$sql_file $dep" >> src/deps-v3.txt
             done
         fi
     done < "$sql_file"
 done
 
-cat src/deps-protect.txt | tsort | tac > src/deps-ordered-protect.txt
-verify_deps_exist src/deps-ordered-protect.txt
+verify_v3_self_contained src/deps-v3.txt
 
-cat src/deps-ordered-protect.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt-protect.sql
-cat tasks/pin_search_path.sql >> release/cipherstash-encrypt-protect.sql
+cat src/deps-v3.txt | tsort | tac > src/deps-ordered-v3.txt
+verify_deps_exist src/deps-ordered-v3.txt
 
-cat tasks/uninstall-protect.sql >> release/cipherstash-encrypt-protect-uninstall.sql
+cat src/deps-ordered-v3.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
+cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt.sql
+
+cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-uninstall.sql
 
 
 echo
@@ -149,10 +125,6 @@ echo '###############################################'
 echo
 echo 'Installer:'
 echo '    release/cipherstash-encrypt.sql'
-echo '    release/cipherstash-encrypt-supabase.sql'
-echo '    release/cipherstash-encrypt-protect.sql'
 echo
 echo 'Uninstaller:'
 echo '    release/cipherstash-encrypt-uninstall.sql'
-echo '    release/cipherstash-encrypt-uninstall-supabase.sql'
-echo '    release/cipherstash-encrypt-protect-uninstall.sql'

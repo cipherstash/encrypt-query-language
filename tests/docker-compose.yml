@@ -24,6 +24,11 @@ services:
       interval: 1s
       timeout: 5s
       retries: 10
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   postgres-17:
     <<: *postgres

@@ -1,6 +1,6 @@
 # `postgres-eql` Docker image
 
-A layered image that ships an official `postgres` image with [CipherStash EQL](https://github.com/cipherstash/encrypt-query-language) pre-installed. One `docker run` and you have a Postgres with the `eql_v2` schema, types, and operators ready to use.
+A layered image that ships an official `postgres` image with [CipherStash EQL](https://github.com/cipherstash/encrypt-query-language) pre-installed. One `docker run` and you have a Postgres with the `eql_v3` schema, types, and operators ready to use.
 
 ## Quick start
 
@@ -12,7 +12,7 @@ docker run --rm -p 5432:5432 -e POSTGRES_PASSWORD=postgres \
 Then in another shell:
 
 ```sh
-PGPASSWORD=postgres psql -h localhost -U postgres -c "SELECT eql_v2.version();"
+PGPASSWORD=postgres psql -h localhost -U postgres -c "SELECT eql_v3.version();"
 ```
 
 ## Tags
@@ -33,7 +33,7 @@ Examples:
 
 ```sh
 docker pull ghcr.io/cipherstash/postgres-eql:latest
-docker pull ghcr.io/cipherstash/postgres-eql:17-2.1.8
+docker pull ghcr.io/cipherstash/postgres-eql:17-<eql-version>  # pin a specific EQL release
 docker pull ghcr.io/cipherstash/postgres-eql:14
 ```
 
@@ -57,11 +57,11 @@ The numeric prefix (`10-`) leaves room for users to drop their own `00-*.sql` fi
 From the repo root:
 
 ```sh
-mise run build --version 2.1.8
+mise run build --version <eql-version>
 cp release/cipherstash-encrypt.sql docker/
 docker build \
   --build-arg PG_VERSION=17 \
-  --build-arg EQL_VERSION=2.1.8 \
+  --build-arg EQL_VERSION=<eql-version> \
   -t postgres-eql:dev \
   docker/
 ```
@@ -69,4 +69,4 @@ docker build \
 ## See also
 
 - [Main EQL README](../README.md) — usage, configuration, and SQL API
-- [CipherStash Proxy](https://github.com/cipherstash/proxy) and [Protect.js](https://github.com/cipherstash/protectjs) — the clients that actually encrypt and decrypt data
+- [CipherStash Proxy](https://github.com/cipherstash/proxy) and [CipherStash Stack](https://github.com/cipherstash/stack) — the clients that actually encrypt and decrypt data

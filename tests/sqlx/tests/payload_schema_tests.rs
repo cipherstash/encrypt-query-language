@@ -326,8 +326,7 @@ fn v2_3_legacy_split_ore_fields_are_rejected() {
     // leading domain-tag byte on the ciphertext.
     //
     // The OPE-side legacy fields (`opf` / `opv`) are also rejected — v2.3
-    // doesn't support OPE on `eql_v2_encrypted` (deferred to a future
-    // separate type).
+    // doesn't support OPE (deferred to a future separate type).
     let cases = [
         (
             "encrypted payload with legacy ocf",
@@ -500,4 +499,129 @@ fn v2_3_minimum_required_fields_enforced() {
     for (label, p) in cases {
         assert_invalid(schema_v2_3(), &p, label);
     }
+}
+
+// ===========================================================================
+// from_v2 conversion outputs against the published v3 JSON Schemas
+// ===========================================================================
+//
+// `eql_bindings::from_v2` already validates every converted payload through
+// the target's binding struct; these tests close the remaining gap by
+// validating the SAME outputs against the committed schema ARTIFACTS in
+// `crates/eql-bindings/schema/v3/` — the files external consumers validate
+// with — using the identical jsonschema machinery as the v2 sections above.
+
+fn load_v3_schema(domain: &str) -> Validator {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("../../crates/eql-bindings/schema/v3")
+        .join(format!("{domain}.json"));
+    let text = std::fs::read_to_string(&path)
+        .unwrap_or_else(|e| panic!("failed to read {}: {}", path.display(), e));
+    let schema: Value =
+        serde_json::from_str(&text).unwrap_or_else(|e| panic!("schema is not valid JSON: {e}"));
+    compile(&schema)
+}
+
+/// Convert `v2` for `domain` via `from_v2` and validate against the
+/// domain's committed schema file.
+#[track_caller]
+fn assert_converts_to_valid_v3(v2: &Value, domain: &str) -> Value {
+    use eql_bindings::from_v2::{from_v2, TargetDomain};
+    let target =
+        TargetDomain::parse(domain).unwrap_or_else(|e| panic!("target {domain} must parse: {e}"));
+    let out =
+        from_v2(v2, target).unwrap_or_else(|e| panic!("conversion to {domain} must succeed: {e}"));
+    assert_valid(
+        &load_v3_schema(domain),
+        &out,
+        &format!("from_v2 output for {domain}"),
+    );
+    out
+}
+
+/// The fully-populated v2.3 scalar payload used by the conversion tests
+/// (`op` included: cipherstash-client emits it for OPE-ordered columns ahead
+/// of the v3 envelope).
+fn v2_ct_full() -> Value {
+    json!({
+        "v": 2,
+        "k": "ct",
+        "c": CIPHERTEXT,
+        "i": ident(),
+        "hm": HEX,
+        "bf": [12, 47, 91, 40000],
+        "ob": [HEX, HEX_LONG],
+        "op": HEX
+    })
+}
+
+#[test]
+fn from_v2_scalar_outputs_validate_against_published_v3_schemas() {
+    // One target per capability shape: storage-only, hm, ob, hm+op+bf,
+    // hm+ob+bf, op, hm+op. The bf fixture includes an upper-half position
+    // (40000) so the schema's signed int16 bounds are exercised on the
+    // converted value.
+    let v2 = v2_ct_full();
+    for domain in [
+        "eql_v3_integer",
+        "eql_v3_text_eq",
+        "eql_v3_integer_ord_ore",
+        "eql_v3_text_search",
+        "eql_v3_text_search_ore",
+        "eql_v3_integer_ord_ope",
+        "eql_v3_text_ord_ope",
+    ] {
+        assert_converts_to_valid_v3(&v2, domain);
+    }
+}
+
+#[test]
+fn from_v2_ste_vec_output_validates_against_published_v3_schema() {
+    let v2 = json!({
+        "v": 2,
+        "k": "sv",
+        "i": ident(),
+        "sv": [
+            { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
+            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
+        ]
+    });
+    assert_converts_to_valid_v3(&v2, "eql_v3_json");
+}
+
+#[test]
+fn from_v2_query_output_validates_against_published_v3_schema() {
+    use eql_bindings::from_v2::{from_v2_query, TargetDomain};
+    let v2 = json!({
+        "sv": [
+            { "s": SELECTOR, "hm": HEX },
+            { "s": SELECTOR, "op": HEX_LONG }
+        ]
+    });
+    let out = from_v2_query(&v2, TargetDomain::Json).expect("query conversion must succeed");
+    assert_valid(
+        &load_v3_schema("query_jsonb"),
+        &out,
+        "from_v2_query output for query_jsonb",
+    );
+}
+
+#[test]
+fn published_v3_schemas_reject_the_unconverted_v2_payloads() {
+    // The discriminating half: the same machinery must FAIL the raw v2 inputs
+    // (v: 2 envelope, stray k/terms), proving the schema validation above is
+    // not vacuously green.
+    assert_invalid(
+        &load_v3_schema("eql_v3_text_eq"),
+        &v2_ct_full(),
+        "raw v2 ct payload",
+    );
+    assert_invalid(
+        &load_v3_schema("eql_v3_json"),
+        &json!({
+            "v": 2, "k": "sv", "i": ident(),
+            "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX }]
+        }),
+        "raw v2 sv payload",
+    );
 }

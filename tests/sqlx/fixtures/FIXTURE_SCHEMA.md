@@ -1,239 +1,94 @@
 # SQLx Test Fixtures Schema Documentation
 
-This document defines the structure and dependencies of test fixtures used in the SQLx test suite.
+This document defines the structure of the test fixtures used in the SQLx test
+suite.
 
-## Fixture Dependencies
+The suite installs the self-contained `eql_v3` surface (via the generated
+`001_install_eql.sql` migration) and drives all coverage from **generated**
+fixtures. There are no committed table-data fixtures: every fixture is produced
+by the Rust fixture framework in `tests/sqlx/src/fixtures/` and is gitignored.
 
+## Generated `eql_v3` fixtures
+
+`mise run fixture:generate:all` (the `generate_all_fixtures` test, run over
+`eql-domains::CATALOG`) materialises the fixtures into this directory:
+
+```text
+Generated eql_v3 fixtures (gitignored)
+  ├── eql_v3_<T>.sql           (jsonb payload — no EQL dependency)
+  ├── eql_v3_<T>_doubles.sql   (jsonb payload — duplicate-value variant the
+  │                             property suites consume)
+  ├── v3_numeric_collision.sql (jsonb payload — no EQL dependency)
+  ├── v3_doc_integer.sql       (public.eql_v3_json payload — depends on eql_v3 surface)
+  └── v3_ste_vec.sql           (public.eql_v3_json payload — depends on eql_v3 surface)
 ```
-EQL Extension (via migrations)
-  ├── encrypted_json.sql
-  ├── array_data.sql
-  ├── order_by_null_data.sql (depends on ore migration)
-  ├── ore table (migration 002 — not a fixture)
-  └── bench_data.sql + bench_setup.sql (depend on migration 007)
-```
 
-All fixtures depend on the EQL extension being installed via SQLx migrations.
+The scalar fixtures (`eql_v3_<T>.sql`) have **no EQL dependency** — `payload` is
+plain `jsonb`, so each script applies standalone. The document fixtures
+(`v3_doc_integer.sql`, `v3_ste_vec.sql`) depend on the `eql_v3` encrypted-JSONB
+surface being installed.
 
----
+**Regenerated every test run.** `mise run test:sqlx` invokes the generator
+before `cargo test`, so a stale generated fixture cannot mask a payload-shape
+regression. The generator encrypts in-process via `cipherstash-client`; it
+needs a live Postgres plus **both** CipherStash credential pairs in the shell
+environment (they are not alternatives): `CS_CLIENT_ACCESS_KEY` +
+`CS_WORKSPACE_CRN` for ZeroKMS auth (AutoStrategy) **and** `CS_CLIENT_ID` +
+`CS_CLIENT_KEY` for the client key (EnvKeyProvider). Do not hand-edit a
+generated file; it is overwritten in place on every run.
 
-## encrypted_json.sql
-
-**Purpose:** Creates `encrypted` table with HMAC-indexed encrypted values for equality/JSONB tests.
-
-**Schema:**
+**Schema (e.g. `eql_v3_integer`):** Tables live in the dedicated `fixtures` SQL
+schema (kept out of the `public`/`eql_v3` type namespaces):
 ```sql
-CREATE TABLE encrypted (
-  id INTEGER PRIMARY KEY,
-  e eql_v2_encrypted
+CREATE SCHEMA IF NOT EXISTS fixtures;
+CREATE TABLE fixtures.eql_v3_integer (
+  id BIGINT PRIMARY KEY,
+  plaintext integer NOT NULL,
+  payload jsonb NOT NULL
 );
 ```
 
 **Data:**
-- 3 records (ids 1, 2, 3)
-- Each record has encrypted JSONB with HMAC index
-- Values include nested objects for JSONB path tests
+- One row per generated value; `id = N` is the Nth generated value.
+- `plaintext` values include the type extremes and zero (the matrix comparison
+  pivots) plus small/medium/large magnitudes.
+- `plaintext` is the **in-table oracle**: consuming tests filter
+  `WHERE plaintext = N` directly, so no Rust value constant is shared.
+- Each `payload` is a cipherstash-client-encrypted JSONB object converted to
+  the v3 envelope via `eql_bindings::from_v2`, carrying `c` (ciphertext),
+  `hm` (HMAC equality term), `ob` (ORE block ordering term), `op` (CLLW-OPE
+  ordering term — a single hex string, not an array; every ordered family,
+  CIP-3348), `bf` (bloom filter — `text` only), an inert `i` metadata object,
+  and `v = 3` (v3 scalars carry no `k` discriminator).
 
 **Used By:**
-- equality_tests.rs
-- jsonb_tests.rs
-- inequality_tests.rs
-- jsonb_path_operators_tests.rs
-- containment_tests.rs
-- like_operator_tests.rs
-- aggregate_tests.rs
+- the `__scalar_matrix_fixture_shape!` arm in `tests/sqlx/src/matrix.rs`
+  (structural verification, generated per type)
+- the `eql_v3.<T>` domain operator / property tests, via per-query `payload`
+  casts
 
-**Create Function:**
-- Uses `create_encrypted_json(id, 'hm')` for HMAC-indexed values
-- Creates consistent test data across test runs
-
----
-
-## array_data.sql
-
-**Purpose:** Creates test data with arrays for JSONB array function tests.
-
-**Dependencies:**
-- Requires `encrypted_json.sql` (extends encrypted table or creates new table)
-
-**Data:**
-- Records with JSONB arrays
-- Used for testing `jsonb_array_elements()` and array path queries
-
-**Used By:**
-- jsonb_tests.rs (array-specific tests)
-
----
-
-## order_by_null_data.sql
-
-**Purpose:** Creates `encrypted` table with NULL and ORE-encrypted values for ORDER BY NULL ordering tests.
-
-**Dependencies:**
-- Requires `ore` table from migrations (selects encrypted values for ids 42 and 3)
-
-**Schema:**
-```sql
-CREATE TABLE encrypted (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  e eql_v2_encrypted
-);
-```
-
-**Data:**
-- 4 records:
-  - id=1: NULL
-  - id=2: ORE value for 42 (from ore table)
-  - id=3: ORE value for 3 (from ore table)
-  - id=4: NULL
-
-**Used By:**
-- order_by_tests.rs (NULLS FIRST / NULLS LAST tests)
-
----
-
-## ore table (from migrations - NOT a fixture)
-
-**Source:** `tests/sqlx/migrations/002_install_ore_data.sql`
-
-**Purpose:** Provides ORE-encrypted values 1-99 for comparison/ORDER BY tests.
-
-**Schema:**
-```sql
-CREATE TABLE ore (
-  id bigint PRIMARY KEY,
-  e eql_v2_encrypted
-);
-```
-
-**Data:**
-- 99 records (ids 1-99)
-- Each record has ONLY `ob` key (ORE block), NOT ore64 index
-- Pre-seeded by migration, available to all tests automatically
-- No fixture needed - table exists from migrations
-
-**Used By:**
-- comparison_tests.rs (< > <= >=)
-- order_by_tests.rs
-- ore_equality_tests.rs (ORE variants)
-- aggregate_tests.rs (MAX/MIN)
-
-**Helper Functions:**
-- `get_ore_encrypted(pool, id)` - Selects encrypted value from ore table
-- `create_encrypted_json(id)` - Looks up ore table at `id * 10` (valid ids: 1-9 → ore lookups: 10-90)
-
-**Key Property:**
-- Sequential numeric values enable deterministic comparison tests
-- e.g., `WHERE e < get_ore_encrypted(42)` should return 41 records
-
-**IMPORTANT:**
-- ❌ DO NOT create `ore_data.sql` fixture - table already exists from migrations
-- ❌ DO NOT use `scripts("ore_data")` in test attributes
-- ✅ Use `#[sqlx::test]` without fixtures for ORE tests
-
----
-
-## bench_data.sql
-
-**Purpose:** Seeds 10K rows into the `bench` table for performance benchmarking. Opt-in fixture — only loaded when a test explicitly includes `scripts("bench_data")`, so other tests don't pay the cost.
-
-**Dependencies:**
-- Requires `bench` table from migration `007_install_bench_data.sql`
-- Uses `create_encrypted_json()` from migration `004_install_test_helpers.sql`
-
-**Schema:** Uses `bench` table (DDL in migration 007):
-```sql
-CREATE TABLE bench (
-  id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  encrypted_text    eql_v2_encrypted,
-  encrypted_int     eql_v2_encrypted,
-  encrypted_bigint  eql_v2_encrypted
-);
-```
-
-**Data:**
-- 10,000 rows drawn from 99 distinct encrypted values via `create_encrypted_json()` helper ids 1-99 (which map to ORE rows 10, 20, ..., 990)
-- Zipf-like skew via `setseed(0.42)` + `random()^2` — deterministic and byte-identical across runs
-- Top id gets ~5% of rows; tail ids ~0.5% each (top:bottom ratio ~10x)
-- Each column draws independently, so column values are decorrelated within a row
-- Each row has HMAC, bloom filter, and ORE index terms
-
-**Used By:**
-- bench_data_tests.rs (all tests)
-
----
-
-## bench_setup.sql
-
-**Purpose:** Creates the 5 benchmark indexes and refreshes planner statistics. Always loaded after `bench_data.sql` in tests that verify index usage.
-
-**Dependencies:**
-- Requires `bench` table with data from `bench_data.sql`
-
-**Indexes created:**
-- `bench_text_hmac_idx` — hash on `eql_v2.hmac_256(encrypted_text)` for equality
-- `bench_text_ore_idx` — btree on `encrypted_text` via operator class for text ordering
-- `bench_int_ore_idx` — btree on `encrypted_int` via operator class for range/ORDER BY
-- `bench_bigint_ore_idx` — btree on `encrypted_bigint` via operator class
-- `bench_text_bloom_idx` — GIN on `eql_v2.bloom_filter(encrypted_text)` for containment
-
-**Used By:**
-- bench_data_tests.rs (index-usage tests: `scripts("bench_data", "bench_setup")`)
-
----
-
-## Validation Tests
-
-Each fixture should have a validation test to ensure correct structure:
-
-### encrypted_json Validation
+**Opt-in:** Each consuming test opts in explicitly:
 ```rust
-#[sqlx::test(fixtures(path = "../fixtures", scripts("encrypted_json")))]
-async fn fixture_encrypted_json_has_three_records(pool: PgPool) {
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM encrypted")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-    assert_eq!(count, 3, "encrypted_json fixture should create 3 records");
-}
-```
-
-### ore Migration Validation
-```rust
-#[sqlx::test]
-async fn fixture_ore_data_has_99_records(pool: PgPool) {
-    let count: i64 = sqlx::query_scalar("SELECT COUNT(*) FROM ore")
-        .fetch_one(&pool)
-        .await
-        .unwrap();
-    assert_eq!(count, 99, "ore migration should provide 99 records");
-}
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_integer")))]
 ```
 
 ---
 
 ## Fixture Naming Conventions
 
-- Use snake_case for fixture file names
-- Name should describe the data, not the test using it
-- Examples: `encrypted_json.sql`, `array_data.sql`, `bench_data.sql`
-
-## Adding New Fixtures
-
-1. Create fixture file in `tests/sqlx/fixtures/`
-2. Add header comment explaining purpose and dependencies
-3. Document schema in this file
-4. Add validation test
-5. Update dependency graph above
+- Use snake_case for fixture file names.
+- Generated scalar fixtures follow `eql_v3_<T>.sql`.
 
 ## Troubleshooting
 
 **Fixture fails to load:**
-- Check EQL extension is installed (migrations run first)
-- Verify `create_encrypted_json()` function exists
-- Check for SQL syntax errors in fixture file
+- Check the `eql_v3` extension is installed (the `001_install_eql.sql`
+  migration runs first).
+- Confirm the generator ran — `mise run fixture:generate:all` (or
+  `mise run test:sqlx`, which runs it for you).
+- Check for SQL syntax errors in the generated file.
 
 **Inconsistent test results:**
-- Fixtures are loaded per-test (isolated)
-- Check fixture dependencies are correct
-- Verify no cross-fixture table name conflicts
+- Fixtures are loaded per-test (isolated).
+- Verify the CipherStash credentials are present so the generator produces real
+  ciphertexts (the suite does not ship static fixtures).

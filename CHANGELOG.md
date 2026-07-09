@@ -4,7 +4,7 @@ All notable changes to EQL are recorded in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and EQL adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html). The `eql_v2` schema name is part of the public API and is independent of the EQL release version — bumping EQL's major version does not rename the schema.
 
-Tags follow `eql-<version>` (e.g. `eql-2.3.0`); the GitHub release for that tag drives the release workflow.
+Tags follow `eql-<version>` (e.g. `eql-2.3.0`); `release.yml` cuts the tag and its GitHub release.
 
 ## How to read this file
 
@@ -16,9 +16,7 @@ Tags follow `eql-<version>` (e.g. `eql-2.3.0`); the GitHub release for that tag 
 - **Security** — fixes that affect confidentiality, integrity, or availability.
 - **Upgrade notes** — for releases that change behaviour callers should be aware of (even when no API breaks), a pointer to `docs/upgrading/<version>.md` with numbered notes (`U-NNN`) and a verification checklist.
 
-Each entry that ships in a published release links to the PR that introduced it. Unreleased work lives in the `[Unreleased]` section at the top; entries are promoted into a versioned section when a release is cut.
-
-## [Unreleased]
+**From 3.0.0, release notes move to [`packages/eql/CHANGELOG.md`](packages/eql/CHANGELOG.md)** — assembled by [Changesets](https://github.com/changesets/changesets) from the `.changeset/*.md` files added in each PR (Changesets writes per-package changelogs; since SQL, the `eql-bindings` crate, and the `@cipherstash/eql` npm package release in lockstep at one version, that file is the changelog for the whole release). Add a changeset for every releasable change (see `.changeset/README.md`); don't hand-edit either changelog. This file is preserved as the pre-3.0 history and is no longer appended to.
 
 ## [2.3.1] — 2026-05-21
 
@@ -62,7 +60,7 @@ Each entry that ships in a published release links to the PR that introduced it.
 - **Per-subtype ORE CLLW directories and functions.** `src/ore_cllw_u64_8/` and `src/ore_cllw_var_8/` collapse to `src/ore_cllw/`. Per-subtype function names (`eql_v2.ore_cllw_u64_8`, `eql_v2.compare_ore_cllw_var_8`, `eql_v2.has_ore_cllw_u64_8`, `eql_v2.has_ore_cllw_var_8`, …) collapse to the single-family names `eql_v2.ore_cllw`, `eql_v2.has_ore_cllw`. The composite types `eql_v2.ore_cllw_u64_8` / `eql_v2.ore_cllw_var_8` collapse to `eql_v2.ore_cllw`. Callers using the old names directly must rewrite — see [U-006](docs/upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation). ([#219](https://github.com/cipherstash/encrypt-query-language/pull/219))
 - **`eql_v2.ore_cllw(eql_v2_encrypted)`, `eql_v2.has_ore_cllw(eql_v2_encrypted)`, and `eql_v2.compare_ore_cllw(eql_v2_encrypted, eql_v2_encrypted)`.** Replaced by the typed `(eql_v2.ste_vec_entry)` overloads (see `Added` and `Changed` entries above). The removed overloads were misleading: they read `oc` from `eql_v2_encrypted.data`, but per the v2.3 payload schema `oc` is sv-element scope only and never lives at the root of a column value. The "fake-root" trick where `->` merged meta + sv element into a new `eql_v2_encrypted` so these overloads could read `oc` is gone alongside them. Callers must now extract via `->` and cast `.data::eql_v2.ste_vec_entry` to reach the typed overload — see [U-006](docs/upgrading/v2.3.md#u-006-ste_vec-ore-field-consolidation). ([#219](https://github.com/cipherstash/encrypt-query-language/pull/219))
 - **OPE-CLLW support on `eql_v2_encrypted`.** The `eql_v2.ope_cllw_u64_65` and `eql_v2.ope_cllw_var_8` types, their extractor/has/compare families, the `opf` / `opv` payload fields, the `op` field, and the `eql_v2.order_by_ope` helper are all removed. OPE moves to a future separate encrypted column type — `eql_v2_encrypted` now exclusively handles ORE for ordered comparisons. v2.2 didn't emit `opf` / `opv` from production `@cipherstash/protect` either, so this is not a customer-facing data migration; it's a tightening of the documented payload surface. ([#219](https://github.com/cipherstash/encrypt-query-language/pull/219))
-- **Root-level `b3` from synthetic test fixtures.** `create_encrypted_json` no longer emits `"b3": "blake3.…"` at the payload root, matching production [`@cipherstash/protect`](https://github.com/cipherstash/protect-js) output. ([#196](https://github.com/cipherstash/encrypt-query-language/pull/196))
+- **Root-level `b3` from synthetic test fixtures.** `create_encrypted_json` no longer emits `"b3": "blake3.…"` at the payload root, matching production [`@cipherstash/protect`](https://github.com/cipherstash/stack) output. ([#196](https://github.com/cipherstash/encrypt-query-language/pull/196))
 - **Pre-release fused `eql_v2.hmac_256(val eql_v2_encrypted, selector text)`.** This overload, added earlier in the 2.3 cycle as the migration path off Blake3 for U-004, is removed before release in favour of the typed chain `eql_v2.eq_term(col -> '<selector>')` (XOR-aware — see U-007). The fused form bypassed the typed model and silently NULLed on oc-bearing selectors. Recipe migration: `eql_v2.hmac_256(col, '<sel>')` → `eql_v2.eq_term(col -> '<sel>')` (or `WHERE col -> '<sel>' = $1::eql_v2.ste_vec_entry`); index DDL: `USING hash (eql_v2.hmac_256(col, '<sel>'))` → `USING hash (eql_v2.eq_term(col -> '<sel>'))`. See [U-007](docs/upgrading/v2.3.md#u-007-typed-arrow-selector).
 
 ### Deprecated
@@ -83,7 +81,6 @@ See [`docs/upgrading/v2.3.md`](docs/upgrading/v2.3.md). Eight numbered notes cov
 
 (Backfill pending — entries for tagged 2.x releases will be added retroactively from `git log` in a follow-up.)
 
-[Unreleased]: https://github.com/cipherstash/encrypt-query-language/compare/eql-2.3.1...HEAD
 [2.3.1]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.3.1
 [2.3.0]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.3.0
 [2.2.1]: https://github.com/cipherstash/encrypt-query-language/releases/tag/eql-2.2.1
