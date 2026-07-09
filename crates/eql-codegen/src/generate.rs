@@ -394,7 +394,10 @@ fn ore_alternatives(spec: &DomainFamily, qualify: &dyn Fn(&Domain) -> String) ->
 /// query-operand twin with an always-raising CHECK constraint so the domains
 /// fail loudly on first use instead of silently degrading to unindexable seq
 /// scans. The poison function is plpgsql and non-STRICT per the
-/// encrypted-domain footgun list.
+/// encrypted-domain footgun list, and the constraints are added NOT VALID so
+/// a re-install over existing ORE data (written under an earlier superuser
+/// install) does not abort — domain coercion enforces the CHECK on new values
+/// regardless of validation status.
 pub fn render_ore_fallback_file() -> String {
     use crate::consts::sql_str;
     use crate::context::{environment, OreFallbackContext, OreFallbackEntry};
@@ -418,22 +421,21 @@ pub fn render_ore_fallback_file() -> String {
         let column_alts = ore_alternatives(spec, &|d| domain_name(&d.full_name(spec.name)));
         let query_alts = ore_alternatives(spec, &|d| query_domain_name(&d.query_name(spec.name)));
         for d in ore_domains {
+            let col_name = domain_name(&d.full_name(spec.name));
             entries.push(OreFallbackEntry {
-                name: domain_name(&d.full_name(spec.name)),
+                name_literal: sql_str(&col_name),
+                name: col_name,
                 alternatives: sql_str(&column_alts),
             });
+            let query_name = query_domain_name(&d.query_name(spec.name));
             entries.push(OreFallbackEntry {
-                name: query_domain_name(&d.query_name(spec.name)),
+                name_literal: sql_str(&query_name),
+                name: query_name,
                 alternatives: sql_str(&query_alts),
             });
         }
     }
-    let count = entries.len();
-    let ctx = OreFallbackContext {
-        requires,
-        entries,
-        count,
-    };
+    let ctx = OreFallbackContext { requires, entries };
     environment()
         .get_template("ore_fallback.sql")
         .unwrap()
@@ -1255,6 +1257,21 @@ mod tests {
         assert!(create_fn.contains("LANGUAGE plpgsql"));
         assert!(!create_fn.contains("STRICT"));
         assert!(!create_fn.contains("RETURNS NULL ON NULL INPUT"));
+    }
+
+    #[test]
+    fn ore_fallback_poison_constraints_are_not_valid() {
+        // ALTER DOMAIN ... ADD CONSTRAINT validates existing stored data, and
+        // the poison raises unconditionally — without NOT VALID, re-running
+        // the installer over a database holding ORE values (written under an
+        // earlier superuser install) would abort inside the DO block. NOT
+        // VALID skips that scan; domain coercion still enforces the CHECK on
+        // every new cast/insert regardless of validation status.
+        let sql = render_ore_fallback_file();
+        let adds = sql.matches("ADD CONSTRAINT eql_ore_unavailable").count();
+        let not_valid = sql.matches(")) NOT VALID;").count();
+        assert!(adds > 0, "poison constraints present");
+        assert_eq!(adds, not_valid, "every poison constraint must be NOT VALID");
     }
 
     #[test]

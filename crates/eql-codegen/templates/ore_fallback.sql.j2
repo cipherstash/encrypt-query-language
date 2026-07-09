@@ -27,6 +27,15 @@
 --! the poison function is LANGUAGE plpgsql (never inlined, so the RAISE
 --! cannot be planned away) and NOT STRICT (a STRICT function is skipped for
 --! NULL inputs, which would silently let NULLs through the poisoned domain).
+--!
+--! The poison constraints are added NOT VALID. For domains — unlike table
+--! constraints — this does not weaken enforcement: coercion applies every
+--! constraint regardless of validation status, so new casts and inserts
+--! (including NULL) still raise. What it skips is validating existing stored
+--! data: without it, re-running the installer over a database that already
+--! holds ORE values (written under an earlier superuser install, before the
+--! installing role was demoted) would run the always-raising poison against
+--! every stored row and abort the install.
 
 DO $do$
 BEGIN
@@ -56,10 +65,14 @@ BEGIN
             ERRCODE = 'feature_not_supported';
   END;
   $poison$;
+  -- NOT VALID: skip validating existing stored data (rows written under an
+  -- earlier superuser install must stay readable, and re-installing over them
+  -- must not abort). Domain coercion still enforces the CHECK on every new
+  -- cast/insert regardless of validation status.
 {% for e in entries %}
   ALTER DOMAIN {{ e.name }} ADD CONSTRAINT eql_ore_unavailable
-    CHECK ({{ internal_schema }}.ore_domain_unavailable(VALUE, '{{ e.name }}', '{{ e.alternatives }}'));
+    CHECK ({{ internal_schema }}.ore_domain_unavailable(VALUE, '{{ e.name_literal }}', '{{ e.alternatives }}')) NOT VALID;
 {% endfor %}
-  RAISE NOTICE 'EQL: ORE operator class absent (creation requires superuser) — % ORE-backed domains disabled and will raise on use; use the _ord_ope (ordering), _eq (equality), or _match (match) domains instead', {{ count }};
+  RAISE NOTICE 'EQL: ORE operator class absent (creation requires superuser) — {{ entries|length }} ORE-backed domains disabled and will raise on use; use the _ord_ope (ordering) and _eq (equality) domains — and text_match for text pattern match — instead';
 END;
 $do$;

@@ -357,16 +357,18 @@ pub struct AggregatesContext {
 pub struct OreFallbackContext {
     pub requires: Vec<String>, // dependency paths only; template emits "-- REQUIRE:"
     pub entries: Vec<OreFallbackEntry>,
-    pub count: usize, // == entries.len(), hoisted for the closing NOTICE
 }
 
 /// One poisoned domain in `ore_fallback.sql`: the schema-qualified domain name
-/// and the human-readable alternatives its poison error steers callers to (the
-/// same family's non-ORE term-bearing siblings, e.g.
+/// (`name` for the identifier position, `name_literal` sql_str-escaped for the
+/// string-literal position in the poison CHECK) and the human-readable
+/// alternatives its poison error steers callers to (the same family's non-ORE
+/// term-bearing siblings, e.g.
 /// `public.integer_eq (equality) or public.integer_ord_ope (ordering)`).
 #[derive(serde::Serialize)]
 pub struct OreFallbackEntry {
     pub name: String,
+    pub name_literal: String,
     pub alternatives: String,
 }
 

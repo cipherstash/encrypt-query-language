@@ -53,7 +53,10 @@ async fn unique_role(conn: &mut sqlx::PgConnection) -> Result<String> {
 /// `bf`) as arrays. Mirrors what the generated CHECK validates (key presence +
 /// array shape); the values are inert — no crypto runs at the CHECK layer.
 fn column_payload(terms: &[Term]) -> String {
-    let mut payload = String::from(r#"{"v":"3","i":{"t":"t","c":"c"},"c":"ct""#);
+    // `v` is a JSON number: the wire contract (`SchemaVersion`, the published
+    // bindings) pins integer 3; the domain CHECK's `->>` would also accept a
+    // string, but the fixtures here should model conforming payloads.
+    let mut payload = String::from(r#"{"v":3,"i":{"t":"t","c":"c"},"c":"ct""#);
     for t in Term::payload_terms(terms) {
         let key = t.json_key();
         if t.nonempty_array_key().is_some() {
@@ -69,7 +72,7 @@ fn column_payload(terms: &[Term]) -> String {
 /// A minimal payload accepted by a query-twin domain's CHECK: envelope minus
 /// `c` (the twins require `NOT (VALUE ? 'c')`) plus every term key.
 fn query_payload(terms: &[Term]) -> String {
-    let mut payload = String::from(r#"{"v":"3","i":{"t":"t","c":"c"}"#);
+    let mut payload = String::from(r#"{"v":3,"i":{"t":"t","c":"c"}"#);
     for t in Term::payload_terms(terms) {
         let key = t.json_key();
         if t.nonempty_array_key().is_some() {
@@ -309,4 +312,135 @@ async fn superuser_install_creates_opclass_and_poisons_nothing(pool: PgPool) -> 
         .await
         .expect("integer_ord accepts values on a superuser install");
     Ok(())
+}
+
+/// The demotion scenario the NOT VALID poison exists for: a role installs as
+/// superuser, ORE data is stored, the role is demoted (managed-platform
+/// reality: the capability is lost), and the installer re-runs. Without
+/// NOT VALID, `ALTER DOMAIN ... ADD CONSTRAINT` validates the stored rows
+/// against the always-raising poison and aborts the whole install — for
+/// exactly the users the fallback exists to help. The re-install must
+/// succeed, keep the pre-existing rows readable, and poison only new writes.
+/// A third install run pins non-superuser-over-non-superuser re-install
+/// idempotency on a data-bearing, already-poisoned database.
+#[sqlx::test(migrations = false)]
+async fn reinstall_over_ore_data(pool: PgPool) -> Result<()> {
+    let mut conn = pool.acquire().await?;
+    let role = unique_role(&mut conn).await?;
+    let db: String = sqlx::query_scalar("SELECT current_database()")
+        .fetch_one(&mut *conn)
+        .await?;
+
+    // Self-heal from a prior failed run (see nosuper_install_poisons_ore_domains).
+    sqlx::query(&format!(
+        "DO $$ BEGIN
+           IF EXISTS (SELECT FROM pg_roles WHERE rolname = '{role}') THEN
+             EXECUTE 'DROP OWNED BY {role} CASCADE';
+             EXECUTE 'DROP ROLE {role}';
+           END IF;
+         END $$"
+    ))
+    .execute(&mut *conn)
+    .await?;
+
+    // Start SUPERUSER: the first install runs with full privileges (opclass
+    // created, nothing poisoned) and — the point of same-role demotion — the
+    // role OWNS every EQL object, so the demoted re-install can drop and
+    // alter them.
+    sqlx::query(&format!("CREATE ROLE {role} SUPERUSER"))
+        .execute(&mut *conn)
+        .await?;
+    // No-ops while the role is superuser; load-bearing after the demotion.
+    sqlx::query(&format!("GRANT CREATE ON DATABASE \"{db}\" TO {role}"))
+        .execute(&mut *conn)
+        .await?;
+    sqlx::query(&format!("GRANT CREATE ON SCHEMA public TO {role}"))
+        .execute(&mut *conn)
+        .await?;
+
+    let ord = eql_domains::scalar_families()
+        .find(|s| s.name == "integer")
+        .and_then(|s| s.domains.iter().find(|d| d.name == "ord"))
+        .expect("integer_ord in catalog");
+    let payload = column_payload(ord.terms);
+    let expected_poisoned: i64 = eql_domains::scalar_families()
+        .flat_map(|s| s.domains.iter())
+        .filter(|d| d.terms.contains(&Term::Ore))
+        .count() as i64
+        * 2; // column domain + query twin
+
+    let result = async {
+        install_as(&mut conn, &role).await?;
+
+        // Store ORE data while the domain is fully functional, owned by the
+        // role so teardown's DROP OWNED BY cleans it up.
+        sqlx::query(&format!("SET ROLE {role}"))
+            .execute(&mut *conn)
+            .await?;
+        sqlx::query("CREATE TABLE ore_reinstall_probe (x public.integer_ord)")
+            .execute(&mut *conn)
+            .await?;
+        sqlx::query("INSERT INTO ore_reinstall_probe VALUES ($1::jsonb)")
+            .bind(&payload)
+            .execute(&mut *conn)
+            .await?;
+        sqlx::query("RESET ROLE").execute(&mut *conn).await?;
+
+        sqlx::query(&format!("ALTER ROLE {role} NOSUPERUSER"))
+            .execute(&mut *conn)
+            .await?;
+
+        // The demoted re-install must not abort validating the stored row.
+        install_as(&mut conn, &role).await?;
+        drop(conn);
+
+        assert!(
+            !ore_opclass_exists(&pool).await?,
+            "the demoted re-install must not have recreated the ORE opclass"
+        );
+        let stored: i64 = sqlx::query_scalar("SELECT count(*) FROM ore_reinstall_probe")
+            .fetch_one(&pool)
+            .await?;
+        assert_eq!(stored, 1, "pre-demotion ORE rows must stay readable");
+        let err = sqlx::query("INSERT INTO ore_reinstall_probe VALUES ($1::jsonb)")
+            .bind(&payload)
+            .execute(&pool)
+            .await
+            .expect_err("new writes into the poisoned domain must raise");
+        assert_poison_error(err, "public.integer_ord");
+
+        // Non-superuser over non-superuser: a further re-run over the same
+        // data-bearing, already-poisoned database is idempotent.
+        let mut conn = pool.acquire().await?;
+        install_as(&mut conn, &role).await?;
+        drop(conn);
+        let poison_constraints: i64 = sqlx::query_scalar(
+            "SELECT count(*) FROM pg_constraint WHERE conname = 'eql_ore_unavailable'",
+        )
+        .fetch_one(&pool)
+        .await?;
+        assert_eq!(
+            poison_constraints, expected_poisoned,
+            "re-install re-poisons every ORE-carrying domain"
+        );
+        let stored: i64 = sqlx::query_scalar("SELECT count(*) FROM ore_reinstall_probe")
+            .fetch_one(&pool)
+            .await?;
+        assert_eq!(stored, 1, "rows survive repeated re-installs");
+
+        Ok::<(), anyhow::Error>(())
+    }
+    .await;
+
+    // Teardown mirrors nosuper_install_poisons_ore_domains: never let a
+    // teardown error mask the real failure.
+    let mut conn = pool.acquire().await?;
+    sqlx::query("RESET ROLE").execute(&mut *conn).await.ok();
+    if let Err(e) = drop_role(&mut conn, &role).await {
+        if result.is_ok() {
+            return Err(e);
+        }
+        eprintln!("teardown: failed to drop role {role}: {e}");
+    }
+    result
 }
