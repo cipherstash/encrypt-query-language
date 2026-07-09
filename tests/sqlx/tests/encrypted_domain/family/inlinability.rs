@@ -88,8 +88,8 @@ async fn no_encrypted_domain_inline_critical_function_is_pinned(pool: PgPool) ->
 
 /// Direct guard for the self-contained eql_v3 SEM index-term functions. Unlike
 /// the structural guard above (which covers jsonb-domain-arg functions), these
-/// take a composite (the ore_block_256 and ore_cllw comparators) or raw
-/// jsonb (hmac_256, bloom_filter, the ore_cllw/has_ore_cllw extractors, the two
+/// take a composite (the ore_block_256 comparators) or raw
+/// jsonb (hmac_256, bloom_filter, the ope_cllw extractor, the two
 /// per-encrypted-value `jsonb_array_to_*` helpers) arg, so they are NOT caught
 /// by the structural pin-skip and need explicit inline_critical allowlisting. If
 /// pin_search_path_v3.sql pins any of them, v3 functional-index inlining silently
@@ -107,8 +107,7 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
         r#"
         WITH expected(proname, pronargs, arg0, arg1) AS (
           VALUES
-            ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
-            ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
+            ('ope_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('meta_data', 1, 'jsonb'::regtype, 0::oid),
             ('jsonb_array', 1, 'jsonb'::regtype, 0::oid),
             ('jsonb_contains', 2, 'jsonb'::regtype, 'jsonb'::regtype),
@@ -131,15 +130,10 @@ async fn eql_v3_sem_inline_critical_functions_are_unpinned(pool: PgPool) -> Resu
               'ore_block_256_eq','ore_block_256_neq',
               'ore_block_256_lt','ore_block_256_lte',
               'ore_block_256_gt','ore_block_256_gte'))
-            OR (p.pronargs = 2 AND p.proname IN (
-              'ore_cllw_eq','ore_cllw_neq',
-              'ore_cllw_lt','ore_cllw_lte',
-              'ore_cllw_gt','ore_cllw_gte'))
             OR (p.pronargs = 1 AND p.proname IN (
               'hmac_256',
               'bloom_filter',
-              'ore_cllw',
-              'has_ore_cllw')
+              'ope_cllw')
                 AND p.proargtypes[0] = 'jsonb'::regtype)
             OR e.proname IS NOT NULL
           )
@@ -183,8 +177,7 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
         r#"
         WITH expected(proname, pronargs, arg0, arg1) AS (
           VALUES
-            ('ore_cllw', 1, 'jsonb'::regtype, 0::oid),
-            ('has_ore_cllw', 1, 'jsonb'::regtype, 0::oid),
+            ('ope_cllw', 1, 'jsonb'::regtype, 0::oid),
             ('meta_data', 1, 'jsonb'::regtype, 0::oid),
             ('jsonb_array', 1, 'jsonb'::regtype, 0::oid),
             ('jsonb_contains', 2, 'jsonb'::regtype, 'jsonb'::regtype),

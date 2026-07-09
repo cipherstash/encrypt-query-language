@@ -458,7 +458,7 @@ macro_rules! scalar_matrix {
 ///
 /// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
 /// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
-/// count-distinct, and aggregates reduce through `eql_v3.ore_cllw` via the
+/// count-distinct, and aggregates reduce through `eql_v3.ord_ope_term` via the
 /// `JsonbEntryInteger` extractor overrides.
 #[macro_export]
 macro_rules! jsonb_entry_matrix {
@@ -505,14 +505,14 @@ macro_rules! jsonb_entry_matrix {
         // (`value < '<lit>'::jsonb`), which is load-bearing for scalars (they have
         // `(domain, jsonb)` cross-type operators) but UNSAFE for entries —
         // `jsonb_entry` has no `(entry, jsonb)` operator, so a bare-jsonb RHS
-        // flattens to native `jsonb < jsonb` (no ore_cllw, no index) rather than
+        // flattens to native `jsonb < jsonb` (no ord_ope_term, no index) rather than
         // the entry operator. The hand-written `jsonb_entry_integer_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
 
         // Aggregates: eql_v3.min/max over jsonb_entry (src/v3/jsonb/aggregates.sql).
         // The aggregate leaf cases compare extrema via the ord-extractor seam
-        // (eql_v3.ore_cllw for entries), so the entry min/max route through the
-        // `oc` (CLLW ORE) term exactly like the comparison operators.
+        // (eql_v3.ord_ope_term for entries), so the entry min/max route through the
+        // `op` (CLLW OPE) term exactly like the comparison operators.
         $crate::__scalar_matrix_aggregate_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
@@ -2961,7 +2961,7 @@ macro_rules! __scalar_matrix_aggregate_case {
                 // where payload text matches but the ordering term resolves to a
                 // different value (e.g. due to payload-key reordering). Routed
                 // through the ord-extractor seam so scalars use `eql_v3.ord_term`
-                // and SteVec entries use `eql_v3.ore_cllw`.
+                // and SteVec entries use `eql_v3.ord_ope_term`.
                 let lhs_ord = (spec.ord_extractor)(&format!("eql_v3.{}(({col})::{d})", $agg_fn));
                 let rhs_ord = (spec.ord_extractor)(&format!("$1::jsonb::{d}"));
                 let ord_terms_match: bool = sqlx::query_scalar(&format!(

@@ -581,7 +581,7 @@ fn from_v2_ste_vec_output_validates_against_published_v3_schema() {
         "i": ident(),
         "sv": [
             { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
-            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "oc": HEX_LONG }
+            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
         ]
     });
     assert_converts_to_valid_v3(&v2, "json");
@@ -593,7 +593,7 @@ fn from_v2_query_output_validates_against_published_v3_schema() {
     let v2 = json!({
         "sv": [
             { "s": SELECTOR, "hm": HEX },
-            { "s": SELECTOR, "oc": HEX_LONG }
+            { "s": SELECTOR, "op": HEX_LONG }
         ]
     });
     let out = from_v2_query(&v2, TargetDomain::Json).expect("query conversion must succeed");

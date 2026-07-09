@@ -107,7 +107,7 @@ SELECT encrypted_json ->> 'selector_hash'::text FROM examples;
 SELECT encrypted_json -> 0 FROM examples;
 ```
 
-The extracted `public.jsonb_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ore_cllw` (on String / Number leaves):
+The extracted `public.jsonb_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_ope_term` (on String / Number leaves):
 
 ```sql
 SELECT * FROM examples
@@ -163,7 +163,7 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 ### Entry comparison / aggregate
 
 - **`eql_v3.eq_term(entry public.jsonb_entry)`** — equality term (backs `=` / `<>` / `GROUP BY`).
-- **`eql_v3.ore_cllw(entry public.jsonb_entry)`** — ordering term (backs `<` … `>=`); **`eql_v3.has_ore_cllw(entry)`** reports whether the leaf carries one.
+- **`eql_v3.ord_ope_term(entry public.jsonb_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
 - **`eql_v3.min(public.jsonb_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
 For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops`).
@@ -177,7 +177,7 @@ The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`
 Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
 1. **Flattening the structure** — each unique path to a leaf gets a deterministic selector hash.
-2. **Encrypting terms** — each path and value is encrypted into per-path terms (`hm` for equality; `oc` CLLW ORE for ordered String / Number leaves).
+2. **Encrypting terms** — each path and value is encrypted into per-path terms (`hm` for equality; `op` CLLW OPE for ordered String / Number leaves).
 3. **Storing the `sv` array** — all encrypted terms live in the document's `sv` vector.
 
 **Example document:**

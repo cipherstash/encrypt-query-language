@@ -6,7 +6,7 @@
 //! This file owns dimensions D1–D11 and D13–D14. The signature-aware
 //! operator-surface guard (D12) lives in `v3_jsonb_operator_surface_tests.rs`.
 //!
-//! Parameter axes are `{leaf kind: hm, oc} × {operator / behavior}` — NOT
+//! Parameter axes are `{leaf kind: hm, op} × {operator / behavior}` — NOT
 //! `{scalar type}`, because a SteVec value is a *document* (a collection of
 //! leaves addressed by selector), so it does not fit `scalar_matrix!`.
 //!
@@ -39,11 +39,11 @@ use sqlx::PgPool;
 /// A selector carrying a constant `hm` leaf across all rows (an object node —
 /// the document root `$` / `$.nested`). Used for equality / containment needles.
 const SEL_ROOT_HM: &str = "87042b77604cf03ab1ec9a05b5f9c2f7";
-/// A selector carrying a distinct-per-row `oc` leaf (a scalar value, `$.hello`
+/// A selector carrying a distinct-per-row `op` leaf (a scalar value, `$.hello`
 /// / `$.number`). Distinctness is load-bearing for the W1 containment oracle
-/// (`v3_jsonb_containment_oc_only`) — a constant oc would hollow it (Risk #0),
+/// (`v3_jsonb_containment_op_only`) — a constant op would hollow it (Risk #0),
 /// guarded by `v3_jsonb_fixture_structural_invariants`.
-const SEL_HELLO_OC: &str = "3a114ad13d25b030f41175114347de59";
+const SEL_HELLO_OP: &str = "3a114ad13d25b030f41175114347de59";
 
 /// A forged `hm` term for the SELF-CONTAINED equality / containment tests (D1,
 /// `containment_self_and_subset`) — they build their own entries / docs and
@@ -54,28 +54,29 @@ const HM_TERM_FORGED: &str = "aabbccddeeff00112233445566778899";
 // ============================================================================
 // Tier-2 builders — curated literal payloads with KNOWN relationships.
 //
-// The fixture's real `oc` ciphertexts are not in a guaranteed total order, so
-// the ORDERED-correctness arms (D2) use a CURATED forged `oc` ladder built
-// inline here (forge hex differing in the trailing byte). Under the CLLW
-// per-byte protocol, when the
-// first differing byte `b` satisfies `(b+1) == a`, then `a > b`; choosing
-// trailing bytes `..00 < ..01 < ..02` yields a total, known order.
+// The fixture's real `op` ciphertexts are not in a guaranteed total order, so
+// the ORDERED-correctness arms (D2) use a CURATED forged `op` ladder built
+// inline here (forge hex differing in the trailing byte). CLLW-OPE ciphertexts
+// order as PLAIN LEXICOGRAPHIC byte strings (the hex-decoded bytes compare
+// like memcmp; a shorter prefix sorts first), so choosing trailing bytes
+// `..00 < ..01 < ..02` at a shared prefix yields a total, known order.
 //
-// Why not assert ordering over the *real* per-leaf `oc` ciphertexts directly:
-// the v3_ste_vec fixture's `$.hello` `oc` leaves are sampled values with no
-// known/stable plaintext-to-order mapping (the proxy emits CLLW blocks whose
-// pairwise order is not curated in the fixture), so there is no oracle to assert
-// against per leaf. Real-ciphertext ordering *is* covered where an oracle
+// Why not assert ordering over the *real* per-leaf `op` ciphertexts directly:
+// the v3_ste_vec fixture's `$.hello` `op` leaves are sampled values with no
+// known/stable plaintext-to-order mapping (the client emits OPE ciphertexts
+// whose pairwise order is not curated in the fixture), so there is no oracle to
+// assert against per leaf. Real-ciphertext ordering *is* covered where an oracle
 // exists: the scalar matrix ORDER BY arm (`tests/sqlx/src/matrix.rs`,
 // `*_ord_*_order_by`) sorts a column of real fixture ciphertexts and asserts the
 // result matches the plaintext-sorted oracle. This forged ladder covers the
-// complementary axis — that the per-leaf jsonb `oc` comparison wiring itself
+// complementary axis — that the per-leaf jsonb `op` comparison wiring itself
 // orders correctly — with a known total order the fixture cannot provide.
 // ============================================================================
 
-/// A forged `oc` hex ladder at a shared prefix, strictly increasing under CLLW.
-/// `OC_LADDER[0] < OC_LADDER[1] < OC_LADDER[2] < OC_LADDER[3]`.
-const OC_LADDER: [&str; 4] = [
+/// A forged `op` hex ladder at a shared prefix, strictly increasing under
+/// plain lexicographic byte order (the OPE comparison order).
+/// `OP_LADDER[0] < OP_LADDER[1] < OP_LADDER[2] < OP_LADDER[3]`.
+const OP_LADDER: [&str; 4] = [
     "00010203040500",
     "00010203040501",
     "00010203040502",
@@ -83,14 +84,14 @@ const OC_LADDER: [&str; 4] = [
 ];
 
 /// Build a single sv entry literal (`jsonb_entry`-shaped) carrying selector
-/// `sel`, ciphertext `c`, and exactly one term (`hm` or `oc`).
+/// `sel`, ciphertext `c`, and exactly one term (`hm` or `op`).
 fn entry(sel: &str, term_field: &str, term_hex: &str) -> String {
     format!(r#"{{"s":"{sel}","c":"ct","{term_field}":"{term_hex}"}}"#)
 }
 
-/// Build an `oc` jsonb_entry literal at the canonical ordered selector.
-fn oc_entry(oc_hex: &str) -> String {
-    entry(SEL_HELLO_OC, "oc", oc_hex)
+/// Build an `op` jsonb_entry literal at the canonical ordered selector.
+fn op_entry(op_hex: &str) -> String {
+    entry(SEL_HELLO_OP, "op", op_hex)
 }
 
 /// Build a document literal (`public.json`-shaped) wrapping the given sv element
@@ -132,7 +133,7 @@ async fn root_hm_term(pool: &PgPool) -> anyhow::Result<String> {
 
 // ============================================================================
 // D1 — Equality correctness on a leaf (entry = needle iff terms equal; <> is
-//      the negation). Parameterized over leaf kind ∈ {hm, oc}.
+//      the negation). Parameterized over leaf kind ∈ {hm, op}.
 // ============================================================================
 
 macro_rules! v3_jsonb_eq_correctness {
@@ -180,44 +181,45 @@ v3_jsonb_eq_correctness!(
         HM_TERM_FORGED,
         "ffffffffffffffffffffffffffffffff"
     ),
-    (oc, "oc", SEL_HELLO_OC, OC_LADDER[0], OC_LADDER[1]),
+    (op, "op", SEL_HELLO_OP, OP_LADDER[0], OP_LADDER[1]),
 );
 
 // ============================================================================
-// D2 — Ordered correctness on an `oc` leaf: < <= > >= follow CLLW ORE order,
-//      asserted against the curated, KNOWN-ordered forged ladder. Order is
-//      total and known, so we assert the exact relation for each operator.
+// D2 — Ordered correctness on an `op` leaf: < <= > >= follow the CLLW-OPE
+//      order (plain bytewise comparison of the decoded ciphertexts), asserted
+//      against the curated, KNOWN-ordered forged ladder. Order is total and
+//      known, so we assert the exact relation for each operator.
 // ============================================================================
 
 macro_rules! v3_jsonb_ord_correctness {
     ( $( ($name:ident, $op:literal, $lo_rel:expr, $eq_rel:expr, $hi_rel:expr) ),+ $(,)? ) => {
         $( paste::paste! {
             #[sqlx::test]
-            async fn [<v3_jsonb_oc_ $name _correctness>](pool: PgPool) -> anyhow::Result<()> {
-                let lo = oc_entry(OC_LADDER[1]);
-                let mid = oc_entry(OC_LADDER[1]); // equal term to `lo`
-                let hi = oc_entry(OC_LADDER[2]);
+            async fn [<v3_jsonb_op_ $name _correctness>](pool: PgPool) -> anyhow::Result<()> {
+                let lo = op_entry(OP_LADDER[1]);
+                let mid = op_entry(OP_LADDER[1]); // equal term to `lo`
+                let hi = op_entry(OP_LADDER[2]);
 
                 // mid `op` (something strictly greater): the "lo < hi" position.
                 let against_greater: bool = sqlx::query_scalar(&format!(
                     "SELECT '{mid}'::public.jsonb_entry {} '{hi}'::public.jsonb_entry", $op
                 )).fetch_one(&pool).await?;
                 assert_eq!(against_greater, $lo_rel,
-                    "oc {} against a strictly-greater leaf", $op);
+                    "op {} against a strictly-greater leaf", $op);
 
                 // mid `op` (equal term).
                 let against_equal: bool = sqlx::query_scalar(&format!(
                     "SELECT '{mid}'::public.jsonb_entry {} '{lo}'::public.jsonb_entry", $op
                 )).fetch_one(&pool).await?;
                 assert_eq!(against_equal, $eq_rel,
-                    "oc {} against an equal-term leaf", $op);
+                    "op {} against an equal-term leaf", $op);
 
                 // hi `op` (something strictly smaller).
                 let against_smaller: bool = sqlx::query_scalar(&format!(
                     "SELECT '{hi}'::public.jsonb_entry {} '{lo}'::public.jsonb_entry", $op
                 )).fetch_one(&pool).await?;
                 assert_eq!(against_smaller, $hi_rel,
-                    "oc {} against a strictly-smaller leaf", $op);
+                    "op {} against a strictly-smaller leaf", $op);
 
                 Ok(())
             }
@@ -235,10 +237,10 @@ v3_jsonb_ord_correctness!(
 
 /// D2 — the forged ladder is a TOTAL order across all four leaves.
 #[sqlx::test]
-async fn v3_jsonb_oc_ladder_is_total_order(pool: PgPool) -> anyhow::Result<()> {
-    for w in OC_LADDER.windows(2) {
-        let lo = oc_entry(w[0]);
-        let hi = oc_entry(w[1]);
+async fn v3_jsonb_op_ladder_is_total_order(pool: PgPool) -> anyhow::Result<()> {
+    for w in OP_LADDER.windows(2) {
+        let lo = op_entry(w[0]);
+        let hi = op_entry(w[1]);
         let ok: bool = sqlx::query_scalar(&format!(
             "SELECT '{lo}'::public.jsonb_entry < '{hi}'::public.jsonb_entry"
         ))
@@ -251,8 +253,8 @@ async fn v3_jsonb_oc_ladder_is_total_order(pool: PgPool) -> anyhow::Result<()> {
         );
     }
     // Transitive end-to-end: first < last.
-    let first = oc_entry(OC_LADDER[0]);
-    let last = oc_entry(OC_LADDER[OC_LADDER.len() - 1]);
+    let first = op_entry(OP_LADDER[0]);
+    let last = op_entry(OP_LADDER[OP_LADDER.len() - 1]);
     let end: bool = sqlx::query_scalar(&format!(
         "SELECT '{first}'::public.jsonb_entry < '{last}'::public.jsonb_entry"
     ))
@@ -272,8 +274,8 @@ async fn v3_jsonb_oc_ladder_is_total_order(pool: PgPool) -> anyhow::Result<()> {
 
 #[sqlx::test]
 async fn v3_jsonb_entry_entry_shape_resolves(pool: PgPool) -> anyhow::Result<()> {
-    let a = entry(SEL_HELLO_OC, "oc", OC_LADDER[0]);
-    let b = entry(SEL_HELLO_OC, "oc", OC_LADDER[1]);
+    let a = entry(SEL_HELLO_OP, "op", OP_LADDER[0]);
+    let b = entry(SEL_HELLO_OP, "op", OP_LADDER[1]);
     // Each of the six entry operators resolves on (entry, entry) and returns bool.
     for op in ["=", "<>", "<", "<=", ">", ">="] {
         let _v: bool = sqlx::query_scalar(&format!(
@@ -287,7 +289,7 @@ async fn v3_jsonb_entry_entry_shape_resolves(pool: PgPool) -> anyhow::Result<()>
 
 // ============================================================================
 // D4 — Containment positives + commutator agreement `a @> b ⇔ b <@ a`.
-//      Parameterized over needle kind ∈ {hm-only, oc-only, mixed}.
+//      Parameterized over needle kind ∈ {hm-only, op-only, mixed}.
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
@@ -326,22 +328,22 @@ async fn v3_jsonb_containment_hm_only(pool: PgPool) -> anyhow::Result<()> {
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn v3_jsonb_containment_oc_only(pool: PgPool) -> anyhow::Result<()> {
-    // Use a self-needle: extract row 1's `$.hello` oc term and search for it.
-    let oc: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' FROM fixtures.v3_ste_vec WHERE id = 1"
+async fn v3_jsonb_containment_op_only(pool: PgPool) -> anyhow::Result<()> {
+    // Use a self-needle: extract row 1's `$.hello` op term and search for it.
+    let op: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
     .fetch_one(&pool)
     .await?;
-    let n = needle(&[(SEL_HELLO_OC, "oc", &oc)]);
+    let n = needle(&[(SEL_HELLO_OP, "op", &op)]);
 
-    // Row 1 must be among the matches (oc terms can repeat across rows).
+    // Row 1 must be among the matches (op terms can repeat across rows).
     let row1: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(row1, 1, "row 1 must contain its own oc leaf");
+    assert_eq!(row1, 1, "row 1 must contain its own op leaf");
 
     // Commutator agreement over the whole table.
     let fwd: i64 = sqlx::query_scalar(&format!(
@@ -354,7 +356,7 @@ async fn v3_jsonb_containment_oc_only(pool: PgPool) -> anyhow::Result<()> {
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(fwd, rev, "oc-only @> must agree with <@");
+    assert_eq!(fwd, rev, "op-only @> must agree with <@");
 
     // Independent oracle (W1): the exact match count, computed by plain field
     // extraction + string equality — NOT via the `@>` operator under test. This
@@ -363,29 +365,29 @@ async fn v3_jsonb_containment_oc_only(pool: PgPool) -> anyhow::Result<()> {
     // tautological `fwd >= 1`.
     let expected: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec \
-         WHERE (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' = '{oc}'"
+         WHERE (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' = '{op}'"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(
         expected >= 1,
-        "fixture sanity: row 1's oc term must be present"
+        "fixture sanity: row 1's op term must be present"
     );
     assert_eq!(
         fwd, expected,
-        "@> must match exactly the rows whose $.hello oc equals the needle term"
+        "@> must match exactly the rows whose $.hello op equals the needle term"
     );
 
     // W1 strict-subset (Risk #0): the self-needle must match a PROPER subset,
     // not the whole table. With `$.hello` distinct per row, `expected == 1 <
-    // total`. A full-table match means `$.hello` collapsed to a constant oc and
+    // total`. A full-table match means `$.hello` collapsed to a constant op and
     // the exact-multiplicity check above is vacuous.
     let total: i64 = sqlx::query_scalar("SELECT count(*) FROM fixtures.v3_ste_vec")
         .fetch_one(&pool)
         .await?;
     assert!(
         expected < total,
-        "W1: $.hello oc self-needle must match a strict subset ({expected} of {total}); \
+        "W1: $.hello op self-needle must match a strict subset ({expected} of {total}); \
          a full-table match means $.hello is constant and the oracle is hollow (Risk #0)"
     );
     Ok(())
@@ -393,14 +395,14 @@ async fn v3_jsonb_containment_oc_only(pool: PgPool) -> anyhow::Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
-    // Mixed needle: root hm + row 1's own oc leaf. Row 1 must match.
-    let oc: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' FROM fixtures.v3_ste_vec WHERE id = 1"
+    // Mixed needle: root hm + row 1's own op leaf. Row 1 must match.
+    let op: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
     .fetch_one(&pool)
     .await?;
     let root_hm = root_hm_term(&pool).await?;
-    let n = needle(&[(SEL_ROOT_HM, "hm", &root_hm), (SEL_HELLO_OC, "oc", &oc)]);
+    let n = needle(&[(SEL_ROOT_HM, "hm", &root_hm), (SEL_HELLO_OP, "op", &op)]);
 
     let row1: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_jsonb"
@@ -409,7 +411,7 @@ async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
     .await?;
     assert_eq!(
         row1, 1,
-        "row 1 contains both the root hm and its own oc leaf"
+        "row 1 contains both the root hm and its own op leaf"
     );
     Ok(())
 }
@@ -420,7 +422,7 @@ async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
 async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()> {
     let full = doc(&[
         entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED),
-        oc_entry(OC_LADDER[2]),
+        op_entry(OP_LADDER[2]),
     ]);
     let subset = doc(&[entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED)]);
 
@@ -489,7 +491,7 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
 async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow::Result<()> {
     let full = doc(&[
         entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED),
-        oc_entry(OC_LADDER[2]),
+        op_entry(OP_LADDER[2]),
     ]);
     let subset = doc(&[entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED)]);
 
@@ -535,29 +537,33 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     Ok(())
 }
 
-/// `eql_v3.has_ore_cllw(jsonb_entry)` is otherwise only exercised incidentally
-/// — `jsonb_entry_integer_fixture_shape` asserts every fixture row's `oc`-bearing
-/// entry passes it, but never exercises the false branch (an entry with `hm`
-/// only, no `oc`). Dedicated positive/negative coverage of both branches.
+/// `eql_v3.ord_ope_term(jsonb_entry)` has no `has_*` companion: absence of an
+/// `op` term is signalled by the extractor returning SQL NULL (which a
+/// functional btree index stores and comparisons skip). Dedicated
+/// positive/negative coverage of both branches — a non-NULL bytea for an
+/// op-bearing entry, NULL for an hm-only entry.
 #[sqlx::test]
-async fn v3_jsonb_has_ore_cllw_entry_branches(pool: PgPool) -> anyhow::Result<()> {
-    let with_oc = oc_entry(OC_LADDER[0]);
-    let has_oc: bool = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.has_ore_cllw('{with_oc}'::public.jsonb_entry)"
-    ))
-    .fetch_one(&pool)
-    .await?;
-    assert!(has_oc, "has_ore_cllw must be true for an oc-bearing entry");
-
-    let hm_only = entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED);
-    let has_no_oc: bool = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.has_ore_cllw('{hm_only}'::public.jsonb_entry)"
+async fn v3_jsonb_ord_ope_term_entry_branches(pool: PgPool) -> anyhow::Result<()> {
+    let with_op = op_entry(OP_LADDER[0]);
+    let term: Option<Vec<u8>> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.ord_ope_term('{with_op}'::public.jsonb_entry)::bytea"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(
-        !has_no_oc,
-        "has_ore_cllw must be false for an hm-only entry"
+        term.is_some(),
+        "ord_ope_term must be non-NULL for an op-bearing entry"
+    );
+
+    let hm_only = entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED);
+    let no_term: Option<Vec<u8>> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.ord_ope_term('{hm_only}'::public.jsonb_entry)::bytea"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        no_term.is_none(),
+        "ord_ope_term must be NULL for an hm-only entry (no op term to extract)"
     );
 
     Ok(())
@@ -598,23 +604,23 @@ async fn v3_jsonb_fixture_structural_invariants(pool: PgPool) -> anyhow::Result<
     .await?;
     assert_eq!(root_hm_rows, 10, "LB2: root hm present in every row");
 
-    // LB3: the $.hello oc is present in every row AND distinct across all 10
+    // LB3: the $.hello op is present in every row AND distinct across all 10
     // (oracle discrimination — Risk #0).
-    let distinct_hello_oc: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(DISTINCT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc') \
+    let distinct_hello_op: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(DISTINCT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op') \
          FROM fixtures.v3_ste_vec"
     ))
     .fetch_one(&pool)
     .await?;
     assert_eq!(
-        distinct_hello_oc, 10,
-        "LB3: $.hello oc distinct across all rows (oracle discrimination)"
+        distinct_hello_op, 10,
+        "LB3: $.hello op distinct across all rows (oracle discrimination)"
     );
     Ok(())
 }
 
 // ============================================================================
-// D5 — Negative / discriminating containment (the eq_term coalesce(hm,oc)
+// D5 — Negative / discriminating containment (the eq_term coalesce(hm,op)
 //      collapse regression guard). BOTH wrong-bytes AND wrong-term-type.
 // ============================================================================
 
@@ -651,17 +657,17 @@ async fn v3_jsonb_containment_rejects_wrong_bytes(pool: PgPool) -> anyhow::Resul
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::Result<()> {
     // The genuine load-bearing collapse guard (W2), fully self-contained (no
-    // fixture): a curated `hm` leaf and an `oc` needle carrying BYTE-IDENTICAL
-    // term bytes at the same selector. `eq_term` coalesces hm/oc to the same
+    // fixture): a curated `hm` leaf and an `op` needle carrying BYTE-IDENTICAL
+    // term bytes at the same selector. `eq_term` coalesces hm/op to the same
     // bytes, so a naive byte compare would falsely match — but containment keys
-    // on the term FIELD (`hm` vs `oc`), so the oc needle must REJECT while the
+    // on the term FIELD (`hm` vs `op`), so the op needle must REJECT while the
     // matching hm needle ACCEPTS (floor proving it's discrimination, not a dead
     // path). The fixture data happens to contain no such collision, so this
     // constructs one explicitly rather than relying on the rows.
     const COLLIDE_SEL: &str = "00000000000000000000000000000001";
     const COLLIDE_TERM: &str = "00112233445566778899aabbccddeeff";
     let hm_doc = doc(&[entry(COLLIDE_SEL, "hm", COLLIDE_TERM)]);
-    let oc_needle = needle(&[(COLLIDE_SEL, "oc", COLLIDE_TERM)]);
+    let op_needle = needle(&[(COLLIDE_SEL, "op", COLLIDE_TERM)]);
     let hm_needle = needle(&[(COLLIDE_SEL, "hm", COLLIDE_TERM)]);
     let collide_accept: bool = sqlx::query_scalar(&format!(
         "SELECT '{hm_doc}'::public.json @> '{hm_needle}'::eql_v3.query_jsonb"
@@ -669,14 +675,14 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     .fetch_one(&pool)
     .await?;
     let collide_reject: bool = sqlx::query_scalar(&format!(
-        "SELECT '{hm_doc}'::public.json @> '{oc_needle}'::eql_v3.query_jsonb"
+        "SELECT '{hm_doc}'::public.json @> '{op_needle}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(collide_accept, "matching hm needle must accept (floor)");
     assert!(
         !collide_reject,
-        "an oc needle must NOT match an hm leaf with byte-identical term bytes"
+        "an op needle must NOT match an hm leaf with byte-identical term bytes"
     );
 
     // The same field-type discrimination against the REAL fixture rows. W3
@@ -694,8 +700,8 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
         "fixture sanity: the correct hm needle must match"
     );
 
-    // An `oc`-field needle carrying the real hm term at the hm selector: rejects.
-    let n = needle(&[(SEL_ROOT_HM, "oc", &root_hm)]);
+    // An `op`-field needle carrying the real hm term at the hm selector: rejects.
+    let n = needle(&[(SEL_ROOT_HM, "op", &root_hm)]);
     let hits: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_jsonb"
     ))
@@ -703,17 +709,17 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     .await?;
     assert_eq!(
         hits, 0,
-        "an oc-field needle must not match an hm leaf (field-type discrimination)"
+        "an op-field needle must not match an hm leaf (field-type discrimination)"
     );
 
-    // And the reverse: an `hm`-field needle carrying a real oc term at the oc
+    // And the reverse: an `hm`-field needle carrying a real op term at the op
     // selector must reject against every row.
-    let oc: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' FROM fixtures.v3_ste_vec WHERE id = 1"
+    let op: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
     .fetch_one(&pool)
     .await?;
-    let n2 = needle(&[(SEL_HELLO_OC, "hm", &oc)]);
+    let n2 = needle(&[(SEL_HELLO_OP, "hm", &op)]);
     let hits2: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n2}'::eql_v3.query_jsonb"
     ))
@@ -721,7 +727,7 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     .await?;
     assert_eq!(
         hits2, 0,
-        "an hm-field needle must not match an oc leaf (field-type discrimination)"
+        "an hm-field needle must not match an op leaf (field-type discrimination)"
     );
     Ok(())
 }
@@ -779,7 +785,7 @@ macro_rules! v3_jsonb_supported_null {
 //
 // Intentionally crypto-free: this is the minimal structurally-valid envelope
 // (empty `i`, version literal, empty `sv`), NOT a stand-in for a generated
-// fixture. It carries zero `hm`/`oc`/`ore` index terms, so the real-encrypted-
+// fixture. It carries zero `hm`/`op` index terms, so the real-encrypted-
 // data rule (fixtures must come from actual crypto) does not apply — there is
 // nothing fabricated to pass off as a real ciphertext. The blocker and
 // bare-operand tests that use it exercise PostgreSQL domain/operator resolution
@@ -796,10 +802,10 @@ v3_jsonb_supported_null!(
     (entry_eq_lhs, "SELECT NULL::public.jsonb_entry = '{\"s\":\"r\",\"c\":\"x\",\"hm\":\"00\"}'::public.jsonb_entry"),
     (entry_eq_rhs, "SELECT '{\"s\":\"r\",\"c\":\"x\",\"hm\":\"00\"}'::public.jsonb_entry = NULL::public.jsonb_entry"),
     (entry_neq_lhs, "SELECT NULL::public.jsonb_entry <> '{\"s\":\"r\",\"c\":\"x\",\"hm\":\"00\"}'::public.jsonb_entry"),
-    (entry_lt_lhs, "SELECT NULL::public.jsonb_entry < '{\"s\":\"r\",\"c\":\"x\",\"oc\":\"00\"}'::public.jsonb_entry"),
-    (entry_lte_lhs, "SELECT NULL::public.jsonb_entry <= '{\"s\":\"r\",\"c\":\"x\",\"oc\":\"00\"}'::public.jsonb_entry"),
-    (entry_gt_lhs, "SELECT NULL::public.jsonb_entry > '{\"s\":\"r\",\"c\":\"x\",\"oc\":\"00\"}'::public.jsonb_entry"),
-    (entry_gte_lhs, "SELECT NULL::public.jsonb_entry >= '{\"s\":\"r\",\"c\":\"x\",\"oc\":\"00\"}'::public.jsonb_entry"),
+    (entry_lt_lhs, "SELECT NULL::public.jsonb_entry < '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.jsonb_entry"),
+    (entry_lte_lhs, "SELECT NULL::public.jsonb_entry <= '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.jsonb_entry"),
+    (entry_gt_lhs, "SELECT NULL::public.jsonb_entry > '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.jsonb_entry"),
+    (entry_gte_lhs, "SELECT NULL::public.jsonb_entry >= '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.jsonb_entry"),
     // document containment: json @> json
     (doc_contains_doc_lhs, "SELECT NULL::public.json @> '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json"),
     (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.json @> NULL::public.json"),
@@ -1142,7 +1148,7 @@ v3_jsonb_payload_reject!(
         "{\"i\":{},\"v\":3,\"sv\":[{\"s\":null,\"c\":\"y\",\"hm\":\"00\"}]}", // bad entry s
         "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":1,\"hm\":\"00\"}]}", // bad entry c
         "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"hm\":null}]}", // bad entry hm
-        "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"oc\":1}]}", // bad entry oc
+        "{\"i\":{},\"v\":3,\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"op\":1}]}", // bad entry op
     ]
 );
 
@@ -1153,12 +1159,12 @@ v3_jsonb_payload_reject!(
         "[]",                                                    // non-object
         "{\"s\":\"x\",\"hm\":\"00\"}",                           // missing c
         "{\"c\":\"y\",\"hm\":\"00\"}",                           // missing s
-        "{\"s\":\"x\",\"c\":\"y\"}",                             // neither hm nor oc
-        "{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\",\"oc\":\"01\"}", // both hm and oc (XOR)
+        "{\"s\":\"x\",\"c\":\"y\"}",                             // neither hm nor op
+        "{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\",\"op\":\"01\"}", // both hm and op (XOR)
         "{\"s\":null,\"c\":\"y\",\"hm\":\"00\"}",                // s must be a string
         "{\"s\":\"x\",\"c\":1,\"hm\":\"00\"}",                   // c must be a string
         "{\"s\":\"x\",\"c\":\"y\",\"hm\":null}",                 // hm must be a string
-        "{\"s\":\"x\",\"c\":\"y\",\"oc\":1}",                    // oc must be a string
+        "{\"s\":\"x\",\"c\":\"y\",\"op\":1}",                    // op must be a string
     ]
 );
 
@@ -1170,11 +1176,11 @@ v3_jsonb_payload_reject!(
         "{\"sv\":{}}",                                          // sv not an array
         "{\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\"}]}",   // c-bearing element
         "{\"sv\":[{\"hm\":\"00\"}]}",                           // selector-only (no s)
-        "{\"sv\":[{\"s\":\"x\",\"hm\":\"00\",\"oc\":\"01\"}]}", // both terms
+        "{\"sv\":[{\"s\":\"x\",\"hm\":\"00\",\"op\":\"01\"}]}", // both terms
         "{\"sv\":[{\"s\":\"x\"}]}",                             // no term
         "{\"sv\":[{\"s\":null,\"hm\":\"00\"}]}",                // s must be a string
         "{\"sv\":[{\"s\":\"x\",\"hm\":null}]}",                 // hm must be a string
-        "{\"sv\":[{\"s\":\"x\",\"oc\":1}]}",                    // oc must be a string
+        "{\"sv\":[{\"s\":\"x\",\"op\":1}]}",                    // op must be a string
     ]
 );
 
@@ -1213,7 +1219,7 @@ async fn v3_jsonb_generator_envelope_shape_accepted(pool: PgPool) -> anyhow::Res
         "k":"sv","v":3,"i":{"c":"payload","t":"_fixture_v3_ste_vec"},
         "sv":[
             {"s":"87042b77604cf03ab1ec9a05b5f9c2f7","c":"ct","hm":"8477cf88d9be4f92503b0d31dd575704","a":false},
-            {"s":"3a114ad13d25b030f41175114347de59","c":"ct","oc":"00010203","a":false}
+            {"s":"3a114ad13d25b030f41175114347de59","c":"ct","op":"00010203","a":false}
         ]
     }"#;
     let ok: bool = sqlx::query_scalar(&format!("SELECT '{envelope}'::public.json IS NOT NULL"))
@@ -1403,11 +1409,11 @@ async fn v3_jsonb_index_to_ste_vec_query_gin_engages(pool: PgPool) -> anyhow::Re
 //
 // Real ciphertext only: both documents come from the generated `v3_ste_vec`
 // fixture, replicated via generate_series — no new fixture, no static blob.
-// Selectivity comes from the distinct-per-row `$.hello` oc leaf
-// (`SEL_HELLO_OC`, whose load-bearing distinctness is asserted by
-// `v3_jsonb_containment_oc_only` / `v3_jsonb_fixture_structural_invariants`):
-// the pivot's own oc term matches ONLY the pivot row, never the 5000 bulk rows
-// (whose oc term is the filler document's, a different value). A precondition
+// Selectivity comes from the distinct-per-row `$.hello` op leaf
+// (`SEL_HELLO_OP`, whose load-bearing distinctness is asserted by
+// `v3_jsonb_containment_op_only` / `v3_jsonb_fixture_structural_invariants`):
+// the pivot's own op term matches ONLY the pivot row, never the 5000 bulk rows
+// (whose op term is the filler document's, a different value). A precondition
 // check below fails loudly if the two leaves ever collide.
 // ============================================================================
 
@@ -1415,8 +1421,8 @@ async fn v3_jsonb_index_to_ste_vec_query_gin_engages(pool: PgPool) -> anyhow::Re
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::Result<()> {
     // Two DISTINCT real fixture rows: the filler (bulk) and the pivot. Their
-    // `$.hello` oc leaves differ (distinct per row), so a needle for the
-    // pivot's oc isolates exactly the single pivot row.
+    // `$.hello` op leaves differ (distinct per row), so a needle for the
+    // pivot's op isolates exactly the single pivot row.
     let filler_payload: String = sqlx::query_scalar(
         "SELECT payload::jsonb::text FROM fixtures.v3_ste_vec ORDER BY id ASC LIMIT 1",
     )
@@ -1428,25 +1434,25 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     .fetch_one(&pool)
     .await?;
 
-    // The pivot's own `$.hello` oc term — the same extraction the oc-containment
-    // oracle (`v3_jsonb_containment_oc_only`) uses — which the needle searches
-    // for. The filler's oc term is extracted only to assert the two differ.
-    let pivot_oc: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' \
+    // The pivot's own `$.hello` op term — the same extraction the op-containment
+    // oracle (`v3_jsonb_containment_op_only`) uses — which the needle searches
+    // for. The filler's op term is extracted only to assert the two differ.
+    let pivot_op: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' \
          FROM fixtures.v3_ste_vec ORDER BY id DESC LIMIT 1"
     ))
     .fetch_one(&pool)
     .await?;
-    let filler_oc: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OC}'::text)::jsonb ->> 'oc' \
+    let filler_op: String = sqlx::query_scalar(&format!(
+        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' \
          FROM fixtures.v3_ste_vec ORDER BY id ASC LIMIT 1"
     ))
     .fetch_one(&pool)
     .await?;
     anyhow::ensure!(
-        filler_oc != pivot_oc,
-        "fixture precondition: filler and pivot rows must have distinct $.hello oc \
-         leaves for single-row selectivity (distinct-per-row oc is the load-bearing \
+        filler_op != pivot_op,
+        "fixture precondition: filler and pivot rows must have distinct $.hello op \
+         leaves for single-row selectivity (distinct-per-row op is the load-bearing \
          W1 invariant); got identical terms"
     );
 
@@ -1479,9 +1485,9 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     // enable_seqscan LEFT ON — this is the cost-PREFERENCE proof, not the
     // usability proof (the sibling `*_gin_engages` arm forces seqscan off).
 
-    // Selective needle: the pivot's own `$.hello` oc leaf. With distinct-per-row
-    // oc, exactly the single pivot row contains it.
-    let n = needle(&[(SEL_HELLO_OC, "oc", &pivot_oc)]);
+    // Selective needle: the pivot's own `$.hello` op leaf. With distinct-per-row
+    // op, exactly the single pivot row contains it.
+    let n = needle(&[(SEL_HELLO_OP, "op", &pivot_op)]);
     let query =
         format!("SELECT count(*) FROM v3_jsonb_scale WHERE payload @> '{n}'::eql_v3.query_jsonb");
     assert_index_scan_uses(
@@ -1506,26 +1512,26 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn v3_jsonb_index_ore_cllw_btree_engages(pool: PgPool) -> anyhow::Result<()> {
+async fn v3_jsonb_index_ord_ope_btree_engages(pool: PgPool) -> anyhow::Result<()> {
     let mut tx = pool.begin().await?;
     sqlx::query("SET LOCAL enable_seqscan = off")
         .execute(&mut *tx)
         .await?;
     sqlx::query(&format!(
         "CREATE INDEX v3_jsonb_btree_idx ON fixtures.v3_ste_vec \
-         (eql_v3.ore_cllw(payload -> '{SEL_HELLO_OC}'::text))"
+         (eql_v3.ord_ope_term(payload -> '{SEL_HELLO_OP}'::text))"
     ))
     .execute(&mut *tx)
     .await?;
 
     let query = format!(
-        "SELECT id FROM fixtures.v3_ste_vec ORDER BY eql_v3.ore_cllw(payload -> '{SEL_HELLO_OC}'::text)"
+        "SELECT id FROM fixtures.v3_ste_vec ORDER BY eql_v3.ord_ope_term(payload -> '{SEL_HELLO_OP}'::text)"
     );
     assert_index_scan_uses(
         &mut *tx,
         &query,
         "v3_jsonb_btree_idx",
-        "ore_cllw default btree opclass must engage for ORDER BY on a per-leaf oc",
+        "ord_ope_term's default bytea btree opclass must engage for ORDER BY on a per-leaf op",
     )
     .await?;
 
@@ -1584,21 +1590,6 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
         sv_lookup.is_none(),
         "-> 'sv'::text must be a selector lookup (no match), not native key access"
     );
-    Ok(())
-}
-
-#[sqlx::test]
-async fn v3_jsonb_ore_cllw_null_bytes_composite_raises(pool: PgPool) -> anyhow::Result<()> {
-    eql_tests::assert_raises(
-        &pool,
-        "SELECT eql_v3_internal.compare_ore_cllw_term(
-           ROW(NULL)::eql_v3_internal.ore_cllw,
-           ROW(decode('00', 'hex'))::eql_v3_internal.ore_cllw
-         )",
-        &[],
-        "NULL bytes field",
-    )
-    .await?;
     Ok(())
 }
 

@@ -25,7 +25,7 @@ pub(crate) const RUST_GENERATED_MARKER: &str =
 pub(crate) const SCHEMA: &str = "eql_v3";
 
 /// The schema housing INTERNAL eql_v3 objects only: the SEM index-term types
-/// (`hmac_256`, `bloom_filter`, `ore_block_256(_term)`, `ore_cllw`) and their
+/// (`hmac_256`, `bloom_filter`, `ore_block_256(_term)`, `ope_cllw`) and their
 /// support/constructor/comparator functions, the unsupported-operator
 /// **blockers** (anti-functionality that only raises — never a caller
 /// entrypoint), and the aggregate **state functions**. Split out of `SCHEMA`

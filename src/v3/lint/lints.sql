@@ -19,7 +19,7 @@
 --! (or `pg_get_functiondef`); tracked as a follow-up.
 --!
 --! Operators on `eql_v3` types (the jsonb-backed encrypted-domain families and
---! the SEM index-term types `eql_v3_internal.ore_block_256`, `eql_v3_internal.ore_cllw`) whose
+--! the SEM index-term type `eql_v3_internal.ore_block_256`) whose
 --! implementation functions fail any of these rules silently fall back to seq
 --! scan when the documented functional indexes (`eql_v3.eq_term(col)`,
 --! `eql_v3.ord_term(col)`) are in place. This lint surfaces every such case.

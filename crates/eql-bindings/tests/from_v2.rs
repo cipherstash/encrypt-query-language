@@ -42,7 +42,7 @@ fn v2_ct_minimal() -> Value {
 }
 
 /// A v2.3 SteVec (`k: "sv"`) payload: an `hm` root entry first (the
-/// decryption root — its `c` is the record ciphertext), then an `oc` leaf
+/// decryption root — its `c` is the record ciphertext), then an `op` leaf
 /// carrying the optional array marker `a`.
 fn v2_sv() -> Value {
     json!({
@@ -51,7 +51,7 @@ fn v2_sv() -> Value {
         "i": ident(),
         "sv": [
             { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
-            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "oc": HEX_LONG }
+            { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
         ]
     })
 }
@@ -346,7 +346,7 @@ fn ste_vec_document_converts_and_preserves_entry_order() {
             "i": ident(),
             "sv": [
                 { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
-                { "s": SELECTOR, "c": CIPHERTEXT, "a": true, "oc": HEX_LONG }
+                { "s": SELECTOR, "c": CIPHERTEXT, "a": true, "op": HEX_LONG }
             ]
         })
     );
@@ -356,9 +356,32 @@ fn ste_vec_document_converts_and_preserves_entry_order() {
 #[test]
 fn ste_vec_entry_with_both_terms_is_ambiguous() {
     let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG });
+    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "op": HEX_LONG });
     let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
     assert!(matches!(err, FromV2Error::AmbiguousTerm { entry: 1 }));
+}
+
+#[test]
+fn ste_vec_entry_with_ore_term_is_unconvertible() {
+    // A CLLW-ORE `oc` entry term has no v3 representation: v3 orders SteVec
+    // entries by the CLLW-OPE `op` term (native byte order), and ORE
+    // ciphertext bytes would silently misorder — the converter must fail
+    // closed and demand re-encryption, never pass `oc` bytes through as `op`.
+    let mut v2 = v2_sv();
+    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "oc": HEX_LONG });
+    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
+    assert!(matches!(
+        err,
+        FromV2Error::UnconvertibleOreTerm { entry: 1 }
+    ));
+    // Even alongside a valid term: `oc` presence alone is disqualifying.
+    let mut v2 = v2_sv();
+    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG });
+    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
+    assert!(matches!(
+        err,
+        FromV2Error::UnconvertibleOreTerm { entry: 1 }
+    ));
 }
 
 #[test]
@@ -371,7 +394,7 @@ fn ste_vec_entry_with_neither_term_is_missing() {
     match err {
         FromV2Error::MissingTerm { domain, key, entry } => {
             assert_eq!(domain, "json");
-            assert_eq!(key, "hm|oc");
+            assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }
         other => panic!("expected MissingTerm, got {other:?}"),
@@ -384,11 +407,11 @@ fn ste_vec_entry_with_neither_term_is_missing() {
 
 #[test]
 fn ste_vec_query_converts_to_v3_needle() {
-    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|oc}]}` — no envelope.
+    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope.
     let v2 = json!({
         "sv": [
             { "s": SELECTOR, "hm": HEX },
-            { "s": SELECTOR, "oc": HEX_LONG }
+            { "s": SELECTOR, "op": HEX_LONG }
         ]
     });
     let out = from_v2_query(&v2, TargetDomain::Json).unwrap();
@@ -412,7 +435,7 @@ fn ste_vec_query_normalizes_c_and_a_away() {
 
 #[test]
 fn ste_vec_query_entry_term_errors_match_document_rules() {
-    let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "oc": HEX_LONG } ] });
+    let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] });
     assert!(matches!(
         from_v2_query(&both, TargetDomain::Json).unwrap_err(),
         FromV2Error::AmbiguousTerm { entry: 0 }
@@ -423,7 +446,7 @@ fn ste_vec_query_entry_term_errors_match_document_rules() {
     match from_v2_query(&neither, TargetDomain::Json).unwrap_err() {
         FromV2Error::MissingTerm { domain, key, entry } => {
             assert_eq!(domain, "query_jsonb");
-            assert_eq!(key, "hm|oc");
+            assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }
         other => panic!("expected MissingTerm, got {other:?}"),

@@ -1,11 +1,12 @@
 -- REQUIRE: src/v3/schema.sql
 
 --! @file v3/sem/ope_cllw/types.sql
---! @brief CLLW OPE index term type for scalar range queries (eql_v3 SEM)
+--! @brief CLLW OPE index term type for ordered range queries (eql_v3 SEM)
 --!
 --! Domain type representing a CLLW (Copyless Logarithmic Width)
 --! Order-Preserving Encryption term. The ciphertext is stored hex-encoded in
---! the `op` field of encrypted scalar payloads (the `_ord_ope` domains); the
+--! the `op` field of encrypted payloads — the scalar `_ord_ope` domains and
+--! the ordered entries of a SteVec document (`public.jsonb_entry`); the
 --! domain carries the hex-decoded bytes.
 --!
 --! A DOMAIN over bytea, not a composite: the OPE ciphertext is
@@ -15,8 +16,8 @@
 --! same pattern as eql_v3_internal.hmac_256 over text). That keeps the whole
 --! comparison chain inlinable, so a functional btree index on
 --! `eql_v3.ord_ope_term(col)` engages structurally for the `_ord_ope`
---! domains' comparison operators. Contrast eql_v3_internal.ore_cllw (`oc`), the SteVec
---! CLLW-*ORE* composite compared by a custom per-byte protocol.
+--! domains' comparison operators — and likewise on
+--! `eql_v3.ord_ope_term(col -> 'selector')` for SteVec entry ordering.
 --!
 --! @note Transient type used only during query execution.
 --! @see eql_v3_internal.ope_cllw

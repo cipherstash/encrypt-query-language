@@ -38,16 +38,16 @@ async fn real_ste_vec_row_parses_into_document_and_entries(pool: PgPool) -> anyh
 
     // Assert BOTH index-term variants actually occur in real data — not merely
     // that entries parse. The fixture mixes object leaves (`hm`, hash-equality)
-    // and scalar leaves (`oc`, CLLW-ORE), so a real SteVec document must exercise
+    // and scalar leaves (`op`, CLLW-OPE), so a real SteVec document must exercise
     // both `SteVecTerm` arms; a fixture or binding regression that collapsed one
     // arm would slip past a bare "parses without error" check.
-    let (mut saw_hm, mut saw_oc) = (false, false);
+    let (mut saw_hm, mut saw_op) = (false, false);
     for e in elems {
         // Fails if the real wire shape drifts from the bindings.
         let entry: SteVecEntry = serde_json::from_value(e)?;
         match entry.term {
             SteVecTerm::Hmac { .. } => saw_hm = true,
-            SteVecTerm::OreCllw { .. } => saw_oc = true,
+            SteVecTerm::OpeCllw { .. } => saw_op = true,
         }
     }
     assert!(
@@ -55,8 +55,8 @@ async fn real_ste_vec_row_parses_into_document_and_entries(pool: PgPool) -> anyh
         "real SteVec entries must include an hm (hash-equality) term"
     );
     assert!(
-        saw_oc,
-        "real SteVec entries must include an oc (CLLW-ORE) term"
+        saw_op,
+        "real SteVec entries must include an op (CLLW-OPE) term"
     );
 
     Ok(())
@@ -85,7 +85,7 @@ async fn real_ste_vec_query_parses_into_bindings(pool: PgPool) -> anyhow::Result
     // SteVecQuery above); confirm the term variants are well-formed.
     for entry in &query.sv {
         match &entry.term {
-            SteVecTerm::Hmac { .. } | SteVecTerm::OreCllw { .. } => {}
+            SteVecTerm::Hmac { .. } | SteVecTerm::OpeCllw { .. } => {}
         }
     }
     Ok(())

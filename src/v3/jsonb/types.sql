@@ -14,7 +14,7 @@
 --! @internal
 --! @param val jsonb Candidate entry payload.
 --! @return boolean True when `val` is an sv entry with string `s`, string `c`,
---!         and exactly one string deterministic term (`hm` XOR `oc`).
+--!         and exactly one string deterministic term (`hm` XOR `op`).
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -24,9 +24,9 @@ AS $$
      AND jsonb_typeof(val -> 's') = 'string'
      AND jsonb_typeof(val -> 'c') = 'string'
      AND (
-       (jsonb_typeof(val -> 'hm') = 'string' AND NOT (val ? 'oc'))
+       (jsonb_typeof(val -> 'hm') = 'string' AND NOT (val ? 'op'))
        OR
-       (jsonb_typeof(val -> 'oc') = 'string' AND NOT (val ? 'hm'))
+       (jsonb_typeof(val -> 'op') = 'string' AND NOT (val ? 'hm'))
      ),
     false
   )
@@ -37,7 +37,7 @@ $$;
 --! @param val jsonb Candidate query payload.
 --! @return boolean True when `val` is `{"sv":[...]}` and every element carries
 --!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
---!         `oc`).
+--!         `op`).
 --! @note plpgsql, not LANGUAGE sql (issues #353/#354): the only caller is the
 --!   eql_v3.query_jsonb domain CHECK, where a SQL function can never be
 --!   inlined (and the CHECK itself cannot absorb this body — it needs a
@@ -62,9 +62,9 @@ BEGIN
          AND jsonb_typeof(elem -> 's') = 'string'
          AND NOT (elem ? 'c')
          AND (
-           (jsonb_typeof(elem -> 'hm') = 'string' AND NOT (elem ? 'oc'))
+           (jsonb_typeof(elem -> 'hm') = 'string' AND NOT (elem ? 'op'))
            OR
-           (jsonb_typeof(elem -> 'oc') = 'string' AND NOT (elem ? 'hm'))
+           (jsonb_typeof(elem -> 'op') = 'string' AND NOT (elem ? 'hm'))
          )
        ), false)
      ),
@@ -132,9 +132,9 @@ $$;
 --!
 --! A single element inside an `sv` array: a JSON object that carries a selector
 --! (`s`), a ciphertext (`c`), and **exactly one** of `hm` (HMAC-256, for
---! hash-equality) or `oc` (CLLW ORE, for ordered queries) — they are mutually
+--! hash-equality) or `op` (CLLW OPE, for ordered queries) — they are mutually
 --! exclusive. This is the type returned by `->` and accepted by the per-entry
---! extractors `eql_v3.eq_term` / `eql_v3.ore_cllw`. Extra fields (`a`, root
+--! extractors `eql_v3.eq_term` / `eql_v3.ord_ope_term`. Extra fields (`a`, root
 --! `i`/`v` merged in by `->`) are allowed.
 --!
 --! @see src/v3/jsonb/operators.sql
@@ -166,9 +166,9 @@ BEGIN
            AND jsonb_typeof(VALUE -> 's') = 'string'
            AND jsonb_typeof(VALUE -> 'c') = 'string'
            AND (
-             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'oc'))
+             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'op'))
              OR
-             (jsonb_typeof(VALUE -> 'oc') = 'string' AND NOT (VALUE ? 'hm'))
+             (jsonb_typeof(VALUE -> 'op') = 'string' AND NOT (VALUE ? 'hm'))
            ),
           false
         )
@@ -183,7 +183,7 @@ $$;
 --!
 --! A query-shaped payload `{"sv":[...]}` whose elements carry selector + index
 --! term but **never** a ciphertext (`c`). Each element must carry `s` and
---! exactly one deterministic term (`hm` XOR `oc`). Typing the needle this way
+--! exactly one deterministic term (`hm` XOR `op`). Typing the needle this way
 --! stops selector-only needles from casting and matching every row via bare
 --! `jsonb @>`.
 --!
@@ -220,7 +220,7 @@ $$;
 --! @brief Convert a public.json to a query_jsonb needle.
 --!
 --! Normalises each sv element down to the matching-relevant fields: `s` plus
---! exactly one of `hm` / `oc`. Other fields (`c`, `a`, `i`/`v`, anything else)
+--! exactly one of `hm` / `op`. Other fields (`c`, `a`, `i`/`v`, anything else)
 --! are stripped. This is the canonical needle shape for `@>` containment.
 --! Designed for use as a functional GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
@@ -240,7 +240,7 @@ AS $$
                   jsonb_build_object(
                     's',  elem -> 's',
                     'hm', elem -> 'hm',
-                    'oc', elem -> 'oc'
+                    'op', elem -> 'op'
                   )
                 )
               )
