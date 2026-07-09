@@ -44,7 +44,11 @@ for entry in "${entries[@]}"; do
   name=${entry%% *}
   number=${entry##* }
 
-  refs=$(grep -rl --include='*.rs' -- "$name" "${EQL_ROOT}/tests/sqlx/tests" 2>/dev/null | wc -l | tr -d ' ')
+  # `grep` exits 1 when it matches nothing — which is exactly the case this
+  # check exists to report. Under `set -e` + `pipefail` that status propagates
+  # out of the pipeline and kills the script here, before the diagnostic below
+  # can print. Swallow only grep's status; `wc` still counts the (empty) input.
+  refs=$( { grep -rl --include='*.rs' -- "$name" "${EQL_ROOT}/tests/sqlx/tests" 2>/dev/null || true; } | wc -l | tr -d ' ')
   if [ "$refs" -eq 0 ]; then
     echo "  ✗ ${name} (#${number}) is registered but referenced by no test — remove it" >&2
     fail=1
