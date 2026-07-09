@@ -1127,9 +1127,16 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     let order_path = out_root.join("src/generated-order-v3.txt");
     fs::write(&order_path, format!("{}\n", manifest.order.join("\n")))?;
     let deps_path = out_root.join("src/generated-deps-v3.txt");
-    let deps_body: String = manifest.edges.iter().map(|(d, f)| format!("{d} {f}\n")).collect();
+    let deps_body: String = manifest
+        .edges
+        .iter()
+        .map(|(d, f)| format!("{d} {f}\n"))
+        .collect();
     fs::write(&deps_path, deps_body)?;
-    println!("wrote src/generated-order-v3.txt ({} files)", manifest.order.len());
+    println!(
+        "wrote src/generated-order-v3.txt ({} files)",
+        manifest.order.len()
+    );
 
     let names: Vec<&str> = eql_domains::families_with_scalar_domains()
         .map(|s| s.name)
@@ -1191,8 +1198,12 @@ mod tests {
         assert_eq!(set.len(), m.order.len(), "duplicate path in manifest");
 
         // Every intra-generated edge is respected (dep before file).
-        let pos: std::collections::HashMap<&str, usize> =
-            m.order.iter().enumerate().map(|(i, p)| (p.as_str(), i)).collect();
+        let pos: std::collections::HashMap<&str, usize> = m
+            .order
+            .iter()
+            .enumerate()
+            .map(|(i, p)| (p.as_str(), i))
+            .collect();
         for (dep, file) in &m.edges {
             if let (Some(di), Some(fi)) = (pos.get(dep.as_str()), pos.get(file.as_str())) {
                 assert!(di <= fi, "generated dep {dep} ordered after {file}");

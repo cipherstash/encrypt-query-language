@@ -12,7 +12,11 @@ pub struct CycleError {
 
 impl std::fmt::Display for CycleError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "dependency cycle among generated files: {}", self.remaining.join(", "))
+        write!(
+            f,
+            "dependency cycle among generated files: {}",
+            self.remaining.join(", ")
+        )
     }
 }
 impl std::error::Error for CycleError {}
@@ -69,7 +73,11 @@ pub fn topo_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>, CycleE
     }
     if order.len() != nodes.len() {
         let done: BTreeSet<&str> = order.iter().map(|s| s.as_str()).collect();
-        let remaining = nodes.iter().filter(|n| !done.contains(**n)).map(|s| s.to_string()).collect();
+        let remaining = nodes
+            .iter()
+            .filter(|n| !done.contains(**n))
+            .map(|s| s.to_string())
+            .collect();
         return Err(CycleError { remaining });
     }
     Ok(order)
@@ -82,10 +90,7 @@ mod tests {
     // Two independent nodes must come out in byte (name) order — reproducible.
     #[test]
     fn topo_order_is_name_sorted_for_independent_nodes() {
-        let files = vec![
-            ("b.sql".to_string(), vec![]),
-            ("a.sql".to_string(), vec![]),
-        ];
+        let files = vec![("b.sql".to_string(), vec![]), ("a.sql".to_string(), vec![])];
         assert_eq!(topo_order(&files).unwrap(), vec!["a.sql", "b.sql"]);
     }
 
@@ -95,7 +100,10 @@ mod tests {
         let files = vec![
             ("ops.sql".to_string(), vec!["types.sql".to_string()]),
             ("types.sql".to_string(), vec![]),
-            ("agg.sql".to_string(), vec!["ops.sql".to_string(), "types.sql".to_string()]),
+            (
+                "agg.sql".to_string(),
+                vec!["ops.sql".to_string(), "types.sql".to_string()],
+            ),
         ];
         let out = topo_order(&files).unwrap();
         let pos = |n: &str| out.iter().position(|x| x == n).unwrap();
@@ -107,9 +115,7 @@ mod tests {
     // they never block ordering and never appear in the output.
     #[test]
     fn topo_order_ignores_external_edges() {
-        let files = vec![
-            ("t.sql".to_string(), vec!["src/v3/schema.sql".to_string()]),
-        ];
+        let files = vec![("t.sql".to_string(), vec!["src/v3/schema.sql".to_string()])];
         assert_eq!(topo_order(&files).unwrap(), vec!["t.sql"]);
     }
 
@@ -144,7 +150,11 @@ mod tests {
         let body = "-- AUTOMATICALLY GENERATED FILE.\n-- REQUIRE: src/v3/schema.sql\n-- REQUIRE: a.sql b.sql\nSELECT 1; -- REQUIRE in prose\n";
         assert_eq!(
             requires_of(body),
-            vec!["src/v3/schema.sql".to_string(), "a.sql".to_string(), "b.sql".to_string()]
+            vec![
+                "src/v3/schema.sql".to_string(),
+                "a.sql".to_string(),
+                "b.sql".to_string()
+            ]
         );
     }
 }
