@@ -87,7 +87,10 @@ jobs:
         run: |
           set -euo pipefail
           cargo_version="$(grep -m1 '^version = ' crates/eql-bindings/Cargo.toml | cut -d'"' -f2)"
-          published="$(curl -fsSL --retry 3 "https://crates.io/api/v1/crates/eql-bindings/versions" | jq -r '.versions[].num' | grep -Fx "$cargo_version" || true)"
+          # crates.io rejects curl's default User-Agent with a 403. Without an
+          # explicit UA the request always fails, `|| true` swallows it, and the
+          # no-op short-circuit below is unreachable.
+          published="$(curl -fsSL --retry 3 -H "User-Agent: cipherstash-eql-release (https://github.com/cipherstash/encrypt-query-language)" "https://crates.io/api/v1/crates/eql-bindings/versions" | jq -r '.versions[].num' | grep -Fx "$cargo_version" || true)"
           if [[ -n "$published" ]]; then
             echo "eql-bindings@${cargo_version} is already on crates.io; this run is a publish no-op — skipping the bundled-SQL guard"
             exit 0
