@@ -25,8 +25,8 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | ----------------------------- | ------------------------- | ------------------------ | :------: | :---------------: | :-----------: | :-------: |
 | `public.<T>`                  | none (storage only)       | —                        |    ❌    |        ❌         |      ❌       |    ❌     |
 | `public.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
-| `public.<T>_ord` / `_ord_ope` | `op` (ope_cllw)           | `eql_v3.ord_ope_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
-| `public.<T>_ord_ore`          | `ob` (ore_block_256)      | `eql_v3.ord_term(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
+| `public.<T>_ord` / `_ord_ope` | `op` (ope_cllw)           | `eql_v3.ord_term(col)` |  ✅    |        ✅         |      ✅       |    ❌     |
+| `public.<T>_ord_ore`          | `ob` (ore_block_256)      | `eql_v3.ord_term_ore(col)`   |    ✅    |        ✅         |      ✅       |    ❌     |
 | `public.eql_v3_text_match`           | `bf` (bloom_filter)       | `eql_v3.match_term(col)` |    ❌    |        ❌         |      ❌       |    ✅\*   |
 | `public.eql_v3_text_search`          | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
@@ -35,8 +35,8 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 Notes:
 
 - The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.eql_v3_integer_ord`) when you need to query.
-- `_ord` and `_ord_ope` are **twins**: byte-identical surfaces backed by the CLLW-OPE term. `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol, and `eql_v3_internal.ope_cllw` is a domain over `bytea`, so a functional btree on `eql_v3.ord_ope_term(col)` uses the default operator class and needs no superuser). `_ord` is the recommended name; `_ord_ope` documents the scheme explicitly.
-- `_ord_ore` exposes the **same ordered surface** backed by the block-ORE term (`ob`) instead, compared by the custom N-block protocol. Use it when you specifically need block-ORE. Caveat: its btree operator class is created by a superuser-only `DO` block that is **silently skipped** without that privilege. When it is missing, `CREATE INDEX … btree (eql_v3.ord_term(col))` still *succeeds* — PostgreSQL falls back to `record_ops` on the composite — but that opfamily does not contain the ORE comparison operators, so the index never engages and the ordering it stores is not the ORE ordering. Verify with `\d+` that the index opclass is `ore_block_256_operator_class`, not `record_ops`.
+- `_ord` and `_ord_ope` are **twins**: byte-identical surfaces backed by the CLLW-OPE term. `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol, and `eql_v3_internal.ope_cllw` is a domain over `bytea`, so a functional btree on `eql_v3.ord_term(col)` uses the default operator class and needs no superuser). `_ord` is the recommended name; `_ord_ope` documents the scheme explicitly.
+- `_ord_ore` exposes the **same ordered surface** backed by the block-ORE term (`ob`) instead, compared by the custom N-block protocol. Use it when you specifically need block-ORE. Caveat: its btree operator class is created by a superuser-only `DO` block that is **silently skipped** without that privilege. When it is missing, `CREATE INDEX … btree (eql_v3.ord_term_ore(col))` still *succeeds* — PostgreSQL falls back to `record_ops` on the composite — but that opfamily does not contain the ORE comparison operators, so the index never engages and the ordering it stores is not the ORE ordering. Verify with `\d+` that the index opclass is `ore_block_256_operator_class`, not `record_ops`.
 - On `text_ord` / `text_ord_ope` / `text_ord_ore`, `=` / `<>` route through `hm` (exact HMAC) — ordering terms over text are not equality-lossless.
 - `text_ord` accepts the empty string (its `op` term is well-formed and sorts first). `text_ord_ore` **rejects** it: encrypting `""` yields an empty ORE term (`ob: []`) that the domain CHECK refuses.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
@@ -100,8 +100,8 @@ Notes:
 -- Equality (hash index on eq_term)
 CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
 
--- Ordering / range (btree index on ord_ope_term; use ord_term for an _ord_ore column)
-CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_ope_term(encrypted_at));
+-- Ordering / range (btree index on ord_term; use ord_term_ore for an _ord_ore column)
+CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_term(encrypted_at));
 
 -- Text match (bloom containment — GIN on match_term)
 CREATE INDEX users_name_match ON users USING gin (eql_v3.match_term(encrypted_name));
@@ -142,7 +142,7 @@ The search capabilities available on a value extracted via `->` or `eql_v3.jsonb
 | `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.eql_v3_jsonb_entry`. |
 | `doc ->> 'sel'::text`            | `eql_v3."->>"`                                     | the matching entry serialized as `text` (ciphertext JSON, **not** decrypted plaintext). |
 | extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.eql_v3_jsonb_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
-| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_ope_term(public.eql_v3_jsonb_entry)`       | ordered comparison on an extracted String / Number leaf. |
+| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_term(public.eql_v3_jsonb_entry)`       | ordered comparison on an extracted String / Number leaf. |
 | `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.eql_v3_jsonb_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |
 | `eql_v3.jsonb_array_length/elements/elements_text(doc)` | array helpers                  | length / set-returning elements / element text. |

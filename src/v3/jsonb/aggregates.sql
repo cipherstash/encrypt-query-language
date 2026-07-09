@@ -7,7 +7,7 @@
 --!
 --! SteVec document entries extracted at a selector (`doc -> 'sel'`) order by
 --! their CLLW OPE (`op`) term, so the extremum is picked by comparing
---! `eql_v3.ord_ope_term(entry)` rather than the scalar Block-ORE `ord_term` the
+--! `eql_v3.ord_term(entry)` rather than the scalar Block-ORE `ord_term` the
 --! generated scalar ord aggregates use. The ope_cllw bytea domain orders under
 --! native byte comparison, so `<` / `>` on the extracted terms needs no custom
 --! comparator. Same STRICT + PARALLEL SAFE shape as the generated scalar
@@ -18,13 +18,13 @@
 --! `LANGUAGE plpgsql` with the pinned `search_path` — a `LANGUAGE sql` body would
 --! be inlinable and the planner could elide it.
 --!
---! @note **Only `op`-carrying entries are orderable.** `eql_v3.ord_ope_term(entry)`
+--! @note **Only `op`-carrying entries are orderable.** `eql_v3.ord_term(entry)`
 --!   returns NULL when an entry has no `op` (CLLW OPE) term — the same entries a
---!   `eql_v3.ord_ope_term` btree NULL-filters from range scans. The state functions
+--!   `eql_v3.ord_term` btree NULL-filters from range scans. The state functions
 --!   therefore IGNORE `op`-less entries (they never become or survive as the
 --!   extremum), so `min`/`max` is well-defined over a mix of `op`-carrying and
 --!   `op`-less entries and is not corrupted by an `op`-less seed. A naive
---!   `ord_ope_term(value) < ord_ope_term(state)` would be NULL whenever either side
+--!   `ord_term(value) < ord_term(state)` would be NULL whenever either side
 --!   lacks `op`, pinning a wrong (`op`-less) extremum when the first aggregated
 --!   row is `op`-less. An all-`op`-less input has no orderable extremum and
 --!   returns the (arbitrary) STRICT seed.
@@ -37,7 +37,7 @@
 --!
 --! @param state public.eql_v3_jsonb_entry Running extremum.
 --! @param value public.eql_v3_jsonb_entry Candidate entry.
---! @return public.eql_v3_jsonb_entry The lesser orderable entry by `ord_ope_term`.
+--! @return public.eql_v3_jsonb_entry The lesser orderable entry by `ord_term`.
 CREATE FUNCTION eql_v3_internal.jsonb_entry_min_sfunc(
   state public.eql_v3_jsonb_entry,
   value public.eql_v3_jsonb_entry
@@ -47,8 +47,8 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(value);
-  state_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(state);
+  value_ope eql_v3_internal.ope_cllw := eql_v3.ord_term(value);
+  state_ope eql_v3_internal.ope_cllw := eql_v3.ord_term(state);
 BEGIN
   -- A non-orderable (op-less) candidate never replaces the running extremum.
   IF value_ope IS NULL THEN
@@ -80,7 +80,7 @@ CREATE AGGREGATE eql_v3.min(public.eql_v3_jsonb_entry) (
 --!
 --! @param state public.eql_v3_jsonb_entry Running extremum.
 --! @param value public.eql_v3_jsonb_entry Candidate entry.
---! @return public.eql_v3_jsonb_entry The greater orderable entry by `ord_ope_term`.
+--! @return public.eql_v3_jsonb_entry The greater orderable entry by `ord_term`.
 CREATE FUNCTION eql_v3_internal.jsonb_entry_max_sfunc(
   state public.eql_v3_jsonb_entry,
   value public.eql_v3_jsonb_entry
@@ -90,8 +90,8 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(value);
-  state_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(state);
+  value_ope eql_v3_internal.ope_cllw := eql_v3.ord_term(value);
+  state_ope eql_v3_internal.ope_cllw := eql_v3.ord_term(state);
 BEGIN
   -- A non-orderable (op-less) candidate never replaces the running extremum.
   IF value_ope IS NULL THEN

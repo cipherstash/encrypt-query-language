@@ -24,10 +24,10 @@ load_domains = _mod.load_domains
 CATALOG_JSON = """{
   "types": [
     { "token": "text", "is_eq_only": false, "domains": [
-      { "segment": "storage", "suffix": "", "typname": "eql_v3_text", "supported_ops": [], "terms": [] },
-      { "segment": "eq", "suffix": "_eq", "typname": "eql_v3_text_eq", "supported_ops": ["=", "<>"],
+      { "segment": "storage", "suffix": "", "supported_ops": [], "terms": [] },
+      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"],
         "terms": [{"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"}] },
-      { "segment": "search", "suffix": "_search", "typname": "eql_v3_text_search",
+      { "segment": "search", "suffix": "_search",
         "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"],
         "terms": [
           {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
@@ -36,12 +36,12 @@ CATALOG_JSON = """{
     ]}
   ],
   "stevec": [
-    { "full_name": "json", "typname": "eql_v3_json", "name": "json", "terms": [] },
-    { "full_name": "jsonb_entry", "typname": "eql_v3_jsonb_entry", "name": "entry", "terms": [
+    { "full_name": "json", "name": "json", "terms": [] },
+    { "full_name": "jsonb_entry", "name": "entry", "terms": [
       {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
-      {"key": "op", "extractor": "ord_ope_term", "ctor": "ope_cllw"}
+      {"key": "op", "extractor": "ord_term", "ctor": "ope_cllw"}
     ] },
-    { "full_name": "query_jsonb", "typname": "query_jsonb", "name": "query", "terms": [] }
+    { "full_name": "query_jsonb", "name": "query", "terms": [] }
   ]
 }"""
 
@@ -124,12 +124,12 @@ def test_load_domains():
     assert by_name["public.eql_v3_text_search"]["capabilities"] == ["equality", "order", "match"]
     # SteVec (jsonb) domains come from the `stevec` section. Term extractors are
     # hardcoded on `jsonb_entry` (the sv element type) ONLY — hm -> eq_term,
-    # op -> ord_ope_term; the `json` container and `query_jsonb` carry none.
+    # op -> ord_term; the `json` container and `query_jsonb` carry none.
     assert by_name["public.eql_v3_json"]["termFunctions"] == []
     assert by_name["eql_v3.query_jsonb"]["termFunctions"] == []
     assert by_name["public.eql_v3_jsonb_entry"]["capabilities"] == ["json"]
     assert by_name["public.eql_v3_jsonb_entry"]["shape"] == "stevec"
-    assert by_name["public.eql_v3_jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ord_ope_term"]
+    assert by_name["public.eql_v3_jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ord_term"]
 
 
 if __name__ == "__main__":

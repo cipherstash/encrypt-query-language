@@ -5,7 +5,7 @@
       "type": "string"
     },
     "OpeCllw": {
-      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`\ndomains (`=` `<>` `<` `<=` `>` `>=`) and the ordered entries of a SteVec\ndocument (exactly one of `hm` (equality) XOR `op` (ordering) per entry —\nenforced by the SQL domain CHECK): a hex-encoded CLLW OPE ciphertext,\nsortable via native bytea comparison after hex-decode — unlike `ob`\n(block-ORE) it needs no custom comparator. SQL-side constructor:\n`eql_v3_internal.ope_cllw`; per-entry extractor: `eql_v3.ord_ope_term`.",
+      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the\ndefault ordering domain) and `_ord_ope` domains, and their `query_` operands\n(`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,\nsortable via native bytea comparison after hex-decode — unlike `ob`\n(block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. Extracted by\n`eql_v3.ord_term`; SQL-side constructor: `eql_v3_internal.ope_cllw`. Distinct\nfrom [`OreCllw`] (`oc`), the SteVec CLLW-*ORE* term compared by the custom\nper-byte protocol.",
       "type": "string"
     },
     "Selector": {

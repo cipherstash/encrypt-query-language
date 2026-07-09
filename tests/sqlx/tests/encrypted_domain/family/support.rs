@@ -11,7 +11,7 @@ use sqlx::PgPool;
 fn variant_derives_consistent_sql_domain_and_capabilities() {
     // Capabilities are catalog-derived for the scalar's token (`integer`). integer's
     // ordered domains are `[Ore]`-only — ORE is lossless for integers, so `=`
-    // routes through `ord_term`, unlike text where `=` routes through `eq_term`.
+    // routes through `ord_term_ore`, unlike text where `=` routes through `eq_term`.
     let storage = ScalarDomainSpec::new::<i32>(Variant::Storage);
     assert_eq!(storage.sql_domain, "public.eql_v3_integer");
     assert!(!storage.supports_eq());
@@ -36,19 +36,16 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     let ord = ScalarDomainSpec::new::<i32>(Variant::Ord);
     assert_eq!(ord.sql_domain, "public.eql_v3_integer_ord");
     assert!(ord.supports_ord());
-    assert_eq!(
-        ord.primary_extractor().as_deref(),
-        Some("eql_v3.ord_ope_term")
-    );
+    assert_eq!(ord.primary_extractor().as_deref(), Some("eql_v3.ord_term"));
     // integer_ord is `[Ope]`-only: equality routes through OPE, which is
     // deterministic and therefore lossless for ints.
     assert_eq!(
         ord.extractor_for_op("=").as_deref(),
-        Some("eql_v3.ord_ope_term")
+        Some("eql_v3.ord_term")
     );
     assert_eq!(
         ord.extractor_for_op("<").as_deref(),
-        Some("eql_v3.ord_ope_term")
+        Some("eql_v3.ord_term")
     );
     assert_eq!(
         Variant::Ord.payload_required_keys("integer"),
@@ -61,11 +58,11 @@ fn variant_derives_consistent_sql_domain_and_capabilities() {
     assert!(ord_ore.supports_ord());
     assert_eq!(
         ord_ore.primary_extractor().as_deref(),
-        Some("eql_v3.ord_term")
+        Some("eql_v3.ord_term_ore")
     );
     assert_eq!(
         ord_ore.extractor_for_op("<").as_deref(),
-        Some("eql_v3.ord_term")
+        Some("eql_v3.ord_term_ore")
     );
     assert_eq!(
         Variant::OrdOre.payload_required_keys("integer"),

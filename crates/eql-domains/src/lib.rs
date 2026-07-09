@@ -189,7 +189,7 @@ pub struct DomainFamily {
 /// hex-decode. `eql_v3_internal.ope_cllw` is a `DOMAIN ... AS bytea`, so it
 /// inherits bytea's comparison operators and DEFAULT btree opclass — no custom
 /// comparator, no pgcrypto in the compare path, and a functional btree on
-/// `eql_v3.ord_ope_term(col)` needs no superuser-only operator class. `_ord`
+/// `eql_v3.ord_term(col)` needs no superuser-only operator class. `_ord`
 /// and `_ord_ope` are therefore the twins now (identical terms, two names).
 ///
 /// `_ord_ore` keeps the block-ORE term (`ob`, compared by the custom N-block

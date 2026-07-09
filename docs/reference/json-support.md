@@ -107,7 +107,7 @@ SELECT encrypted_json ->> 'selector_hash'::text FROM examples;
 SELECT encrypted_json -> 0 FROM examples;
 ```
 
-The extracted `public.eql_v3_jsonb_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_ope_term` (on String / Number leaves):
+The extracted `public.eql_v3_jsonb_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (on String / Number leaves):
 
 ```sql
 SELECT * FROM examples
@@ -163,7 +163,7 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 ### Entry comparison / aggregate
 
 - **`eql_v3.eq_term(entry public.eql_v3_jsonb_entry)`** — equality term (backs `=` / `<>` / `GROUP BY`).
-- **`eql_v3.ord_ope_term(entry public.eql_v3_jsonb_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
+- **`eql_v3.ord_term(entry public.eql_v3_jsonb_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
 - **`eql_v3.min(public.eql_v3_jsonb_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
 For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops`).

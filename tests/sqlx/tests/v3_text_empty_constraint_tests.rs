@@ -71,7 +71,7 @@ async fn empty_string_accepted_by_text_ord(pool: PgPool) -> Result<()> {
 async fn empty_string_orders_first_under_text_ord(pool: PgPool) -> Result<()> {
     let plaintexts: Vec<String> = sqlx::query_scalar(
         "SELECT plaintext FROM fixtures.v3_text_empty \
-         ORDER BY eql_v3.ord_ope_term(payload::public.eql_v3_text_ord) ASC",
+         ORDER BY eql_v3.ord_term(payload::public.eql_v3_text_ord) ASC",
     )
     .fetch_all(&pool)
     .await?;
@@ -122,13 +122,13 @@ async fn non_empty_controls_accepted_by_text_ord_ore(pool: PgPool) -> Result<()>
     Ok(())
 }
 
-/// The controls order correctly via `ord_ope_term` once cast into `text_ord`.
+/// The controls order correctly via `ord_term` once cast into `text_ord`.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_text_empty")))]
 async fn non_empty_controls_order_under_text_ord(pool: PgPool) -> Result<()> {
     let plaintexts: Vec<String> = sqlx::query_scalar(
         "SELECT plaintext FROM fixtures.v3_text_empty \
          WHERE id IN (2, 3) \
-         ORDER BY eql_v3.ord_ope_term(payload::public.eql_v3_text_ord) ASC",
+         ORDER BY eql_v3.ord_term(payload::public.eql_v3_text_ord) ASC",
     )
     .fetch_all(&pool)
     .await?;
@@ -140,14 +140,14 @@ async fn non_empty_controls_order_under_text_ord(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// The controls order correctly via `ord_term` once cast into `text_ord_ore` —
+/// The controls order correctly via `ord_term_ore` once cast into `text_ord_ore` —
 /// the non-empty-`ob` CHECK does not disturb ordering of real values.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_text_empty")))]
 async fn non_empty_controls_order_under_text_ord_ore(pool: PgPool) -> Result<()> {
     let plaintexts: Vec<String> = sqlx::query_scalar(
         "SELECT plaintext FROM fixtures.v3_text_empty \
          WHERE id IN (2, 3) \
-         ORDER BY eql_v3.ord_term(payload::public.eql_v3_text_ord_ore) ASC",
+         ORDER BY eql_v3.ord_term_ore(payload::public.eql_v3_text_ord_ore) ASC",
     )
     .fetch_all(&pool)
     .await?;

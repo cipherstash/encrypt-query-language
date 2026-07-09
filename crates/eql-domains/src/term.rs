@@ -17,16 +17,25 @@ impl Term {
     }
 
     /// The generated extractor function name (`"eq_term"` / `"ord_term"` /
-    /// `"match_term"` / `"ord_ope_term"`). `Ope` deliberately does NOT reuse
-    /// `"ord_term"`: `dedupe_terms_by(Term::extractor)` collapses terms
-    /// sharing an extractor name, so a shared name would silently drop the
-    /// OPE extractor from a mixed `[Ore, Ope]` domain.
+    /// `"match_term"` / `"ord_term_ore"`).
+    ///
+    /// The extractor name tracks the *domain* it serves, not the cipher: `Ope`
+    /// backs the default `_ord` domain, so it takes the unqualified
+    /// `"ord_term"`, and block-ORE — the by-name escape hatch behind
+    /// `_ord_ore` — takes the qualified `"ord_term_ore"`, mirroring the domain
+    /// suffix exactly (`_ord` → `ord_term`, `_ord_ore` → `ord_term_ore`).
+    ///
+    /// The two names must stay DISTINCT: `dedupe_terms_by(Term::extractor)`
+    /// collapses terms sharing an extractor name, so giving `Ore` and `Ope` a
+    /// shared name would silently drop one extractor from a mixed
+    /// `[Ore, Ope]` domain. No such domain exists today; the distinctness is
+    /// what keeps that true by construction rather than by luck.
     pub const fn extractor(self) -> &'static str {
         match self {
             Term::Hm => "eq_term",
-            Term::Ore => "ord_term",
+            Term::Ore => "ord_term_ore",
             Term::Bloom => "match_term",
-            Term::Ope => "ord_ope_term",
+            Term::Ope => "ord_term",
         }
     }
 
@@ -174,7 +183,8 @@ impl Term {
 
     /// Distinct extractor-bearing terms, first occurrence per extractor wins.
     /// Two terms sharing an extractor collapse to the first, since the generated
-    /// `eq_term`/`ord_term`/`match_term` function is emitted once per extractor.
+    /// `eq_term`/`ord_term`/`ord_term_ore`/`match_term` function is emitted once
+    /// per extractor.
     pub fn extractor_terms(terms: &[Term]) -> Vec<Term> {
         Self::dedupe_terms_by(terms, Term::extractor)
     }

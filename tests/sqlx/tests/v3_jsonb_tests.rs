@@ -537,7 +537,7 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     Ok(())
 }
 
-/// `eql_v3.ord_ope_term(jsonb_entry)` has no `has_*` companion: absence of an
+/// `eql_v3.ord_term(jsonb_entry)` has no `has_*` companion: absence of an
 /// `op` term is signalled by the extractor returning SQL NULL (which a
 /// functional btree index stores and comparisons skip). Dedicated
 /// positive/negative coverage of both branches — a non-NULL bytea for an
@@ -546,24 +546,24 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
 async fn v3_jsonb_ord_ope_term_entry_branches(pool: PgPool) -> anyhow::Result<()> {
     let with_op = op_entry(OP_LADDER[0]);
     let term: Option<Vec<u8>> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.ord_ope_term('{with_op}'::public.eql_v3_jsonb_entry)::bytea"
+        "SELECT eql_v3.ord_term('{with_op}'::public.eql_v3_jsonb_entry)::bytea"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(
         term.is_some(),
-        "ord_ope_term must be non-NULL for an op-bearing entry"
+        "ord_term must be non-NULL for an op-bearing entry"
     );
 
     let hm_only = entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED);
     let no_term: Option<Vec<u8>> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.ord_ope_term('{hm_only}'::public.eql_v3_jsonb_entry)::bytea"
+        "SELECT eql_v3.ord_term('{hm_only}'::public.eql_v3_jsonb_entry)::bytea"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(
         no_term.is_none(),
-        "ord_ope_term must be NULL for an hm-only entry (no op term to extract)"
+        "ord_term must be NULL for an hm-only entry (no op term to extract)"
     );
 
     Ok(())
@@ -1524,19 +1524,19 @@ async fn v3_jsonb_index_ord_ope_btree_engages(pool: PgPool) -> anyhow::Result<()
         .await?;
     sqlx::query(&format!(
         "CREATE INDEX v3_jsonb_btree_idx ON fixtures.v3_ste_vec \
-         (eql_v3.ord_ope_term(payload -> '{SEL_HELLO_OP}'::text))"
+         (eql_v3.ord_term(payload -> '{SEL_HELLO_OP}'::text))"
     ))
     .execute(&mut *tx)
     .await?;
 
     let query = format!(
-        "SELECT id FROM fixtures.v3_ste_vec ORDER BY eql_v3.ord_ope_term(payload -> '{SEL_HELLO_OP}'::text)"
+        "SELECT id FROM fixtures.v3_ste_vec ORDER BY eql_v3.ord_term(payload -> '{SEL_HELLO_OP}'::text)"
     );
     assert_index_scan_uses(
         &mut *tx,
         &query,
         "v3_jsonb_btree_idx",
-        "ord_ope_term's default bytea btree opclass must engage for ORDER BY on a per-leaf op",
+        "ord_term's default bytea btree opclass must engage for ORDER BY on a per-leaf op",
     )
     .await?;
 

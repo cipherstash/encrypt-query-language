@@ -21,13 +21,13 @@ use anyhow::Result;
 use sqlx::PgPool;
 
 /// Fetch two fixture payloads by plaintext literal, wrap each in the ordered
-/// extractor, and return the ORE comparison. The single fetch + `ord_term` +
+/// extractor, and return the ORE comparison. The single fetch + `ord_term_ore` +
 /// `compare_ore_block_256_terms` shape every chain/pair test shares; `lo`/`hi`
 /// are the plaintext SQL literals (with cast), e.g. `"(-1)::numeric"`.
 ///
-/// `ord_domain` MUST be an `_ord_ore` domain. `eql_v3.ord_term` and the block-ORE
+/// `ord_domain` MUST be an `_ord_ore` domain. `eql_v3.ord_term_ore` and the block-ORE
 /// comparator exist only for `Term::Ore`-bearing domains; the bare `_ord` domains
-/// are CLLW-OPE-backed (`ord_ope_term` → `eql_v3_internal.ope_cllw`, ordered by
+/// are CLLW-OPE-backed (`ord_term` → `eql_v3_internal.ope_cllw`, ordered by
 /// native bytea comparison) and have no block terms to compare.
 async fn compare_fixture_pair(
     pool: &PgPool,
@@ -38,8 +38,8 @@ async fn compare_fixture_pair(
 ) -> Result<i32> {
     let sql = format!(
         "SELECT eql_v3_internal.compare_ore_block_256_terms( \
-            eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {lo})::public.{ord_domain}), \
-            eql_v3.ord_term((SELECT payload FROM fixtures.{table} WHERE plaintext = {hi})::public.{ord_domain}))"
+            eql_v3.ord_term_ore((SELECT payload FROM fixtures.{table} WHERE plaintext = {lo})::public.{ord_domain}), \
+            eql_v3.ord_term_ore((SELECT payload FROM fixtures.{table} WHERE plaintext = {hi})::public.{ord_domain}))"
     );
     Ok(sqlx::query_scalar::<_, i32>(&sql).fetch_one(pool).await?)
 }
@@ -98,8 +98,8 @@ async fn assert_orders_like_oracle(
     let order_violations: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM ore_sample a JOIN ore_sample b ON a.rank < b.rank \
          WHERE eql_v3_internal.compare_ore_block_256_terms( \
-             eql_v3.ord_term(a.payload::public.{ord_domain}), \
-             eql_v3.ord_term(b.payload::public.{ord_domain})) <> -1"
+             eql_v3.ord_term_ore(a.payload::public.{ord_domain}), \
+             eql_v3.ord_term_ore(b.payload::public.{ord_domain})) <> -1"
     ))
     .fetch_one(&mut *conn)
     .await?;
@@ -112,11 +112,11 @@ async fn assert_orders_like_oracle(
     let antisymmetry_violations: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM ore_sample a JOIN ore_sample b ON a.rank <> b.rank \
          WHERE eql_v3_internal.compare_ore_block_256_terms( \
-                 eql_v3.ord_term(a.payload::public.{ord_domain}), \
-                 eql_v3.ord_term(b.payload::public.{ord_domain})) \
+                 eql_v3.ord_term_ore(a.payload::public.{ord_domain}), \
+                 eql_v3.ord_term_ore(b.payload::public.{ord_domain})) \
              <> - eql_v3_internal.compare_ore_block_256_terms( \
-                 eql_v3.ord_term(b.payload::public.{ord_domain}), \
-                 eql_v3.ord_term(a.payload::public.{ord_domain}))"
+                 eql_v3.ord_term_ore(b.payload::public.{ord_domain}), \
+                 eql_v3.ord_term_ore(a.payload::public.{ord_domain}))"
     ))
     .fetch_one(&mut *conn)
     .await?;
@@ -309,7 +309,7 @@ async fn comparator_length_guard_sweep(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_numeric")))]
 async fn numeric_term_is_14_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
-        "SELECT octet_length((((eql_v3.ord_term( \
+        "SELECT octet_length((((eql_v3.ord_term_ore( \
             (SELECT payload FROM fixtures.eql_v3_numeric WHERE plaintext = (-1000000)::numeric) \
             ::public.eql_v3_numeric_ord_ore)).terms)[1]).bytes)",
     )
@@ -362,7 +362,7 @@ async fn numeric_terms_order_like_decimal_ord(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_timestamp")))]
 async fn timestamp_term_is_12_blocks(pool: PgPool) -> Result<()> {
     let width: i32 = sqlx::query_scalar(
-        "SELECT octet_length((((eql_v3.ord_term( \
+        "SELECT octet_length((((eql_v3.ord_term_ore( \
             (SELECT payload FROM fixtures.eql_v3_timestamp WHERE plaintext = '1970-01-01T00:00:00Z'::timestamptz) \
             ::public.eql_v3_timestamp_ord_ore)).terms)[1]).bytes)",
     )
@@ -447,8 +447,8 @@ async fn wide_block_term_compares_equal_to_itself(pool: PgPool) -> Result<()> {
 async fn compare_collision_ids(pool: &PgPool, a: i64, b: i64) -> Result<i32> {
     let sql = format!(
         "SELECT eql_v3_internal.compare_ore_block_256_terms( \
-            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::public.eql_v3_numeric_ord_ore), \
-            eql_v3.ord_term((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::public.eql_v3_numeric_ord_ore))"
+            eql_v3.ord_term_ore((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {a})::public.eql_v3_numeric_ord_ore), \
+            eql_v3.ord_term_ore((SELECT payload FROM fixtures.v3_numeric_collision WHERE id = {b})::public.eql_v3_numeric_ord_ore))"
     );
     Ok(sqlx::query_scalar::<_, i32>(&sql).fetch_one(pool).await?)
 }

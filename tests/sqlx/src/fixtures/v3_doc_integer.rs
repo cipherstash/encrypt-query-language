@@ -38,7 +38,7 @@ const FIELD: &str = "field";
 /// two sv entries per ordered field — an `hm` entry (equality only) and an `op`
 /// entry — under distinct selectors. The matrix needs the entry that supports
 /// BOTH comparisons: `eql_v3.eq_term` reads `coalesce(hm, op)` (so it works on
-/// the `op` entry, injective on distinct plaintexts) and `eql_v3.ord_ope_term`
+/// the `op` entry, injective on distinct plaintexts) and `eql_v3.ord_term`
 /// requires `op`. The `hm` entry would have no `op`, breaking ordering.
 ///
 /// Read from the generated fixture and pinned here so a future selector drift

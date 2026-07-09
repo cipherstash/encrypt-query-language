@@ -28,7 +28,7 @@
       "type": "object"
     },
     "OreBlock256": {
-      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`\ndomains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's\ndomain, so it serves equality too. The block count is width-agnostic on the\nwire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the\narray just carries more block strings. SQL-side constructor:\n`eql_v3_internal.ore_block_256`.",
+      "description": "Block-ORE order term — the `ob` wire key. Backs the `_ord_ore` domains and\n`text_search` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's\ndomain, so it serves equality too. The block count is width-agnostic on the\nwire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the\narray just carries more block strings. Extracted by `eql_v3.ord_term_ore`;\nSQL-side constructor: `eql_v3_internal.ore_block_256`.",
       "items": {
         "type": "string"
       },

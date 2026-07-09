@@ -11,7 +11,7 @@
 //! generated `eql_v3.*` comparison **functions** by name across all three
 //! [`Overload`]s, and `assert_extractor_oracle` checks term-extractor identity
 //! (`eq_term` == payload `hm`; and per the domain's catalog ordering term,
-//! `ord_ope_term` == payload `op` or `ord_term` == payload `ob`).
+//! `ord_term` == payload `op` or `ord_term_ore` == payload `ob`).
 //! `assert_match_smoke` is the example-based bloom-containment check for the
 //! text `_match` domain.
 //!
@@ -188,8 +188,8 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
 /// `<ord extractor>(a) < <ord extractor>(b)` ⇔ `a.plaintext < b.plaintext`.
 /// `variant` is `Variant::Ord` or `Variant::OrdOre` (or `Search` for text).
 ///
-/// The ordering extractor is catalog-derived per variant — `ord_ope_term` on
-/// the OPE-backed `_ord`, `ord_term` on the ORE-backed `_ord_ore` — so this
+/// The ordering extractor is catalog-derived per variant — `ord_term` on
+/// the OPE-backed `_ord`, `ord_term_ore` on the ORE-backed `_ord_ore` — so this
 /// oracle never names one SEM's extractor.
 pub async fn assert_ord_oracle<T: ScalarType>(
     pool: &PgPool,
@@ -429,7 +429,7 @@ pub async fn assert_ord_fn_oracle<T: ScalarType>(
 /// - an `Ore` term ⇒ the `ord_term` composite, re-rendered to a hex-block array
 ///   (`encode((t).bytes,'hex')` per block, ordinal order), equals the payload's
 ///   `ob` array.
-/// - an `Ope` term ⇒ `encode(ord_ope_term(<dom>), 'hex')` equals the payload's
+/// - an `Ope` term ⇒ `encode(ord_term(<dom>), 'hex')` equals the payload's
 ///   `op` string. `eql_v3_internal.ope_cllw` is a domain over `bytea` (not a
 ///   composite), so there is no `.terms` to walk — hex-encoding the value round-
 ///   trips the `decode(op,'hex')` the extractor performed.
@@ -535,10 +535,10 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
                 let got: Option<String> = sqlx::query_scalar(&sql)
                     .fetch_one(pool)
                     .await
-                    .with_context(|| format!("ord_ope_term identity query: {sql}"))?;
+                    .with_context(|| format!("ord_term identity query: {sql}"))?;
                 anyhow::ensure!(
                     got.as_deref() == Some(op),
-                    "ord_ope_term identity on {domain}: extractor returned {got:?}, payload op={op:?}",
+                    "ord_term identity on {domain}: extractor returned {got:?}, payload op={op:?}",
                 );
             }
             Some(other) => anyhow::bail!(

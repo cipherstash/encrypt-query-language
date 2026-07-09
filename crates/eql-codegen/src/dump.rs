@@ -55,7 +55,7 @@ pub struct TermInfo {
     /// Payload key: `hm` / `ob` / `bf` / `op`.
     pub key: &'static str,
     /// Generated extractor function (unqualified): `eq_term` / `ord_term` /
-    /// `match_term` / `ord_ope_term`.
+    /// `match_term` / `ord_term_ore`.
     pub extractor: &'static str,
     /// SEM index-term constructor (unqualified): `hmac_256` / `ore_block_256` /
     /// `bloom_filter` / `ope_cllw`.
@@ -101,7 +101,7 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
 /// extractors from `src/v3/jsonb/{functions,operators}.sql`.
 ///
 /// Terms live on `jsonb_entry` — the sv *element* type — ONLY: `eql_v3.eq_term`
-/// reads `coalesce(hm, op)` for `=`/`<>`, and `eql_v3.ord_ope_term` reads `op` for
+/// reads `coalesce(hm, op)` for `=`/`<>`, and `eql_v3.ord_term` reads `op` for
 /// `<`/`<=`/`>`/`>=`. The `json` container and `query_jsonb` domains carry no
 /// term extractors (their surface is containment `@>`/`<@` and path navigation),
 /// so they return no terms. Keyed on the catalog domain name (`json`/`entry`/
@@ -118,7 +118,7 @@ fn stevec_terms(name: &str) -> Vec<TermInfo> {
         },
         TermInfo {
             key: "op",
-            extractor: "ord_ope_term",
+            extractor: "ord_term",
             ctor: "ope_cllw",
         },
     ]
@@ -219,14 +219,14 @@ mod tests {
         let dump = dump_catalog();
         let integer = dump.types.iter().find(|t| t.token == "integer").unwrap();
 
-        // `_ord` is the OPE-backed default.
+        // `_ord` is the OPE-backed default, reached by the unqualified extractor.
         let ord = integer.domains.iter().find(|d| d.segment == "ord").unwrap();
         assert_eq!(ord.terms.len(), 1);
         assert_eq!(ord.terms[0].key, "op");
-        assert_eq!(ord.terms[0].extractor, "ord_ope_term");
+        assert_eq!(ord.terms[0].extractor, "ord_term");
         assert_eq!(ord.terms[0].ctor, "ope_cllw");
 
-        // `_ord_ore` keeps the block-ORE term.
+        // `_ord_ore` keeps the block-ORE term, behind the qualified extractor.
         let ord_ore = integer
             .domains
             .iter()
@@ -234,7 +234,7 @@ mod tests {
             .unwrap();
         assert_eq!(ord_ore.terms.len(), 1);
         assert_eq!(ord_ore.terms[0].key, "ob");
-        assert_eq!(ord_ore.terms[0].extractor, "ord_term");
+        assert_eq!(ord_ore.terms[0].extractor, "ord_term_ore");
         assert_eq!(ord_ore.terms[0].ctor, "ore_block_256");
     }
 
@@ -252,13 +252,13 @@ mod tests {
         };
 
         // Term extractors live on `jsonb_entry` (the sv element type) ONLY:
-        // `eq_term` (hm/op equality) + `ord_ope_term` (op ordering).
+        // `eq_term` (hm/op equality) + `ord_term` (op ordering).
         let entry_extractors: Vec<&str> = by_name("jsonb_entry")
             .terms
             .iter()
             .map(|t| t.extractor)
             .collect();
-        assert_eq!(entry_extractors, ["eq_term", "ord_ope_term"]);
+        assert_eq!(entry_extractors, ["eq_term", "ord_term"]);
 
         // The `json` container and `query_jsonb` domains carry no term
         // extractors — their surface is containment (@>, <@) and path nav.

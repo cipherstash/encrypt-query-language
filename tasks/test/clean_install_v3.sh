@@ -41,7 +41,7 @@ SELECT 'eql_v3_internal.ore_block_256'::regtype;
 -- A real ordered-domain column + the documented functional index. This is the
 -- D4 proof: it fails outright if the ported operator_class is absent.
 CREATE TABLE v3_smoke (c public.eql_v3_integer_ord);
-CREATE INDEX v3_smoke_ord ON v3_smoke (eql_v3.ord_term(c));
+CREATE INDEX v3_smoke_ord ON v3_smoke (eql_v3.ord_term_ore(c));
 DROP TABLE v3_smoke;
 SQL
 

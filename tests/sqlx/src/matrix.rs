@@ -458,7 +458,7 @@ macro_rules! scalar_matrix {
 ///
 /// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
 /// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
-/// count-distinct, and aggregates reduce through `eql_v3.ord_ope_term` via the
+/// count-distinct, and aggregates reduce through `eql_v3.ore_cllw` via the
 /// `JsonbEntryInteger` extractor overrides.
 #[macro_export]
 macro_rules! jsonb_entry_matrix {
@@ -505,14 +505,14 @@ macro_rules! jsonb_entry_matrix {
         // (`value < '<lit>'::jsonb`), which is load-bearing for scalars (they have
         // `(domain, jsonb)` cross-type operators) but UNSAFE for entries —
         // `jsonb_entry` has no `(entry, jsonb)` operator, so a bare-jsonb RHS
-        // flattens to native `jsonb < jsonb` (no ord_ope_term, no index) rather than
+        // flattens to native `jsonb < jsonb` (no ore_cllw, no index) rather than
         // the entry operator. The hand-written `jsonb_entry_integer_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
 
         // Aggregates: eql_v3.min/max over jsonb_entry (src/v3/jsonb/aggregates.sql).
         // The aggregate leaf cases compare extrema via the ord-extractor seam
-        // (eql_v3.ord_ope_term for entries), so the entry min/max route through the
-        // `op` (CLLW OPE) term exactly like the comparison operators.
+        // (eql_v3.ore_cllw for entries), so the entry min/max route through the
+        // `oc` (CLLW ORE) term exactly like the comparison operators.
         $crate::__scalar_matrix_aggregate_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
@@ -1804,7 +1804,7 @@ macro_rules! __scalar_matrix_scale_default_case {
                 let d = &spec.sql_domain;
                 // Catalog-derived: the scale-default proof exercises a selective
                 // `=`, so the preferred functional index is the one serving `=`
-                // (`eql_v3.ord_ope_term` for an [Ope] _ord domain, `eql_v3.eq_term`
+                // (`eql_v3.ord_term` for an [Ope] _ord domain, `eql_v3.eq_term`
                 // for a [Hm, Ope] text _ord domain). Same source codegen uses.
                 let extractor = spec.extractor_for_op("=").ok_or_else(|| {
                     anyhow::anyhow!(
@@ -2039,7 +2039,7 @@ macro_rules! __scalar_matrix_fixture_shape {
 // Ord-routes-through-the-ordering-term category — ordered variants of the
 // integer families carry `c` + their ordering term and drop `hm`. Equality on
 // such a variant must therefore route through that domain's ordering extractor
-// (`eql_v3.ord_ope_term` / `op` on `_ord`, `eql_v3.ord_term` / `ob` on
+// (`eql_v3.ord_term` / `op` on `_ord`, `eql_v3.ord_term_ore` / `ob` on
 // `_ord_ore`), never HMAC. Strip `hm` from every fixture payload so an
 // accidental regression to HMAC equality fails rather than passing on the
 // hm-carrying fixture.
@@ -2105,8 +2105,8 @@ macro_rules! __scalar_matrix_ord_routes_case {
                     .iter()
                     .any(|t| t.json_key() == "hm");
                 // The no-hm ordering extractor is catalog-derived, not a literal:
-                // `_ord` routes `=` through `ord_ope_term`, `_ord_ore` through
-                // `ord_term`. Naming one here would fail on the other domain.
+                // `_ord` routes `=` through `ord_term`, `_ord_ore` through
+                // `ord_term_ore`. Naming one here would fail on the other domain.
                 let (extractor, value_expr, caveat): (String, &str, String) = if carries_hm {
                     (
                         "eql_v3.eq_term".to_string(),
@@ -2967,9 +2967,9 @@ macro_rules! __scalar_matrix_aggregate_case {
                 // where payload text matches but the ordering term resolves to a
                 // different value (e.g. due to payload-key reordering). Routed
                 // through the ord-extractor seam, so each domain uses its own
-                // catalog ordering extractor (`eql_v3.ord_ope_term` on `_ord`,
-                // `eql_v3.ord_term` on `_ord_ore`) and SteVec entries use
-                // the `public.jsonb_entry` overload of `eql_v3.ord_ope_term`.
+                // catalog ordering extractor (`eql_v3.ord_term` on `_ord`,
+                // `eql_v3.ord_term_ore` on `_ord_ore`) and SteVec entries use
+                // `eql_v3.ore_cllw`.
                 let lhs_ord = spec.ord_extractor_expr(&format!("eql_v3.{}(({col})::{d})", $agg_fn));
                 let rhs_ord = spec.ord_extractor_expr(&format!("$1::jsonb::{d}"));
                 let ord_terms_match: bool = sqlx::query_scalar(&format!(

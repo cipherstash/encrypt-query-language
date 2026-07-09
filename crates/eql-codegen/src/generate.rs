@@ -969,7 +969,9 @@ mod tests {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord_ore"));
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
-        assert!(sql.contains("CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord_ore)"));
+        assert!(
+            sql.contains("CREATE FUNCTION eql_v3.ord_term_ore(a public.eql_v3_integer_ord_ore)")
+        );
         assert!(sql.contains("RETURNS eql_v3_internal.ore_block_256"));
         // Ore needs the hand-written comparison operators on the composite.
         assert!(sql.contains("-- REQUIRE: src/v3/sem/ore_block_256/functions.sql"));
@@ -983,11 +985,12 @@ mod tests {
     }
 
     /// The OPE ordered domains mirror the ORE one — same operator surface
-    /// (18 wrappers), one extractor — but the extractor is `ord_ope_term`
-    /// returning the SEM `eql_v3_internal.ope_cllw` domain (over bytea), and the
-    /// sole SEM REQUIRE edge is the extractor file: the bytea-backed
-    /// domain inherits native comparison operators, so there is no
-    /// hand-written operators.sql to depend on (unlike Ore).
+    /// (18 wrappers), one extractor — but the extractor is the unqualified
+    /// `ord_term` (OPE backs the default `_ord` domain; block-ORE takes the
+    /// qualified `ord_term_ore`) returning the SEM `eql_v3_internal.ope_cllw`
+    /// domain (over bytea), and the sole SEM REQUIRE edge is the extractor
+    /// file: the bytea-backed domain inherits native comparison operators, so
+    /// there is no hand-written operators.sql to depend on (unlike Ore).
     ///
     /// Both `_ord` (the default) and `_ord_ope` carry the OPE term, so both are
     /// asserted here.
@@ -999,7 +1002,7 @@ mod tests {
             assert_eq!(sql.matches("CREATE FUNCTION").count(), 45, "{dom}");
             assert!(
                 sql.contains(&format!(
-                    "CREATE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_{dom})"
+                    "CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_{dom})"
                 )),
                 "{dom}"
             );
@@ -1266,7 +1269,6 @@ mod tests {
         let sql = render_ore_fallback_file();
         for spec in eql_domains::scalar_families() {
             for d in spec.domains {
-                // The installed typname carries the eql_v3_ prefix (CIP-3472).
                 let col = format!("ALTER DOMAIN public.{} ", spec.domain_name(d));
                 let query = format!("ALTER DOMAIN eql_v3.{} ", d.query_name(spec.name));
                 if d.terms.contains(&Term::Ore) {

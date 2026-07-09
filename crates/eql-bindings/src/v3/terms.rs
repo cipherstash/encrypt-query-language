@@ -28,29 +28,38 @@ pub struct Ciphertext(pub String);
 #[ts(export, export_to = "v3/")]
 pub struct Hmac256(pub String);
 
+/// CLLW-ORE ordered term — the `oc` wire key of a SteVec entry. Backs entry
+/// ordering (`<` `<=` `>` `>=`) and equality on ordered leaves. SQL-side
+/// constructor: `eql_v3.ore_cllw`. A SteVec entry carries exactly one of `hm`
+/// (equality) XOR `oc` (ordering) — enforced by the SQL domain CHECK.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct OreCllw(pub String);
+
 /// A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an
 /// encrypted document (`public.eql_v3_json`); present on every entry and query element.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct Selector(pub String);
 
-/// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord_ope`
-/// domains (`=` `<>` `<` `<=` `>` `>=`) and the ordered entries of a SteVec
-/// document (exactly one of `hm` (equality) XOR `op` (ordering) per entry —
-/// enforced by the SQL domain CHECK): a hex-encoded CLLW OPE ciphertext,
+/// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the
+/// default ordering domain) and `_ord_ope` domains, and their `query_` operands
+/// (`=` `<>` `<` `<=` `>` `>=`): a hex-encoded CLLW OPE ciphertext,
 /// sortable via native bytea comparison after hex-decode — unlike `ob`
-/// (block-ORE) it needs no custom comparator. SQL-side constructor:
-/// `eql_v3_internal.ope_cllw`; per-entry extractor: `eql_v3.ord_ope_term`.
+/// (block-ORE) and `oc` (CLLW-ORE) it needs no custom comparator. Extracted by
+/// `eql_v3.ord_term`; SQL-side constructor: `eql_v3_internal.ope_cllw`. Distinct
+/// from [`OreCllw`] (`oc`), the SteVec CLLW-*ORE* term compared by the custom
+/// per-byte protocol.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct OpeCllw(pub String);
 
-/// Block-ORE order term — the `ob` wire key. Backs the `_ord` / `_ord_ore`
-/// domains (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
+/// Block-ORE order term — the `ob` wire key. Backs the `_ord_ore` domains and
+/// `text_search` (`=` `<>` `<` `<=` `>` `>=`); ORE is lossless over the scalar's
 /// domain, so it serves equality too. The block count is width-agnostic on the
 /// wire (8 for the int scalars, 12 for timestamp, 14 for numeric) — the
-/// array just carries more block strings. SQL-side constructor:
-/// `eql_v3_internal.ore_block_256`.
+/// array just carries more block strings. Extracted by `eql_v3.ord_term_ore`;
+/// SQL-side constructor: `eql_v3_internal.ore_block_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct OreBlock256(pub Vec<String>);
@@ -115,6 +124,12 @@ impl From<Vec<String>> for OreBlock256 {
 
 impl From<Vec<i16>> for BloomFilter {
     fn from(value: Vec<i16>) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for OreCllw {
+    fn from(value: String) -> Self {
         Self(value)
     }
 }

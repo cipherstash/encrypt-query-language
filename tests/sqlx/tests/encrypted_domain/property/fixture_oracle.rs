@@ -340,7 +340,7 @@ fixture_oracle_suite!(double, eql_tests::scalar_domains::F8, ordered);
 //
 // The same fixture rows, but calling the generated `eql_v3.*` comparison
 // functions by name across all three overloads and asserting term-extractor
-// identity (eq_term==hm / ord_term==ob). Free of fresh encryption — read-only
+// identity (eq_term==hm / ord_term_ore==ob). Free of fresh encryption — read-only
 // SQL over the already-encrypted fixtures. integer is the reference family with
 // explicit tests; the other types go through `fixture_fn_oracle_suite!`.
 
@@ -464,7 +464,7 @@ mod text_fn {
     }
 
     /// `text_ord` / `text_ord_ore` — full six comparisons (eq/neq + the four ord
-    /// ops) plus eq_term(`hm`) + ord_term(`ob`) identity on each ordered twin.
+    /// ops) plus eq_term(`hm`) + ord_term_ore(`ob`) identity on each ordered twin.
     #[sqlx::test]
     async fn ord_fn_oracle(pool: PgPool) -> Result<()> {
         run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
@@ -479,7 +479,7 @@ mod text_fn {
     }
 
     /// `text_search` ([Hm, Ore, Bloom]) — the eq/ord function facets plus
-    /// eq_term + ord_term identity (the bloom `@>`/`<@` facet is covered by the
+    /// eq_term + ord_term_ore identity (the bloom `@>`/`<@` facet is covered by the
     /// example-based `match_smoke`, not a random oracle).
     #[sqlx::test]
     async fn search_fn_oracle(pool: PgPool) -> Result<()> {

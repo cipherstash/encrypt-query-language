@@ -99,26 +99,26 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- CLLW OPE per-entry overload (converged with the scalar ord_ope_term)
+-- CLLW OPE per-entry overload (converged with the scalar ord_term)
 ------------------------------------------------------------------------------
 
 --! @brief Extract the CLLW OPE index term from a ste_vec entry.
 --!
 --! An sv-element `op` term is only ever present on an sv element, never at a
 --! root encrypted value, so the typed overload accepts public.eql_v3_jsonb_entry —
---! the jsonb_entry twin of the generated scalar `eql_v3.ord_ope_term`
+--! the jsonb_entry twin of the generated scalar `eql_v3.ord_term`
 --! extractors. Returns SQL NULL when `op` is absent (the strict `->>` /
 --! `decode` chain propagates it), so btree NULL-filters such rows from range
 --! queries. The returned eql_v3_internal.ope_cllw is a bytea domain: it orders
 --! under native byte comparison with the DEFAULT btree opclass, so a
---! functional index on `eql_v3.ord_ope_term(col -> 'selector')` engages
+--! functional index on `eql_v3.ord_term(col -> 'selector')` engages
 --! structurally with no custom operator class (Supabase/managed-Postgres
 --! safe).
 --!
 --! @param entry public.eql_v3_jsonb_entry
 --! @return eql_v3_internal.ope_cllw Hex-decoded CLLW OPE term, or NULL when
 --!         `op` is absent.
-CREATE FUNCTION eql_v3.ord_ope_term(entry public.eql_v3_jsonb_entry)
+CREATE FUNCTION eql_v3.ord_term(entry public.eql_v3_jsonb_entry)
   RETURNS eql_v3_internal.ope_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$

@@ -160,14 +160,14 @@ behaviour change, not a refactor:
 | Term    | JSON key | Extractor      | Returns                          | Operators                  |
 | ------- | -------- | -------------- | -------------------------------- | -------------------------- |
 | `Hm`    | `hm`     | `eq_term`      | `eql_v3_internal.hmac_256`       | `=` `<>`                   |
-| `Ore`   | `ob`     | `ord_term`     | `eql_v3_internal.ore_block_256`  | `=` `<>` `<` `<=` `>` `>=` |
+| `Ore`   | `ob`     | `ord_term_ore`     | `eql_v3_internal.ore_block_256`  | `=` `<>` `<` `<=` `>` `>=` |
 | `Bloom` | `bf`     | `match_term`   | `eql_v3_internal.bloom_filter`   | `@>` `<@`                  |
-| `Ope`   | `op`     | `ord_ope_term` | `eql_v3_internal.ope_cllw`       | `=` `<>` `<` `<=` `>` `>=` |
+| `Ope`   | `op`     | `ord_term` | `eql_v3_internal.ope_cllw`       | `=` `<>` `<` `<=` `>` `>=` |
 
 (`Ope` is the CLLW-OPE term: a hex-encoded, order-preserving ciphertext whose
 SEM type reduces comparison to native bytea ordering after hex-decode — no
 custom comparison protocol, unlike `Ore`'s N-block protocol. Its extractor is
-deliberately NOT `ord_term`: two terms sharing an extractor name collapse in
+deliberately NOT `ord_term_ore`: two terms sharing an extractor name collapse in
 `dedupe_terms_by(Term::extractor)`, so a mixed `[Ore, Ope]` domain would lose
 one extractor.)
 
@@ -634,20 +634,20 @@ any of its terms provides; the rest stay blockers. `Functions` =
 | none              |          0 |        0 |       44 |        44 |        44 |
 | `&[Term::Hm]`     |          1 (`eq_term`)    |  6 | 38 | 45 | 44 |
 | `&[Term::Bloom]`  |          1 (`match_term`) |  6 | 38 | 45 | 44 |
-| `&[Term::Ore]`    |          1 (`ord_term`)   | 18 | 26 | 45 | 44 |
-| `&[Term::Ope]`    |          1 (`ord_ope_term`) | 18 | 26 | 45 | 44 |
-| `&[Term::Hm, Term::Ore]` | 2 (`eq_term`, `ord_term`) | 18 | 26 | 46 | 44 |
-| `&[Term::Hm, Term::Ope]` | 2 (`eq_term`, `ord_ope_term`) | 18 | 26 | 46 | 44 |
-| `&[Term::Hm, Term::Ore, Term::Bloom]` | 3 (`eq_term`, `ord_term`, `match_term`) | 24 | 20 | 47 | 44 |
+| `&[Term::Ore]`    |          1 (`ord_term_ore`)   | 18 | 26 | 45 | 44 |
+| `&[Term::Ope]`    |          1 (`ord_term`) | 18 | 26 | 45 | 44 |
+| `&[Term::Hm, Term::Ore]` | 2 (`eq_term`, `ord_term_ore`) | 18 | 26 | 46 | 44 |
+| `&[Term::Hm, Term::Ope]` | 2 (`eq_term`, `ord_term`) | 18 | 26 | 46 | 44 |
+| `&[Term::Hm, Term::Ore, Term::Bloom]` | 3 (`eq_term`, `ord_term_ore`, `match_term`) | 24 | 20 | 47 | 44 |
 
 Six wrappers for `Hm` = `=` and `<>` × three shapes; six for `Bloom` = `@>` and
 `<@` × three shapes; eighteen for `Ore` = six operators × three shapes (`Ope`
-mirrors `Ore`'s eighteen — same six operators through `ord_ope_term`). For the
+mirrors `Ore`'s eighteen — same six operators through `ord_term`). For the
 multi-term rows the wrapper set is the **deduplicated union**: `[Hm, Ore]` is
 `{=, <>, <, <=, >, >=}` (Ore's `=`/`<>` collapse onto Hm's — only the *extractor*
 differs, so the count stays 18, but `=`/`<>` now resolve through `eq_term`, exact
 HMAC, not ORE); `[Hm, Ope]` (the `text_ord_ope` shape) collapses identically, so
-`=`/`<>` stay exact HMAC while range operators route through `ord_ope_term`;
+`=`/`<>` stay exact HMAC while range operators route through `ord_term`;
 `[Hm, Ore, Bloom]` adds `@>`/`<@` for 24. The extra extractor
 functions are the only thing that grows `Functions` past 45 — the operator total
 is always 44.
@@ -687,9 +687,9 @@ extractor, whose return type already carries a default opclass:
 
 ```sql
 -- _ord / _ord_ope (CLLW-OPE); ope_cllw is a domain over bytea, default opclass
-CREATE INDEX ... ON table_name USING btree (eql_v3.ord_ope_term(col));
--- _ord_ore (block-ORE); needs the superuser-created ore_block_256 opclass
 CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term(col));
+-- _ord_ore (block-ORE); needs the superuser-created ore_block_256 opclass
+CREATE INDEX ... ON table_name USING btree (eql_v3.ord_term_ore(col));
 CREATE INDEX ... ON table_name USING hash  (eql_v3.eq_term(col));
 ```
 
@@ -767,8 +767,8 @@ edits:
   functions by language (`sql`), volatility (`IMMUTABLE`), and a jsonb-backed
   `DOMAIN` argument in the `eql_v3` schema. New scalar types need no edit.
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged wrapper /
-  extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term`,
-  `ord_ope_term`, the `Bloom` term's `match_term` extractor and its `contains` /
+  extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term_ore`,
+  `ord_term`, the `Bloom` term's `match_term` extractor and its `contains` /
   `contained_by` containment wrappers) plus the generated `min` / `max`
   aggregates are covered by `eql_v3`-schema entries, and the SEM
   `hmac_256` / `ore_block_256` / `bloom_filter` / `ope_cllw` constructors and
@@ -776,7 +776,7 @@ edits:
   coverage; **a new term needs splinter entries for each new name it introduces
   — both its extractor and its comparison wrappers** (adding `Bloom` required
   `match_term`, `contains`, `contained_by`, and the SEM `bloom_filter`; adding
-  `Ope` required `ord_ope_term` and the SEM `ope_cllw`).
+  `Ope` required `ord_term` and the SEM `ope_cllw`).
 
 ---
 
@@ -936,7 +936,7 @@ Adding a new **term** is a bigger move than adding a type: edit the `Term` enum'
 `impl` methods, add `#[test]`s, add a `splinter.sh` entry for **each new name the
 term introduces** — its extractor *and* its comparison wrappers, plus any new SEM
 constructor (adding `Bloom` required `match_term`, `contains`, `contained_by`,
-and the SEM `bloom_filter`; adding `Ope` required `ord_ope_term` and the SEM
+and the SEM `bloom_filter`; adding `Ope` required `ord_term` and the SEM
 `ope_cllw`) — and, because it changes the generated surface,
 regenerate and commit the affected SQL files under
 `src/v3/scalars/<token>/`.

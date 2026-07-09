@@ -115,7 +115,7 @@ async fn unsetting_restrict_flips_planner_metadata_arm(pool: PgPool) -> Result<(
     Ok(())
 }
 
-// 3. `_ord` equality must route through its ordering term — `ord_ope_term`
+// 3. `_ord` equality must route through its ordering term — `ord_term`
 //    (`op`) since the default flipped to CLLW-OPE — never HMAC.
 //    Rerouting it through `hmac_256` (`hm`) over hm-stripped rows makes `=`
 //    stop matching. Proves the `ord_routes_through_*` arm has teeth.
@@ -134,7 +134,7 @@ async fn rerouting_ord_eq_through_hm_flips_ord_routes_arm(pool: PgPool) -> Resul
                      WHERE (payload - 'hm')::public.eql_v3_integer_ord = $1::jsonb::public.eql_v3_integer_ord";
 
     // Baseline: with `hm` stripped, `=` still matches the pivot via
-    // `ord_ope_term` (the `op` term survives) — exactly one row.
+    // `ord_term` (the `op` term survives) — exactly one row.
     let baseline: i64 = sqlx::query_scalar(count_sql)
         .bind(&pivot_payload)
         .fetch_one(&pool)
@@ -201,7 +201,7 @@ async fn dropping_strict_on_eq_flips_supported_null_arm(pool: PgPool) -> Result<
 
 // 5. Ord `<` correctness routes through `eql_v3.lt`. Turning `lt` into a
 //    blocker makes `<` raise — proving the ord `<` correctness arm has teeth.
-//    Crucially, ORDER BY routes through `ord_ope_term`, NOT `<`, so it must stay
+//    Crucially, ORDER BY routes through `ord_term`, NOT `<`, so it must stay
 //    green here. This is the #5-vs-#7 split: #5 attacks `<`, #7 attacks the
 //    sort key. Blocking `<` alone must not disturb ORDER BY.
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_integer")))]
@@ -209,7 +209,7 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     let lt_sql =
         "SELECT $1::jsonb::public.eql_v3_integer_ord < $2::jsonb::public.eql_v3_integer_ord";
     let order_by_sql = "SELECT plaintext FROM fixtures.eql_v3_integer \
-                        ORDER BY eql_v3.ord_ope_term(payload::public.eql_v3_integer_ord) ASC";
+                        ORDER BY eql_v3.ord_term(payload::public.eql_v3_integer_ord) ASC";
 
     let mut ascending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
     ascending.sort();
@@ -235,7 +235,7 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     let order_baseline: Vec<i32> = sqlx::query_scalar(order_by_sql).fetch_all(&pool).await?;
     ensure!(
         order_baseline == ascending,
-        "baseline: ORDER BY ord_ope_term ASC must be plaintext-sorted"
+        "baseline: ORDER BY ord_term ASC must be plaintext-sorted"
     );
 
     // Mutation: turn `eql_v3.lt(_ord, _ord)` into a blocker. Must be
@@ -257,12 +257,12 @@ async fn blocking_lt_flips_lt_arm_but_not_order_by(pool: PgPool) -> Result<()> {
     )
     .await?;
 
-    // Post: ORDER BY is UNCHANGED — it routes through ord_ope_term, not `<`.
+    // Post: ORDER BY is UNCHANGED — it routes through ord_term, not `<`.
     // This is the whole point of separating #5 from #7.
     let order_after: Vec<i32> = sqlx::query_scalar(order_by_sql).fetch_all(&pool).await?;
     ensure!(
         order_after == ascending,
-        "blocking `<` must NOT disturb ORDER BY (it routes through ord_ope_term); got {order_after:?}"
+        "blocking `<` must NOT disturb ORDER BY (it routes through ord_term); got {order_after:?}"
     );
     Ok(())
 }
@@ -331,8 +331,8 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-// 7. ORDER BY routes through `ord_ope_term` — the sort key, NOT `<` (see #5).
-//    Collapsing `ord_ope_term` to a constant makes ORDER BY DESC no longer
+// 7. ORDER BY routes through `ord_term` — the sort key, NOT `<` (see #5).
+//    Collapsing `ord_term` to a constant makes ORDER BY DESC no longer
 //    plaintext-sorted. Proves the ORDER BY arm has teeth independently of the
 //    `<` arm.
 //
@@ -342,28 +342,28 @@ async fn rerouting_eq_eq_through_ob_flips_eq_arm(pool: PgPool) -> Result<()> {
 //    expectation. Asserting against DESC therefore detects the collapse
 //    regardless of heap order (the ascending-fixture caveat from the plan).
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_integer")))]
-async fn collapsing_ord_ope_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
+async fn collapsing_ord_term_flips_order_by_arm(pool: PgPool) -> Result<()> {
     let order_by_desc = "SELECT plaintext FROM fixtures.eql_v3_integer \
-                         ORDER BY eql_v3.ord_ope_term(payload::public.eql_v3_integer_ord) DESC";
+                         ORDER BY eql_v3.ord_term(payload::public.eql_v3_integer_ord) DESC";
 
     let mut descending: Vec<i32> = <i32 as ScalarType>::fixture_values().to_vec();
     descending.sort();
     descending.reverse();
 
-    // Baseline: ORDER BY ord_ope_term DESC is plaintext-descending.
+    // Baseline: ORDER BY ord_term DESC is plaintext-descending.
     let baseline: Vec<i32> = sqlx::query_scalar(order_by_desc).fetch_all(&pool).await?;
     ensure!(
         baseline == descending,
-        "baseline: ORDER BY ord_ope_term DESC must be plaintext-descending"
+        "baseline: ORDER BY ord_term DESC must be plaintext-descending"
     );
 
-    // Mutation: collapse ord_ope_term to a constant OPE term. Use a REAL fixture
+    // Mutation: collapse ord_term to a constant OPE term. Use a REAL fixture
     // payload as the source (guaranteed to carry a valid `op`) and a
     // unique dollar-quote tag so the embedded jsonb literal can't break the
     // function body.
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
-        "CREATE OR REPLACE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord) \
          RETURNS eql_v3_internal.ope_cllw LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE \
          AS $mutbody$ SELECT eql_v3_internal.ope_cllw('{esc}'::jsonb) $mutbody$",
         esc = const_payload.replace('\'', "''"),
@@ -375,22 +375,22 @@ async fn collapsing_ord_ope_term_flips_order_by_arm(pool: PgPool) -> Result<()> 
     let mutated: Vec<i32> = sqlx::query_scalar(order_by_desc).fetch_all(&pool).await?;
     ensure!(
         mutated != descending,
-        "after collapsing ord_ope_term to a constant, ORDER BY DESC must no longer be \
+        "after collapsing ord_term to a constant, ORDER BY DESC must no longer be \
          plaintext-descending (got {mutated:?})"
     );
     Ok(())
 }
 
-// 8. ORDER BY NULLS placement depends on `ord_ope_term` being STRICT: a NULL domain
+// 8. ORDER BY NULLS placement depends on `ord_term` being STRICT: a NULL domain
 //    value yields a NULL sort key, so `NULLS LAST` parks those rows at the tail.
 //    Dropping STRICT (coalescing a NULL input to a real payload) gives NULL-valued
 //    rows a concrete sort key, so they stop clustering at the end. Proves the
 //    ORDER BY NULLS arm has teeth on the NULL-placement dimension — one #5 (block
-//    `lt`) and #7 (collapse `ord_ope_term`) do not exercise, since both run on the
+//    `lt`) and #7 (collapse `ord_term`) do not exercise, since both run on the
 //    NULL-free fixture. A UNION ALL subquery supplies the NULL rows inline, so no
 //    session-local temp table is needed and the global `mutate()` stays valid.
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_integer")))]
-async fn making_ord_ope_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Result<()> {
+async fn making_ord_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -> Result<()> {
     const NULL_ROWS: usize = 3;
     let order_by = format!(
         "SELECT plaintext FROM ( \
@@ -398,13 +398,13 @@ async fn making_ord_ope_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -
            UNION ALL \
            SELECT NULL::integer, NULL::public.eql_v3_integer_ord FROM generate_series(1, {NULL_ROWS}) \
          ) s \
-         ORDER BY eql_v3.ord_ope_term(value) ASC NULLS LAST"
+         ORDER BY eql_v3.ord_term(value) ASC NULLS LAST"
     );
 
     let tail_all_none =
         |rows: &[Option<i32>]| rows.iter().rev().take(NULL_ROWS).all(|x| x.is_none());
 
-    // Baseline: STRICT ord_ope_term -> NULL value -> NULL sort key -> NULLS LAST
+    // Baseline: STRICT ord_term -> NULL value -> NULL sort key -> NULLS LAST
     // parks the NULL-valued rows at the tail.
     let baseline: Vec<Option<i32>> = sqlx::query_scalar(&order_by).fetch_all(&pool).await?;
     ensure!(
@@ -418,7 +418,7 @@ async fn making_ord_ope_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -
     // unchanged. Unique dollar-quote tag guards the embedded jsonb literal.
     let const_payload = fetch_fixture_payload::<i32>(&pool, 0).await?;
     let ddl = format!(
-        "CREATE OR REPLACE FUNCTION eql_v3.ord_ope_term(a public.eql_v3_integer_ord) \
+        "CREATE OR REPLACE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_ord) \
          RETURNS eql_v3_internal.ope_cllw LANGUAGE sql IMMUTABLE PARALLEL SAFE \
          AS $mutbody$ SELECT eql_v3_internal.ope_cllw(\
          coalesce(a, '{esc}'::jsonb::public.eql_v3_integer_ord)::jsonb) $mutbody$",
@@ -431,7 +431,7 @@ async fn making_ord_ope_term_non_strict_flips_order_by_nulls_arm(pool: PgPool) -
     let mutated: Vec<Option<i32>> = sqlx::query_scalar(&order_by).fetch_all(&pool).await?;
     ensure!(
         !tail_all_none(&mutated),
-        "after dropping STRICT on ord_ope_term, the NULL-valued rows must no longer \
+        "after dropping STRICT on ord_term, the NULL-valued rows must no longer \
          cluster at the tail (got {mutated:?})"
     );
     Ok(())

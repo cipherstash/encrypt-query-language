@@ -19,7 +19,7 @@ async fn ord_ope_functional_index_engages_for_range_and_equality(
     // The headline capability: a functional btree index on the documented
     // extractor expression must be USABLE for the domain's `<` and `=`
     // predicates. `eql_v3.ope_cllw` is a domain over bytea, so the inlined
-    // wrapper (`ord_ope_term(a) < ord_ope_term(b)` -> `decode(...) <
+    // wrapper (`ord_term(a) < ord_term(b)` -> `decode(...) <
     // decode(...)`) matches the index expression under the native bytea
     // opclass — the same mechanism as `hm` equality. `enable_seqscan = off`
     // proves usability only (the matrix's scale tests own preference).
@@ -35,7 +35,7 @@ async fn ord_ope_functional_index_engages_for_range_and_equality(
         .execute(&mut *tx)
         .await?;
     }
-    sqlx::query("CREATE INDEX ope_idx_ord ON ope_idx USING btree (eql_v3.ord_ope_term(payload))")
+    sqlx::query("CREATE INDEX ope_idx_ord ON ope_idx USING btree (eql_v3.ord_term(payload))")
         .execute(&mut *tx)
         .await?;
     sqlx::query("SET LOCAL enable_seqscan = off")
@@ -51,7 +51,7 @@ async fn ord_ope_functional_index_engages_for_range_and_equality(
             &mut *tx,
             &query,
             "ope_idx_ord",
-            &format!("integer_ord_ope `{op}` must engage the ord_ope_term btree index"),
+            &format!("integer_ord_ope `{op}` must engage the ord_term btree index"),
         )
         .await?;
     }
@@ -111,7 +111,7 @@ async fn ord_ope_order_by_sorts_by_decoded_bytes(pool: PgPool) -> anyhow::Result
     }
 
     let by_extractor: Vec<i32> =
-        sqlx::query_scalar("SELECT id FROM ope_smoke ORDER BY eql_v3.ord_ope_term(payload)")
+        sqlx::query_scalar("SELECT id FROM ope_smoke ORDER BY eql_v3.ord_term(payload)")
             .fetch_all(&pool)
             .await?;
     assert_eq!(

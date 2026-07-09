@@ -3,7 +3,7 @@
 //! Covers UNIQUE / NOT NULL / FOREIGN KEY on the jsonb-backed `eql_v3.<T>`
 //! domains (the reference scalar `integer`). The domains are jsonb under the hood, so a table-level constraint
 //! constrains the *raw jsonb payload value*, NOT the semantic plaintext or the
-//! `eq_term` / `ord_term` index term — see the documented findings on each test.
+//! `eq_term` / `ord_term_ore` index term — see the documented findings on each test.
 //!
 //! Like the sibling `signed.rs` suite it lives OUTSIDE the `scalars::`
 //! namespace, so the matrix-inventory snapshot (which pins the uniform per-type

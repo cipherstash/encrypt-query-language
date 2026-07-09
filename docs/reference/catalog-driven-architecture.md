@@ -135,7 +135,7 @@ A `Term` answers every question the generators need, via exhaustive `impl` metho
 | Method | `Hm` | `Ore` | `Bloom` | `Ope` |
 |--------|------|-------|---------|-------|
 | `json_key()` | `"hm"` | `"ob"` | `"bf"` | `"op"` |
-| `extractor()` | `eq_term` | `ord_term` | `match_term` | `ord_ope_term` |
+| `extractor()` | `eq_term` | `ord_term_ore` | `match_term` | `ord_term` |
 | `ctor()` | `hmac_256` | `ore_block_256` | `bloom_filter` | `ope_cllw` |
 | `binding_newtype()` | `Hmac256` | `OreBlock256` | `BloomFilter` | `OpeCllw` |
 | `role()` | `Eq` | `Ord` | `Match` | `Ord` |
@@ -144,8 +144,10 @@ A `Term` answers every question the generators need, via exhaustive `impl` metho
 
 `Ope` is the CLLW-OPE term: a hex-encoded ciphertext that is natively `bytea`-sortable after
 hex-decode (no custom comparison protocol), so — like `Hm` — its extractor is the whole SEM
-surface and it deliberately does *not* reuse `ord_term`'s extractor name (a shared name would
-collapse a mixed `[Ore, Ope]` domain under `dedupe_terms_by(Term::extractor)`).
+surface. The extractor name tracks the *domain* it serves, not the cipher: `Ope` backs the
+default `_ord` domain and so takes the unqualified `ord_term`, while `Ore` — the by-name escape
+hatch behind `_ord_ore` — takes the qualified `ord_term_ore`. The two names must stay distinct or
+a mixed `[Ore, Ope]` domain would collapse under `dedupe_terms_by(Term::extractor)`.
 `provides_ordering()` is `true` for **both** `Ore` and `Ope`.
 
 Cross-term helpers compose these into the per-domain answers the renderers consume:
@@ -501,7 +503,7 @@ flowchart TD
 | **e2e** | `tests/sqlx/tests/encrypted_domain/property/e2e_oracle.rs` | fresh-encrypted plaintexts | shared DB + `CS_*` creds |
 
 The oracle: for all pairs `(a,b)`, `a = b` in SQL (via the `_eq` domain) **⟺**
-`a.plaintext == b.plaintext`; ordering operators and `ord_term` sort order agree with the
+`a.plaintext == b.plaintext`; ordering operators and the domain's ordering-extractor sort order agree with the
 plaintext ordering. `cross_ciphertext.rs` additionally proves two independent encryptions of
 the same plaintext compare equal (the unique-plaintext matrix fixture can't cover the
 equality-true branch across *distinct* ciphertexts).

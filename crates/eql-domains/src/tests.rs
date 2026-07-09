@@ -251,7 +251,7 @@ mod term_tests {
     fn ore_term_preserves_integer_sql_contract() {
         let ore = Term::Ore;
         assert_eq!(ore.json_key(), "ob");
-        assert_eq!(ore.extractor(), "ord_term");
+        assert_eq!(ore.extractor(), "ord_term_ore");
         assert_eq!(ore.ctor(), "ore_block_256");
         assert_eq!(ore.role(), Role::Ord);
         assert_eq!(ore.operators(), &["=", "<>", "<", "<=", ">", ">="]);
@@ -282,12 +282,13 @@ mod term_tests {
         // over bytea) → native comparison operators and default btree
         // ordering, no custom comparison protocol and no hand-written
         // operators (so the SEM surface is the extractor alone, like `Hm`).
-        // The extractor name is deliberately NOT "ord_term":
-        // `dedupe_terms_by(extractor)` would collapse it against `Term::Ore`
-        // on a hypothetical mixed `[Ore, Ope]` domain.
+        // `Ope` backs the default `_ord` domain, so it takes the unqualified
+        // "ord_term"; `Term::Ore` takes the qualified "ord_term_ore". The two
+        // must stay distinct or `dedupe_terms_by(extractor)` would collapse
+        // them on a hypothetical mixed `[Ore, Ope]` domain.
         let ope = Term::Ope;
         assert_eq!(ope.json_key(), "op");
-        assert_eq!(ope.extractor(), "ord_ope_term");
+        assert_eq!(ope.extractor(), "ord_term");
         assert_eq!(ope.ctor(), "ope_cllw");
         assert_eq!(ope.binding_newtype(), "OpeCllw");
         assert_eq!(ope.role(), Role::Ord);
@@ -432,7 +433,7 @@ mod term_helper_tests {
     fn extractor_terms_dedupes_by_extractor_first_occurrence_wins() {
         // No catalog domain currently carries two terms sharing an extractor, so
         // this exercises the dedupe branch directly: Hm and Ore have distinct
-        // extractors (eq_term / ord_term) and survive; the repeated term collapses.
+        // extractors (eq_term / ord_term_ore) and survive; the repeat collapses.
         assert_eq!(
             Term::extractor_terms(&[Term::Hm, Term::Ore, Term::Hm]),
             vec![Term::Hm, Term::Ore]
@@ -453,7 +454,7 @@ mod term_helper_tests {
         );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Ore], "<"),
-            Some("ord_term")
+            Some("ord_term_ore")
         );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Hm, Term::Ore], "="),
@@ -461,6 +462,11 @@ mod term_helper_tests {
         );
         assert_eq!(
             Term::extractor_for_operator(&[Term::Hm, Term::Ore], "<"),
+            Some("ord_term_ore")
+        );
+        // The default ordering term takes the unqualified extractor name.
+        assert_eq!(
+            Term::extractor_for_operator(&[Term::Ope], "<"),
             Some("ord_term")
         );
     }
@@ -809,7 +815,7 @@ mod catalog_tests {
         );
         assert_eq!(
             Term::extractor_for_operator(search.terms, "<"),
-            Some("ord_term")
+            Some("ord_term_ore")
         );
         assert_eq!(
             Term::extractor_for_operator(search.terms, "@>"),
@@ -1422,13 +1428,14 @@ mod invariant_tests {
         assert_eq!(Term::term_json_keys(s.domains[3].terms), vec!["op"]);
         assert_eq!(
             Term::extractor_for_operator(s.domains[3].terms, "<"),
-            Some("ord_ope_term")
+            Some("ord_term")
         );
-        // _ord_ore domain: ore => full ordering through the block-ORE term.
+        // _ord_ore domain: ore => full ordering through the block-ORE term,
+        // reached by the qualified extractor name.
         assert_eq!(Term::term_json_keys(s.domains[2].terms), vec!["ob"]);
         assert_eq!(
             Term::extractor_for_operator(s.domains[2].terms, "<"),
-            Some("ord_term")
+            Some("ord_term_ore")
         );
     }
 }

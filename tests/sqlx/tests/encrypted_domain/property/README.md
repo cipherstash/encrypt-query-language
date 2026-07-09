@@ -54,8 +54,8 @@ oracles**: it calls the generated `eql_v3.eq`/`neq`/`lt`/`lte`/`gt`/`gte`
 **functions** by name across all three [`Overload`s][overload]
 (domain–domain, domain–jsonb, jsonb–domain) and asserts **term-extractor
 identity** — `eql_v3.eq_term` returns the payload's exact `hm`, and the domain's
-ordering extractor returns its exact ordering term (`eql_v3.ord_ope_term` == `op`
-on `_ord`, `eql_v3.ord_term` == `ob` on `_ord_ore`). [`match_smoke.rs`](./match_smoke.rs) adds the
+ordering extractor returns its exact ordering term (`eql_v3.ord_term` == `op`
+on `_ord`, `eql_v3.ord_term_ore` == `ob` on `_ord_ore`). [`match_smoke.rs`](./match_smoke.rs) adds the
 example-based bloom containment (`@>`/`<@`) for the text `_match` domain.
 
 Cross-ciphertext equality — "two independent encryptions of one value compare

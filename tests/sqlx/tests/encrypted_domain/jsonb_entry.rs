@@ -60,12 +60,12 @@ async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result
     );
 
     // Every extracted entry is a valid jsonb_entry payload AND carries `op`
-    // (the ordered term the matrix's ord_ope_term paths require —
-    // `eql_v3.ord_ope_term` returns SQL NULL for an op-less entry).
+    // (the ordered term the matrix's ord_term paths require —
+    // `eql_v3.ord_term` returns SQL NULL for an op-less entry).
     let invalid: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(*) FROM fixtures.v3_doc_integer \
          WHERE NOT public.eql_v3_is_valid_ste_vec_entry_payload((payload -> '{SELECTOR}'::text)::jsonb) \
-            OR eql_v3.ord_ope_term((payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry) IS NULL",
+            OR eql_v3.ord_term((payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry) IS NULL",
     ))
     .fetch_one(&pool)
     .await?;
@@ -134,8 +134,8 @@ async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> any
 }
 
 // ----------------------------------------------------------------------------
-// CLLW-OPE injectivity. Distinct plaintexts must produce distinct ord_ope_term
-// terms. Compares `eql_v3.ord_ope_term(...)` outputs directly — NOT entry `=`, which
+// CLLW-OPE injectivity. Distinct plaintexts must produce distinct ord_term
+// terms. Compares `eql_v3.ord_term(...)` outputs directly — NOT entry `=`, which
 // tests `eq_term`, not ORE.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
@@ -145,8 +145,8 @@ async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::
          FROM fixtures.v3_doc_integer a \
          JOIN fixtures.v3_doc_integer b ON a.id < b.id \
          WHERE a.plaintext <> b.plaintext \
-           AND eql_v3.ord_ope_term((a.payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry) \
-             = eql_v3.ord_ope_term((b.payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry)",
+           AND eql_v3.ord_term((a.payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry) \
+             = eql_v3.ord_term((b.payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry)",
     ))
     .fetch_one(&pool)
     .await?;
@@ -160,16 +160,16 @@ async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::
 // ----------------------------------------------------------------------------
 // Index engagement — hand-written (not via the shared `__scalar_matrix_index`
 // driver, which sweeps a bare-jsonb RHS that flattens to native `jsonb < jsonb`
-// for entries). Builds the ord_ope_term functional btree and asserts each ORDERING
-// op (which inlines to `ord_ope_term(value) <op> ord_ope_term(const)`) engages it, using
+// for entries). Builds the ord_term functional btree and asserts each ORDERING
+// op (which inlines to `ord_term(value) <op> ord_term(const)`) engages it, using
 // the domain-cast RHS (`'<lit>'::public.eql_v3_jsonb_entry`) so the entry operator
 // resolves rather than native jsonb.
 //
 // VALIDITY ONLY: forces `enable_seqscan = off` on the ~17-row fixture, so a
 // green assertion proves the index is USABLE, not that the planner would PREFER
 // it at scale (mirrors the scalar index-engagement caveat). Equality is
-// excluded: entry `=` reduces through `eql_v3.eq_term`, not `ord_ope_term`, so the
-// ord_ope_term btree cannot serve it.
+// excluded: entry `=` reduces through `eql_v3.eq_term`, not `ord_term`, so the
+// ord_term btree cannot serve it.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()> {
@@ -189,7 +189,7 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
     ))
     .execute(&mut *tx)
     .await?;
-    sqlx::query("CREATE INDEX entry_idx_ope ON entry_idx USING btree (eql_v3.ord_ope_term(value))")
+    sqlx::query("CREATE INDEX entry_idx_ope ON entry_idx USING btree (eql_v3.ord_term(value))")
         .execute(&mut *tx)
         .await?;
     sqlx::query("ANALYZE entry_idx").execute(&mut *tx).await?;
@@ -204,9 +204,7 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
             &mut *tx,
             &query,
             "entry_idx_ope",
-            &format!(
-                "entry op {op} (domain-cast RHS) must engage the ord_ope_term functional btree"
-            ),
+            &format!("entry op {op} (domain-cast RHS) must engage the ord_term functional btree"),
         )
         .await?;
     }
@@ -216,9 +214,9 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
 }
 
 // ----------------------------------------------------------------------------
-// Aggregate robustness over non-orderable (op-less) entries. `eql_v3.ord_ope_term`
-// is NULL for an entry without an `op` term, so a naive `ord_ope_term(value) <
-// ord_ope_term(state)` would be NULL whenever the running extremum is op-less —
+// Aggregate robustness over non-orderable (op-less) entries. `eql_v3.ord_term`
+// is NULL for an entry without an `op` term, so a naive `ord_term(value) <
+// ord_term(state)` would be NULL whenever the running extremum is op-less —
 // pinning a wrong result when the FIRST aggregated row (the STRICT seed) is
 // op-less. The min/max sfuncs explicitly skip op-less entries. This feeds a
 // forged hm-only (op-less) entry in the SEED position alongside real op-carrying
@@ -232,7 +230,7 @@ async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
 ) -> anyhow::Result<()> {
     let sel = SELECTOR;
     // A valid public.eql_v3_jsonb_entry that is NOT orderable: string s, string c,
-    // exactly one of hm/op — here `hm`, so `eql_v3.ord_ope_term(entry)` is NULL.
+    // exactly one of hm/op — here `hm`, so `eql_v3.ord_term(entry)` is NULL.
     let op_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
 
     let mut sorted: Vec<i32> = <JsonbEntryInteger as ScalarType>::fixture_values()
