@@ -1,5 +1,19 @@
 # @cipherstash/eql
 
+## 3.0.0-alpha.4
+
+### Major Changes
+
+- 60bc2fe: **SteVec (encrypted JSONB) ordering switched from CLLW-ORE to CLLW-OPE: sv entries carry `hm` XOR `op`, and entry ordering extracts `eql_v3.ord_ope_term(entry)` — native bytea order, no operator class.** The `eql_v3_internal.ore_cllw` composite type, its per-byte comparator, six operators, and superuser-only `DEFAULT FOR TYPE` btree operator class are removed, along with `eql_v3.ore_cllw(entry)` / `eql_v3.has_ore_cllw(entry)`; the domain CHECKs on `public.json` / `public.jsonb_entry` / `eql_v3.query_jsonb` now validate `hm` XOR `op` and reject `oc`-bearing payloads. Why: `CREATE OPERATOR CLASS` requires superuser, so SteVec entry ordering was the last EQL surface that could not index on cloud-hosted Supabase / managed Postgres — the CLLW-OPE term is the same `op` / `eql_v3_internal.ope_cllw` bytea domain the scalar `_ord_ope` domains use, the whole comparison chain is inlinable SQL, and a plain functional btree index on `eql_v3.ord_ope_term(doc -> '<selector>'::text)` engages structurally on any install. Stored `oc` documents must be re-encrypted with an OPE-mode client (`eql-bindings`' `from_v2` fails closed with the new `UnconvertibleOreTerm` on `oc` entries; the bindings' `SteVecTerm` gains an `OpeCllw { op }` variant in place of `OreCllw { oc }`). See [U-004](docs/upgrading/v3.0.md#u-004-stevec-ordering-terms-are-cllw-ope-op) for the migration recipe. ([CIP-3469](https://linear.app/cipherstash/issue/CIP-3469/switch-jsonbstevec-support-from-cllw-ore-to-ope))
+
+### Minor Changes
+
+- 99dc436: **Non-superuser installs (cloud-hosted Supabase, most managed Postgres) now disable the ORE-backed domains loudly instead of installing them half-working.** `CREATE OPERATOR CLASS` requires superuser, so the installer has always attempted the ORE operator class and skipped it on `insufficient_privilege` — but the ORE-carrying domains (`_ord` / `_ord_ore` on every ordered scalar, `text_search`, and their `eql_v3.query_*` twins) still installed, leaving a trap: `<` / `>` comparisons ran as unindexable seq scans while `CREATE INDEX ... (eql_v3.ord_term(col))` and bare `ORDER BY` failed with opaque Postgres errors. The installer now capability-detects the skip (by checking `pg_opclass` after the attempt) and poisons all 38 ORE-carrying domains with an always-raising `CHECK` constraint: the first value cast or inserted into one — including `NULL` — raises `feature_not_supported` (SQLSTATE `0A000`) naming the domain and pointing at the platform-supported alternatives (`_ord_ope` for indexed ordering via CLLW-OPE, `_eq` for equality, `text_match` for pattern match). The constraint is added `NOT VALID`, so ORE data written under an earlier superuser install stays readable and re-running the installer over it succeeds — only new casts and inserts raise. Superuser installs are unchanged: the operator class is created and nothing is poisoned. The check is install-time, so installing as superuser keeps full ORE support regardless of which role queries later. ([CIP-3468](https://linear.app/cipherstash/issue/CIP-3468/do-not-install-ore-types-on-cloud-hosted-supabase))
+
+### Patch Changes
+
+- a758894: **npm prereleases publish under the `latest` dist-tag until 3.0.0 ships.** Until the 3.0.0 final, the alphas are the package's only release line, so `npm install @cipherstash/eql` should resolve to the newest alpha instead of whichever version last happened to hold `latest`. Once 3.0.0 GA is published, prereleases return to their channel dist-tag (`alpha`/`beta`/`rc`) and `latest` stays on finals (`PRE_GA_LATEST` in `packages/eql/scripts/npm-publish.mjs`).
+
 ## 3.0.0-alpha.3
 
 ### Major Changes

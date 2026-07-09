@@ -29,6 +29,8 @@
     "eql-340",
     "eql-341",
     "eql-3442",
+    "eql-3468",
+    "eql-3469-stevec-ope",
     "eql-349",
     "eql-350",
     "eql-353",
@@ -41,6 +43,7 @@
     "eql-lints-schema-placement",
     "eql-sole-installer",
     "eql-v2-removed",
-    "eql-version-fn"
+    "eql-version-fn",
+    "npm-latest-pre-ga"
   ]
 }

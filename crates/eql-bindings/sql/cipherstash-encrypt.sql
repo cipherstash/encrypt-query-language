@@ -2580,6 +2580,107 @@ END
 $$;
 -- AUTOMATICALLY GENERATED FILE.
 
+--! @file v3/scalars/timestamp/timestamp_types.sql
+--! @brief Encrypted-domain types for timestamp.
+
+DO $$
+BEGIN
+  --! @brief Encrypted domain public.timestamp.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamp' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.timestamp AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.timestamp IS 'EQL encrypted timestamp (storage only)';
+
+  --! @brief Encrypted domain public.timestamp_eq.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamp_eq' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.timestamp_eq AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'hm'
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.timestamp_eq IS 'EQL encrypted timestamp (equality)';
+
+  --! @brief Encrypted domain public.timestamp_ord_ore.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamp_ord_ore' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.timestamp_ord_ore AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'ob'
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.timestamp_ord_ore IS 'EQL encrypted timestamp (equality, ordering)';
+
+  --! @brief Encrypted domain public.timestamp_ord.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamp_ord' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.timestamp_ord AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'ob'
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.timestamp_ord IS 'EQL encrypted timestamp (equality, ordering)';
+
+  --! @brief Encrypted domain public.timestamp_ord_ope.
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'timestamp_ord_ope' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.timestamp_ord_ope AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE ? 'op'
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.timestamp_ord_ope IS 'EQL encrypted timestamp (equality, ordering)';
+END
+$$;
+-- AUTOMATICALLY GENERATED FILE.
+
 --! @file v3/scalars/text/text_types.sql
 --! @brief Encrypted-domain types for text.
 
@@ -3179,107 +3280,6 @@ AS $$
 $$;
 -- AUTOMATICALLY GENERATED FILE.
 
---! @file v3/scalars/timestamp/timestamp_types.sql
---! @brief Encrypted-domain types for timestamp.
-
-DO $$
-BEGIN
-  --! @brief Encrypted domain public.timestamp.
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp' AND typnamespace = 'public'::regnamespace
-  ) THEN
-    CREATE DOMAIN public.timestamp AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'c'
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN public.timestamp IS 'EQL encrypted timestamp (storage only)';
-
-  --! @brief Encrypted domain public.timestamp_eq.
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_eq' AND typnamespace = 'public'::regnamespace
-  ) THEN
-    CREATE DOMAIN public.timestamp_eq AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'c'
-        AND VALUE ? 'hm'
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN public.timestamp_eq IS 'EQL encrypted timestamp (equality)';
-
-  --! @brief Encrypted domain public.timestamp_ord_ore.
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord_ore' AND typnamespace = 'public'::regnamespace
-  ) THEN
-    CREATE DOMAIN public.timestamp_ord_ore AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'c'
-        AND VALUE ? 'ob'
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN public.timestamp_ord_ore IS 'EQL encrypted timestamp (equality, ordering)';
-
-  --! @brief Encrypted domain public.timestamp_ord.
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord' AND typnamespace = 'public'::regnamespace
-  ) THEN
-    CREATE DOMAIN public.timestamp_ord AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'c'
-        AND VALUE ? 'ob'
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN public.timestamp_ord IS 'EQL encrypted timestamp (equality, ordering)';
-
-  --! @brief Encrypted domain public.timestamp_ord_ope.
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord_ope' AND typnamespace = 'public'::regnamespace
-  ) THEN
-    CREATE DOMAIN public.timestamp_ord_ope AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'c'
-        AND VALUE ? 'op'
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN public.timestamp_ord_ope IS 'EQL encrypted timestamp (equality, ordering)';
-END
-$$;
--- AUTOMATICALLY GENERATED FILE.
-
 --! @file encrypted_domain/timestamp/timestamp_eq_functions.sql
 --! @brief Functions for public.timestamp_eq.
 
@@ -3682,11 +3682,12 @@ AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.t
 LANGUAGE plpgsql;
 
 --! @file v3/sem/ope_cllw/types.sql
---! @brief CLLW OPE index term type for scalar range queries (eql_v3 SEM)
+--! @brief CLLW OPE index term type for ordered range queries (eql_v3 SEM)
 --!
 --! Domain type representing a CLLW (Copyless Logarithmic Width)
 --! Order-Preserving Encryption term. The ciphertext is stored hex-encoded in
---! the `op` field of encrypted scalar payloads (the `_ord_ope` domains); the
+--! the `op` field of encrypted payloads — the scalar `_ord_ope` domains and
+--! the ordered entries of a SteVec document (`public.jsonb_entry`); the
 --! domain carries the hex-decoded bytes.
 --!
 --! A DOMAIN over bytea, not a composite: the OPE ciphertext is
@@ -3696,8 +3697,8 @@ LANGUAGE plpgsql;
 --! same pattern as eql_v3_internal.hmac_256 over text). That keeps the whole
 --! comparison chain inlinable, so a functional btree index on
 --! `eql_v3.ord_ope_term(col)` engages structurally for the `_ord_ope`
---! domains' comparison operators. Contrast eql_v3_internal.ore_cllw (`oc`), the SteVec
---! CLLW-*ORE* composite compared by a custom per-byte protocol.
+--! domains' comparison operators — and likewise on
+--! `eql_v3.ord_ope_term(col -> 'selector')` for SteVec entry ordering.
 --!
 --! @note Transient type used only during query execution.
 --! @see eql_v3_internal.ope_cllw
@@ -19682,6 +19683,141 @@ AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 CREATE FUNCTION eql_v3.neq(a eql_v3.query_integer_eq, b public.integer_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
+
+--! @file v3/sem/ore_block_256/operator_class.sql
+--! @brief B-tree operator family + default class on eql_v3_internal.ore_block_256.
+--!
+--! Gives the composite type its DEFAULT btree opclass so the recommended
+--! functional index `CREATE INDEX ON t (eql_v3_internal.ord_term(col))` engages without
+--! an explicit opclass annotation (design D4).
+--!
+--! @note Creating an operator family/class requires superuser: Postgres forbids
+--!       CREATE OPERATOR FAMILY / CLASS to non-superusers to protect index
+--!       integrity. Managed platforms (Supabase, and most hosted Postgres) run
+--!       the installer as a non-superuser role, so the DO block below ATTEMPTS
+--!       the creation and skips it on insufficient_privilege (SQLSTATE 42501),
+--!       letting the single installer run everywhere. When the class is absent,
+--!       ORE ordered scans over eql_v3_internal.ore_block_256 are unavailable,
+--!       but the order-preserving (OPE) ordering domains — whose extractor
+--!       return types carry a native btree opclass — still index without it. On
+--!       superuser installs (self-managed Postgres, the SQLx test matrix) the
+--!       class is created normally. Any non-privilege error still propagates.
+--! @see eql_v3_internal.compare_ore_block_256_terms
+
+DO $do$
+BEGIN
+  EXECUTE 'CREATE OPERATOR FAMILY eql_v3_internal.ore_block_256_operator_family USING btree';
+
+  EXECUTE $ddl$
+    CREATE OPERATOR CLASS eql_v3_internal.ore_block_256_operator_class
+      DEFAULT FOR TYPE eql_v3_internal.ore_block_256
+      USING btree FAMILY eql_v3_internal.ore_block_256_operator_family AS
+        OPERATOR 1 public.<,
+        OPERATOR 2 public.<=,
+        OPERATOR 3 public.=,
+        OPERATOR 4 public.>=,
+        OPERATOR 5 public.>,
+        FUNCTION 1 eql_v3_internal.compare_ore_block_256_terms(a eql_v3_internal.ore_block_256, b eql_v3_internal.ore_block_256)
+  $ddl$;
+
+  RAISE NOTICE 'EQL: created btree operator class eql_v3_internal.ore_block_256_operator_class';
+EXCEPTION
+  WHEN insufficient_privilege THEN
+    RAISE NOTICE 'EQL: skipped operator class eql_v3_internal.ore_block_256_operator_class (requires superuser); ORE ordered indexes on ore_block_256 unavailable, OPE ordering domains unaffected';
+END;
+$do$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file v3/scalars/timestamp/query_timestamp_types.sql
+--! @brief Query-operand domains for timestamp (index-terms-only, no ciphertext).
+--! @note Query-operand domains live in `eql_v3` (not `public`): they are
+--!       never valid column types, so they don't belong in the column-type
+--!       namespace, and dropping the EQL-owned schema can never drop an
+--!       application column.
+--! @note Cast a query operand explicitly to its `query_` domain in a predicate
+--!       (e.g. `WHERE col = $1::eql_v3.query_timestamp_eq`). A bare,
+--!       uncast literal RHS is ambiguous between the `query_` and `jsonb`
+--!       operator overloads and will not resolve.
+
+DO $$
+BEGIN
+  --! @brief Query-operand domain eql_v3.query_timestamp_eq (term-only; no `c`).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'query_timestamp_eq' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.query_timestamp_eq AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'hm'
+        AND NOT (VALUE ? 'c')
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN eql_v3.query_timestamp_eq IS 'EQL timestamp query operand (equality)';
+
+  --! @brief Query-operand domain eql_v3.query_timestamp_ord_ore (term-only; no `c`).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'query_timestamp_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.query_timestamp_ord_ore AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'ob'
+        AND NOT (VALUE ? 'c')
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN eql_v3.query_timestamp_ord_ore IS 'EQL timestamp query operand (equality, ordering)';
+
+  --! @brief Query-operand domain eql_v3.query_timestamp_ord (term-only; no `c`).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'query_timestamp_ord' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.query_timestamp_ord AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'ob'
+        AND NOT (VALUE ? 'c')
+        AND jsonb_typeof(VALUE -> 'ob') = 'array'
+        AND jsonb_array_length(VALUE -> 'ob') > 0
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN eql_v3.query_timestamp_ord IS 'EQL timestamp query operand (equality, ordering)';
+
+  --! @brief Query-operand domain eql_v3.query_timestamp_ord_ope (term-only; no `c`).
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'query_timestamp_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
+  ) THEN
+    CREATE DOMAIN eql_v3.query_timestamp_ord_ope AS jsonb
+      CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'op'
+        AND NOT (VALUE ? 'c')
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN eql_v3.query_timestamp_ord_ope IS 'EQL timestamp query operand (equality, ordering)';
+END
+$$;
 -- AUTOMATICALLY GENERATED FILE.
 
 --! @file v3/scalars/text/query_text_types.sql
@@ -23441,98 +23577,6 @@ CREATE OPERATOR || (
 );
 -- AUTOMATICALLY GENERATED FILE.
 
---! @file v3/scalars/timestamp/query_timestamp_types.sql
---! @brief Query-operand domains for timestamp (index-terms-only, no ciphertext).
---! @note Query-operand domains live in `eql_v3` (not `public`): they are
---!       never valid column types, so they don't belong in the column-type
---!       namespace, and dropping the EQL-owned schema can never drop an
---!       application column.
---! @note Cast a query operand explicitly to its `query_` domain in a predicate
---!       (e.g. `WHERE col = $1::eql_v3.query_timestamp_eq`). A bare,
---!       uncast literal RHS is ambiguous between the `query_` and `jsonb`
---!       operator overloads and will not resolve.
-
-DO $$
-BEGIN
-  --! @brief Query-operand domain eql_v3.query_timestamp_eq (term-only; no `c`).
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'query_timestamp_eq' AND typnamespace = 'eql_v3'::regnamespace
-  ) THEN
-    CREATE DOMAIN eql_v3.query_timestamp_eq AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'hm'
-        AND NOT (VALUE ? 'c')
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN eql_v3.query_timestamp_eq IS 'EQL timestamp query operand (equality)';
-
-  --! @brief Query-operand domain eql_v3.query_timestamp_ord_ore (term-only; no `c`).
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'query_timestamp_ord_ore' AND typnamespace = 'eql_v3'::regnamespace
-  ) THEN
-    CREATE DOMAIN eql_v3.query_timestamp_ord_ore AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'ob'
-        AND NOT (VALUE ? 'c')
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN eql_v3.query_timestamp_ord_ore IS 'EQL timestamp query operand (equality, ordering)';
-
-  --! @brief Query-operand domain eql_v3.query_timestamp_ord (term-only; no `c`).
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'query_timestamp_ord' AND typnamespace = 'eql_v3'::regnamespace
-  ) THEN
-    CREATE DOMAIN eql_v3.query_timestamp_ord AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'ob'
-        AND NOT (VALUE ? 'c')
-        AND jsonb_typeof(VALUE -> 'ob') = 'array'
-        AND jsonb_array_length(VALUE -> 'ob') > 0
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN eql_v3.query_timestamp_ord IS 'EQL timestamp query operand (equality, ordering)';
-
-  --! @brief Query-operand domain eql_v3.query_timestamp_ord_ope (term-only; no `c`).
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_type
-    WHERE typname = 'query_timestamp_ord_ope' AND typnamespace = 'eql_v3'::regnamespace
-  ) THEN
-    CREATE DOMAIN eql_v3.query_timestamp_ord_ope AS jsonb
-      CHECK (
-        jsonb_typeof(VALUE) = 'object'
-        AND VALUE ? 'v'
-        AND VALUE ? 'i'
-        AND VALUE ? 'op'
-        AND NOT (VALUE ? 'c')
-        AND VALUE->>'v' = '3'
-      );
-  END IF;
-
-  COMMENT ON DOMAIN eql_v3.query_timestamp_ord_ope IS 'EQL timestamp query operand (equality, ordering)';
-END
-$$;
--- AUTOMATICALLY GENERATED FILE.
-
 --! @file encrypted_domain/timestamp/query_timestamp_eq_functions.sql
 --! @brief Functions for eql_v3.query_timestamp_eq.
 
@@ -24450,203 +24494,6 @@ CREATE OPERATOR || (
   LEFTARG = jsonb, RIGHTARG = public.timestamp_ord_ore
 );
 
---! @file v3/sem/ore_cllw/types.sql
---! @brief CLLW ORE index term type for STE-vec range queries (eql_v3 SEM)
---!
---! Composite type for CLLW (Copyless Logarithmic Width) Order-Revealing
---! Encryption. The ciphertext is stored in the `oc` field of encrypted data
---! payloads (Standard-mode `ste_vec` elements). Used by the range operators
---! (`<`, `<=`, `>`, `>=`) when an sv element carries an `oc` term.
---!
---! The wire-format `oc` value is a hex string with a leading domain-tag byte
---! (`0x00` numeric, `0x01` string) followed by the CLLW ciphertext. The
---! decoded `bytes` field carries the full byte string including the tag — the
---! comparator is variable-length capable, so numeric and string values within
---! the same column order correctly: the domain tag separates the ranges
---! (numeric < string) and the within-domain comparison falls through to the
---! CLLW per-byte protocol.
---!
---! @note This is a transient type used only during query execution.
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE TYPE eql_v3_internal.ore_cllw AS (
-  bytes bytea
-);
-
---! @file v3/sem/ore_cllw/functions.sql
---! @brief CLLW ORE index-term extraction and comparison (eql_v3 SEM).
-
---! @brief Extract CLLW ORE index term from raw jsonb
---!
---! Returns the CLLW ORE ciphertext from the `oc` field of a single sv element
---! supplied as raw jsonb. Inlinable single-statement SQL — the planner folds
---! the body into the calling query.
---!
---! **Missing-`oc` semantics**: returns SQL-level NULL (not a composite with
---! NULL bytes) when `oc` is absent, so btree's NULL handling filters those
---! rows from range queries.
---!
---! @param val jsonb An object carrying an `oc` field
---! @return eql_v3_internal.ore_cllw Composite carrying the CLLW ciphertext, or NULL
---!         when the `oc` field is absent.
---! @see eql_v3_internal.has_ore_cllw
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw(val jsonb)
-  RETURNS eql_v3_internal.ore_cllw
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT CASE WHEN val ->> 'oc' IS NULL THEN NULL
-              ELSE ROW(decode(val ->> 'oc', 'hex'))::eql_v3_internal.ore_cllw
-         END
-$$;
-
-COMMENT ON FUNCTION eql_v3_internal.ore_cllw(jsonb) IS
-  'eql-inline-critical: raw-jsonb CLLW extractor; must stay inlinable (unpinned search_path)';
-
---! @brief Check if a raw jsonb value contains a CLLW ORE index term
---! @param val jsonb An object that may carry an `oc` field
---! @return boolean True if `oc` field is present and non-null
-CREATE FUNCTION eql_v3_internal.has_ore_cllw(val jsonb)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT val ->> 'oc' IS NOT NULL
-$$;
-
-COMMENT ON FUNCTION eql_v3_internal.has_ore_cllw(jsonb) IS
-  'eql-inline-critical: raw-jsonb CLLW presence helper; must stay inlinable (unpinned search_path)';
-
---! @brief CLLW per-byte comparison helper
---! @internal
---!
---! Byte-by-byte comparison implementing the CLLW order-revealing protocol.
---! Identify the index of the first differing byte; if `(y_byte + 1) == x_byte`
---! (mod 256) there, then x > y; otherwise x < y. Equal inputs return 0. Inputs
---! MUST be the same length (the caller guarantees this). Stays `LANGUAGE
---! plpgsql` — the per-byte loop can't be a single inlinable SQL expression.
---!
---! @param a bytea First CLLW ciphertext slice
---! @param b bytea Second CLLW ciphertext slice
---! @return integer -1, 0, or 1
---! @throws Exception if inputs are different lengths
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.compare_ore_cllw_term_bytes(a bytea, b bytea)
-RETURNS int
-  SET search_path = pg_catalog, extensions, public
-AS $$
-DECLARE
-    len_a INT;
-    len_b INT;
-    i INT;
-    first_diff INT := 0;
-BEGIN
-
-    len_a := LENGTH(a);
-    len_b := LENGTH(b);
-
-    IF len_a != len_b THEN
-      RAISE EXCEPTION 'ore_cllw index terms are not the same length';
-    END IF;
-
-    FOR i IN 1..len_a LOOP
-        IF first_diff = 0 AND get_byte(a, i - 1) != get_byte(b, i - 1) THEN
-            first_diff := i;
-        END IF;
-    END LOOP;
-
-    IF first_diff = 0 THEN
-        RETURN 0;
-    END IF;
-
-    IF ((get_byte(b, first_diff - 1) + 1) & 255) = get_byte(a, first_diff - 1) THEN
-        RETURN 1;
-    ELSE
-        RETURN -1;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
---! @brief Variable-length CLLW ORE term comparison
---! @internal
---!
---! Three-way comparison of two CLLW ORE ciphertext terms of potentially
---! different lengths. Compares the shared prefix via the CLLW per-byte
---! protocol; on equal prefixes, the shorter input sorts first. The leading
---! domain-tag byte makes numeric (`0x00`) sort before string (`0x01`). Stays
---! `LANGUAGE plpgsql` because it dispatches to `compare_ore_cllw_term_bytes`.
---!
---! btree filters NULL composites at the row level, so this should never see a
---! NULL composite under normal operation; the IS-NULL guard returns NULL
---! defensively. A non-NULL composite with NULL `bytes` is a contract violation
---! — the extractor returns SQL NULL (not ROW(NULL)) on missing `oc`, so raise
---! loudly rather than silently misorder.
---!
---! @param a eql_v3_internal.ore_cllw First term
---! @param b eql_v3_internal.ore_cllw Second term
---! @return integer -1, 0, or 1; NULL if either composite is NULL
---! @throws Exception if either composite has a NULL `bytes` field
---! @see eql_v3_internal.compare_ore_cllw_term_bytes
-CREATE FUNCTION eql_v3_internal.compare_ore_cllw_term(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-RETURNS int
-  SET search_path = pg_catalog, extensions, public
-AS $$
-DECLARE
-    len_a INT;
-    len_b INT;
-    common_len INT;
-    cmp_result INT;
-BEGIN
-    -- The `::text` cast is load-bearing, not a stylistic choice. For the
-    -- single-field `ore_cllw` composite, `ROW(NULL)::ore_cllw IS NULL` is TRUE
-    -- but `(ROW(NULL)::ore_cllw)::text IS NULL` is FALSE. Casting to text first
-    -- means a NULL-component composite falls THROUGH to the RAISE below (the
-    -- extractor-invariant violation) instead of silently returning NULL and
-    -- masking it. A plain `a IS NULL` would reintroduce that masking bug.
-    IF a::text IS NULL OR b::text IS NULL THEN
-      RETURN NULL;
-    END IF;
-
-    IF a.bytes IS NULL OR b.bytes IS NULL THEN
-      RAISE EXCEPTION 'eql_v3_internal.compare_ore_cllw_term: composite has NULL bytes field — extractor invariant violated. Check that the index expression uses eql_v3_internal.ore_cllw(...) and not a hand-crafted ROW(NULL).';
-    END IF;
-
-    len_a := LENGTH(a.bytes);
-    len_b := LENGTH(b.bytes);
-
-    IF len_a = 0 AND len_b = 0 THEN
-        RETURN 0;
-    ELSIF len_a = 0 THEN
-        RETURN -1;
-    ELSIF len_b = 0 THEN
-        RETURN 1;
-    END IF;
-
-    IF len_a < len_b THEN
-        common_len := len_a;
-    ELSE
-        common_len := len_b;
-    END IF;
-
-    cmp_result := eql_v3_internal.compare_ore_cllw_term_bytes(
-      SUBSTRING(a.bytes FROM 1 FOR common_len),
-      SUBSTRING(b.bytes FROM 1 FOR common_len)
-    );
-
-    IF cmp_result = -1 THEN
-        RETURN -1;
-    ELSIF cmp_result = 1 THEN
-        RETURN 1;
-    END IF;
-
-    IF len_a < len_b THEN
-        RETURN -1;
-    ELSIF len_a > len_b THEN
-        RETURN 1;
-    ELSE
-        RETURN 0;
-    END IF;
-END;
-$$ LANGUAGE plpgsql;
-
 --! @file v3/jsonb/types.sql
 --! @brief Domain types for the eql_v3 encrypted-JSONB (SteVec) surface.
 --!
@@ -24661,7 +24508,7 @@ $$ LANGUAGE plpgsql;
 --! @internal
 --! @param val jsonb Candidate entry payload.
 --! @return boolean True when `val` is an sv entry with string `s`, string `c`,
---!         and exactly one string deterministic term (`hm` XOR `oc`).
+--!         and exactly one string deterministic term (`hm` XOR `op`).
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -24671,9 +24518,9 @@ AS $$
      AND jsonb_typeof(val -> 's') = 'string'
      AND jsonb_typeof(val -> 'c') = 'string'
      AND (
-       (jsonb_typeof(val -> 'hm') = 'string' AND NOT (val ? 'oc'))
+       (jsonb_typeof(val -> 'hm') = 'string' AND NOT (val ? 'op'))
        OR
-       (jsonb_typeof(val -> 'oc') = 'string' AND NOT (val ? 'hm'))
+       (jsonb_typeof(val -> 'op') = 'string' AND NOT (val ? 'hm'))
      ),
     false
   )
@@ -24684,7 +24531,7 @@ $$;
 --! @param val jsonb Candidate query payload.
 --! @return boolean True when `val` is `{"sv":[...]}` and every element carries
 --!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
---!         `oc`).
+--!         `op`).
 --! @note plpgsql, not LANGUAGE sql (issues #353/#354): the only caller is the
 --!   eql_v3.query_jsonb domain CHECK, where a SQL function can never be
 --!   inlined (and the CHECK itself cannot absorb this body — it needs a
@@ -24709,9 +24556,9 @@ BEGIN
          AND jsonb_typeof(elem -> 's') = 'string'
          AND NOT (elem ? 'c')
          AND (
-           (jsonb_typeof(elem -> 'hm') = 'string' AND NOT (elem ? 'oc'))
+           (jsonb_typeof(elem -> 'hm') = 'string' AND NOT (elem ? 'op'))
            OR
-           (jsonb_typeof(elem -> 'oc') = 'string' AND NOT (elem ? 'hm'))
+           (jsonb_typeof(elem -> 'op') = 'string' AND NOT (elem ? 'hm'))
          )
        ), false)
      ),
@@ -24779,9 +24626,9 @@ $$;
 --!
 --! A single element inside an `sv` array: a JSON object that carries a selector
 --! (`s`), a ciphertext (`c`), and **exactly one** of `hm` (HMAC-256, for
---! hash-equality) or `oc` (CLLW ORE, for ordered queries) — they are mutually
+--! hash-equality) or `op` (CLLW OPE, for ordered queries) — they are mutually
 --! exclusive. This is the type returned by `->` and accepted by the per-entry
---! extractors `eql_v3.eq_term` / `eql_v3.ore_cllw`. Extra fields (`a`, root
+--! extractors `eql_v3.eq_term` / `eql_v3.ord_ope_term`. Extra fields (`a`, root
 --! `i`/`v` merged in by `->`) are allowed.
 --!
 --! @see src/v3/jsonb/operators.sql
@@ -24813,9 +24660,9 @@ BEGIN
            AND jsonb_typeof(VALUE -> 's') = 'string'
            AND jsonb_typeof(VALUE -> 'c') = 'string'
            AND (
-             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'oc'))
+             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'op'))
              OR
-             (jsonb_typeof(VALUE -> 'oc') = 'string' AND NOT (VALUE ? 'hm'))
+             (jsonb_typeof(VALUE -> 'op') = 'string' AND NOT (VALUE ? 'hm'))
            ),
           false
         )
@@ -24830,7 +24677,7 @@ $$;
 --!
 --! A query-shaped payload `{"sv":[...]}` whose elements carry selector + index
 --! term but **never** a ciphertext (`c`). Each element must carry `s` and
---! exactly one deterministic term (`hm` XOR `oc`). Typing the needle this way
+--! exactly one deterministic term (`hm` XOR `op`). Typing the needle this way
 --! stops selector-only needles from casting and matching every row via bare
 --! `jsonb @>`.
 --!
@@ -24867,7 +24714,7 @@ $$;
 --! @brief Convert a public.json to a query_jsonb needle.
 --!
 --! Normalises each sv element down to the matching-relevant fields: `s` plus
---! exactly one of `hm` / `oc`. Other fields (`c`, `a`, `i`/`v`, anything else)
+--! exactly one of `hm` / `op`. Other fields (`c`, `a`, `i`/`v`, anything else)
 --! are stripped. This is the canonical needle shape for `@>` containment.
 --! Designed for use as a functional GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
@@ -24887,7 +24734,7 @@ AS $$
                   jsonb_build_object(
                     's',  elem -> 's',
                     'hm', elem -> 'hm',
-                    'oc', elem -> 'oc'
+                    'op', elem -> 'op'
                   )
                 )
               )
@@ -24977,55 +24824,50 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Equality-term extractor (XOR-aware: coalesce(hm, oc))
+-- Equality-term extractor (XOR-aware: coalesce(hm, op))
 ------------------------------------------------------------------------------
 
 --! @brief XOR-aware equality term extractor for public.jsonb_entry.
 --!
 --! Returns the bytea of whichever deterministic term the sv entry carries —
---! `hm` (HMAC-256) or `oc` (CLLW ORE). The two byte distributions are disjoint
+--! `hm` (HMAC-256) or `op` (CLLW OPE). The two byte distributions are disjoint
 --! by construction, so byte equality on the coalesce is unambiguous. Canonical
 --! equality extractor used by `=` / `<>` on jsonb_entry.
 --!
 --! @param entry public.jsonb_entry
---! @return bytea Decoded `hm` or `oc` bytes (NULL if entry is NULL).
+--! @return bytea Decoded `hm` or `op` bytes (NULL if entry is NULL).
 CREATE FUNCTION eql_v3.eq_term(entry public.jsonb_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT decode(coalesce(entry ->> 'hm', entry ->> 'oc'), 'hex')
+  SELECT decode(coalesce(entry ->> 'hm', entry ->> 'op'), 'hex')
 $$;
 
 ------------------------------------------------------------------------------
--- ORE CLLW per-entry overloads (live here so sem/ore_cllw stays a leaf)
+-- CLLW OPE per-entry overload (converged with the scalar ord_ope_term)
 ------------------------------------------------------------------------------
 
---! @brief Extract CLLW ORE index term from a ste_vec entry.
+--! @brief Extract the CLLW OPE index term from a ste_vec entry.
 --!
---! `oc` is only ever present on an sv element, never at a root encrypted value,
---! so the typed overload accepts public.jsonb_entry. Returns SQL NULL when
---! `oc` is absent (btree NULL-filters such rows from range queries).
+--! An sv-element `op` term is only ever present on an sv element, never at a
+--! root encrypted value, so the typed overload accepts public.jsonb_entry —
+--! the jsonb_entry twin of the generated scalar `eql_v3.ord_ope_term`
+--! extractors. Returns SQL NULL when `op` is absent (the strict `->>` /
+--! `decode` chain propagates it), so btree NULL-filters such rows from range
+--! queries. The returned eql_v3_internal.ope_cllw is a bytea domain: it orders
+--! under native byte comparison with the DEFAULT btree opclass, so a
+--! functional index on `eql_v3.ord_ope_term(col -> 'selector')` engages
+--! structurally with no custom operator class (Supabase/managed-Postgres
+--! safe).
 --!
 --! @param entry public.jsonb_entry
---! @return eql_v3_internal.ore_cllw Composite carrying the CLLW ciphertext, or NULL.
---! @see eql_v3.has_ore_cllw
-CREATE FUNCTION eql_v3.ore_cllw(entry public.jsonb_entry)
-  RETURNS eql_v3_internal.ore_cllw
+--! @return eql_v3_internal.ope_cllw Hex-decoded CLLW OPE term, or NULL when
+--!         `op` is absent.
+CREATE FUNCTION eql_v3.ord_ope_term(entry public.jsonb_entry)
+  RETURNS eql_v3_internal.ope_cllw
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT CASE WHEN entry ->> 'oc' IS NULL THEN NULL
-              ELSE ROW(decode(entry ->> 'oc', 'hex'))::eql_v3_internal.ore_cllw
-         END
-$$;
-
---! @brief Check if a ste_vec entry contains a CLLW ORE index term.
---! @param entry public.jsonb_entry
---! @return boolean True if `oc` is present and non-null.
-CREATE FUNCTION eql_v3.has_ore_cllw(entry public.jsonb_entry)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT entry ->> 'oc' IS NOT NULL
+  SELECT eql_v3_internal.ope_cllw(entry::jsonb)
 $$;
 
 ------------------------------------------------------------------------------
@@ -25082,7 +24924,7 @@ $$ LANGUAGE plpgsql;
 -- Deterministic-fields array for GIN containment
 ------------------------------------------------------------------------------
 
---! @brief Extract deterministic search fields (s, hm, oc, op) per sv element.
+--! @brief Extract deterministic search fields (s, hm, op) per sv element.
 --!
 --! Excludes non-deterministic ciphertext so PostgreSQL's native jsonb `@>` can
 --! compare for containment. Use for GIN indexes and containment queries.
@@ -25100,7 +24942,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'hm', 'oc', 'op')
+    WHERE kv.key IN ('s', 'hm', 'op')
     GROUP BY elem
   );
 $$;
@@ -25156,18 +24998,19 @@ COMMENT ON FUNCTION eql_v3.jsonb_contained_by(jsonb, jsonb) IS
 --! @brief Check if an sv array contains a specific sv element.
 --!
 --! Match = selector equal AND eq_term equal (byte-equality over coalesce(hm,
---! oc)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
+--! op)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
 --! are deterministic and byte-disjoint, so either one is a valid equality
 --! discriminator and a single byte comparison is correct.
 --!
---! ASSUMPTION (locked by a negative test in v3_jsonb_tests.rs): hm and oc byte
+--! ASSUMPTION (locked by a negative test in v3_jsonb_tests.rs): hm and op byte
 --! distributions never collide at a given selector. The crypto layer configures
 --! a selector for eq XOR ordered, so both sides of a real comparison carry the
---! same term type; and an oc value carries a leading domain-tag byte an hm never
---! has. Unlike v2's explicit `has_hmac(both)`/`has_ore_cllw(both)`/`ELSE false`
---! CASE, this collapse would wrongly match an hm needle against an oc leaf if
---! their hex bytes were ever identical — which the contract prevents. The
---! negative-containment test guards against regression.
+--! same term type — an hm needle never meets an op leaf at the same selector.
+--! This collapse would wrongly match an hm needle against an op leaf if their
+--! hex bytes were ever identical — which the contract prevents (an hm is a
+--! fixed 32-byte HMAC; an op is a CLLW OPE ciphertext whose length is a
+--! function of the plaintext bit width, never 32 bytes for the supported
+--! domains). The negative-containment test guards against regression.
 --!
 --! @param a jsonb[] sv array to search within.
 --! @param b jsonb sv element to search for.
@@ -25388,7 +25231,7 @@ DROP FUNCTION IF EXISTS eql_v3.version();
 --! @brief EQL version reporting (self-contained eql_v3 surface)
 --!
 --! This file is auto-generated from src/v3/version.template during build.
---! The 3.0.0-alpha.3 placeholder is replaced with the actual release
+--! The 3.0.0-alpha.4 placeholder is replaced with the actual release
 --! version (bare semver, e.g. "3.0.0") supplied via `mise run build --version`,
 --! or "DEV" for development builds.
 
@@ -25407,14 +25250,14 @@ CREATE FUNCTION eql_v3.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT '3.0.0-alpha.3';
+  SELECT '3.0.0-alpha.4';
 $$ LANGUAGE SQL;
 
 --! @brief Schema-level version marker for obj_description() discoverability
 --!
 --! Mirrors eql_v3.version() as a comment on the schema so the installed
 --! version can also be read via obj_description('eql_v3'::regnamespace).
-COMMENT ON SCHEMA eql_v3 IS '3.0.0-alpha.3';
+COMMENT ON SCHEMA eql_v3 IS '3.0.0-alpha.4';
 
 --! @brief EQL lint: detect non-inlinable operator implementation functions
 --!
@@ -25435,7 +25278,7 @@ COMMENT ON SCHEMA eql_v3 IS '3.0.0-alpha.3';
 --! (or `pg_get_functiondef`); tracked as a follow-up.
 --!
 --! Operators on `eql_v3` types (the jsonb-backed encrypted-domain families and
---! the SEM index-term types `eql_v3_internal.ore_block_256`, `eql_v3_internal.ore_cllw`) whose
+--! the SEM index-term type `eql_v3_internal.ore_block_256`) whose
 --! implementation functions fail any of these rules silently fall back to seq
 --! scan when the documented functional indexes (`eql_v3.eq_term(col)`,
 --! `eql_v3.ord_term(col)`) are in place. This lint surfaces every such case.
@@ -37718,6 +37561,192 @@ CREATE OPERATOR >= (
 );
 -- AUTOMATICALLY GENERATED FILE.
 
+--! @file v3/scalars/ore_fallback.sql
+--! @brief Disable the ORE-backed encrypted domains when the ORE operator class is absent (CIP-3468).
+--!
+--! Runs after the DO block in src/v3/sem/ore_block_256/operator_class.sql,
+--! which ATTEMPTS to create the default btree operator class for
+--! eql_v3_internal.ore_block_256 and skips it on insufficient_privilege
+--! (CREATE OPERATOR CLASS requires superuser; managed platforms — cloud
+--! Supabase and most hosted Postgres — run the installer as a non-superuser
+--! role). When the class was created, this file is a no-op.
+--!
+--! When the class was skipped, the ORE-carrying domains would otherwise
+--! install half-working: `<`/`>` comparisons still run (as unindexable seq
+--! scans), while `CREATE INDEX ... (eql_v3.ord_term(col))` and bare
+--! `ORDER BY` fail with opaque Postgres errors. Instead of that silent
+--! degradation, this file poisons every ORE-carrying domain (and its
+--! query-operand twin) with an always-raising CHECK constraint, so the first
+--! value coerced into the domain fails loudly and points at the
+--! platform-supported alternatives (OPE ordering / HMAC equality /
+--! bloom-filter match).
+--!
+--! Footguns honoured (see the encrypted-domain footgun list in CLAUDE.md):
+--! the poison function is LANGUAGE plpgsql (never inlined, so the RAISE
+--! cannot be planned away) and NOT STRICT (a STRICT function is skipped for
+--! NULL inputs, which would silently let NULLs through the poisoned domain).
+--!
+--! The poison constraints are added NOT VALID. For domains — unlike table
+--! constraints — this does not weaken enforcement: coercion applies every
+--! constraint regardless of validation status, so new casts and inserts
+--! (including NULL) still raise. What it skips is validating existing stored
+--! data: without it, re-running the installer over a database that already
+--! holds ORE values (written under an earlier superuser install, before the
+--! installing role was demoted) would run the always-raising poison against
+--! every stored row and abort the install.
+
+DO $do$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_catalog.pg_opclass c
+    JOIN pg_catalog.pg_am am ON am.oid = c.opcmethod
+    WHERE am.amname = 'btree'
+      AND c.opcdefault
+      AND c.opcintype = 'eql_v3_internal.ore_block_256'::pg_catalog.regtype
+  ) THEN
+    RETURN;
+  END IF;
+
+  --! @brief Poison CHECK backing for the ORE-carrying domains on platforms
+  --!        without the ORE operator class. Always raises; never returns.
+  --! @internal
+  CREATE FUNCTION eql_v3_internal.ore_domain_unavailable(val jsonb, domain_name text, alternatives text)
+  RETURNS boolean
+  IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
+  LANGUAGE plpgsql
+  AS $poison$
+  BEGIN
+    RAISE EXCEPTION 'EQL: % cannot be used on this platform: the EQL installer could not create the ORE operator class (requires superuser, unavailable on e.g. cloud-hosted Supabase)', domain_name
+      USING HINT = 'Use ' || alternatives || ' instead.',
+            ERRCODE = 'feature_not_supported';
+  END;
+  $poison$;
+  -- NOT VALID: skip validating existing stored data (rows written under an
+  -- earlier superuser install must stay readable, and re-installing over them
+  -- must not abort). Domain coercion still enforces the CHECK on every new
+  -- cast/insert regardless of validation status.
+
+  ALTER DOMAIN public.integer_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.integer_ord_ore', 'public.integer_eq (equality) or public.integer_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_integer_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_integer_ord_ore', 'eql_v3.query_integer_eq (equality) or eql_v3.query_integer_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.integer_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.integer_ord', 'public.integer_eq (equality) or public.integer_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_integer_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_integer_ord', 'eql_v3.query_integer_eq (equality) or eql_v3.query_integer_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.smallint_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.smallint_ord_ore', 'public.smallint_eq (equality) or public.smallint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_smallint_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_smallint_ord_ore', 'eql_v3.query_smallint_eq (equality) or eql_v3.query_smallint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.smallint_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.smallint_ord', 'public.smallint_eq (equality) or public.smallint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_smallint_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_smallint_ord', 'eql_v3.query_smallint_eq (equality) or eql_v3.query_smallint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.bigint_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.bigint_ord_ore', 'public.bigint_eq (equality) or public.bigint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_bigint_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_bigint_ord_ore', 'eql_v3.query_bigint_eq (equality) or eql_v3.query_bigint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.bigint_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.bigint_ord', 'public.bigint_eq (equality) or public.bigint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_bigint_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_bigint_ord', 'eql_v3.query_bigint_eq (equality) or eql_v3.query_bigint_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.date_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.date_ord_ore', 'public.date_eq (equality) or public.date_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_date_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_date_ord_ore', 'eql_v3.query_date_eq (equality) or eql_v3.query_date_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.date_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.date_ord', 'public.date_eq (equality) or public.date_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_date_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_date_ord', 'eql_v3.query_date_eq (equality) or eql_v3.query_date_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.timestamp_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.timestamp_ord_ore', 'public.timestamp_eq (equality) or public.timestamp_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_timestamp_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_timestamp_ord_ore', 'eql_v3.query_timestamp_eq (equality) or eql_v3.query_timestamp_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.timestamp_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.timestamp_ord', 'public.timestamp_eq (equality) or public.timestamp_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_timestamp_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_timestamp_ord', 'eql_v3.query_timestamp_eq (equality) or eql_v3.query_timestamp_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.numeric_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.numeric_ord_ore', 'public.numeric_eq (equality) or public.numeric_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_numeric_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_numeric_ord_ore', 'eql_v3.query_numeric_eq (equality) or eql_v3.query_numeric_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.numeric_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.numeric_ord', 'public.numeric_eq (equality) or public.numeric_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_numeric_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_numeric_ord', 'eql_v3.query_numeric_eq (equality) or eql_v3.query_numeric_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.text_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.text_ord_ore', 'public.text_eq (equality) or public.text_match (match) or public.text_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_text_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_text_ord_ore', 'eql_v3.query_text_eq (equality) or eql_v3.query_text_match (match) or eql_v3.query_text_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.text_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.text_ord', 'public.text_eq (equality) or public.text_match (match) or public.text_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_text_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_text_ord', 'eql_v3.query_text_eq (equality) or eql_v3.query_text_match (match) or eql_v3.query_text_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.text_search ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.text_search', 'public.text_eq (equality) or public.text_match (match) or public.text_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_text_search ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_text_search', 'eql_v3.query_text_eq (equality) or eql_v3.query_text_match (match) or eql_v3.query_text_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.real_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.real_ord_ore', 'public.real_eq (equality) or public.real_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_real_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_real_ord_ore', 'eql_v3.query_real_eq (equality) or eql_v3.query_real_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.real_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.real_ord', 'public.real_eq (equality) or public.real_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_real_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_real_ord', 'eql_v3.query_real_eq (equality) or eql_v3.query_real_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.double_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.double_ord_ore', 'public.double_eq (equality) or public.double_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_double_ord_ore ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_double_ord_ore', 'eql_v3.query_double_eq (equality) or eql_v3.query_double_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN public.double_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'public.double_ord', 'public.double_eq (equality) or public.double_ord_ope (ordering)')) NOT VALID;
+
+  ALTER DOMAIN eql_v3.query_double_ord ADD CONSTRAINT eql_ore_unavailable
+    CHECK (eql_v3_internal.ore_domain_unavailable(VALUE, 'eql_v3.query_double_ord', 'eql_v3.query_double_eq (equality) or eql_v3.query_double_ord_ope (ordering)')) NOT VALID;
+
+  RAISE NOTICE 'EQL: ORE operator class absent (creation requires superuser) — 38 ORE-backed domains disabled and will raise on use; use the _ord_ope (ordering) and _eq (equality) domains — and text_match for text pattern match — instead';
+END;
+$do$;
+-- AUTOMATICALLY GENERATED FILE.
+
 --! @file encrypted_domain/text/query_text_match_functions.sql
 --! @brief Functions for eql_v3.query_text_match.
 
@@ -41991,291 +42020,42 @@ CREATE OPERATOR >= (
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
---! @file v3/sem/ore_block_256/operator_class.sql
---! @brief B-tree operator family + default class on eql_v3_internal.ore_block_256.
---!
---! Gives the composite type its DEFAULT btree opclass so the recommended
---! functional index `CREATE INDEX ON t (eql_v3_internal.ord_term(col))` engages without
---! an explicit opclass annotation (design D4).
---!
---! @note Creating an operator family/class requires superuser: Postgres forbids
---!       CREATE OPERATOR FAMILY / CLASS to non-superusers to protect index
---!       integrity. Managed platforms (Supabase, and most hosted Postgres) run
---!       the installer as a non-superuser role, so the DO block below ATTEMPTS
---!       the creation and skips it on insufficient_privilege (SQLSTATE 42501),
---!       letting the single installer run everywhere. When the class is absent,
---!       ORE ordered scans over eql_v3_internal.ore_block_256 are unavailable,
---!       but the order-preserving (OPE) ordering domains — whose extractor
---!       return types carry a native btree opclass — still index without it. On
---!       superuser installs (self-managed Postgres, the SQLx test matrix) the
---!       class is created normally. Any non-privilege error still propagates.
---! @see eql_v3_internal.compare_ore_block_256_terms
-
-DO $do$
-BEGIN
-  EXECUTE 'CREATE OPERATOR FAMILY eql_v3_internal.ore_block_256_operator_family USING btree';
-
-  EXECUTE $ddl$
-    CREATE OPERATOR CLASS eql_v3_internal.ore_block_256_operator_class
-      DEFAULT FOR TYPE eql_v3_internal.ore_block_256
-      USING btree FAMILY eql_v3_internal.ore_block_256_operator_family AS
-        OPERATOR 1 public.<,
-        OPERATOR 2 public.<=,
-        OPERATOR 3 public.=,
-        OPERATOR 4 public.>=,
-        OPERATOR 5 public.>,
-        FUNCTION 1 eql_v3_internal.compare_ore_block_256_terms(a eql_v3_internal.ore_block_256, b eql_v3_internal.ore_block_256)
-  $ddl$;
-
-  RAISE NOTICE 'EQL: created btree operator class eql_v3_internal.ore_block_256_operator_class';
-EXCEPTION
-  WHEN insufficient_privilege THEN
-    RAISE NOTICE 'EQL: skipped operator class eql_v3_internal.ore_block_256_operator_class (requires superuser); ORE ordered indexes on ore_block_256 unavailable, OPE ordering domains unaffected';
-END;
-$do$;
-
---! @file v3/sem/ore_cllw/operators.sql
---! @brief Comparison operators on the eql_v3_internal.ore_cllw composite type.
---!
---! Each backing function reduces to a single SELECT over
---! eql_v3_internal.compare_ore_cllw_term(a, b) and is inlinable so the planner can fold
---! it through to functional-index matching. The inner comparator is plpgsql
---! (per-byte loop) and is not inlined — fine for index *match*.
---!
---! @note Deliberately no HASHES / MERGES — the CLLW protocol gives ordering,
---!       not a hash; there is no merge-joinable opclass on the other side.
---! @see eql_v3_internal.compare_ore_cllw_term
-
---! @brief Equality backing function for eql_v3_internal.ore_cllw.
---! @internal
---!
---! @param a eql_v3_internal.ore_cllw Left operand
---! @param b eql_v3_internal.ore_cllw Right operand
---! @return boolean True if the CLLW ORE terms are equal
---!
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw_eq(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.compare_ore_cllw_term(a, b) = 0
-$$;
-
---! @brief Not-equal backing function for eql_v3_internal.ore_cllw.
---! @internal
---!
---! @param a eql_v3_internal.ore_cllw Left operand
---! @param b eql_v3_internal.ore_cllw Right operand
---! @return boolean True if the CLLW ORE terms are not equal
---!
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw_neq(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.compare_ore_cllw_term(a, b) <> 0
-$$;
-
---! @brief Less-than backing function for eql_v3_internal.ore_cllw.
---! @internal
---!
---! @param a eql_v3_internal.ore_cllw Left operand
---! @param b eql_v3_internal.ore_cllw Right operand
---! @return boolean True if the left operand is less than the right operand
---!
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw_lt(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.compare_ore_cllw_term(a, b) = -1
-$$;
-
---! @brief Less-than-or-equal backing function for eql_v3_internal.ore_cllw.
---! @internal
---!
---! @param a eql_v3_internal.ore_cllw Left operand
---! @param b eql_v3_internal.ore_cllw Right operand
---! @return boolean True if the left operand is less than or equal to the right operand
---!
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw_lte(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.compare_ore_cllw_term(a, b) <> 1
-$$;
-
---! @brief Greater-than backing function for eql_v3_internal.ore_cllw.
---! @internal
---!
---! @param a eql_v3_internal.ore_cllw Left operand
---! @param b eql_v3_internal.ore_cllw Right operand
---! @return boolean True if the left operand is greater than the right operand
---!
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw_gt(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.compare_ore_cllw_term(a, b) = 1
-$$;
-
---! @brief Greater-than-or-equal backing function for eql_v3_internal.ore_cllw.
---! @internal
---!
---! @param a eql_v3_internal.ore_cllw Left operand
---! @param b eql_v3_internal.ore_cllw Right operand
---! @return boolean True if the left operand is greater than or equal to the right operand
---!
---! @see eql_v3_internal.compare_ore_cllw_term
-CREATE FUNCTION eql_v3_internal.ore_cllw_gte(a eql_v3_internal.ore_cllw, b eql_v3_internal.ore_cllw)
-  RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.compare_ore_cllw_term(a, b) <> -1
-$$;
-
-
-CREATE OPERATOR public.= (
-  FUNCTION = eql_v3_internal.ore_cllw_eq,
-  LEFTARG = eql_v3_internal.ore_cllw,
-  RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(public.=),
-  NEGATOR = OPERATOR(public.<>),
-  RESTRICT = eqsel,
-  JOIN = eqjoinsel
-);
-
-CREATE OPERATOR public.<> (
-  FUNCTION = eql_v3_internal.ore_cllw_neq,
-  LEFTARG = eql_v3_internal.ore_cllw,
-  RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(public.<>),
-  NEGATOR = OPERATOR(public.=),
-  RESTRICT = neqsel,
-  JOIN = neqjoinsel
-);
-
-CREATE OPERATOR public.< (
-  FUNCTION = eql_v3_internal.ore_cllw_lt,
-  LEFTARG = eql_v3_internal.ore_cllw,
-  RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(public.>),
-  NEGATOR = OPERATOR(public.>=),
-  RESTRICT = scalarltsel,
-  JOIN = scalarltjoinsel
-);
-
-CREATE OPERATOR public.<= (
-  FUNCTION = eql_v3_internal.ore_cllw_lte,
-  LEFTARG = eql_v3_internal.ore_cllw,
-  RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(public.>=),
-  NEGATOR = OPERATOR(public.>),
-  RESTRICT = scalarlesel,
-  JOIN = scalarlejoinsel
-);
-
-CREATE OPERATOR public.> (
-  FUNCTION = eql_v3_internal.ore_cllw_gt,
-  LEFTARG = eql_v3_internal.ore_cllw,
-  RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(public.<),
-  NEGATOR = OPERATOR(public.<=),
-  RESTRICT = scalargtsel,
-  JOIN = scalargtjoinsel
-);
-
-CREATE OPERATOR public.>= (
-  FUNCTION = eql_v3_internal.ore_cllw_gte,
-  LEFTARG = eql_v3_internal.ore_cllw,
-  RIGHTARG = eql_v3_internal.ore_cllw,
-  COMMUTATOR = OPERATOR(public.<=),
-  NEGATOR = OPERATOR(public.<),
-  RESTRICT = scalargesel,
-  JOIN = scalargejoinsel
-);
-
---! @file v3/sem/ore_cllw/operator_class.sql
---! @brief Btree operator class on the eql_v3_internal.ore_cllw composite type.
---!
---! DEFAULT FOR TYPE so a functional btree index on eql_v3_internal.ore_cllw(expr)
---! engages without an explicit opclass annotation. FUNCTION 1 is the three-way
---! comparator btree's internal sort uses; it is plpgsql by design (per-byte
---! CLLW protocol needs iteration) and is called once per index-entry pair
---! during build / search, not per-row in the outer query.
---!
---! @note Creating an operator family/class requires superuser: Postgres forbids
---!       CREATE OPERATOR FAMILY / CLASS to non-superusers to protect index
---!       integrity. Managed platforms (Supabase, and most hosted Postgres) run
---!       the installer as a non-superuser role, so the DO block below ATTEMPTS
---!       the creation and skips it on insufficient_privilege (SQLSTATE 42501),
---!       letting the single installer run everywhere. When the class is absent,
---!       ORE ordered scans over eql_v3_internal.ore_cllw are unavailable, but
---!       the order-preserving (OPE) ordering domains — whose extractor return
---!       types carry a native btree opclass — still index without it. On
---!       superuser installs (self-managed Postgres, the SQLx test matrix) the
---!       class is created normally. Any non-privilege error still propagates.
---! @see eql_v3_internal.compare_ore_cllw_term
-
-DO $do$
-BEGIN
-  EXECUTE 'CREATE OPERATOR FAMILY eql_v3_internal.ore_cllw_ops USING btree';
-
-  EXECUTE $ddl$
-    CREATE OPERATOR CLASS eql_v3_internal.ore_cllw_ops
-      DEFAULT FOR TYPE eql_v3_internal.ore_cllw
-      USING btree FAMILY eql_v3_internal.ore_cllw_ops AS
-        OPERATOR 1 public.<  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-        OPERATOR 2 public.<= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-        OPERATOR 3 public.=  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-        OPERATOR 4 public.>= (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-        OPERATOR 5 public.>  (eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw),
-        FUNCTION 1 eql_v3_internal.compare_ore_cllw_term(eql_v3_internal.ore_cllw, eql_v3_internal.ore_cllw)
-  $ddl$;
-
-  RAISE NOTICE 'EQL: created btree operator class eql_v3_internal.ore_cllw_ops';
-EXCEPTION
-  WHEN insufficient_privilege THEN
-    RAISE NOTICE 'EQL: skipped operator class eql_v3_internal.ore_cllw_ops (requires superuser); ORE ordered indexes on ore_cllw unavailable, OPE ordering domains unaffected';
-END;
-$do$;
-
 --! @file v3/jsonb/aggregates.sql
 --! @brief min / max aggregates over public.jsonb_entry.
 --!
 --! SteVec document entries extracted at a selector (`doc -> 'sel'`) order by
---! their CLLW ORE (`oc`) term, so the extremum is picked by comparing
---! `eql_v3.ore_cllw(entry)` rather than the scalar Block-ORE `ord_term` the
---! generated scalar ord aggregates use. Same STRICT + PARALLEL SAFE shape as the
---! generated scalar `min`/`max` so partial/parallel aggregation is available on
---! large GROUP BY workloads.
+--! their CLLW OPE (`op`) term, so the extremum is picked by comparing
+--! `eql_v3.ord_ope_term(entry)` rather than the scalar Block-ORE `ord_term` the
+--! generated scalar ord aggregates use. The ope_cllw bytea domain orders under
+--! native byte comparison, so `<` / `>` on the extracted terms needs no custom
+--! comparator. Same STRICT + PARALLEL SAFE shape as the generated scalar
+--! `min`/`max` so partial/parallel aggregation is available on large GROUP BY
+--! workloads.
 --!
 --! Per the encrypted-domain footgun rules the state functions are
 --! `LANGUAGE plpgsql` with the pinned `search_path` — a `LANGUAGE sql` body would
 --! be inlinable and the planner could elide it.
 --!
---! @note **Only `oc`-carrying entries are orderable.** `eql_v3.ore_cllw(entry)`
---!   returns NULL when an entry has no `oc` (CLLW ORE) term — the same entries a
---!   `eql_v3.ore_cllw` btree NULL-filters from range scans. The state functions
---!   therefore IGNORE `oc`-less entries (they never become or survive as the
---!   extremum), so `min`/`max` is well-defined over a mix of `oc`-carrying and
---!   `oc`-less entries and is not corrupted by an `oc`-less seed. A naive
---!   `ore_cllw(value) < ore_cllw(state)` would be NULL whenever either side
---!   lacks `oc`, pinning a wrong (`oc`-less) extremum when the first aggregated
---!   row is `oc`-less. An all-`oc`-less input has no orderable extremum and
+--! @note **Only `op`-carrying entries are orderable.** `eql_v3.ord_ope_term(entry)`
+--!   returns NULL when an entry has no `op` (CLLW OPE) term — the same entries a
+--!   `eql_v3.ord_ope_term` btree NULL-filters from range scans. The state functions
+--!   therefore IGNORE `op`-less entries (they never become or survive as the
+--!   extremum), so `min`/`max` is well-defined over a mix of `op`-carrying and
+--!   `op`-less entries and is not corrupted by an `op`-less seed. A naive
+--!   `ord_ope_term(value) < ord_ope_term(state)` would be NULL whenever either side
+--!   lacks `op`, pinning a wrong (`op`-less) extremum when the first aggregated
+--!   row is `op`-less. An all-`op`-less input has no orderable extremum and
 --!   returns the (arbitrary) STRICT seed.
 
 --! @brief State function for min on public.jsonb_entry.
 --!
---! Keeps whichever orderable entry has the lesser CLLW ORE term. STRICT, so SQL
---! NULL entries are skipped by the aggregate machinery; `oc`-less (non-orderable)
+--! Keeps whichever orderable entry has the lesser CLLW OPE term. STRICT, so SQL
+--! NULL entries are skipped by the aggregate machinery; `op`-less (non-orderable)
 --! entries are skipped explicitly (see the @note on this file).
 --!
 --! @param state public.jsonb_entry Running extremum.
 --! @param value public.jsonb_entry Candidate entry.
---! @return public.jsonb_entry The lesser orderable entry by `ore_cllw`.
+--! @return public.jsonb_entry The lesser orderable entry by `ord_ope_term`.
 CREATE FUNCTION eql_v3_internal.jsonb_entry_min_sfunc(
   state public.jsonb_entry,
   value public.jsonb_entry
@@ -42285,16 +42065,16 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(value);
-  state_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(state);
+  value_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(value);
+  state_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(state);
 BEGIN
-  -- A non-orderable (oc-less) candidate never replaces the running extremum.
-  IF value_ore IS NULL THEN
+  -- A non-orderable (op-less) candidate never replaces the running extremum.
+  IF value_ope IS NULL THEN
     RETURN state;
   END IF;
   -- Adopt the candidate when the running extremum is itself non-orderable
-  -- (e.g. an oc-less STRICT seed) or strictly greater.
-  IF state_ore IS NULL OR value_ore < state_ore THEN
+  -- (e.g. an op-less STRICT seed) or strictly greater.
+  IF state_ope IS NULL OR value_ope < state_ope THEN
     RETURN value;
   END IF;
   RETURN state;
@@ -42303,7 +42083,7 @@ $$;
 
 --! @brief min aggregate over public.jsonb_entry.
 --! @param input public.jsonb_entry
---! @return public.jsonb_entry The entry with the smallest CLLW ORE term.
+--! @return public.jsonb_entry The entry with the smallest CLLW OPE term.
 CREATE AGGREGATE eql_v3.min(public.jsonb_entry) (
   sfunc = eql_v3_internal.jsonb_entry_min_sfunc,
   stype = public.jsonb_entry,
@@ -42313,12 +42093,12 @@ CREATE AGGREGATE eql_v3.min(public.jsonb_entry) (
 
 --! @brief State function for max on public.jsonb_entry.
 --!
---! Keeps whichever orderable entry has the greater CLLW ORE term. `oc`-less
+--! Keeps whichever orderable entry has the greater CLLW OPE term. `op`-less
 --! entries are skipped, mirroring `jsonb_entry_min_sfunc` (see the file @note).
 --!
 --! @param state public.jsonb_entry Running extremum.
 --! @param value public.jsonb_entry Candidate entry.
---! @return public.jsonb_entry The greater orderable entry by `ore_cllw`.
+--! @return public.jsonb_entry The greater orderable entry by `ord_ope_term`.
 CREATE FUNCTION eql_v3_internal.jsonb_entry_max_sfunc(
   state public.jsonb_entry,
   value public.jsonb_entry
@@ -42328,16 +42108,16 @@ LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
 DECLARE
-  value_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(value);
-  state_ore eql_v3_internal.ore_cllw := eql_v3.ore_cllw(state);
+  value_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(value);
+  state_ope eql_v3_internal.ope_cllw := eql_v3.ord_ope_term(state);
 BEGIN
-  -- A non-orderable (oc-less) candidate never replaces the running extremum.
-  IF value_ore IS NULL THEN
+  -- A non-orderable (op-less) candidate never replaces the running extremum.
+  IF value_ope IS NULL THEN
     RETURN state;
   END IF;
   -- Adopt the candidate when the running extremum is itself non-orderable
-  -- (e.g. an oc-less STRICT seed) or strictly lesser.
-  IF state_ore IS NULL OR value_ore > state_ore THEN
+  -- (e.g. an op-less STRICT seed) or strictly lesser.
+  IF state_ope IS NULL OR value_ope > state_ope THEN
     RETURN value;
   END IF;
   RETURN state;
@@ -42346,7 +42126,7 @@ $$;
 
 --! @brief max aggregate over public.jsonb_entry.
 --! @param input public.jsonb_entry
---! @return public.jsonb_entry The entry with the largest CLLW ORE term.
+--! @return public.jsonb_entry The entry with the largest CLLW OPE term.
 CREATE AGGREGATE eql_v3.max(public.jsonb_entry) (
   sfunc = eql_v3_internal.jsonb_entry_max_sfunc,
   stype = public.jsonb_entry,
@@ -42369,8 +42149,8 @@ CREATE AGGREGATE eql_v3.max(public.jsonb_entry) (
 --! index on `eql_v3.eq_term(col -> 'sel')`.
 --!
 --! @warning The selector operand MUST carry a known type — a text-typed
---!   parameter (`$1`, the Proxy interface) or an explicit cast (`col -> 'sel'::text`).
---!   A bare untyped literal (`col -> 'sel'`) resolves to the NATIVE `jsonb -> text`
+--!   parameter (`$1`, the Proxy interface) or an explicit cast (`col -> 'sel'::%text`).
+--!   A bare untyped literal (`col -> 'sel'`) resolves to the NATIVE `jsonb -> %text`
 --!   operator and silently returns native jsonb semantics (a root-key lookup,
 --!   typically NULL), NOT this operator: PostgreSQL reduces the `public.json`
 --!   domain to its base type `jsonb` when resolving an unknown-typed RHS, and the
@@ -42536,7 +42316,7 @@ AS $$
                 jsonb_build_object(
                   's',  b -> 's',
                   'hm', b -> 'hm',
-                  'oc', b -> 'oc'
+                  'op', b -> 'op'
                 )
               )
             )
@@ -42650,7 +42430,7 @@ CREATE OPERATOR <> (
   JOIN     = neqjoinsel
 );
 
---! @brief Less-than on jsonb_entry via ore_cllw.
+--! @brief Less-than on jsonb_entry via the CLLW OPE term (native bytea order).
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is less than b
@@ -42658,7 +42438,7 @@ CREATE FUNCTION eql_v3.lt(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) < eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) < eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR < (
@@ -42671,7 +42451,7 @@ CREATE OPERATOR < (
   JOIN     = scalarltjoinsel
 );
 
---! @brief Less-than-or-equal on jsonb_entry via ore_cllw.
+--! @brief Less-than-or-equal on jsonb_entry via the CLLW OPE term.
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is less than or equal to b
@@ -42679,7 +42459,7 @@ CREATE FUNCTION eql_v3.lte(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) <= eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) <= eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR <= (
@@ -42692,7 +42472,7 @@ CREATE OPERATOR <= (
   JOIN     = scalarlejoinsel
 );
 
---! @brief Greater-than on jsonb_entry via ore_cllw.
+--! @brief Greater-than on jsonb_entry via the CLLW OPE term.
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is greater than b
@@ -42700,7 +42480,7 @@ CREATE FUNCTION eql_v3.gt(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) > eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) > eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR > (
@@ -42713,7 +42493,7 @@ CREATE OPERATOR > (
   JOIN     = scalargtjoinsel
 );
 
---! @brief Greater-than-or-equal on jsonb_entry via ore_cllw.
+--! @brief Greater-than-or-equal on jsonb_entry via the CLLW OPE term.
 --! @param a public.jsonb_entry Left operand
 --! @param b public.jsonb_entry Right operand
 --! @return boolean True if a is greater than or equal to b
@@ -42721,7 +42501,7 @@ CREATE FUNCTION eql_v3.gte(a public.jsonb_entry, b public.jsonb_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ore_cllw(a) >= eql_v3.ore_cllw(b)
+  SELECT eql_v3.ord_ope_term(a) >= eql_v3.ord_ope_term(b)
 $$;
 
 CREATE OPERATOR >= (
@@ -43264,10 +43044,10 @@ CREATE OPERATOR <@ (
 --! satisfying Supabase splinter's `function_search_path_mutable` lint.
 --!
 --! @note A SET clause disables SQL-function inlining. The inline-critical SEM
---!       helpers (ore_block_256_*, ore_cllw_*, ore_cllw/has_ore_cllw,
---!       ope_cllw, hmac_256, bloom_filter over jsonb) and the
---!       encrypted-domain family (recognised structurally, including public
---!       user-column domains) are deliberately left unpinned.
+--!       helpers (ore_block_256_*, ope_cllw, hmac_256, bloom_filter over
+--!       jsonb) and the encrypted-domain family (recognised structurally,
+--!       including public user-column domains) are deliberately left
+--!       unpinned.
 --! @see tasks/test/splinter.sh
 --! @see tasks/build.sh
 
@@ -43298,13 +43078,6 @@ BEGIN
         AND p.proname IN ('ore_block_256_eq', 'ore_block_256_neq',
                           'ore_block_256_lt', 'ore_block_256_lte',
                           'ore_block_256_gt', 'ore_block_256_gte'))
-      OR (p.pronargs = 2
-        AND p.proname IN ('ore_cllw_eq', 'ore_cllw_neq',
-                          'ore_cllw_lt', 'ore_cllw_lte',
-                          'ore_cllw_gt', 'ore_cllw_gte'))
-      OR (p.pronargs = 1
-        AND p.proname IN ('ore_cllw', 'has_ore_cllw')
-        AND p.proargtypes[0] = jsonb_oid)
       -- The CLLW-OPE surface is the extractor alone: eql_v3_internal.ope_cllw is a
       -- domain over bytea (native comparison operators and btree opclass),
       -- so there are no ope-specific comparison functions to keep inlinable.
