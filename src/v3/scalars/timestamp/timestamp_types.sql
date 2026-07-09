@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain public.timestamp.
+  --! @brief Encrypted domain public.eql_v3_timestamp.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_timestamp' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.timestamp AS jsonb
+    CREATE DOMAIN public.eql_v3_timestamp AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -21,14 +21,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.timestamp IS 'EQL encrypted timestamp (storage only)';
+  COMMENT ON DOMAIN public.eql_v3_timestamp IS 'EQL encrypted timestamp (storage only)';
 
-  --! @brief Encrypted domain public.timestamp_eq.
+  --! @brief Encrypted domain public.eql_v3_timestamp_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_eq' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_timestamp_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.timestamp_eq AS jsonb
+    CREATE DOMAIN public.eql_v3_timestamp_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -39,14 +39,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.timestamp_eq IS 'EQL encrypted timestamp (equality)';
+  COMMENT ON DOMAIN public.eql_v3_timestamp_eq IS 'EQL encrypted timestamp (equality)';
 
-  --! @brief Encrypted domain public.timestamp_ord_ore.
+  --! @brief Encrypted domain public.eql_v3_timestamp_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord_ore' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_timestamp_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.timestamp_ord_ore AS jsonb
+    CREATE DOMAIN public.eql_v3_timestamp_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -59,14 +59,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.timestamp_ord_ore IS 'EQL encrypted timestamp (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_timestamp_ord_ore IS 'EQL encrypted timestamp (equality, ordering)';
 
-  --! @brief Encrypted domain public.timestamp_ord.
+  --! @brief Encrypted domain public.eql_v3_timestamp_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_timestamp_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.timestamp_ord AS jsonb
+    CREATE DOMAIN public.eql_v3_timestamp_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -79,14 +79,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.timestamp_ord IS 'EQL encrypted timestamp (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_timestamp_ord IS 'EQL encrypted timestamp (equality, ordering)';
 
-  --! @brief Encrypted domain public.timestamp_ord_ope.
+  --! @brief Encrypted domain public.eql_v3_timestamp_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'timestamp_ord_ope' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_timestamp_ord_ope' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.timestamp_ord_ope AS jsonb
+    CREATE DOMAIN public.eql_v3_timestamp_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -97,6 +97,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.timestamp_ord_ope IS 'EQL encrypted timestamp (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_timestamp_ord_ope IS 'EQL encrypted timestamp (equality, ordering)';
 END
 $$;

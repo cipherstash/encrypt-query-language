@@ -15,33 +15,33 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.query_double_eq.
---! @param a public.double_eq
+--! @param a public.eql_v3_double_eq
 --! @param b eql_v3.query_double_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a public.double_eq, b eql_v3.query_double_eq)
+CREATE FUNCTION eql_v3.eq(a public.eql_v3_double_eq, b eql_v3.query_double_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_double_eq.
 --! @param a eql_v3.query_double_eq
---! @param b public.double_eq
+--! @param b public.eql_v3_double_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a eql_v3.query_double_eq, b public.double_eq)
+CREATE FUNCTION eql_v3.eq(a eql_v3.query_double_eq, b public.eql_v3_double_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_double_eq.
---! @param a public.double_eq
+--! @param a public.eql_v3_double_eq
 --! @param b eql_v3.query_double_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a public.double_eq, b eql_v3.query_double_eq)
+CREATE FUNCTION eql_v3.neq(a public.eql_v3_double_eq, b eql_v3.query_double_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_double_eq.
 --! @param a eql_v3.query_double_eq
---! @param b public.double_eq
+--! @param b public.eql_v3_double_eq
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a eql_v3.query_double_eq, b public.double_eq)
+CREATE FUNCTION eql_v3.neq(a eql_v3.query_double_eq, b public.eql_v3_double_eq)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;

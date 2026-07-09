@@ -6,8 +6,8 @@
 --! Three jsonb-backed domains (none over another domain — operators resolve
 --! against the ultimate base type jsonb, so the native-jsonb firewall in
 --! blockers.sql can attach):
---!   - public.json     — storage/root: an EQL envelope object ({i, v, ...}).
---!   - public.jsonb_entry — a single sv element (returned by `->`).
+--!   - public.eql_v3_json     — storage/root: an EQL envelope object ({i, v, ...}).
+--!   - public.eql_v3_jsonb_entry — a single sv element (returned by `->`).
 --!   - eql_v3.query_jsonb  — a containment needle (sv elements, no ciphertext).
 
 --! @brief Validate a single SteVec entry payload.
@@ -106,25 +106,25 @@ $$;
 --! is `{i, v, sv}` with no root ciphertext. The CHECK now also requires an `sv`
 --! array, so the domain accepts only SteVec **document** payloads and rejects
 --! encrypted *scalar* payloads (which carry `c`/`hm`/`ob` but no `sv`) — this is
---! what keeps `public.json` a typed document domain rather than a generic
+--! what keeps `public.eql_v3_json` a typed document domain rather than a generic
 --! encrypted envelope. The firewall in blockers.sql attaches to this domain to
 --! stop native jsonb operators from reaching a column value.
 --!
 --! @note Constructing from inline JSON uses the standard DOMAIN cast:
---!       `'{"i":{},"v":3,"sv":[...]}'::public.json`.
+--!       `'{"i":{},"v":3,"sv":[...]}'::public.eql_v3_json`.
 DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'json' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_json' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.json AS jsonb
+    CREATE DOMAIN public.eql_v3_json AS jsonb
       CHECK (
         public.eql_v3_is_valid_ste_vec_document_payload(VALUE)
       );
   END IF;
 
-  COMMENT ON DOMAIN public.json IS 'EQL encrypted JSONB document (containment, equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_json IS 'EQL encrypted JSONB document (containment, equality, ordering)';
 END
 $$;
 
@@ -156,9 +156,9 @@ DO $$
 BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'jsonb_entry' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_jsonb_entry' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.jsonb_entry AS jsonb
+    CREATE DOMAIN public.eql_v3_jsonb_entry AS jsonb
       CHECK (
         VALUE IS NULL
         OR COALESCE(
@@ -175,7 +175,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.jsonb_entry IS 'EQL encrypted JSONB leaf entry (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_jsonb_entry IS 'EQL encrypted JSONB leaf entry (equality, ordering)';
 END
 $$;
 
@@ -193,7 +193,7 @@ $$;
 --!
 --! @internal
 --! Implementation note (issue #354): this CHECK CANNOT be inlined like
---! public.jsonb_entry's — validating the sv elements requires a subquery
+--! public.eql_v3_jsonb_entry's — validating the sv elements requires a subquery
 --! (`NOT EXISTS (SELECT ... FROM jsonb_array_elements(...))`), and CHECK
 --! constraints forbid subqueries. The validator is plpgsql instead (cached
 --! plan; substantially cheaper per call than a non-inlined LANGUAGE sql
@@ -217,7 +217,7 @@ BEGIN
 END
 $$;
 
---! @brief Convert a public.json to a query_jsonb needle.
+--! @brief Convert a public.eql_v3_json to a query_jsonb needle.
 --!
 --! Normalises each sv element down to the matching-relevant fields: `s` plus
 --! exactly one of `hm` / `oc`. Other fields (`c`, `a`, `i`/`v`, anything else)
@@ -225,10 +225,10 @@ $$;
 --! Designed for use as a functional GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
---! @param e public.json Source encrypted payload
+--! @param e public.eql_v3_json Source encrypted payload
 --! @return eql_v3.query_jsonb Query-shaped needle, sv elements normalised.
 --! @see eql_v3.query_jsonb
-CREATE FUNCTION eql_v3.to_ste_vec_query(e public.json)
+CREATE FUNCTION eql_v3.to_ste_vec_query(e public.eql_v3_json)
   RETURNS eql_v3.query_jsonb
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -250,6 +250,6 @@ AS $$
   )::eql_v3.query_jsonb
 $$;
 
-CREATE CAST (public.json AS eql_v3.query_jsonb)
+CREATE CAST (public.eql_v3_json AS eql_v3.query_jsonb)
   WITH FUNCTION eql_v3.to_ste_vec_query
   AS ASSIGNMENT;

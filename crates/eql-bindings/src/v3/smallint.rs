@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `public.smallint` — storage-only domain.
+/// `public.eql_v3_smallint` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Smallint {
 }
 impl DomainType for Smallint {
     fn sql_domain_static() -> &'static str {
-        "public.smallint"
+        "public.eql_v3_smallint"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -37,7 +37,7 @@ impl DomainType for Smallint {
         schema_for!(Smallint)
     }
 }
-/// `public.smallint_eq` — equality domain.
+/// `public.eql_v3_smallint_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -51,7 +51,7 @@ pub struct SmallintEq {
 }
 impl DomainType for SmallintEq {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_eq"
+        "public.eql_v3_smallint_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -69,7 +69,7 @@ impl DomainType for SmallintEq {
         schema_for!(SmallintEq)
     }
 }
-/// `public.smallint_ord_ore` — ordering domain.
+/// `public.eql_v3_smallint_ord_ore` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -83,7 +83,7 @@ pub struct SmallintOrdOre {
 }
 impl DomainType for SmallintOrdOre {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_ord_ore"
+        "public.eql_v3_smallint_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -101,7 +101,7 @@ impl DomainType for SmallintOrdOre {
         schema_for!(SmallintOrdOre)
     }
 }
-/// `public.smallint_ord` — ordering domain.
+/// `public.eql_v3_smallint_ord` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -115,7 +115,7 @@ pub struct SmallintOrd {
 }
 impl DomainType for SmallintOrd {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_ord"
+        "public.eql_v3_smallint_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -133,7 +133,7 @@ impl DomainType for SmallintOrd {
         schema_for!(SmallintOrd)
     }
 }
-/// `public.smallint_ord_ope` — ordering domain.
+/// `public.eql_v3_smallint_ord_ope` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -147,7 +147,7 @@ pub struct SmallintOrdOpe {
 }
 impl DomainType for SmallintOrdOpe {
     fn sql_domain_static() -> &'static str {
-        "public.smallint_ord_ope"
+        "public.eql_v3_smallint_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

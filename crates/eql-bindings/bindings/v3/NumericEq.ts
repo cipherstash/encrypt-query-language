@@ -5,7 +5,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.numeric_eq` — equality domain.
+ * `public.eql_v3_numeric_eq` — equality domain.
  *
  * Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
  */

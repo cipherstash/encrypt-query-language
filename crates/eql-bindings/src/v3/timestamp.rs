@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `public.timestamp` — storage-only domain.
+/// `public.eql_v3_timestamp` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Timestamp {
 }
 impl DomainType for Timestamp {
     fn sql_domain_static() -> &'static str {
-        "public.timestamp"
+        "public.eql_v3_timestamp"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -37,7 +37,7 @@ impl DomainType for Timestamp {
         schema_for!(Timestamp)
     }
 }
-/// `public.timestamp_eq` — equality domain.
+/// `public.eql_v3_timestamp_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -51,7 +51,7 @@ pub struct TimestampEq {
 }
 impl DomainType for TimestampEq {
     fn sql_domain_static() -> &'static str {
-        "public.timestamp_eq"
+        "public.eql_v3_timestamp_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -69,7 +69,7 @@ impl DomainType for TimestampEq {
         schema_for!(TimestampEq)
     }
 }
-/// `public.timestamp_ord_ore` — ordering domain.
+/// `public.eql_v3_timestamp_ord_ore` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -83,7 +83,7 @@ pub struct TimestampOrdOre {
 }
 impl DomainType for TimestampOrdOre {
     fn sql_domain_static() -> &'static str {
-        "public.timestamp_ord_ore"
+        "public.eql_v3_timestamp_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -101,7 +101,7 @@ impl DomainType for TimestampOrdOre {
         schema_for!(TimestampOrdOre)
     }
 }
-/// `public.timestamp_ord` — ordering domain.
+/// `public.eql_v3_timestamp_ord` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -115,7 +115,7 @@ pub struct TimestampOrd {
 }
 impl DomainType for TimestampOrd {
     fn sql_domain_static() -> &'static str {
-        "public.timestamp_ord"
+        "public.eql_v3_timestamp_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -133,7 +133,7 @@ impl DomainType for TimestampOrd {
         schema_for!(TimestampOrd)
     }
 }
-/// `public.timestamp_ord_ope` — ordering domain.
+/// `public.eql_v3_timestamp_ord_ope` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -147,7 +147,7 @@ pub struct TimestampOrdOpe {
 }
 impl DomainType for TimestampOrdOpe {
     fn sql_domain_static() -> &'static str {
-        "public.timestamp_ord_ope"
+        "public.eql_v3_timestamp_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

@@ -6,12 +6,12 @@
 
 DO $$
 BEGIN
-  --! @brief Encrypted domain public.real.
+  --! @brief Encrypted domain public.eql_v3_real.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'real' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_real' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.real AS jsonb
+    CREATE DOMAIN public.eql_v3_real AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -21,14 +21,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.real IS 'EQL encrypted real (storage only)';
+  COMMENT ON DOMAIN public.eql_v3_real IS 'EQL encrypted real (storage only)';
 
-  --! @brief Encrypted domain public.real_eq.
+  --! @brief Encrypted domain public.eql_v3_real_eq.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'real_eq' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_real_eq' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.real_eq AS jsonb
+    CREATE DOMAIN public.eql_v3_real_eq AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -39,14 +39,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.real_eq IS 'EQL encrypted real (equality)';
+  COMMENT ON DOMAIN public.eql_v3_real_eq IS 'EQL encrypted real (equality)';
 
-  --! @brief Encrypted domain public.real_ord_ore.
+  --! @brief Encrypted domain public.eql_v3_real_ord_ore.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'real_ord_ore' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_real_ord_ore' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.real_ord_ore AS jsonb
+    CREATE DOMAIN public.eql_v3_real_ord_ore AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -59,14 +59,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.real_ord_ore IS 'EQL encrypted real (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_real_ord_ore IS 'EQL encrypted real (equality, ordering)';
 
-  --! @brief Encrypted domain public.real_ord.
+  --! @brief Encrypted domain public.eql_v3_real_ord.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'real_ord' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_real_ord' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.real_ord AS jsonb
+    CREATE DOMAIN public.eql_v3_real_ord AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -79,14 +79,14 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.real_ord IS 'EQL encrypted real (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_real_ord IS 'EQL encrypted real (equality, ordering)';
 
-  --! @brief Encrypted domain public.real_ord_ope.
+  --! @brief Encrypted domain public.eql_v3_real_ord_ope.
   IF NOT EXISTS (
     SELECT 1 FROM pg_type
-    WHERE typname = 'real_ord_ope' AND typnamespace = 'public'::regnamespace
+    WHERE typname = 'eql_v3_real_ord_ope' AND typnamespace = 'public'::regnamespace
   ) THEN
-    CREATE DOMAIN public.real_ord_ope AS jsonb
+    CREATE DOMAIN public.eql_v3_real_ord_ope AS jsonb
       CHECK (
         jsonb_typeof(VALUE) = 'object'
         AND VALUE ? 'v'
@@ -97,6 +97,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.real_ord_ope IS 'EQL encrypted real (equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_real_ord_ope IS 'EQL encrypted real (equality, ordering)';
 END
 $$;

@@ -31,129 +31,129 @@ LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.bloom_filter(a::jsonb) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.eq(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.eq(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.neq(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.neq(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.contains(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
---! @param a public.text_search
+--! @param a public.eql_v3_text_search
 --! @param b eql_v3.query_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.text_search, b eql_v3.query_text_search)
+CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_search, b eql_v3.query_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
 
 --! @brief Operator wrapper for eql_v3.query_text_search.
 --! @param a eql_v3.query_text_search
---! @param b public.text_search
+--! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.query_text_search, b public.text_search)
+CREATE FUNCTION eql_v3.contained_by(a eql_v3.query_text_search, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;

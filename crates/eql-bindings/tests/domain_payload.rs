@@ -88,12 +88,12 @@ fn assert_serialization_pin(v2: &Value, t: TargetDomain) -> DomainPayload {
 
 #[test]
 fn typed_scalar_single_term_yields_the_matching_variant() {
-    let typed = assert_serialization_pin(&v2_ct_full(), target("integer_eq"));
-    assert_eq!(typed.domain(), "integer_eq");
-    assert_eq!(typed.sql_domain(), "public.integer_eq");
+    let typed = assert_serialization_pin(&v2_ct_full(), target("eql_v3_integer_eq"));
+    assert_eq!(typed.domain(), "eql_v3_integer_eq");
+    assert_eq!(typed.sql_domain(), "public.eql_v3_integer_eq");
     match &typed {
         DomainPayload::IntegerEq(p) => {
-            assert_eq!(p.sql_domain(), "public.integer_eq");
+            assert_eq!(p.sql_domain(), "public.eql_v3_integer_eq");
         }
         other => panic!("expected IntegerEq, got {other:?}"),
     }
@@ -101,8 +101,8 @@ fn typed_scalar_single_term_yields_the_matching_variant() {
 
 #[test]
 fn typed_scalar_multi_term_yields_text_search() {
-    let typed = assert_serialization_pin(&v2_ct_full(), target("text_search"));
-    assert_eq!(typed.domain(), "text_search");
+    let typed = assert_serialization_pin(&v2_ct_full(), target("eql_v3_text_search"));
+    assert_eq!(typed.domain(), "eql_v3_text_search");
     match &typed {
         DomainPayload::TextSearch(p) => {
             // All three terms present — the capability is the type.
@@ -125,8 +125,8 @@ fn typed_scalar_multi_term_yields_text_search() {
 #[test]
 fn typed_ste_vec_document_yields_ste_vec_document() {
     let typed = assert_serialization_pin(&v2_sv(), TargetDomain::Json);
-    assert_eq!(typed.domain(), "json");
-    assert_eq!(typed.sql_domain(), "public.json");
+    assert_eq!(typed.domain(), "eql_v3_json");
+    assert_eq!(typed.sql_domain(), "public.eql_v3_json");
     match &typed {
         DomainPayload::SteVecDocument(doc) => {
             assert_eq!(doc.sv.len(), 2, "entry order/count preserved");
@@ -156,12 +156,12 @@ fn typed_conversion_pins_serialization_for_every_scalar_domain() {
 #[test]
 fn typed_missing_term_fails_closed_exactly_like_from_v2() {
     let minimal = json!({ "v": 2, "k": "ct", "c": CIPHERTEXT, "i": ident() });
-    let typed_err = from_v2_typed(&minimal, target("text_eq")).unwrap_err();
-    let untyped_err = from_v2(&minimal, target("text_eq")).unwrap_err();
+    let typed_err = from_v2_typed(&minimal, target("eql_v3_text_eq")).unwrap_err();
+    let untyped_err = from_v2(&minimal, target("eql_v3_text_eq")).unwrap_err();
     for err in [&typed_err, &untyped_err] {
         match err {
             FromV2Error::MissingTerm { domain, key, entry } => {
-                assert_eq!(domain, "text_eq");
+                assert_eq!(domain, "eql_v3_text_eq");
                 assert_eq!(key, "hm");
                 assert_eq!(entry, &None);
             }
@@ -176,18 +176,18 @@ fn typed_rejects_the_same_inputs_as_from_v2() {
     // conversion path); spot-check each class.
     let v3 = json!({ "v": 3, "i": ident(), "c": CIPHERTEXT, "hm": HEX });
     assert!(matches!(
-        from_v2_typed(&v3, target("text_eq")).unwrap_err(),
+        from_v2_typed(&v3, target("eql_v3_text_eq")).unwrap_err(),
         FromV2Error::UnsupportedVersion { found: Some(3) }
     ));
     assert!(matches!(
-        from_v2_typed(&v2_sv(), target("integer_eq")).unwrap_err(),
+        from_v2_typed(&v2_sv(), target("eql_v3_integer_eq")).unwrap_err(),
         FromV2Error::KindMismatch { .. }
     ));
     // A v2 QUERY payload (no `c`) fails the strict parse — Invalid, exactly
     // like from_v2's validate_as.
     let query = json!({ "v": 2, "k": "ct", "i": ident(), "hm": HEX });
     assert!(matches!(
-        from_v2_typed(&query, target("text_eq")).unwrap_err(),
+        from_v2_typed(&query, target("eql_v3_text_eq")).unwrap_err(),
         FromV2Error::Invalid(_)
     ));
 }
@@ -203,8 +203,8 @@ fn parse_constructs_every_stored_payload_domain() {
     for family in eql_domains::CATALOG {
         for domain in family.domains {
             let name = family.domain_name(domain);
-            let stored = domain.is_scalar() || name == "json";
-            let value = if name == "json" {
+            let stored = domain.is_scalar() || name == "eql_v3_json";
+            let value = if name == "eql_v3_json" {
                 from_v2(&v2_sv(), TargetDomain::Json).unwrap()
             } else if stored {
                 from_v2(&v2_ct_full(), target(&name)).unwrap()
@@ -230,10 +230,10 @@ fn parse_constructs_every_stored_payload_domain() {
 fn parse_returns_none_for_unknown_domains() {
     for name in [
         "int5",
-        "public.integer_eq",
+        "public.eql_v3_integer_eq",
         "",
         "jsonb",
-        "jsonb_entry",
+        "eql_v3_jsonb_entry",
         "query_jsonb",
     ] {
         assert!(
@@ -247,18 +247,18 @@ fn parse_returns_none_for_unknown_domains() {
 fn parse_is_strict_exactly_like_the_binding_struct() {
     // Unknown keys and wrong envelope versions fail — DomainPayload::parse is
     // the binding struct's strict Deserialize, kept instead of discarded.
-    let mut good = from_v2(&v2_ct_full(), target("integer_eq")).unwrap();
-    assert!(DomainPayload::parse("integer_eq", &good).unwrap().is_ok());
+    let mut good = from_v2(&v2_ct_full(), target("eql_v3_integer_eq")).unwrap();
+    assert!(DomainPayload::parse("eql_v3_integer_eq", &good).unwrap().is_ok());
 
     good["extra"] = json!(1);
     assert!(
-        DomainPayload::parse("integer_eq", &good).unwrap().is_err(),
+        DomainPayload::parse("eql_v3_integer_eq", &good).unwrap().is_err(),
         "deny_unknown_fields must reject a stray key"
     );
 
     let wrong_version = json!({ "v": 2, "i": ident(), "c": CIPHERTEXT, "hm": HEX });
     assert!(
-        DomainPayload::parse("integer_eq", &wrong_version)
+        DomainPayload::parse("eql_v3_integer_eq", &wrong_version)
             .unwrap()
             .is_err(),
         "SchemaVersion must reject v: 2"
@@ -267,8 +267,8 @@ fn parse_is_strict_exactly_like_the_binding_struct() {
 
 #[test]
 fn as_domain_type_exposes_the_inner_trait_object() {
-    let typed = from_v2_typed(&v2_ct_full(), target("bigint_ord_ope")).unwrap();
+    let typed = from_v2_typed(&v2_ct_full(), target("eql_v3_bigint_ord_ope")).unwrap();
     let dt: &dyn DomainType = typed.as_domain_type();
-    assert_eq!(dt.sql_domain(), "public.bigint_ord_ope");
-    assert_eq!(dt.domain(), "bigint_ord_ope");
+    assert_eq!(dt.sql_domain(), "public.eql_v3_bigint_ord_ope");
+    assert_eq!(dt.domain(), "eql_v3_bigint_ord_ope");
 }

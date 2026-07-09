@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `public.real` — storage-only domain.
+/// `public.eql_v3_real` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Real {
 }
 impl DomainType for Real {
     fn sql_domain_static() -> &'static str {
-        "public.real"
+        "public.eql_v3_real"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -37,7 +37,7 @@ impl DomainType for Real {
         schema_for!(Real)
     }
 }
-/// `public.real_eq` — equality domain.
+/// `public.eql_v3_real_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -51,7 +51,7 @@ pub struct RealEq {
 }
 impl DomainType for RealEq {
     fn sql_domain_static() -> &'static str {
-        "public.real_eq"
+        "public.eql_v3_real_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -69,7 +69,7 @@ impl DomainType for RealEq {
         schema_for!(RealEq)
     }
 }
-/// `public.real_ord_ore` — ordering domain.
+/// `public.eql_v3_real_ord_ore` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -83,7 +83,7 @@ pub struct RealOrdOre {
 }
 impl DomainType for RealOrdOre {
     fn sql_domain_static() -> &'static str {
-        "public.real_ord_ore"
+        "public.eql_v3_real_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -101,7 +101,7 @@ impl DomainType for RealOrdOre {
         schema_for!(RealOrdOre)
     }
 }
-/// `public.real_ord` — ordering domain.
+/// `public.eql_v3_real_ord` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -115,7 +115,7 @@ pub struct RealOrd {
 }
 impl DomainType for RealOrd {
     fn sql_domain_static() -> &'static str {
-        "public.real_ord"
+        "public.eql_v3_real_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -133,7 +133,7 @@ impl DomainType for RealOrd {
         schema_for!(RealOrd)
     }
 }
-/// `public.real_ord_ope` — ordering domain.
+/// `public.eql_v3_real_ord_ope` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -147,7 +147,7 @@ pub struct RealOrdOpe {
 }
 impl DomainType for RealOrdOpe {
     fn sql_domain_static() -> &'static str {
-        "public.real_ord_ope"
+        "public.eql_v3_real_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

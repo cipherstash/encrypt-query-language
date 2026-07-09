@@ -5,7 +5,7 @@ import type { OreCllw } from "./OreCllw";
 import type { Selector } from "./Selector";
 
 /**
- * `public.jsonb_entry` — one sv element (returned by `->`). Carries a selector
+ * `public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector
  * `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
  * `hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
  * root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.

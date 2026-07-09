@@ -7,398 +7,398 @@
 -- REQUIRE: src/v3/sem/ore_block_256/operators.sql
 
 --! @file encrypted_domain/text/text_ord_functions.sql
---! @brief Functions for public.text_ord.
+--! @brief Functions for public.eql_v3_text_ord.
 
---! @brief Index extractor for public.text_ord.
---! @param a public.text_ord
+--! @brief Index extractor for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @return eql_v3_internal.hmac_256
-CREATE FUNCTION eql_v3.eq_term(a public.text_ord)
+CREATE FUNCTION eql_v3.eq_term(a public.eql_v3_text_ord)
 RETURNS eql_v3_internal.hmac_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.hmac_256(a::jsonb) $$;
 
---! @brief Index extractor for public.text_ord.
---! @param a public.text_ord
+--! @brief Index extractor for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @return eql_v3_internal.ore_block_256
-CREATE FUNCTION eql_v3.ord_term(a public.text_ord)
+CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_text_ord)
 RETURNS eql_v3_internal.ore_block_256
 LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3_internal.ore_block_256(a::jsonb) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3.eq(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.eq(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::public.text_ord) $$;
+AS $$ SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b::public.eql_v3_text_ord) $$;
 
---! @brief Operator wrapper for public.text_ord.
+--! @brief Operator wrapper for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.eq(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3.eq(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a::public.text_ord) = eql_v3.eq_term(b) $$;
+AS $$ SELECT eql_v3.eq_term(a::public.eql_v3_text_ord) = eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3.neq(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.neq(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::public.text_ord) $$;
+AS $$ SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b::public.eql_v3_text_ord) $$;
 
---! @brief Operator wrapper for public.text_ord.
+--! @brief Operator wrapper for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.neq(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3.neq(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.eq_term(a::public.text_ord) <> eql_v3.eq_term(b) $$;
+AS $$ SELECT eql_v3.eq_term(a::public.eql_v3_text_ord) <> eql_v3.eq_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::public.text_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b::public.eql_v3_text_ord) $$;
 
---! @brief Operator wrapper for public.text_ord.
+--! @brief Operator wrapper for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lt(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3.lt(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.text_ord) < eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_text_ord) < eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::public.text_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b::public.eql_v3_text_ord) $$;
 
---! @brief Operator wrapper for public.text_ord.
+--! @brief Operator wrapper for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.lte(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3.lte(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.text_ord) <= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_text_ord) <= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::public.text_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b::public.eql_v3_text_ord) $$;
 
---! @brief Operator wrapper for public.text_ord.
+--! @brief Operator wrapper for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gt(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3.gt(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.text_ord) > eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_text_ord) > eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.text_ord.
---! @param a public.text_ord
+--! @brief Operator wrapper for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::public.text_ord) $$;
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b::public.eql_v3_text_ord) $$;
 
---! @brief Operator wrapper for public.text_ord.
+--! @brief Operator wrapper for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3.gte(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3.gte(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.ord_term(a::public.text_ord) >= eql_v3.ord_term(b) $$;
+AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_text_ord) >= eql_v3.ord_term(b) $$;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_ord, b jsonb)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return boolean
-CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.eql_v3_text_ord)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param selector text
---! @return public.text_ord
-CREATE FUNCTION eql_v3_internal."->"(a public.text_ord, selector text)
-RETURNS public.text_ord IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.text_ord'; END; $$
+--! @return public.eql_v3_text_ord
+CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_text_ord, selector text)
+RETURNS public.eql_v3_text_ord IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param selector integer
---! @return public.text_ord
-CREATE FUNCTION eql_v3_internal."->"(a public.text_ord, selector integer)
-RETURNS public.text_ord IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.text_ord'; END; $$
+--! @return public.eql_v3_text_ord
+CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_text_ord, selector integer)
+RETURNS public.eql_v3_text_ord IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param selector public.text_ord
---! @return public.text_ord
-CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.text_ord)
-RETURNS public.text_ord IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.text_ord'; END; $$
+--! @param selector public.eql_v3_text_ord
+--! @return public.eql_v3_text_ord
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.eql_v3_text_ord)
+RETURNS public.eql_v3_text_ord IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param selector text
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a public.text_ord, selector text)
+CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_text_ord, selector text)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param selector integer
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a public.text_ord, selector integer)
+CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_text_ord, selector integer)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param selector public.text_ord
+--! @param selector public.eql_v3_text_ord
 --! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.text_ord)
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.eql_v3_text_ord)
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?"(a public.text_ord, b text)
+CREATE FUNCTION eql_v3_internal."?"(a public.eql_v3_text_ord, b text)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?|"(a public.text_ord, b text[])
+CREATE FUNCTION eql_v3_internal."?|"(a public.eql_v3_text_ord, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text[]
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."?&"(a public.text_ord, b text[])
+CREATE FUNCTION eql_v3_internal."?&"(a public.eql_v3_text_ord, b text[])
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@?"(a public.text_ord, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@?"(a public.eql_v3_text_ord, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonpath
 --! @return boolean
-CREATE FUNCTION eql_v3_internal."@@"(a public.text_ord, b jsonpath)
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_text_ord, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#>"(a public.text_ord, b text[])
+CREATE FUNCTION eql_v3_internal."#>"(a public.eql_v3_text_ord, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text[]
 --! @return text
-CREATE FUNCTION eql_v3_internal."#>>"(a public.text_ord, b text[])
+CREATE FUNCTION eql_v3_internal."#>>"(a public.eql_v3_text_ord, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a public.text_ord, b text)
+CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_text_ord, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b integer
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a public.text_ord, b integer)
+CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_text_ord, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."-"(a public.text_ord, b text[])
+CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_text_ord, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b text[]
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."#-"(a public.text_ord, b text[])
+CREATE FUNCTION eql_v3_internal."#-"(a public.eql_v3_text_ord, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
---! @param b public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
+--! @param b public.eql_v3_text_ord
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a public.text_ord, b public.text_ord)
+CREATE FUNCTION eql_v3_internal."||"(a public.eql_v3_text_ord, b public.eql_v3_text_ord)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
---! @param a public.text_ord
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
+--! @param a public.eql_v3_text_ord
 --! @param b jsonb
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a public.text_ord, b jsonb)
+CREATE FUNCTION eql_v3_internal."||"(a public.eql_v3_text_ord, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;
 
---! @brief Unsupported operator blocker for public.text_ord.
+--! @brief Unsupported operator blocker for public.eql_v3_text_ord.
 --! @param a jsonb
---! @param b public.text_ord
+--! @param b public.eql_v3_text_ord
 --! @return jsonb
-CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.text_ord)
+CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.eql_v3_text_ord)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.text_ord'; END; $$
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_text_ord'; END; $$
 LANGUAGE plpgsql;

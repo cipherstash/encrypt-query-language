@@ -142,11 +142,11 @@ fn parse_value_validates_through_the_inventory() {
         "c": "mp_base85_ciphertext",
         "hm": "deadbeef"
     });
-    assert!(entry("integer_eq").parse_value(&eq_payload).is_ok());
+    assert!(entry("eql_v3_integer_eq").parse_value(&eq_payload).is_ok());
     // Missing term key fails.
-    assert!(entry("integer_ord").parse_value(&eq_payload).is_err());
+    assert!(entry("eql_v3_integer_ord").parse_value(&eq_payload).is_err());
     // Unknown key fails (deny_unknown_fields is live through the trait).
-    assert!(entry("integer").parse_value(&eq_payload).is_err());
+    assert!(entry("eql_v3_integer").parse_value(&eq_payload).is_err());
 
     let doc = json!({
         "v": 3,
@@ -154,7 +154,7 @@ fn parse_value_validates_through_the_inventory() {
         "i": { "t": "users", "c": "profile" },
         "sv": [ { "s": "sel", "c": "ct", "hm": "deadbeef" } ]
     });
-    assert!(entry("json").parse_value(&doc).is_ok());
+    assert!(entry("eql_v3_json").parse_value(&doc).is_ok());
     assert!(entry("query_jsonb").parse_value(&doc).is_err());
     assert!(entry("query_jsonb")
         .parse_value(&json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] }))
@@ -180,12 +180,12 @@ fn schema_id_is_canonical() {
     // Fully-literal anchors — no interpolation, so a typo in the helper's base
     // URL or path cannot match.
     assert_eq!(
-        id_of("integer_eq"),
-        "https://schemas.cipherstash.com/eql/v3/integer_eq.json"
+        id_of("eql_v3_integer_eq"),
+        "https://schemas.cipherstash.com/eql/v3/eql_v3_integer_eq.json"
     );
     assert_eq!(
-        id_of("text_search"),
-        "https://schemas.cipherstash.com/eql/v3/text_search.json"
+        id_of("eql_v3_text_search"),
+        "https://schemas.cipherstash.com/eql/v3/eql_v3_text_search.json"
     );
 
     // Every domain follows the same canonical pattern.
@@ -289,9 +289,9 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
 
     // Document: {v, k, i, sv}. No root `c` (a document is not itself a
     // ciphertext); `k` is the "sv" form discriminator (SteVecForm-pinned).
-    let doc = schema_of("json");
+    let doc = schema_of("eql_v3_json");
     assert_eq!(
-        required(&doc, "/required", "json"),
+        required(&doc, "/required", "eql_v3_json"),
         set(&["v", "k", "i", "sv"]),
         "public.json required keys must match the SteVec document wire contract"
     );
@@ -300,9 +300,9 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     // over {hm} | {oc} (serde/schemars cannot express exclusivity; the SQL CHECK
     // owns the XOR). Assert both the base required set and that BOTH term
     // alternatives are reachable.
-    let entry = schema_of("jsonb_entry");
+    let entry = schema_of("eql_v3_jsonb_entry");
     assert_eq!(
-        required(&entry, "/required", "jsonb_entry"),
+        required(&entry, "/required", "eql_v3_jsonb_entry"),
         set(&["s", "c"]),
         "public.jsonb_entry base required keys must be s + c"
     );

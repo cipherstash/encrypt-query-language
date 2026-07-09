@@ -5,14 +5,14 @@
 -- REQUIRE: src/v3/scalars/timestamp/timestamp_ord_ore_operators.sql
 
 --! @file encrypted_domain/timestamp/timestamp_ord_ore_aggregates.sql
---! @brief Aggregates for public.timestamp_ord_ore.
+--! @brief Aggregates for public.eql_v3_timestamp_ord_ore.
 
---! @brief State function for min on public.timestamp_ord_ore.
---! @param state public.timestamp_ord_ore
---! @param value public.timestamp_ord_ore
---! @return public.timestamp_ord_ore
-CREATE FUNCTION eql_v3_internal.min_sfunc(state public.timestamp_ord_ore, value public.timestamp_ord_ore)
-RETURNS public.timestamp_ord_ore
+--! @brief State function for min on public.eql_v3_timestamp_ord_ore.
+--! @param state public.eql_v3_timestamp_ord_ore
+--! @param value public.eql_v3_timestamp_ord_ore
+--! @return public.eql_v3_timestamp_ord_ore
+CREATE FUNCTION eql_v3_internal.min_sfunc(state public.eql_v3_timestamp_ord_ore, value public.eql_v3_timestamp_ord_ore)
+RETURNS public.eql_v3_timestamp_ord_ore
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -24,22 +24,22 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate for public.timestamp_ord_ore.
---! @param input public.timestamp_ord_ore
---! @return public.timestamp_ord_ore
-CREATE AGGREGATE eql_v3.min(public.timestamp_ord_ore) (
+--! @brief min aggregate for public.eql_v3_timestamp_ord_ore.
+--! @param input public.eql_v3_timestamp_ord_ore
+--! @return public.eql_v3_timestamp_ord_ore
+CREATE AGGREGATE eql_v3.min(public.eql_v3_timestamp_ord_ore) (
   sfunc = eql_v3_internal.min_sfunc,
-  stype = public.timestamp_ord_ore,
+  stype = public.eql_v3_timestamp_ord_ore,
   combinefunc = eql_v3_internal.min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on public.timestamp_ord_ore.
---! @param state public.timestamp_ord_ore
---! @param value public.timestamp_ord_ore
---! @return public.timestamp_ord_ore
-CREATE FUNCTION eql_v3_internal.max_sfunc(state public.timestamp_ord_ore, value public.timestamp_ord_ore)
-RETURNS public.timestamp_ord_ore
+--! @brief State function for max on public.eql_v3_timestamp_ord_ore.
+--! @param state public.eql_v3_timestamp_ord_ore
+--! @param value public.eql_v3_timestamp_ord_ore
+--! @return public.eql_v3_timestamp_ord_ore
+CREATE FUNCTION eql_v3_internal.max_sfunc(state public.eql_v3_timestamp_ord_ore, value public.eql_v3_timestamp_ord_ore)
+RETURNS public.eql_v3_timestamp_ord_ore
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -51,12 +51,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate for public.timestamp_ord_ore.
---! @param input public.timestamp_ord_ore
---! @return public.timestamp_ord_ore
-CREATE AGGREGATE eql_v3.max(public.timestamp_ord_ore) (
+--! @brief max aggregate for public.eql_v3_timestamp_ord_ore.
+--! @param input public.eql_v3_timestamp_ord_ore
+--! @return public.eql_v3_timestamp_ord_ore
+CREATE AGGREGATE eql_v3.max(public.eql_v3_timestamp_ord_ore) (
   sfunc = eql_v3_internal.max_sfunc,
-  stype = public.timestamp_ord_ore,
+  stype = public.eql_v3_timestamp_ord_ore,
   combinefunc = eql_v3_internal.max_sfunc,
   parallel = safe
 );

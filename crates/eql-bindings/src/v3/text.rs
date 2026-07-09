@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `public.text` — storage-only domain.
+/// `public.eql_v3_text` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Text {
 }
 impl DomainType for Text {
     fn sql_domain_static() -> &'static str {
-        "public.text"
+        "public.eql_v3_text"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -37,7 +37,7 @@ impl DomainType for Text {
         schema_for!(Text)
     }
 }
-/// `public.text_eq` — equality domain.
+/// `public.eql_v3_text_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -51,7 +51,7 @@ pub struct TextEq {
 }
 impl DomainType for TextEq {
     fn sql_domain_static() -> &'static str {
-        "public.text_eq"
+        "public.eql_v3_text_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -69,7 +69,7 @@ impl DomainType for TextEq {
         schema_for!(TextEq)
     }
 }
-/// `public.text_match` — match domain.
+/// `public.eql_v3_text_match` — match domain.
 ///
 /// Operators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -83,7 +83,7 @@ pub struct TextMatch {
 }
 impl DomainType for TextMatch {
     fn sql_domain_static() -> &'static str {
-        "public.text_match"
+        "public.eql_v3_text_match"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -101,7 +101,7 @@ impl DomainType for TextMatch {
         schema_for!(TextMatch)
     }
 }
-/// `public.text_ord_ore` — ordering domain.
+/// `public.eql_v3_text_ord_ore` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -116,7 +116,7 @@ pub struct TextOrdOre {
 }
 impl DomainType for TextOrdOre {
     fn sql_domain_static() -> &'static str {
-        "public.text_ord_ore"
+        "public.eql_v3_text_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -134,7 +134,7 @@ impl DomainType for TextOrdOre {
         schema_for!(TextOrdOre)
     }
 }
-/// `public.text_ord` — ordering domain.
+/// `public.eql_v3_text_ord` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -149,7 +149,7 @@ pub struct TextOrd {
 }
 impl DomainType for TextOrd {
     fn sql_domain_static() -> &'static str {
-        "public.text_ord"
+        "public.eql_v3_text_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -167,7 +167,7 @@ impl DomainType for TextOrd {
         schema_for!(TextOrd)
     }
 }
-/// `public.text_ord_ope` — ordering domain.
+/// `public.eql_v3_text_ord_ope` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `hm` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -182,7 +182,7 @@ pub struct TextOrdOpe {
 }
 impl DomainType for TextOrdOpe {
     fn sql_domain_static() -> &'static str {
-        "public.text_ord_ope"
+        "public.eql_v3_text_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -200,7 +200,7 @@ impl DomainType for TextOrdOpe {
         schema_for!(TextOrdOpe)
     }
 }
-/// `public.text_search` — search domain.
+/// `public.eql_v3_text_search` — search domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -216,7 +216,7 @@ pub struct TextSearch {
 }
 impl DomainType for TextSearch {
     fn sql_domain_static() -> &'static str {
-        "public.text_search"
+        "public.eql_v3_text_search"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

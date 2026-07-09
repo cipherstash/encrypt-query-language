@@ -44,6 +44,22 @@ pub use fixtures::{
 /// drift between the SQL and the canonical types.
 pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
+/// The version prefix every PUBLIC-SCHEMA EQL type name carries:
+/// `public.eql_v3_integer_eq`, `public.eql_v3_json`, … (CIP-3472). The prefix
+/// keeps EQL domains from shadowing PostgreSQL built-in type names
+/// (`integer`, `text`, `json`, …) and gives each EQL version a distinct
+/// column-type namespace so multiple EQL versions can coexist in one
+/// database. Query-operand domains are NOT prefixed — they live in the
+/// `eql_v3` schema, which already versions them.
+///
+/// Lives here — in the catalog — because it is cross-crate contract data:
+/// `eql-codegen` renders every public domain name through it, and
+/// `eql-bindings`' parity tests re-derive the expected names from it. The
+/// catalog's own names stay bare — the prefix is applied only at SQL-name
+/// construction ([`Domain::sql_typname`]); file names, struct identifiers,
+/// and matrix test names all keep the bare name.
+pub const PUBLIC_TYPNAME_PREFIX: &str = "eql_v3_";
+
 /// A fixed index term known to the scalar materializer.
 ///
 /// `Hm` provides equality; `Ore` and `Ope` provide equality plus ordering —

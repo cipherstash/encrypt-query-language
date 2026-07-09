@@ -6,7 +6,7 @@ use crate::{Identifier, SchemaVersion};
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
-/// `public.date` — storage-only domain.
+/// `public.eql_v3_date` — storage-only domain.
 ///
 /// Operators: none. Required keys: `v` `i` `c`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -19,7 +19,7 @@ pub struct Date {
 }
 impl DomainType for Date {
     fn sql_domain_static() -> &'static str {
-        "public.date"
+        "public.eql_v3_date"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -37,7 +37,7 @@ impl DomainType for Date {
         schema_for!(Date)
     }
 }
-/// `public.date_eq` — equality domain.
+/// `public.eql_v3_date_eq` — equality domain.
 ///
 /// Operators: `=` `<>`. Required keys: `v` `i` `c` `hm`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -51,7 +51,7 @@ pub struct DateEq {
 }
 impl DomainType for DateEq {
     fn sql_domain_static() -> &'static str {
-        "public.date_eq"
+        "public.eql_v3_date_eq"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -69,7 +69,7 @@ impl DomainType for DateEq {
         schema_for!(DateEq)
     }
 }
-/// `public.date_ord_ore` — ordering domain.
+/// `public.eql_v3_date_ord_ore` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -83,7 +83,7 @@ pub struct DateOrdOre {
 }
 impl DomainType for DateOrdOre {
     fn sql_domain_static() -> &'static str {
-        "public.date_ord_ore"
+        "public.eql_v3_date_ord_ore"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -101,7 +101,7 @@ impl DomainType for DateOrdOre {
         schema_for!(DateOrdOre)
     }
 }
-/// `public.date_ord` — ordering domain.
+/// `public.eql_v3_date_ord` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -115,7 +115,7 @@ pub struct DateOrd {
 }
 impl DomainType for DateOrd {
     fn sql_domain_static() -> &'static str {
-        "public.date_ord"
+        "public.eql_v3_date_ord"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()
@@ -133,7 +133,7 @@ impl DomainType for DateOrd {
         schema_for!(DateOrd)
     }
 }
-/// `public.date_ord_ope` — ordering domain.
+/// `public.eql_v3_date_ord_ope` — ordering domain.
 ///
 /// Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -147,7 +147,7 @@ pub struct DateOrdOpe {
 }
 impl DomainType for DateOrdOpe {
     fn sql_domain_static() -> &'static str {
-        "public.date_ord_ope"
+        "public.eql_v3_date_ord_ope"
     }
     fn sql_domain(&self) -> &'static str {
         Self::sql_domain_static()

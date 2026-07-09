@@ -4,7 +4,7 @@ import type { Identifier } from "./Identifier";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.boolean` — storage-only domain.
+ * `public.eql_v3_boolean` — storage-only domain.
  *
  * Operators: none. Required keys: `v` `i` `c`.
  */

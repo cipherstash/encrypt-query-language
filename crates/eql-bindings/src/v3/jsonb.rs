@@ -71,7 +71,7 @@ impl JsonSchema for SteVecForm {
     }
 }
 
-/// `public.json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
+/// `public.eql_v3_json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
 /// no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
 /// [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -84,7 +84,7 @@ pub struct SteVecDocument {
     pub sv: Vec<SteVecEntry>,
 }
 
-/// `public.jsonb_entry` — one sv element (returned by `->`). Carries a selector
+/// `public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector
 /// `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
 /// `hm` XOR `oc`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
 /// root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
@@ -155,6 +155,6 @@ macro_rules! ste_vec_domain_type {
     };
 }
 
-ste_vec_domain_type!(SteVecDocument, "public.json");
-ste_vec_domain_type!(SteVecEntry, "public.jsonb_entry");
+ste_vec_domain_type!(SteVecDocument, "public.eql_v3_json");
+ste_vec_domain_type!(SteVecEntry, "public.eql_v3_jsonb_entry");
 ste_vec_domain_type!(SteVecQuery, "eql_v3.query_jsonb");

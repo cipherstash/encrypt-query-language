@@ -38,6 +38,9 @@ pub struct DomainEntry {
     /// emitted JSON stays byte-stable after the catalog dropped the leading
     /// underscore from its stored domain names.
     pub suffix: String,
+    /// The installed pg_type typname: the version-prefixed unqualified SQL
+    /// name (`eql_v3_integer_eq` — CIP-3472), resolved under `public`.
+    pub typname: String,
     /// SQL operators the domain's terms support, in catalog order. Empty for
     /// the storage domain (no terms).
     pub supported_ops: Vec<&'static str>,
@@ -63,9 +66,13 @@ pub struct TermInfo {
 /// (CHECK, operators) is hand-written and not derivable from the catalog.
 #[derive(Serialize)]
 pub struct SteVecEntry {
-    /// The bare domain name (resolved under the `public` schema, like a scalar's
-    /// `integer_eq`): `json` / `jsonb_entry` / `query_jsonb`.
+    /// The bare domain name: `json` / `jsonb_entry` / `query_jsonb`.
     pub full_name: String,
+    /// The installed pg_type typname: the version-prefixed name for the
+    /// public-schema column domains (`eql_v3_json` / `eql_v3_jsonb_entry` —
+    /// CIP-3472); the containment needle stays `query_jsonb` (it lives in the
+    /// already-versioned `eql_v3` schema).
+    pub typname: String,
     /// The catalog domain name: `json` / `entry` / `query`.
     pub name: &'static str,
     /// Index terms for this SteVec domain. Non-empty only for `jsonb_entry`
@@ -130,6 +137,7 @@ pub fn dump_catalog() -> CatalogDump {
                     } else {
                         d.name.to_string()
                     },
+                    typname: d.sql_typname(spec.name),
                     suffix: if d.name.is_empty() {
                         String::new()
                     } else {
@@ -155,6 +163,7 @@ pub fn dump_catalog() -> CatalogDump {
         .iter()
         .map(|d| SteVecEntry {
             full_name: d.full_name(eql_domains::JSONB.name),
+            typname: d.sql_typname(eql_domains::JSONB.name),
             name: d.name,
             // Catalog terms are empty for SteVec; hardcode per-domain — only
             // `jsonb_entry` carries extractors (see stevec_terms).

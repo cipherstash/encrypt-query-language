@@ -1,5 +1,7 @@
 //! Inherent impls for [`DomainFamily`] — the per-type helpers `domain_name`
-//! (family-name + `_` + domain-name) and `is_eq_only` (no `ord` domain).
+//! (the installed SQL typname: family-name + `_` + domain-name, public column
+//! domains carrying the `eql_v3_` version prefix — CIP-3472) and `is_eq_only`
+//! (no `ord` domain).
 //! Definitions for [`DomainFamily`] and [`Domain`] live in `lib.rs`.
 
 use crate::{Domain, DomainFamily};
@@ -35,6 +37,23 @@ impl Domain {
         } else {
             format!("{family_name}_{}", self.name)
         }
+    }
+
+    /// The unqualified SQL type name (pg_type `typname`) of this domain as
+    /// installed. Public-schema column domains carry the
+    /// [`crate::PUBLIC_TYPNAME_PREFIX`] version prefix
+    /// (`eql_v3_integer_eq`, `eql_v3_json` — CIP-3472); the SteVec containment
+    /// needle (`query_jsonb`) lives in the `eql_v3` schema, which already
+    /// versions it, so it stays bare like the scalar `query_<name>` twins.
+    /// The **single** site that owns the prefix decision — codegen (SQL +
+    /// bindings) and the eql-bindings parity tests both resolve installed
+    /// names through this (usually via [`DomainFamily::domain_name`]).
+    pub fn sql_typname(&self, family_name: &str) -> String {
+        let full = self.full_name(family_name);
+        if matches!(self.shape, crate::Shape::SteVec) && self.name == "query" {
+            return full;
+        }
+        format!("{}{full}", crate::PUBLIC_TYPNAME_PREFIX)
     }
 
     /// The full (unqualified) name of this domain's query-operand twin under
@@ -102,11 +121,14 @@ fn capitalize(s: &str) -> String {
 }
 
 impl DomainFamily {
-    /// The fully-qualified domain name: family-name + `_` + domain-name. Makes
-    /// the old "domain name must start with the family name" validation
-    /// structural.
+    /// The unqualified SQL type name of `domain` as installed — see
+    /// [`Domain::sql_typname`]: public-schema column domains carry the
+    /// `eql_v3_` version prefix (CIP-3472); query-operand domains stay bare
+    /// (the `eql_v3` schema already versions them). For the bare
+    /// family-name + `_` + domain-name join (file names, struct identifiers,
+    /// matrix test names), use [`Domain::full_name`].
     pub fn domain_name(&self, domain: &Domain) -> String {
-        domain.full_name(self.name)
+        domain.sql_typname(self.name)
     }
 
     /// True when this type declares no ordered (`ord`) domain — i.e. equality-only
@@ -216,11 +238,14 @@ mod tests {
         // `json` doesn't match the family name `jsonb`, so `full_name` returns
         // it verbatim rather than concatenating. The containment needle is the
         // other — it follows the query-operand PREFIX convention (CIP-3442),
-        // like the scalar `query_<name>` twins. Real SQL names: public.json,
-        // public.jsonb_entry, public.query_jsonb.
+        // like the scalar `query_<name>` twins. Real SQL names:
+        // public.eql_v3_json, public.eql_v3_jsonb_entry, eql_v3.query_jsonb —
+        // the public column domains carry the version prefix (CIP-3472); the
+        // needle lives in the already-versioned `eql_v3` schema, so it stays
+        // bare.
         use crate::JSONB;
-        assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "json");
-        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "jsonb_entry");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "eql_v3_json");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "eql_v3_jsonb_entry");
         assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "query_jsonb");
     }
 

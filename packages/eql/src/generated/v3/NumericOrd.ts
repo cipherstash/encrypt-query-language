@@ -5,7 +5,7 @@ import type { OreBlock256 } from "./OreBlock256";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.numeric_ord` — ordering domain.
+ * `public.eql_v3_numeric_ord` — ordering domain.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `ob`.
  */

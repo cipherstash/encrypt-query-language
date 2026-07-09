@@ -8,24 +8,24 @@
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = public.text_match, RIGHTARG = eql_v3.query_text_match,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = eql_v3.query_text_match,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR @> (
   FUNCTION = eql_v3.contains,
-  LEFTARG = eql_v3.query_text_match, RIGHTARG = public.text_match,
+  LEFTARG = eql_v3.query_text_match, RIGHTARG = public.eql_v3_text_match,
   COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.text_match, RIGHTARG = eql_v3.query_text_match,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = eql_v3.query_text_match,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR <@ (
   FUNCTION = eql_v3.contained_by,
-  LEFTARG = eql_v3.query_text_match, RIGHTARG = public.text_match,
+  LEFTARG = eql_v3.query_text_match, RIGHTARG = public.eql_v3_text_match,
   COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
 );

@@ -62,8 +62,8 @@ pub fn environment() -> minijinja::Environment<'static> {
 /// One idempotent CREATE DOMAIN block, with SQL-required values precomputed.
 #[derive(serde::Serialize)]
 pub struct DomainBlock {
-    pub typname: String,   // sql_str-escaped bare name, e.g. integer_ord_ore
-    pub name: String,      // raw bare name (unescaped), e.g. integer_ord_ore
+    pub typname: String,   // sql_str-escaped typname, e.g. eql_v3_integer_ord_ore
+    pub name: String,      // raw typname (unescaped), e.g. eql_v3_integer_ord_ore
     pub keys: Vec<String>, // ordered, sql_str-escaped key tokens (envelope + ciphertext + term keys)
     // sql_str-escaped keys whose payload must be a non-empty array (the ORE term
     // `ob`). Derived from the domain's terms exactly like `keys`, so the template
@@ -132,7 +132,9 @@ pub struct TypesContext {
 /// Build the per-domain block data (port of `render_domain_block`'s value logic,
 /// minus comment prose and the CHECK skeleton — those are template-resident).
 pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
-    let name = domain.full_name(family_name);
+    // Public-schema domains carry the eql_v3_ version prefix (CIP-3472);
+    // the catalog name stays bare.
+    let name = public_typname(&domain.full_name(family_name));
 
     let mut keys: Vec<String> = ENVELOPE_KEYS.iter().map(|k| sql_str(k)).collect();
     for k in Term::term_json_keys(domain.terms) {
@@ -345,11 +347,23 @@ pub struct AggregatesContext {
     pub aggregates: &'static [AggregateOp], // == AGGREGATE_OPS
 }
 
-/// The schema-qualified SQL domain type name, e.g. `public.integer_eq`.
+/// The bare pg_type typname of a public-schema encrypted domain: the catalog
+/// name carrying the [`eql_domains::PUBLIC_TYPNAME_PREFIX`] version prefix,
+/// e.g. `eql_v3_integer_eq` (CIP-3472). The prefix keeps EQL domains from
+/// shadowing PostgreSQL built-in type names (`integer`, `text`, `json`, …)
+/// and gives each EQL version a distinct column-type namespace so multiple
+/// versions can coexist in one database. Catalog names stay bare — the prefix
+/// is applied only at SQL-name construction (file names, REQUIRE paths,
+/// struct idents, and test names all keep the bare name).
+pub fn public_typname(name: &str) -> String {
+    format!("{}{name}", eql_domains::PUBLIC_TYPNAME_PREFIX)
+}
+
+/// The schema-qualified SQL domain type name, e.g. `public.eql_v3_integer_eq`.
 /// User-column encrypted domains intentionally live in `public` so dropping
 /// EQL-owned schemas cannot drop application columns.
 pub fn domain_name(name: &str) -> String {
-    format!("public.{name}")
+    format!("public.{}", public_typname(name))
 }
 
 /// The schema-qualified name of a QUERY-OPERAND domain, e.g.
@@ -407,7 +421,13 @@ mod tests {
 
     #[test]
     fn domain_name_qualifies_user_domains_with_public_schema() {
-        assert_eq!(domain_name("integer_eq"), "public.integer_eq");
+        assert_eq!(domain_name("integer_eq"), "public.eql_v3_integer_eq");
+    }
+
+    #[test]
+    fn public_typname_carries_version_prefix() {
+        assert_eq!(public_typname("integer"), "eql_v3_integer");
+        assert_eq!(public_typname("text_match"), "eql_v3_text_match");
     }
 
     #[test]
@@ -460,25 +480,25 @@ mod tests {
             // Supported comparison operator carries its planner metadata.
             (
                 "=",
-                "public.integer_eq",
+                "public.eql_v3_integer_eq",
                 true,
                 Some("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"),
             ),
             // The same operator, unsupported on this domain → no metadata line.
-            ("=", "public.integer", false, None),
+            ("=", "public.eql_v3_integer", false, None),
             // Supported but metadata-less operator (`->`) → still no metadata.
-            ("->", "public.integer_eq", true, None),
+            ("->", "public.eql_v3_integer_eq", true, None),
             // `@>` carries containment metadata when supported (the Bloom
             // `text_match` path).
             (
                 "@>",
-                "public.text_match",
+                "public.eql_v3_text_match",
                 true,
                 Some("COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"),
             ),
             // ... but suppressed when `@>` is a blocker (non-Bloom domains),
             // which is why the integer reference is unchanged.
-            ("@>", "public.integer_eq", false, None),
+            ("@>", "public.eql_v3_integer_eq", false, None),
         ];
 
         for (symbol, dom, supported, expected) in cases {

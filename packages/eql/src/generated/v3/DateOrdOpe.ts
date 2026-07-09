@@ -5,7 +5,7 @@ import type { OpeCllw } from "./OpeCllw";
 import type { SchemaVersion } from "./SchemaVersion";
 
 /**
- * `public.date_ord_ope` — ordering domain.
+ * `public.eql_v3_date_ord_ope` — ordering domain.
  *
  * Operators: `=` `<>` `<` `<=` `>` `>=`. Required keys: `v` `i` `c` `op`.
  */

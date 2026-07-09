@@ -990,11 +990,11 @@ mod catalog_tests {
     }
 
     #[test]
-    fn domain_name_concatenates_token_and_suffix() {
+    fn domain_name_concatenates_token_and_suffix_with_version_prefix() {
         let s = scalar("integer");
-        assert_eq!(s.domain_name(&s.domains[0]), "integer"); // storage
-        assert_eq!(s.domain_name(&s.domains[1]), "integer_eq");
-        assert_eq!(s.domain_name(&s.domains[3]), "integer_ord");
+        assert_eq!(s.domain_name(&s.domains[0]), "eql_v3_integer"); // storage
+        assert_eq!(s.domain_name(&s.domains[1]), "eql_v3_integer_eq");
+        assert_eq!(s.domain_name(&s.domains[3]), "eql_v3_integer_ord");
     }
 }
 
@@ -1252,11 +1252,19 @@ mod invariant_tests {
                     assert_eq!(s.domain_name(d), format!("query_{}", s.name));
                     continue;
                 }
-                let name = s.domain_name(d);
+                // Pin the bare join rule on `full_name` (the installed
+                // `domain_name` additionally carries the `eql_v3_` version
+                // prefix — CIP-3472 — pinned separately below).
+                let name = d.full_name(s.name);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),
                     "{name} does not start with family name {}",
                     s.name
+                );
+                assert_eq!(
+                    s.domain_name(d),
+                    format!("{PUBLIC_TYPNAME_PREFIX}{name}"),
+                    "installed typname must be the version-prefixed bare name"
                 );
             }
         }
