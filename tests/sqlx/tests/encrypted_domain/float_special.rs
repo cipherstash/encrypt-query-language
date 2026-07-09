@@ -18,7 +18,10 @@
 //! orders `-0.0 < +0.0`. The previous canary comment here predicted exactly this
 //! ("a dormant alternative encoder, `cllw-ore`, instead distinguishes them");
 //! the flip happened when the `_ord` default moved from block-ORE to CLLW-OPE.
-//! Both behaviours are pinned below, one test per domain.
+//! Both behaviours are pinned below, one test per domain — for `ORDER BY` and
+//! for `=`. The `=` split on `_ord` shares its root cause (and its
+//! `known_failure` marker) with the `_eq` split in #387, so a fix there turns
+//! the `_ord` pin RED rather than letting the two domains silently diverge.
 
 use anyhow::Result;
 use eql_tests::fixtures::cipherstash::encrypt_store;
@@ -200,14 +203,72 @@ async fn negative_zero_and_positive_zero_compare_equal_under_eq() -> Result<()> 
         Ok(())
     } else {
         Err(anyhow::anyhow!(
-            "encrypted `=` on public.double_eq returned false for -0.0 vs +0.0"
+            "encrypted `=` on public.eql_v3_double_eq returned false for -0.0 vs +0.0"
         ))
     };
     known_failure(
         ISSUE_FLOAT_SIGNED_ZERO_EQ,
-        "-0.0 == +0.0 under public.double_eq",
+        "-0.0 == +0.0 under public.eql_v3_double_eq",
         assertion,
     )
+}
+
+/// `=` on the OPE-backed `_ord` domain splits `±0.0` too — pinned, and pinned
+/// to the SAME issue as `_eq`.
+///
+/// This is the assertion the changeset's "`_ord` `=` is consistent with `_eq`"
+/// rationale rests on, and it is the one that must fail when that rationale
+/// stops holding. `_ord` compares its `op` term, and CLLW-OPE derives `op` from
+/// the same raw `f64::to_be_bytes()` (sign bit included) that [#387] feeds into
+/// the `hm` HMAC — so the two zeroes land on different `op` ciphertexts and `=`
+/// returns false. Fixing #387 at its root (canonicalizing the sign of zero in
+/// `Plaintext::to_vec()`) fixes `hm` and `op` together: this test then turns
+/// RED, the marker must go, and the "consistent with `_eq`" wording in the
+/// changeset must be revisited rather than quietly outliving its premise.
+///
+/// Without this pin, a fix to #387 would silently leave `_ord` `=` splitting
+/// `±0.0` while `_eq` stopped — the exact divergence the rationale denies.
+///
+/// Contrast [`negative_zero_and_positive_zero_compare_equal_under_ord_ore`]:
+/// block-ORE canonicalizes, so `=` there already agrees with IEEE and needs no
+/// marker. `real` shares this SEM with `double`; one type is pinned, as
+/// everywhere else in this module.
+///
+/// [#387]: https://github.com/cipherstash/encrypt-query-language/issues/387
+#[tokio::test]
+async fn negative_zero_and_positive_zero_compare_equal_under_ord() -> Result<()> {
+    let pool = setup().await?;
+    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
+
+    let equal = ord_cmp(&pool, &p[0], "=", &p[1]).await?;
+    let assertion = if equal {
+        Ok(())
+    } else {
+        Err(anyhow::anyhow!(
+            "encrypted `=` on public.eql_v3_double_ord returned false for -0.0 vs +0.0"
+        ))
+    };
+    known_failure(
+        ISSUE_FLOAT_SIGNED_ZERO_EQ,
+        "-0.0 == +0.0 under public.eql_v3_double_ord",
+        assertion,
+    )
+}
+
+/// `=` on the block-ORE `_ord_ore` domain agrees with IEEE: the
+/// `orderable-bytes` encoder canonicalizes `-0.0 -> +0.0` before encoding, so
+/// both zeroes share one `ob` term. Asserted unconditionally — this is the
+/// behaviour `_ord` had before the CLLW-OPE flip, and the reason a float column
+/// needing IEEE `±0.0` semantics should be typed `_ord_ore`.
+#[tokio::test]
+async fn negative_zero_and_positive_zero_compare_equal_under_ord_ore() -> Result<()> {
+    let pool = setup().await?;
+    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
+    assert!(
+        ord_ore_cmp(&pool, &p[0], "=", &p[1]).await?,
+        "-0.0 = +0.0 under block-ORE `_ord_ore` (orderable-bytes canonicalizes the sign of zero)"
+    );
+    Ok(())
 }
 
 #[tokio::test]
