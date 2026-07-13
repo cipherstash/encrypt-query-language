@@ -13,18 +13,28 @@ use sqlx::PgPool;
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_json_storage")))]
 async fn real_storage_only_row_parses_into_the_json_binding(pool: PgPool) -> anyhow::Result<()> {
-    let payload: serde_json::Value =
-        sqlx::query_scalar("SELECT payload::jsonb FROM fixtures.v3_json_storage ORDER BY id LIMIT 1")
-            .fetch_one(&pool)
-            .await?;
+    let payload: serde_json::Value = sqlx::query_scalar(
+        "SELECT payload::jsonb FROM fixtures.v3_json_storage ORDER BY id LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await?;
 
     // A storage-only payload is a plain ciphertext envelope: v/i/c, and NO
     // SteVec structure (`sv`) or form discriminator (`k`).
     let obj = payload.as_object().expect("payload is an object");
     assert_eq!(obj.get("v"), Some(&serde_json::json!(3)));
-    assert!(obj.contains_key("i"), "storage payload carries index metadata");
-    assert!(obj.contains_key("c"), "storage payload carries a ciphertext");
-    assert!(!obj.contains_key("sv"), "storage payload has no SteVec array");
+    assert!(
+        obj.contains_key("i"),
+        "storage payload carries index metadata"
+    );
+    assert!(
+        obj.contains_key("c"),
+        "storage payload carries a ciphertext"
+    );
+    assert!(
+        !obj.contains_key("sv"),
+        "storage payload has no SteVec array"
+    );
 
     // The real wire shape parses into the hand-written strict `Json` binding
     // (rejects unknown keys / a wrong envelope version).
@@ -51,13 +61,16 @@ async fn storage_only_domain_blocks_native_jsonb_operators(pool: PgPool) -> anyh
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_json_storage")))]
-async fn storage_and_search_domain_checks_are_mutually_exclusive(pool: PgPool) -> anyhow::Result<()> {
+async fn storage_and_search_domain_checks_are_mutually_exclusive(
+    pool: PgPool,
+) -> anyhow::Result<()> {
     // A real storage payload ({v,i,c}) is accepted by public.eql_v3_json but
     // REJECTED by the searchable document domain (which requires an `sv` array).
-    let storage: serde_json::Value =
-        sqlx::query_scalar("SELECT payload::jsonb FROM fixtures.v3_json_storage ORDER BY id LIMIT 1")
-            .fetch_one(&pool)
-            .await?;
+    let storage: serde_json::Value = sqlx::query_scalar(
+        "SELECT payload::jsonb FROM fixtures.v3_json_storage ORDER BY id LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await?;
 
     // Accepted by the storage domain (round-trips through its CHECK).
     let ok: bool = sqlx::query_scalar("SELECT ($1::jsonb::public.eql_v3_json) IS NOT NULL")
@@ -67,12 +80,11 @@ async fn storage_and_search_domain_checks_are_mutually_exclusive(pool: PgPool) -
     assert!(ok, "storage payload must cast to public.eql_v3_json");
 
     // Rejected by the searchable document domain — no `sv` array.
-    let rejected = sqlx::query_scalar::<_, bool>(
-        "SELECT ($1::jsonb::public.eql_v3_json_search) IS NOT NULL",
-    )
-    .bind(&storage)
-    .fetch_one(&pool)
-    .await;
+    let rejected =
+        sqlx::query_scalar::<_, bool>("SELECT ($1::jsonb::public.eql_v3_json_search) IS NOT NULL")
+            .bind(&storage)
+            .fetch_one(&pool)
+            .await;
     assert!(
         rejected.is_err(),
         "a storage {{v,i,c}} payload must NOT cast to the searchable document domain"

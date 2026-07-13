@@ -1191,10 +1191,11 @@ v3_jsonb_payload_reject!(
 /// aren't trivially passing because everything is rejected).
 #[sqlx::test]
 async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()> {
-    let ok_doc: bool =
-        sqlx::query_scalar("SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search IS NOT NULL")
-            .fetch_one(&pool)
-            .await?;
+    let ok_doc: bool = sqlx::query_scalar(
+        "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search IS NOT NULL",
+    )
+    .fetch_one(&pool)
+    .await?;
     assert!(ok_doc);
     let ok_entry: bool = sqlx::query_scalar(
         "SELECT '{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\"}'::public.eql_v3_jsonb_entry IS NOT NULL",
@@ -1351,7 +1352,9 @@ async fn v3_jsonb_array_length_and_elements(pool: PgPool) -> anyhow::Result<()> 
 async fn v3_jsonb_array_length_non_array_raises(pool: PgPool) -> anyhow::Result<()> {
     // A document WITHOUT the `a:true` array flag is not an array.
     let not_array = r#"{"i":{},"v":3,"sv":[{"s":"aa","c":"x","hm":"00"}]}"#;
-    let sql = format!("SELECT eql_v3.jsonb_array_length('{not_array}'::public.eql_v3_json_search::jsonb)");
+    let sql = format!(
+        "SELECT eql_v3.jsonb_array_length('{not_array}'::public.eql_v3_json_search::jsonb)"
+    );
     eql_tests::assert_raises(&pool, &sql, &[], "non-array").await?;
 
     let sql2 = format!(
@@ -1462,9 +1465,11 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     );
 
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TEMP TABLE v3_jsonb_scale (payload public.eql_v3_json_search) ON COMMIT DROP")
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "CREATE TEMP TABLE v3_jsonb_scale (payload public.eql_v3_json_search) ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
     // The bulk: 5000 copies of the filler document.
     sqlx::query(
         "INSERT INTO v3_jsonb_scale(payload) \
@@ -1474,10 +1479,12 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     .execute(&mut *tx)
     .await?;
     // The single selective pivot document.
-    sqlx::query("INSERT INTO v3_jsonb_scale(payload) VALUES ($1::jsonb::public.eql_v3_json_search)")
-        .bind(&pivot_payload)
-        .execute(&mut *tx)
-        .await?;
+    sqlx::query(
+        "INSERT INTO v3_jsonb_scale(payload) VALUES ($1::jsonb::public.eql_v3_json_search)",
+    )
+    .bind(&pivot_payload)
+    .execute(&mut *tx)
+    .await?;
     sqlx::query(
         "CREATE INDEX v3_jsonb_scale_gin_idx ON v3_jsonb_scale \
          USING gin ((eql_v3.to_ste_vec_query(payload)::jsonb) jsonb_path_ops)",
@@ -1576,10 +1583,11 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
     .await?;
     assert_eq!(i1, "bb", "-> 1 must index the second sv element");
 
-    let t1: String =
-        sqlx::query_scalar(&format!("SELECT '{d}'::public.eql_v3_json_search ->> 1::integer"))
-            .fetch_one(&pool)
-            .await?;
+    let t1: String = sqlx::query_scalar(&format!(
+        "SELECT '{d}'::public.eql_v3_json_search ->> 1::integer"
+    ))
+    .fetch_one(&pool)
+    .await?;
     assert!(
         t1.contains("\"s\": \"bb\""),
         "->> 1 must serialize the second sv element, got {t1}"

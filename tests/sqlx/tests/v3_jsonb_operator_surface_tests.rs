@@ -94,7 +94,9 @@ async fn v3_jsonb_surface_supported_or_blocked(pool: PgPool) -> anyhow::Result<(
     let bound: Vec<(String, String, String)> = v3_jsonb_operators(&pool).await?;
     let json_bound_symbols: BTreeSet<String> = bound
         .iter()
-        .filter(|(_, l, r)| norm(l) == "public.eql_v3_json_search" || norm(r) == "public.eql_v3_json_search")
+        .filter(|(_, l, r)| {
+            norm(l) == "public.eql_v3_json_search" || norm(r) == "public.eql_v3_json_search"
+        })
         .map(|(n, _, _)| n.clone())
         .collect();
 
@@ -147,12 +149,28 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
     // Exact supported operand signatures (verified against operators.sql).
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
-        ("@>", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            "@>",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         ("@>", "public.eql_v3_json_search", "eql_v3.query_jsonb"),
-        ("@>", "public.eql_v3_json_search", "public.eql_v3_jsonb_entry"),
-        ("<@", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            "@>",
+            "public.eql_v3_json_search",
+            "public.eql_v3_jsonb_entry",
+        ),
+        (
+            "<@",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         ("<@", "eql_v3.query_jsonb", "public.eql_v3_json_search"),
-        ("<@", "public.eql_v3_jsonb_entry", "public.eql_v3_json_search"),
+        (
+            "<@",
+            "public.eql_v3_jsonb_entry",
+            "public.eql_v3_json_search",
+        ),
         // path access
         ("->", "public.eql_v3_json_search", "text"),
         ("->", "public.eql_v3_json_search", "integer"),
@@ -325,22 +343,46 @@ async fn v3_jsonb_surface_blocker_signatures(pool: PgPool) -> anyhow::Result<()>
         // concat is also blocked with the domain on the RIGHT.
         ("||", "jsonb", "public.eql_v3_json_search"),
         // root comparisons are blocked for every typed domain/jsonb shape.
-        ("=", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            "=",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         ("=", "public.eql_v3_json_search", "jsonb"),
         ("=", "jsonb", "public.eql_v3_json_search"),
-        ("<>", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            "<>",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         ("<>", "public.eql_v3_json_search", "jsonb"),
         ("<>", "jsonb", "public.eql_v3_json_search"),
-        ("<", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            "<",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         ("<", "public.eql_v3_json_search", "jsonb"),
         ("<", "jsonb", "public.eql_v3_json_search"),
-        ("<=", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            "<=",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         ("<=", "public.eql_v3_json_search", "jsonb"),
         ("<=", "jsonb", "public.eql_v3_json_search"),
-        (">", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            ">",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         (">", "public.eql_v3_json_search", "jsonb"),
         (">", "jsonb", "public.eql_v3_json_search"),
-        (">=", "public.eql_v3_json_search", "public.eql_v3_json_search"),
+        (
+            ">=",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_search",
+        ),
         (">=", "public.eql_v3_json_search", "jsonb"),
         (">=", "jsonb", "public.eql_v3_json_search"),
         // mixed jsonb containment shapes are blocked; safe forms use json,
