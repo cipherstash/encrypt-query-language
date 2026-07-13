@@ -422,7 +422,7 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     });
     let parsed: SteVecDocument = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json");
+    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json_search");
 
     // Envelope negatives (parity with the scalar integer tests) — now including `k`.
     for missing in ["v", "k", "i", "sv"] {
@@ -551,7 +551,7 @@ fn stevec_document_and_query_schemas_are_strict() {
     let sq = serde_json::to_value(q.schema()).unwrap();
     assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
     // SteVecDocument/Query domain names.
-    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json");
+    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json_search");
     assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_jsonb");
 }
 

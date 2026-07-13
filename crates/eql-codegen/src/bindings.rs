@@ -404,15 +404,17 @@ pub fn render_inventory_rs() -> String {
 }
 
 /// The stored-payload domains of the catalog, in CATALOG order: every flat
-/// scalar domain plus the SteVec document (`public.eql_v3_json`). The SteVec
-/// entry/query shapes are inventory members but not stored column payloads,
-/// so they are excluded — exactly the set `eql_bindings::from_v2` accepts as
-/// conversion targets ([`render_payload_rs`]'s `DomainPayload` variants).
+/// scalar domain (which now includes the storage-only `public.eql_v3_json`,
+/// a `Shape::Scalar` domain — CIP-3512) plus the SteVec document
+/// (`public.eql_v3_json_search`). The SteVec entry/query shapes are inventory
+/// members but not stored column payloads, so they are excluded — exactly the
+/// set `eql_bindings::from_v2` accepts as conversion targets
+/// ([`render_payload_rs`]'s `DomainPayload` variants).
 fn stored_payload_domains() -> impl Iterator<Item = (&'static DomainFamily, &'static Domain)> {
     CATALOG
         .iter()
         .flat_map(|f| f.domains.iter().map(move |d| (f, d)))
-        .filter(|(f, d)| d.is_scalar() || d.full_name(f.name) == "json")
+        .filter(|(f, d)| d.is_scalar() || d.full_name(f.name) == "json_search")
 }
 
 /// Render the generated `crates/eql-bindings/src/v3/payload.rs`: the
@@ -998,18 +1000,21 @@ mod tests {
         assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
 
         // One variant per catalog (family, domain) pair that is a stored
-        // payload: every scalar domain plus the SteVec document. The SteVec
-        // entry/query shapes are inventory members but not stored payloads.
+        // payload: every scalar domain (incl. the storage-only `json`, which is
+        // Shape::Scalar — CIP-3512) plus the SteVec document (`json_search`).
+        // The SteVec entry/query shapes are inventory members but not stored
+        // payloads.
         let expected: Vec<String> = CATALOG
             .iter()
             .flat_map(|f| {
                 f.domains
                     .iter()
-                    .filter(|d| d.is_scalar() || d.full_name(f.name) == "json")
+                    .filter(|d| d.is_scalar() || d.full_name(f.name) == "json_search")
                     .map(|d| d.rust_struct_name(f.name))
             })
             .collect();
         assert_eq!(variant_idents(&out, "DomainPayload"), expected);
+        assert!(out.contains("Json(super::jsonb::Json)"));
         assert!(out.contains("SteVecDocument(super::jsonb::SteVecDocument)"));
         assert!(!expected.contains(&"SteVecEntry".to_string()));
         assert!(!expected.contains(&"SteVecQuery".to_string()));
@@ -1022,6 +1027,8 @@ mod tests {
         assert!(out.contains(r#""eql_v3_integer_eq" =>"#));
         assert!(out.contains("IntegerEq::deserialize(value).map(Self::IntegerEq)"));
         assert!(out.contains(r#""eql_v3_json" =>"#));
+        assert!(out.contains("Json::deserialize(value).map(Self::Json)"));
+        assert!(out.contains(r#""eql_v3_json_search" =>"#));
         assert!(out.contains("SteVecDocument::deserialize(value).map(Self::SteVecDocument)"));
         assert!(out.contains("_ => None,"));
         assert!(out.contains("pub fn as_domain_type(&self) -> &dyn DomainType"));

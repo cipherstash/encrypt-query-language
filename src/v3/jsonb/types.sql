@@ -3,10 +3,16 @@
 --! @file v3/jsonb/types.sql
 --! @brief Domain types for the eql_v3 encrypted-JSONB (SteVec) surface.
 --!
---! Three jsonb-backed domains (none over another domain — operators resolve
+--! Four jsonb-backed domains (none over another domain — operators resolve
 --! against the ultimate base type jsonb, so the native-jsonb firewall in
 --! blockers.sql can attach):
---!   - public.eql_v3_json     — storage/root: an EQL envelope object ({i, v, ...}).
+--!   - public.eql_v3_json        — storage-only / encryption-only: a plain
+--!     `{v, i, c}` EQL envelope, no SteVec indexing. The JSON analogue of the
+--!     scalar storage domains (`public.eql_v3_integer` etc.): encrypt/decrypt a
+--!     JSON value with no server-side search. Supports NO eql operators.
+--!   - public.eql_v3_json_search — the searchable SteVec document: an EQL
+--!     envelope object ({i, v, sv}) whose `sv` array carries per-leaf index
+--!     terms (containment, equality, ordering).
 --!   - public.eql_v3_jsonb_entry — a single sv element (returned by `->`).
 --!   - eql_v3.query_jsonb  — a containment needle (sv elements, no ciphertext).
 
@@ -99,19 +105,23 @@ AS $$
   )
 $$;
 
---! @brief Storage/root domain for an encrypted JSONB column.
+--! @brief Storage-only / encryption-only domain for an encrypted JSON column.
 --!
---! CHECK: a JSON object carrying the EQL envelope (`v = 3` version and `i` index
---! metadata). Root `c` is intentionally NOT required — an sv-array root payload
---! is `{i, v, sv}` with no root ciphertext. The CHECK now also requires an `sv`
---! array, so the domain accepts only SteVec **document** payloads and rejects
---! encrypted *scalar* payloads (which carry `c`/`hm`/`ob` but no `sv`) — this is
---! what keeps `public.eql_v3_json` a typed document domain rather than a generic
---! encrypted envelope. The firewall in blockers.sql attaches to this domain to
---! stop native jsonb operators from reaching a column value.
+--! The JSON analogue of the scalar storage domains (`public.eql_v3_integer`
+--! etc.): a plain EQL envelope `{v, i, c}` — a version tag, index metadata, and
+--! the ciphertext of the whole JSON value — with NO SteVec structure and no
+--! index terms. Use it to encrypt/decrypt a JSON document that is never queried
+--! into server-side; it supports no eql operators (the firewall in blockers.sql
+--! raises on every native jsonb operator). For a searchable encrypted document,
+--! use `public.eql_v3_json_search` instead.
+--!
+--! CHECK: an object carrying `v = 3`, `i`, and the root ciphertext `c` — the
+--! same envelope the scalar storage domains require. It deliberately rejects a
+--! SteVec document payload (`{v, i, sv}`, no root `c`), which belongs in
+--! `public.eql_v3_json_search`.
 --!
 --! @note Constructing from inline JSON uses the standard DOMAIN cast:
---!       `'{"i":{},"v":3,"sv":[...]}'::public.eql_v3_json`.
+--!       `'{"v":3,"i":{},"c":"<ciphertext>"}'::public.eql_v3_json`.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -120,11 +130,44 @@ BEGIN
   ) THEN
     CREATE DOMAIN public.eql_v3_json AS jsonb
       CHECK (
+        jsonb_typeof(VALUE) = 'object'
+        AND VALUE ? 'v'
+        AND VALUE ? 'i'
+        AND VALUE ? 'c'
+        AND VALUE->>'v' = '3'
+      );
+  END IF;
+
+  COMMENT ON DOMAIN public.eql_v3_json IS 'EQL encrypted JSON (storage only)';
+END
+$$;
+
+--! @brief Searchable SteVec document domain for an encrypted JSONB column.
+--!
+--! CHECK: a JSON object carrying the EQL envelope (`v = 3` version and `i` index
+--! metadata). Root `c` is intentionally NOT required — an sv-array root payload
+--! is `{i, v, sv}` with no root ciphertext. The CHECK also requires an `sv`
+--! array, so the domain accepts only SteVec **document** payloads and rejects
+--! encrypted *scalar* payloads (which carry `c`/`hm`/`ob` but no `sv`) — this is
+--! what keeps `public.eql_v3_json_search` a typed document domain rather than a
+--! generic encrypted envelope. The firewall in blockers.sql attaches to this
+--! domain to stop native jsonb operators from reaching a column value.
+--!
+--! @note Constructing from inline JSON uses the standard DOMAIN cast:
+--!       `'{"i":{},"v":3,"sv":[...]}'::public.eql_v3_json_search`.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_type
+    WHERE typname = 'eql_v3_json_search' AND typnamespace = 'public'::regnamespace
+  ) THEN
+    CREATE DOMAIN public.eql_v3_json_search AS jsonb
+      CHECK (
         public.eql_v3_is_valid_ste_vec_document_payload(VALUE)
       );
   END IF;
 
-  COMMENT ON DOMAIN public.eql_v3_json IS 'EQL encrypted JSONB document (containment, equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_json_search IS 'EQL encrypted JSONB document (containment, equality, ordering)';
 END
 $$;
 
@@ -217,7 +260,7 @@ BEGIN
 END
 $$;
 
---! @brief Convert a public.eql_v3_json to a query_jsonb needle.
+--! @brief Convert a public.eql_v3_json_search to a query_jsonb needle.
 --!
 --! Normalises each sv element down to the matching-relevant fields: `s` plus
 --! exactly one of `hm` / `op`. Other fields (`c`, `a`, `i`/`v`, anything else)
@@ -225,10 +268,10 @@ $$;
 --! Designed for use as a functional GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
---! @param e public.eql_v3_json Source encrypted payload
+--! @param e public.eql_v3_json_search Source encrypted payload
 --! @return eql_v3.query_jsonb Query-shaped needle, sv elements normalised.
 --! @see eql_v3.query_jsonb
-CREATE FUNCTION eql_v3.to_ste_vec_query(e public.eql_v3_json)
+CREATE FUNCTION eql_v3.to_ste_vec_query(e public.eql_v3_json_search)
   RETURNS eql_v3.query_jsonb
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -250,6 +293,6 @@ AS $$
   )::eql_v3.query_jsonb
 $$;
 
-CREATE CAST (public.eql_v3_json AS eql_v3.query_jsonb)
+CREATE CAST (public.eql_v3_json_search AS eql_v3.query_jsonb)
   WITH FUNCTION eql_v3.to_ste_vec_query
   AS ASSIGNMENT;

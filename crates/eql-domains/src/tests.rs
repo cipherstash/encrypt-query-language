@@ -1309,11 +1309,13 @@ mod invariant_tests {
     fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
-                // The one documented exception: `public.eql_v3_json` (the jsonb
-                // family's document domain) predates the catalog and keeps
-                // its established name rather than following the
-                // family+suffix convention — see `Domain::full_name`.
-                if s.name == "jsonb" && d.name == "json" {
+                // The documented exceptions: the jsonb family's two column
+                // domains `public.eql_v3_json` (storage-only) and
+                // `public.eql_v3_json_search` (searchable document) keep their
+                // established literal names rather than following the
+                // family+suffix convention (family is "jsonb") — see
+                // `Domain::full_name` (CIP-3512).
+                if s.name == "jsonb" && (d.name == "json" || d.name == "json_search") {
                     continue;
                 }
                 // The jsonb containment needle follows the query-operand
@@ -1534,10 +1536,16 @@ mod shape_tests {
     #[test]
     fn jsonb_family_is_non_scalar_and_in_catalog_after_flip() {
         use crate::{Shape, CATALOG, JSONB};
+        // The family is non-scalar overall (its searchable/entry/query domains
+        // are SteVec), even though the storage-only `json` domain is Scalar.
         assert!(!JSONB.is_scalar());
-        assert_eq!(JSONB.domains.len(), 3);
-        assert!(matches!(JSONB.domains[0].shape, Shape::SteVec));
+        assert_eq!(JSONB.domains.len(), 4);
+        // [0] storage-only json (Scalar, {v,i,c}); [1] searchable document
+        // (SteVec); [2] entry; [3] query — CIP-3512.
         assert_eq!(JSONB.domains[0].name, "json");
+        assert!(matches!(JSONB.domains[0].shape, Shape::Scalar));
+        assert_eq!(JSONB.domains[1].name, "json_search");
+        assert!(matches!(JSONB.domains[1].shape, Shape::SteVec));
         assert!(JSONB.domains.iter().all(|d| d.terms.is_empty()));
         assert!(
             CATALOG.iter().any(|f| f.name == "jsonb"),

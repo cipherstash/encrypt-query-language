@@ -1,0 +1,7 @@
+---
+'@cipherstash/eql': patch
+---
+
+**`json` now has a storage-only / encryption-only variant, and the searchable SteVec document domain moves to `public.eql_v3_json_search`.** `public.eql_v3_json` is now the storage-only domain — a plain `{v, i, c}` envelope with no SteVec indexing, the JSON analogue of the scalar storage domains (`public.eql_v3_integer` etc.): encrypt and decrypt a JSON value without building or exposing a searchable index. It supports no eql operators (a native-jsonb firewall raises on every operator, mirroring the scalar storage domains). The searchable encrypted-JSONB document — the SteVec surface with `@>`/`<@`/`->`/`->>`, per-leaf `hm`/`op` terms, and the `eql_v3.query_jsonb` cast — is unchanged in behaviour but now lives on the renamed `public.eql_v3_json_search` domain (Rust `SteVecDocument`, JSON Schema `eql_v3_json_search.json`); `public.eql_v3_jsonb_entry` and `eql_v3.query_jsonb` are untouched.
+
+**Why.** Every scalar encrypted-domain type shipped a storage-only variant under its bare name, but `json` did not — its only domain required a full SteVec document, so there was no way to encrypt a JSON blob purely for storage. This closes that gap and aligns `json` with the scalar convention that the bare name (`public.eql_v3_json`) is the storage-only variant. EQL v3 has no production users yet, so the rename ships as a patch rather than a major (see the upgrade note for the one-line column-type change pre-release adopters need).

@@ -4,7 +4,7 @@
 -- REQUIRE: src/v3/sem/ope_cllw/types.sql
 
 --! @file v3/jsonb/operators.sql
---! @brief Operators on public.eql_v3_json and public.eql_v3_jsonb_entry.
+--! @brief Operators on public.eql_v3_json_search and public.eql_v3_jsonb_entry.
 
 ------------------------------------------------------------------------------
 -- -> field accessor (returns jsonb_entry)
@@ -21,16 +21,16 @@
 --!   parameter (`$1`, the Proxy interface) or an explicit cast (`col -> 'sel'::%text`).
 --!   A bare untyped literal (`col -> 'sel'`) resolves to the NATIVE `jsonb -> %text`
 --!   operator and silently returns native jsonb semantics (a root-key lookup,
---!   typically NULL), NOT this operator: PostgreSQL reduces the `public.eql_v3_json`
+--!   typically NULL), NOT this operator: PostgreSQL reduces the `public.eql_v3_json_search`
 --!   domain to its base type `jsonb` when resolving an unknown-typed RHS, and the
 --!   native base-type operator wins the exact-match tiebreak. This is intrinsic to
 --!   the domain type-kind and applies to the native-jsonb blockers too. See
 --!   the "Typed operands" caveat in docs/reference/json-support.md.
 --!
---! @param e public.eql_v3_json Root encrypted payload.
+--! @param e public.eql_v3_json_search Root encrypted payload.
 --! @param selector text Selector hash.
 --! @return public.eql_v3_jsonb_entry Matching entry merged with root meta, or NULL.
-CREATE FUNCTION eql_v3."->"(e public.eql_v3_json, selector text)
+CREATE FUNCTION eql_v3."->"(e public.eql_v3_json_search, selector text)
   RETURNS public.eql_v3_jsonb_entry
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -46,26 +46,26 @@ $$;
 
 CREATE OPERATOR ->(
   FUNCTION=eql_v3."->",
-  LEFTARG=public.eql_v3_json,
+  LEFTARG=public.eql_v3_json_search,
   RIGHTARG=text
 );
 
 --! @brief -> operator with integer array index (0-based, JSONB convention).
---! @param e public.eql_v3_json Encrypted sv-array payload.
+--! @param e public.eql_v3_json_search Encrypted sv-array payload.
 --! @param selector integer Array index.
 --! @return public.eql_v3_jsonb_entry Matching entry merged with root meta, or NULL.
-CREATE FUNCTION eql_v3."->"(e public.eql_v3_json, selector integer)
+CREATE FUNCTION eql_v3."->"(e public.eql_v3_json_search, selector integer)
   RETURNS public.eql_v3_jsonb_entry
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT CASE
     WHEN eql_v3_internal.is_ste_vec_array(e) THEN
       -- NOTE: `e::jsonb` makes the native-jsonb traversal explicit. `'sv'` is an
-      -- unknown-typed literal, so `e -> 'sv'` already flattens `public.eql_v3_json` to
+      -- unknown-typed literal, so `e -> 'sv'` already flattens `public.eql_v3_json_search` to
       -- its base type and binds native `jsonb -> text` (see the @warning above) —
-      -- the custom `->(public.eql_v3_json, text)` operator does NOT capture a bare
+      -- the custom `->(public.eql_v3_json_search, text)` operator does NOT capture a bare
       -- untyped literal. The cast documents that intent and guards the `-> selector`
-      -- (integer) hop from ever resolving to the v3 `->(public.eql_v3_json, integer)`
+      -- (integer) hop from ever resolving to the v3 `->(public.eql_v3_json_search, integer)`
       -- operator instead of native array access.
       (eql_v3.meta_data(e) || (e::jsonb -> 'sv' -> selector))::public.eql_v3_jsonb_entry
     ELSE NULL
@@ -74,7 +74,7 @@ $$;
 
 CREATE OPERATOR ->(
   FUNCTION=eql_v3."->",
-  LEFTARG=public.eql_v3_json,
+  LEFTARG=public.eql_v3_json_search,
   RIGHTARG=integer
 );
 
@@ -88,10 +88,10 @@ CREATE OPERATOR ->(
 --! Intentional v2 parity: this serializes the entire matched jsonb_entry
 --! object as JSON text. It does not decrypt or return scalar plaintext like
 --! native `jsonb ->>`.
---! @param e public.eql_v3_json Encrypted payload.
+--! @param e public.eql_v3_json_search Encrypted payload.
 --! @param selector text Field selector hash.
 --! @return text The matching entry as text.
-CREATE FUNCTION eql_v3."->>"(e public.eql_v3_json, selector text)
+CREATE FUNCTION eql_v3."->>"(e public.eql_v3_json_search, selector text)
   RETURNS text
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -100,16 +100,16 @@ $$;
 
 CREATE OPERATOR ->> (
   FUNCTION=eql_v3."->>",
-  LEFTARG=public.eql_v3_json,
+  LEFTARG=public.eql_v3_json_search,
   RIGHTARG=text
 );
 
 --! @brief ->> operator with integer array index. Inlinable alias of
 --!        ->(json, integer) coerced to text.
---! @param e public.eql_v3_json Encrypted sv-array payload.
+--! @param e public.eql_v3_json_search Encrypted sv-array payload.
 --! @param selector integer Array index.
 --! @return text The matching entry as text.
-CREATE FUNCTION eql_v3."->>"(e public.eql_v3_json, selector integer)
+CREATE FUNCTION eql_v3."->>"(e public.eql_v3_json_search, selector integer)
   RETURNS text
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -118,7 +118,7 @@ $$;
 
 CREATE OPERATOR ->> (
   FUNCTION=eql_v3."->>",
-  LEFTARG=public.eql_v3_json,
+  LEFTARG=public.eql_v3_json_search,
   RIGHTARG=integer
 );
 
@@ -127,11 +127,11 @@ CREATE OPERATOR ->> (
 ------------------------------------------------------------------------------
 
 --! @brief @> contains operator (document, document).
---! @param a public.eql_v3_json Container.
---! @param b public.eql_v3_json Contained value.
+--! @param a public.eql_v3_json_search Container.
+--! @param b public.eql_v3_json_search Contained value.
 --! @return boolean True if a contains b.
 --! @see eql_v3.ste_vec_contains
-CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json, b public.eql_v3_json)
+CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_search)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -140,8 +140,8 @@ $$;
 
 CREATE OPERATOR @>(
   FUNCTION=eql_v3."@>",
-  LEFTARG=public.eql_v3_json,
-  RIGHTARG=public.eql_v3_json
+  LEFTARG=public.eql_v3_json_search,
+  RIGHTARG=public.eql_v3_json_search
 );
 
 --! @brief @> contains operator with an query_jsonb needle.
@@ -149,10 +149,10 @@ CREATE OPERATOR @>(
 --! Inlines to native `jsonb @>` over `eql_v3.to_ste_vec_query(a)::jsonb`, so a
 --! functional GIN index on the same expression engages.
 --!
---! @param a public.eql_v3_json Container.
+--! @param a public.eql_v3_json_search Container.
 --! @param b eql_v3.query_jsonb Query payload.
 --! @return boolean True if a contains b.
-CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json, b eql_v3.query_jsonb)
+CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b eql_v3.query_jsonb)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -161,7 +161,7 @@ $$;
 
 CREATE OPERATOR @>(
   FUNCTION=eql_v3."@>",
-  LEFTARG=public.eql_v3_json,
+  LEFTARG=public.eql_v3_json_search,
   RIGHTARG=eql_v3.query_jsonb
 );
 
@@ -170,10 +170,10 @@ CREATE OPERATOR @>(
 --! Wraps the entry into a single-element sv array (stripping `c`) and reduces
 --! to the same `to_ste_vec_query(a)::jsonb @> needle::jsonb` form.
 --!
---! @param a public.eql_v3_json Container.
+--! @param a public.eql_v3_json_search Container.
 --! @param b public.eql_v3_jsonb_entry Single entry.
 --! @return boolean True if a contains an sv entry matching b.
-CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json, b public.eql_v3_jsonb_entry)
+CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_jsonb_entry)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -194,7 +194,7 @@ $$;
 
 CREATE OPERATOR @>(
   FUNCTION=eql_v3."@>",
-  LEFTARG=public.eql_v3_json,
+  LEFTARG=public.eql_v3_json_search,
   RIGHTARG=public.eql_v3_jsonb_entry
 );
 
@@ -203,10 +203,10 @@ CREATE OPERATOR @>(
 ------------------------------------------------------------------------------
 
 --! @brief <@ contained-by operator (document, document).
---! @param a public.eql_v3_json Contained value.
---! @param b public.eql_v3_json Container.
+--! @param a public.eql_v3_json_search Contained value.
+--! @param b public.eql_v3_json_search Container.
 --! @return boolean True if a is contained by b.
-CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json, b public.eql_v3_json)
+CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_search, b public.eql_v3_json_search)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -215,15 +215,15 @@ $$;
 
 CREATE OPERATOR <@(
   FUNCTION=eql_v3."<@",
-  LEFTARG=public.eql_v3_json,
-  RIGHTARG=public.eql_v3_json
+  LEFTARG=public.eql_v3_json_search,
+  RIGHTARG=public.eql_v3_json_search
 );
 
 --! @brief <@ contained-by operator with an query_jsonb LHS.
 --! @param a eql_v3.query_jsonb Query payload.
---! @param b public.eql_v3_json Container.
+--! @param b public.eql_v3_json_search Container.
 --! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a eql_v3.query_jsonb, b public.eql_v3_json)
+CREATE FUNCTION eql_v3."<@"(a eql_v3.query_jsonb, b public.eql_v3_json_search)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -233,14 +233,14 @@ $$;
 CREATE OPERATOR <@(
   FUNCTION=eql_v3."<@",
   LEFTARG=eql_v3.query_jsonb,
-  RIGHTARG=public.eql_v3_json
+  RIGHTARG=public.eql_v3_json_search
 );
 
 --! @brief <@ contained-by operator with a jsonb_entry LHS.
 --! @param a public.eql_v3_jsonb_entry Single entry.
---! @param b public.eql_v3_json Container.
+--! @param b public.eql_v3_json_search Container.
 --! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a public.eql_v3_jsonb_entry, b public.eql_v3_json)
+CREATE FUNCTION eql_v3."<@"(a public.eql_v3_jsonb_entry, b public.eql_v3_json_search)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
@@ -250,7 +250,7 @@ $$;
 CREATE OPERATOR <@(
   FUNCTION=eql_v3."<@",
   LEFTARG=public.eql_v3_jsonb_entry,
-  RIGHTARG=public.eql_v3_json
+  RIGHTARG=public.eql_v3_json_search
 );
 
 ------------------------------------------------------------------------------

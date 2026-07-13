@@ -116,6 +116,8 @@ pub enum DomainPayload {
     /// The `public.eql_v3_double_ord_ope` payload.
     DoubleOrdOpe(super::double::DoubleOrdOpe),
     /// The `public.eql_v3_json` payload.
+    Json(super::jsonb::Json),
+    /// The `public.eql_v3_json_search` payload.
     SteVecDocument(super::jsonb::SteVecDocument),
 }
 impl DomainPayload {
@@ -257,7 +259,8 @@ impl DomainPayload {
             "eql_v3_double_ord_ope" => {
                 Some(super::double::DoubleOrdOpe::deserialize(value).map(Self::DoubleOrdOpe))
             }
-            "eql_v3_json" => {
+            "eql_v3_json" => Some(super::jsonb::Json::deserialize(value).map(Self::Json)),
+            "eql_v3_json_search" => {
                 Some(super::jsonb::SteVecDocument::deserialize(value).map(Self::SteVecDocument))
             }
             _ => None,
@@ -315,6 +318,7 @@ impl DomainPayload {
             Self::DoubleOrdOre(payload) => payload,
             Self::DoubleOrd(payload) => payload,
             Self::DoubleOrdOpe(payload) => payload,
+            Self::Json(payload) => payload,
             Self::SteVecDocument(payload) => payload,
         }
     }

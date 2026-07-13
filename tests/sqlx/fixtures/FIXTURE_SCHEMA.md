@@ -19,14 +19,16 @@ Generated eql_v3 fixtures (gitignored)
   ├── eql_v3_<T>_doubles.sql   (jsonb payload — duplicate-value variant the
   │                             property suites consume)
   ├── v3_numeric_collision.sql (jsonb payload — no EQL dependency)
-  ├── v3_doc_integer.sql       (public.eql_v3_json payload — depends on eql_v3 surface)
-  └── v3_ste_vec.sql           (public.eql_v3_json payload — depends on eql_v3 surface)
+  ├── v3_doc_integer.sql       (public.eql_v3_json_search payload — depends on eql_v3 surface)
+  ├── v3_ste_vec.sql           (public.eql_v3_json_search payload — depends on eql_v3 surface)
+  └── v3_json_storage.sql      (public.eql_v3_json payload — storage-only, depends on eql_v3 surface)
 ```
 
 The scalar fixtures (`eql_v3_<T>.sql`) have **no EQL dependency** — `payload` is
 plain `jsonb`, so each script applies standalone. The document fixtures
-(`v3_doc_integer.sql`, `v3_ste_vec.sql`) depend on the `eql_v3` encrypted-JSONB
-surface being installed.
+(`v3_doc_integer.sql`, `v3_ste_vec.sql`) and the storage-only json fixture
+(`v3_json_storage.sql`) depend on the `eql_v3` encrypted-JSONB surface being
+installed.
 
 **Regenerated every test run.** `mise run test:sqlx` invokes the generator
 before `cargo test`, so a stale generated fixture cannot mask a payload-shape

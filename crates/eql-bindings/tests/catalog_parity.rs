@@ -156,11 +156,23 @@ fn parse_value_validates_through_the_inventory() {
         "i": { "t": "users", "c": "profile" },
         "sv": [ { "s": "sel", "c": "ct", "hm": "deadbeef" } ]
     });
-    assert!(entry("eql_v3_json").parse_value(&doc).is_ok());
+    // The searchable document domain is `eql_v3_json_search` (CIP-3512).
+    assert!(entry("eql_v3_json_search").parse_value(&doc).is_ok());
     assert!(entry("query_jsonb").parse_value(&doc).is_err());
     assert!(entry("query_jsonb")
         .parse_value(&json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] }))
         .is_ok());
+
+    // The storage-only `eql_v3_json` domain is a plain `{v, i, c}` envelope
+    // (Shape::Scalar): the ciphertext-only payload parses, and the SteVec
+    // document payload (with `k`/`sv`, no `c`) is rejected by deny_unknown_fields.
+    let storage = json!({
+        "v": 3,
+        "i": { "t": "users", "c": "profile" },
+        "c": "mp_base85_ciphertext"
+    });
+    assert!(entry("eql_v3_json").parse_value(&storage).is_ok());
+    assert!(entry("eql_v3_json").parse_value(&doc).is_err());
 }
 
 /// The published `$id` is the schema's identity URL — `tests/export.rs`
@@ -261,7 +273,9 @@ fn schemas_are_strict() {
 ///
 /// KEEP IN SYNC with the canonical `SteVecPayload`
 /// (`eql-payload-v2.3.schema.json`) and `is_valid_ste_vec_{document,entry,query}_payload`:
-/// - `public.eql_v3_json`      requires `v` `k` `i` `sv`           (document; `k` = "sv"
+/// - `public.eql_v3_json`      requires `v` `i` `c`                (storage-only /
+///   encryption-only: a plain ciphertext envelope, no SteVec — CIP-3512)
+/// - `public.eql_v3_json_search` requires `v` `k` `i` `sv`         (document; `k` = "sv"
 ///   form discriminator, required by the canonical SteVecPayload and carried on
 ///   every real payload — the SQL CHECK is laxer and only mandates `v`/`i`/`sv`,
 ///   but the binding models the real wire, which always carries `k`)
@@ -289,13 +303,22 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     };
     let set = |keys: &[&str]| -> BTreeSet<String> { keys.iter().map(|s| s.to_string()).collect() };
 
+    // Storage-only json: {v, i, c} — a plain ciphertext envelope, the JSON
+    // analogue of the scalar storage domains (Shape::Scalar). CIP-3512.
+    let storage = schema_of("eql_v3_json");
+    assert_eq!(
+        required(&storage, "/required", "eql_v3_json"),
+        set(&["v", "i", "c"]),
+        "public.eql_v3_json (storage-only) required keys must be the {{v,i,c}} envelope"
+    );
+
     // Document: {v, k, i, sv}. No root `c` (a document is not itself a
     // ciphertext); `k` is the "sv" form discriminator (SteVecForm-pinned).
-    let doc = schema_of("eql_v3_json");
+    let doc = schema_of("eql_v3_json_search");
     assert_eq!(
-        required(&doc, "/required", "eql_v3_json"),
+        required(&doc, "/required", "eql_v3_json_search"),
         set(&["v", "k", "i", "sv"]),
-        "public.eql_v3_json required keys must match the SteVec document wire contract"
+        "public.eql_v3_json_search required keys must match the SteVec document wire contract"
     );
 
     // Entry: {s, c} + hm XOR op. The XOR is expressed as an untagged `anyOf`

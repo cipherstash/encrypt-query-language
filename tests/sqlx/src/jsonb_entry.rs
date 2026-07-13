@@ -70,7 +70,7 @@ impl ScalarType for JsonbEntryInteger {
     /// Extract the entry at the pinned selector. `->` already yields
     /// `public.eql_v3_jsonb_entry`; the call sites' `::public.eql_v3_jsonb_entry` cast is
     /// a no-op. The selector literal is explicitly typed as text so Postgres
-    /// resolves the `public.eql_v3_json -> text` operator instead of native jsonb path
+    /// resolves the `public.eql_v3_json_search -> text` operator instead of native jsonb path
     /// lookup. Parenthesised by the call sites (`({col})::{d}`).
     fn column_expr() -> String {
         format!("payload -> '{}'::text", v3_doc_integer::SELECTOR)

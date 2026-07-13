@@ -586,7 +586,7 @@ fn from_v2_ste_vec_output_validates_against_published_v3_schema() {
             { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
         ]
     });
-    assert_converts_to_valid_v3(&v2, "eql_v3_json");
+    assert_converts_to_valid_v3(&v2, "eql_v3_json_search");
 }
 
 #[test]
@@ -617,7 +617,7 @@ fn published_v3_schemas_reject_the_unconverted_v2_payloads() {
         "raw v2 ct payload",
     );
     assert_invalid(
-        &load_v3_schema("eql_v3_json"),
+        &load_v3_schema("eql_v3_json_search"),
         &json!({
             "v": 2, "k": "sv", "i": ident(),
             "sv": [{ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX }]

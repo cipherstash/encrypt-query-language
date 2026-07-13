@@ -105,8 +105,8 @@ async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow::Result<()> {
     // The `$.field` CLLW-OPE entry is the sv element carrying `op`. Cast the
-    // `public.eql_v3_json` payload to bare jsonb FIRST so `-> 'sv'` is the native array
-    // accessor, not the custom `public.eql_v3_json -> text` selector-lookup operator.
+    // `public.eql_v3_json_search` payload to bare jsonb FIRST so `-> 'sv'` is the native array
+    // accessor, not the custom `public.eql_v3_json_search -> text` selector-lookup operator.
     let live: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT elem ->> 's' \
          FROM fixtures.v3_doc_integer, \

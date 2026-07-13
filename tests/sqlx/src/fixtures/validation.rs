@@ -25,11 +25,13 @@ fn is_valid_identifier(s: &str) -> bool {
 }
 
 /// Allowlist of generated `payload` column types. `jsonb` for the scalar
-/// fixtures; `public.eql_v3_json` for the v3 jsonb (SteVec document) fixture, whose
-/// generated `payload` column is the `public.eql_v3_json` DOMAIN so the domain CHECK
-/// runs on load. Schema-qualified tokens are allowed — each is an exact,
-/// vetted entry here, never a free-form `&str`.
-pub const ALLOWED_COLUMN_TYPES: &[&str] = &["jsonb", "public.eql_v3_json"];
+/// fixtures; `public.eql_v3_json_search` for the v3 jsonb (SteVec document)
+/// fixture and `public.eql_v3_json` for the storage-only / encryption-only json
+/// fixture (CIP-3512), whose generated `payload` column is that DOMAIN so the
+/// domain CHECK runs on load. Schema-qualified tokens are allowed — each is an
+/// exact, vetted entry here, never a free-form `&str`.
+pub const ALLOWED_COLUMN_TYPES: &[&str] =
+    &["jsonb", "public.eql_v3_json", "public.eql_v3_json_search"];
 
 fn is_valid_column_type(s: &str) -> bool {
     ALLOWED_COLUMN_TYPES.contains(&s)
@@ -143,7 +145,7 @@ mod tests {
     #[test]
     fn column_type_accepts_allowlisted_tokens_only() {
         assert!(ColumnType::try_from("jsonb").is_ok());
-        assert!(ColumnType::try_from("public.eql_v3_json").is_ok());
+        assert!(ColumnType::try_from("public.eql_v3_json_search").is_ok());
         assert!(ColumnType::try_from("text").is_err());
         assert!(ColumnType::try_from("eql_v3_integer").is_err());
         assert!(ColumnType::try_from("eql_v3.jsonb").is_err());

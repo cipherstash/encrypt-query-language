@@ -131,8 +131,17 @@ fn term_key_for(index: IndexKind) -> Option<&'static str> {
 /// the single `json` document target for [`ScalarKind::Jsonb`].
 fn targets_for(kind: ScalarKind, indexes: &[IndexKind]) -> Result<Vec<TargetDomain>> {
     if kind == ScalarKind::Jsonb {
-        let target = TargetDomain::parse("eql_v3_json")
-            .map_err(|e| anyhow!("resolving the SteVec document target: {e}"))?;
+        // A SteVec-indexed jsonb fixture converts to the searchable document
+        // domain (`eql_v3_json_search`, `k: "sv"`); an unindexed / storage-only
+        // jsonb fixture converts to the storage-only `eql_v3_json` domain — a
+        // plain `{v, i, c}` scalar envelope, no SteVec (CIP-3512).
+        let name = if indexes.contains(&IndexKind::SteVec) {
+            "eql_v3_json_search"
+        } else {
+            "eql_v3_json"
+        };
+        let target = TargetDomain::parse(name)
+            .map_err(|e| anyhow!("resolving the jsonb conversion target {name:?}: {e}"))?;
         return Ok(vec![target]);
     }
 
@@ -354,6 +363,28 @@ mod tests {
         let out = to_v3_payloads(vec![payload], ScalarKind::Bool, &[]).unwrap();
         let obj = out[0].as_object().unwrap();
         assert_eq!(obj.get("v"), Some(&json!(3)));
+        let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["c", "i", "v"]);
+    }
+
+    #[test]
+    fn storage_only_jsonb_converts_to_the_bare_envelope() {
+        // A storage-only / encryption-only json fixture (CIP-3512): kind Jsonb
+        // but NO SteVec index, so the client encrypts the whole document as one
+        // `k: "ct"` ciphertext and the v3 payload is exactly `{v, i, c}` for the
+        // storage-only `eql_v3_json` domain — NOT a SteVec document.
+        let payload = json!({
+            "v": 2,
+            "k": "ct",
+            "i": { "t": "_fixture_v3_json_storage", "c": "payload" },
+            "c": "mBbKmsMMkbKAJcY2ZE!ceh0e1t",
+        });
+        let out = to_v3_payloads(vec![payload], ScalarKind::Jsonb, &[]).unwrap();
+        let obj = out[0].as_object().unwrap();
+        assert_eq!(obj.get("v"), Some(&json!(3)));
+        assert!(!obj.contains_key("k"), "storage-only json carries no `k`");
+        assert!(!obj.contains_key("sv"), "storage-only json carries no `sv`");
         let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
         keys.sort_unstable();
         assert_eq!(keys, ["c", "i", "v"]);

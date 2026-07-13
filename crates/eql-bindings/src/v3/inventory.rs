@@ -57,6 +57,7 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<super::double::DoubleOrdOre>),
         Box::new(PhantomData::<super::double::DoubleOrd>),
         Box::new(PhantomData::<super::double::DoubleOrdOpe>),
+        Box::new(PhantomData::<super::jsonb::Json>),
         Box::new(PhantomData::<super::jsonb::SteVecDocument>),
         Box::new(PhantomData::<super::jsonb::SteVecEntry>),
         Box::new(PhantomData::<super::jsonb::SteVecQuery>),

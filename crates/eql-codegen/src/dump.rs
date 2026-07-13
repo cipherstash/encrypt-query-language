@@ -242,7 +242,11 @@ mod tests {
     fn stevec_jsonb_family_is_dumped() {
         let dump = dump_catalog();
         let names: Vec<&str> = dump.stevec.iter().map(|e| e.full_name.as_str()).collect();
-        assert_eq!(names, ["json", "jsonb_entry", "query_jsonb"]);
+        // The jsonb family: storage-only `json` (Scalar), searchable
+        // `json_search` (SteVec document), `jsonb_entry`, `query_jsonb`. The
+        // whole family is dumped together so both column domains get documented
+        // (CIP-3512).
+        assert_eq!(names, ["json", "json_search", "jsonb_entry", "query_jsonb"]);
 
         let by_name = |n: &str| {
             dump.stevec

@@ -15,6 +15,47 @@ use crate::v3::terms::{Ciphertext, Hmac256, OpeCllw, Selector};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 
+/// `public.eql_v3_json` — a storage-only / encryption-only encrypted JSON value:
+/// a plain `{v, i, c}` envelope (the ciphertext of the whole JSON document) with
+/// NO SteVec structure and no index terms. The JSON analogue of the scalar
+/// storage domains (`Integer` etc.); supports no eql operators. For a searchable
+/// encrypted document use [`SteVecDocument`] (`public.eql_v3_json_search`).
+/// Strict. Hand-written (like the SteVec structs) but shaped exactly like a
+/// generated scalar storage struct — its catalog domain is `Shape::Scalar`.
+/// CIP-3512.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
+pub struct Json {
+    pub v: SchemaVersion,
+    pub i: Identifier,
+    pub c: Ciphertext,
+}
+
+impl DomainType for Json {
+    fn sql_domain_static() -> &'static str {
+        "public.eql_v3_json"
+    }
+    fn sql_domain(&self) -> &'static str {
+        Self::sql_domain_static()
+    }
+    // A storage-only scalar shape: no terms beyond the envelope. `Some(&[])`
+    // (not the trait's `None` default) so the catalog's scalar branch in
+    // `term_json_keys_match_catalog_terms` holds — this domain is `Shape::Scalar`.
+    fn term_json_keys_static() -> Option<&'static [&'static str]> {
+        Some(&[])
+    }
+    fn term_json_keys(&self) -> Option<&'static [&'static str]> {
+        Self::term_json_keys_static()
+    }
+    fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
+        Json::deserialize(value).map(|_| ())
+    }
+    fn schema(&self) -> Schema {
+        schema_for!(Json)
+    }
+}
+
 /// The `k` envelope key — the EQL payload **form discriminator**, always the
 /// literal `"sv"` for an encrypted-JSONB document.
 ///
@@ -71,9 +112,11 @@ impl JsonSchema for SteVecForm {
     }
 }
 
-/// `public.eql_v3_json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
-/// no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
-/// [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
+/// `public.eql_v3_json_search` — a SteVec encrypted-JSONB document
+/// (`{v, k, i, sv:[entry]}`, no root ciphertext). Strict. `k` is the `"sv"` form
+/// discriminator (see [`SteVecForm`]) — carried on the real wire, so the strict
+/// struct models it. For a storage-only encrypted JSON value (no search) use
+/// [`Json`] (`public.eql_v3_json`). Renamed from `public.eql_v3_json` in CIP-3512.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -155,6 +198,6 @@ macro_rules! ste_vec_domain_type {
     };
 }
 
-ste_vec_domain_type!(SteVecDocument, "public.eql_v3_json");
+ste_vec_domain_type!(SteVecDocument, "public.eql_v3_json_search");
 ste_vec_domain_type!(SteVecEntry, "public.eql_v3_jsonb_entry");
 ste_vec_domain_type!(SteVecQuery, "eql_v3.query_jsonb");

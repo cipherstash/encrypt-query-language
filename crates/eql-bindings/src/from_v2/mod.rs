@@ -466,7 +466,7 @@ fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
         Some(kind) => {
             return Err(FromV2Error::KindMismatch {
                 kind: kind.into(),
-                target: "eql_v3_json".into(),
+                target: "eql_v3_json_search".into(),
             })
         }
     }
@@ -505,7 +505,7 @@ impl EntryShape {
     /// context.
     fn domain(self) -> &'static str {
         match self {
-            Self::Document => "eql_v3_json",
+            Self::Document => "eql_v3_json_search",
             Self::Query => "query_jsonb",
         }
     }

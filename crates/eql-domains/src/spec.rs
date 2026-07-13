@@ -26,7 +26,12 @@ impl Domain {
     ///
     /// Every other domain — scalar or the SteVec entry — uses the join.
     pub fn full_name(&self, family_name: &str) -> String {
-        if matches!(self.shape, crate::Shape::SteVec) && self.name == "json" {
+        // The two jsonb column domains — storage-only `json` (`Shape::Scalar`,
+        // `public.eql_v3_json`) and searchable `json_search` (`Shape::SteVec`,
+        // `public.eql_v3_json_search`) — keep their established literal names
+        // rather than following the family+suffix convention (family is
+        // "jsonb", not "json"). CIP-3512.
+        if self.name == "json" || self.name == "json_search" {
             return self.name.to_string();
         }
         if matches!(self.shape, crate::Shape::SteVec) && self.name == "query" {
@@ -103,8 +108,10 @@ impl Domain {
     /// renderer calls this instead of carrying its own copy of the shape match.
     pub fn rust_struct_name(&self, family_name: &str) -> String {
         match self.shape {
+            // Storage-only `json` is `Shape::Scalar`, so it mangles like any
+            // scalar storage domain: `struct_ident("json")` -> `Json`.
             crate::Shape::Scalar => self.struct_ident(family_name),
-            crate::Shape::SteVec if self.name == "json" => "SteVecDocument".to_string(),
+            crate::Shape::SteVec if self.name == "json_search" => "SteVecDocument".to_string(),
             crate::Shape::SteVec => format!("SteVec{}", capitalize(self.name)),
         }
     }
@@ -245,8 +252,9 @@ mod tests {
         // bare.
         use crate::JSONB;
         assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "eql_v3_json");
-        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "eql_v3_jsonb_entry");
-        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "query_jsonb");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "eql_v3_json_search");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "eql_v3_jsonb_entry");
+        assert_eq!(JSONB.domain_name(&JSONB.domains[3]), "query_jsonb");
     }
 
     #[test]
@@ -260,12 +268,16 @@ mod tests {
             shape: Shape::Scalar,
         };
         assert_eq!(integer_eq.rust_struct_name("integer"), "IntegerEq");
+        // Storage-only json is Shape::Scalar, so it mangles like a scalar
+        // storage domain: `Json`. The searchable document (json_search) keeps
+        // the hand-written `SteVecDocument` identifier.
+        assert_eq!(JSONB.domains[0].rust_struct_name(JSONB.name), "Json");
         assert_eq!(
-            JSONB.domains[0].rust_struct_name(JSONB.name),
+            JSONB.domains[1].rust_struct_name(JSONB.name),
             "SteVecDocument"
         );
-        assert_eq!(JSONB.domains[1].rust_struct_name(JSONB.name), "SteVecEntry");
-        assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecQuery");
+        assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecEntry");
+        assert_eq!(JSONB.domains[3].rust_struct_name(JSONB.name), "SteVecQuery");
     }
 
     #[test]

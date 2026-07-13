@@ -5,8 +5,10 @@ import type { SteVecEntry } from "./SteVecEntry";
 import type { SteVecForm } from "./SteVecForm";
 
 /**
- * `public.eql_v3_json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
- * no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
- * [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
+ * `public.eql_v3_json_search` — a SteVec encrypted-JSONB document
+ * (`{v, k, i, sv:[entry]}`, no root ciphertext). Strict. `k` is the `"sv"` form
+ * discriminator (see [`SteVecForm`]) — carried on the real wire, so the strict
+ * struct models it. For a storage-only encrypted JSON value (no search) use
+ * [`Json`] (`public.eql_v3_json`). Renamed from `public.eql_v3_json` in CIP-3512.
  */
 export type SteVecDocument = { v: SchemaVersion, k: SteVecForm, i: Identifier, sv: Array<SteVecEntry>, };

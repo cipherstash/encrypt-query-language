@@ -216,7 +216,7 @@ COMMENT ON FUNCTION eql_v3.jsonb_array(jsonb) IS
 --! @note Public raw-`jsonb[]` containment helper over the extracted
 --!       deterministic fields — the function-form entrypoint for containment on
 --!       platforms without operator support (Supabase/PostgREST). The typed
---!       `public.eql_v3_json` `@>` operator does NOT call this function — it binds to
+--!       `public.eql_v3_json_search` `@>` operator does NOT call this function — it binds to
 --!       `eql_v3.ste_vec_contains` instead — but both agree on the result (a
 --!       parity test pins this). Also the documented GIN index expression
 --!       (`eql_v3.jsonb_array(col)`); see docs/reference/database-indexes.md.
@@ -237,7 +237,7 @@ COMMENT ON FUNCTION eql_v3.jsonb_contains(jsonb, jsonb) IS
 --! @return boolean True if all elements of a are contained in b.
 --! @note Public raw-`jsonb[]` reverse-containment helper — the function-form
 --!       entrypoint for `<@` on platforms without operator support. The typed
---!       `public.eql_v3_json` `<@` operator binds to `eql_v3.ste_vec_contains` instead,
+--!       `public.eql_v3_json_search` `<@` operator binds to `eql_v3.ste_vec_contains` instead,
 --!       but both agree on the result.
 CREATE FUNCTION eql_v3.jsonb_contained_by(a jsonb, b jsonb)
 RETURNS boolean
@@ -299,11 +299,11 @@ $$ LANGUAGE plpgsql;
 --! Empty b is always contained. Each element of b must match selector + eq_term
 --! in some element of a.
 --!
---! @param a public.eql_v3_json Container.
---! @param b public.eql_v3_json Elements to find.
+--! @param a public.eql_v3_json_search Container.
+--! @param b public.eql_v3_json_search Elements to find.
 --! @return boolean True if all elements of b are contained in a.
 --! @see eql_v3.ste_vec_contains(jsonb[], jsonb)
-CREATE FUNCTION eql_v3.ste_vec_contains(a public.eql_v3_json, b public.eql_v3_json)
+CREATE FUNCTION eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
   SET search_path = pg_catalog, extensions, public
@@ -344,7 +344,7 @@ $$ LANGUAGE plpgsql;
 --!
 --! Returns one jsonb_entry row per matching encrypted element. Returns empty
 --! set on no match. It deliberately does not wrap multiple matches as an
---! public.eql_v3_json document, because the root document domain requires an `sv`
+--! public.eql_v3_json_search document, because the root document domain requires an `sv`
 --! array and single leaves belong to public.eql_v3_jsonb_entry.
 --!
 --! @param val jsonb encrypted EQL payload with `sv`.

@@ -16,8 +16,10 @@ pub enum TargetDomain {
     /// A flat scalar domain (`integer`, `text_eq`, `integer_ord_ope`, …): the v2
     /// payload must be the `k: "ct"` form.
     Scalar(ScalarTarget),
-    /// The SteVec document domain `public.eql_v3_json`: the v2 payload must be the
-    /// `k: "sv"` form.
+    /// The SteVec document domain `public.eql_v3_json_search`: the v2 payload
+    /// must be the `k: "sv"` form. (The storage-only `public.eql_v3_json`
+    /// domain is a flat `Shape::Scalar` shape and resolves to
+    /// [`TargetDomain::Scalar`] with no term keys — CIP-3512.)
     Json,
 }
 
@@ -48,10 +50,11 @@ impl TargetDomain {
     /// `"text_search"`, `"float8"`, `"eql_v3_json"`, …) against the inventory.
     ///
     /// Shape-aware: scalar domains resolve to [`TargetDomain::Scalar`] with
-    /// their catalog term keys; the SteVec document domain `json` resolves to
-    /// [`TargetDomain::Json`]; the remaining SteVec shapes (`jsonb_entry`,
-    /// `query_jsonb`) are inventory members but not conversion targets, so
-    /// they — like any unknown name — return
+    /// their catalog term keys (including the storage-only `eql_v3_json`, whose
+    /// term-key list is empty — CIP-3512); the SteVec document domain
+    /// `json_search` resolves to [`TargetDomain::Json`]; the remaining SteVec
+    /// shapes (`jsonb_entry`, `query_jsonb`) are inventory members but not
+    /// conversion targets, so they — like any unknown name — return
     /// [`FromV2Error::UnknownDomain`].
     pub fn parse(name: &str) -> Result<Self, FromV2Error> {
         let entry = all().into_iter().find(|d| d.domain() == name);
@@ -61,7 +64,7 @@ impl TargetDomain {
                     domain: d.domain(),
                     term_keys,
                 })),
-                None if name == "eql_v3_json" => Ok(Self::Json),
+                None if name == "eql_v3_json_search" => Ok(Self::Json),
                 None => Err(FromV2Error::UnknownDomain { name: name.into() }),
             },
             None => Err(FromV2Error::UnknownDomain { name: name.into() }),
@@ -69,11 +72,11 @@ impl TargetDomain {
     }
 
     /// The target's name for error messages: the scalar domain name, or
-    /// `"eql_v3_json"`.
+    /// `"eql_v3_json_search"`.
     pub(super) fn describe(&self) -> &'static str {
         match self {
             Self::Scalar(t) => t.domain(),
-            Self::Json => "eql_v3_json",
+            Self::Json => "eql_v3_json_search",
         }
     }
 }

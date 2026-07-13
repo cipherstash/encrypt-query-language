@@ -37,6 +37,12 @@ pub mod v3_convert;
 // here directly rather than via `scalar_types!`.
 pub mod v3_ste_vec;
 
+// The storage-only / encryption-only json fixture (CIP-3512) — a hand-written
+// `FixtureSpec<serde_json::Value>` with NO index, so each document encrypts to a
+// plain `{v, i, c}` envelope for the storage-only `public.eql_v3_json` domain.
+// Same pipeline as `v3_ste_vec`, minus the SteVec index.
+pub mod v3_json_storage;
+
 // The scalar-shaped SteVec document fixture — a SteVec document carrying one
 // integer scalar at `$.field` per `eql_domains::INTEGER_VALUES`. A SPLIT fixture
 // (jsonb-document encryption input, integer plaintext oracle), so it uses the

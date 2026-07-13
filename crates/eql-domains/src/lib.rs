@@ -149,13 +149,16 @@ impl Role {
 pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
-    /// A `jsonb` family payload: `public.eql_v3_json` (`{v, i, sv: [entry]}`),
+    /// A SteVec `jsonb` payload: `public.eql_v3_json_search`
+    /// (`{v, i, sv: [entry]}`, the searchable document),
     /// `public.eql_v3_jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
     /// `public.query_jsonb` (`{sv: [query-entry]}`). The three differ in
     /// payload body but share the non-flat-scalar shape, so a single variant
-    /// covers them; `Domain.name` (`"json"`/`"entry"`/`"query"`) already
+    /// covers them; `Domain.name` (`"json_search"`/`"entry"`/`"query"`) already
     /// disambiguates which one a given domain is (see `Domain::full_name` /
-    /// `Domain::rust_struct_name`).
+    /// `Domain::rust_struct_name`). NB the storage-only `public.eql_v3_json`
+    /// domain is NOT SteVec — it is `Shape::Scalar` (a flat `{v,i,c}` envelope),
+    /// even though it belongs to the `jsonb` family (CIP-3512).
     SteVec,
 }
 
@@ -444,27 +447,47 @@ pub const DOUBLE: DomainFamily = DomainFamily {
     domains: ORDERED_INT_DOMAINS,
 };
 
-/// The SteVec (encrypted-JSONB) domains of the `jsonb` family. Every one has
-/// empty `terms` — but these domains ARE searchable: each carries its index
-/// terms *structurally*, inside the payload (`hm` for hash-equality, `op` for
-/// CLLW-OPE ordering, one per `sv` leaf), not as a flat family-level `Term`.
-/// Empty `terms` records "no flat-scalar term surface," never "no index
-/// capability"; the capability is described by the `Shape` and enforced by the
-/// hand-written SQL CHECKs under `src/v3/jsonb/`. The coupling is pinned by
-/// `tests::shape_and_terms_are_consistent`. The SQL
-/// surface is hand-written under `src/v3/jsonb/` (the SQL generator SKIPS these),
+/// The domains of the `jsonb` family. All have empty `terms`. The
+/// storage-only `json` domain (`Shape::Scalar`) is genuinely non-searchable — a
+/// plain `{v,i,c}` envelope, empty `terms` meaning exactly that. The three
+/// SteVec domains (`json_search`/`entry`/`query`) ARE searchable despite empty
+/// `terms`: each carries its index terms *structurally*, inside the payload
+/// (`hm` for hash-equality, `op` for CLLW-OPE ordering, one per `sv` leaf), not
+/// as a flat family-level `Term`. For the SteVec domains empty `terms` records
+/// "no flat-scalar term surface," never "no index capability"; the capability
+/// is described by the `Shape` and enforced by the hand-written SQL CHECKs under
+/// `src/v3/jsonb/`. The coupling is pinned by
+/// `tests::shape_and_terms_are_consistent`. The SQL surface is hand-written
+/// under `src/v3/jsonb/` (the SQL generator SKIPS the whole non-scalar family),
 /// and the Rust payload structs are hand-written in
 /// `crates/eql-bindings/src/v3/jsonb.rs` (their fields/serde are not derivable
 /// from the catalog); the catalog drives only their inventory membership + order.
 const JSONB_DOMAINS: &[Domain] = &[
     Domain {
-        // The established document name `public.eql_v3_json` predates the catalog and
+        // The storage-only / encryption-only json domain (`public.eql_v3_json`):
+        // a plain `{v, i, c}` envelope, the JSON analogue of the scalar storage
+        // domains (`public.eql_v3_integer` etc.). Structurally a flat scalar
+        // payload, so `Shape::Scalar` — it reuses the scalar storage machinery
+        // (its hand-written `Json` binding behaves like a generated storage
+        // struct). The `jsonb` family is still non-scalar overall (its other
+        // domains are SteVec), so codegen still SKIPS generating its SQL/bindings
+        // — the `Json` struct is hand-written in `crates/eql-bindings/src/v3/jsonb.rs`
+        // alongside the SteVec structs. Like the document domain below, the name
         // does not follow the family+suffix convention (family is "jsonb", not
-        // "json") — an explicit literal name, not the empty-suffix
-        // bare-family-name convention every scalar storage domain uses.
-        // `Domain::full_name` special-cases the name `"json"` to return it
-        // verbatim instead of concatenating.
+        // "json"), so `Domain::full_name` special-cases it to return "json"
+        // verbatim. CIP-3512.
         name: "json",
+        terms: &[],
+        shape: Shape::Scalar,
+    },
+    Domain {
+        // The searchable SteVec document domain (`public.eql_v3_json_search`):
+        // an `{v, i, sv: [entry]}` envelope whose `sv` array carries per-leaf
+        // index terms. Was `public.eql_v3_json` before CIP-3512 (renamed when
+        // the bare name was repurposed to the storage-only domain above).
+        // `Domain::full_name` special-cases the name `"json_search"` to return
+        // it verbatim (family is "jsonb", not "json").
+        name: "json_search",
         terms: &[],
         shape: Shape::SteVec,
     },
@@ -480,14 +503,16 @@ const JSONB_DOMAINS: &[Domain] = &[
     },
 ];
 
-/// `jsonb` — the encrypted-JSONB (SteVec) family: `public.eql_v3_json` (document, the
-/// one explicit-name exception — see `JSONB_DOMAINS`), `public.eql_v3_jsonb_entry`
+/// `jsonb` — the encrypted-JSONB family: `public.eql_v3_json` (storage-only /
+/// encryption-only, a `{v,i,c}` `Shape::Scalar` envelope — CIP-3512),
+/// `public.eql_v3_json_search` (the searchable SteVec document, the one
+/// explicit-name exception — see `JSONB_DOMAINS`), `public.eql_v3_jsonb_entry`
 /// (one sv element), `public.query_jsonb` (containment needle). The Rust
 /// struct *bodies* are hand-written (`crates/eql-bindings/src/v3/jsonb.rs`,
 /// not derivable from the catalog); `Domain::rust_struct_name` derives their
-/// *identifiers* (`SteVecDocument`/`SteVecEntry`/`SteVecQuery`) from
+/// *identifiers* (`Json`/`SteVecDocument`/`SteVecEntry`/`SteVecQuery`) from
 /// `Domain.name` so codegen's inventory renderer doesn't need its own copy of
-/// the mapping. Added to `CATALOG` at the flip task.
+/// the mapping.
 pub const JSONB: DomainFamily = DomainFamily {
     name: "jsonb",
     domains: JSONB_DOMAINS,

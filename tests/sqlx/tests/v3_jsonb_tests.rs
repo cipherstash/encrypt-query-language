@@ -1,5 +1,5 @@
 //! Parameterized test harness for the `eql_v3` encrypted-JSONB (SteVec) surface
-//! (`public.eql_v3_json` / `public.eql_v3_jsonb_entry` / `eql_v3.query_jsonb`).
+//! (`public.eql_v3_json_search` / `public.eql_v3_jsonb_entry` / `eql_v3.query_jsonb`).
 //!
 //! Design source of truth:
 //! `docs/superpowers/plans/2026-06-09-eql-v3-jsonb-test-harness-design.md`.
@@ -10,7 +10,7 @@
 //! `{scalar type}`, because a SteVec value is a *document* (a collection of
 //! leaves addressed by selector), so it does not fit `scalar_matrix!`.
 //!
-//! CRITICAL correctness rule: `public.eql_v3_json` is a DOMAIN over `jsonb`.
+//! CRITICAL correctness rule: `public.eql_v3_json_search` is a DOMAIN over `jsonb`.
 //! PostgreSQL resolves `domain OP untyped_literal` to the NATIVE jsonb operator
 //! (the domain flattens to its base type for unknown-typed literals). So every
 //! `->`/`->>` selector operand and every blocker RHS operand below is
@@ -94,7 +94,7 @@ fn op_entry(op_hex: &str) -> String {
     entry(SEL_HELLO_OP, "op", op_hex)
 }
 
-/// Build a document literal (`public.eql_v3_json`-shaped) wrapping the given sv element
+/// Build a document literal (`public.eql_v3_json_search`-shaped) wrapping the given sv element
 /// literals (each already a JSON object string).
 fn doc(elems: &[String]) -> String {
     format!(
@@ -428,7 +428,7 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
 
     // Self-containment (json @> json).
     let self_c: bool = sqlx::query_scalar(&format!(
-        "SELECT '{full}'::public.eql_v3_json @> '{full}'::public.eql_v3_json"
+        "SELECT '{full}'::public.eql_v3_json_search @> '{full}'::public.eql_v3_json_search"
     ))
     .fetch_one(&pool)
     .await?;
@@ -436,12 +436,12 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
 
     // Superset @> subset, and commutator subset <@ superset.
     let sup: bool = sqlx::query_scalar(&format!(
-        "SELECT '{full}'::public.eql_v3_json @> '{subset}'::public.eql_v3_json"
+        "SELECT '{full}'::public.eql_v3_json_search @> '{subset}'::public.eql_v3_json_search"
     ))
     .fetch_one(&pool)
     .await?;
     let sub: bool = sqlx::query_scalar(&format!(
-        "SELECT '{subset}'::public.eql_v3_json <@ '{full}'::public.eql_v3_json"
+        "SELECT '{subset}'::public.eql_v3_json_search <@ '{full}'::public.eql_v3_json_search"
     ))
     .fetch_one(&pool)
     .await?;
@@ -452,7 +452,7 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
 
     // Subset does NOT contain superset.
     let backwards: bool = sqlx::query_scalar(&format!(
-        "SELECT '{subset}'::public.eql_v3_json @> '{full}'::public.eql_v3_json"
+        "SELECT '{subset}'::public.eql_v3_json_search @> '{full}'::public.eql_v3_json_search"
     ))
     .fetch_one(&pool)
     .await?;
@@ -461,12 +461,12 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
     // entry-needle overload (json @> jsonb_entry) + reverse (entry <@ json).
     let ent = entry(SEL_ROOT_HM, "hm", HM_TERM_FORGED);
     let by_entry: bool = sqlx::query_scalar(&format!(
-        "SELECT '{full}'::public.eql_v3_json @> '{ent}'::public.eql_v3_jsonb_entry"
+        "SELECT '{full}'::public.eql_v3_json_search @> '{ent}'::public.eql_v3_jsonb_entry"
     ))
     .fetch_one(&pool)
     .await?;
     let by_entry_rev: bool = sqlx::query_scalar(&format!(
-        "SELECT '{ent}'::public.eql_v3_jsonb_entry <@ '{full}'::public.eql_v3_json"
+        "SELECT '{ent}'::public.eql_v3_jsonb_entry <@ '{full}'::public.eql_v3_json_search"
     ))
     .fetch_one(&pool)
     .await?;
@@ -525,7 +525,7 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     // The raw helper must agree with the typed `@>` operator (which binds to
     // eql_v3.ste_vec_contains, not this function) on the same well-formed inputs.
     let typed: bool = sqlx::query_scalar(&format!(
-        "SELECT '{full}'::public.eql_v3_json @> '{subset}'::public.eql_v3_json"
+        "SELECT '{full}'::public.eql_v3_json_search @> '{subset}'::public.eql_v3_json_search"
     ))
     .fetch_one(&pool)
     .await?;
@@ -670,12 +670,12 @@ async fn v3_jsonb_containment_rejects_wrong_term_type(pool: PgPool) -> anyhow::R
     let op_needle = needle(&[(COLLIDE_SEL, "op", COLLIDE_TERM)]);
     let hm_needle = needle(&[(COLLIDE_SEL, "hm", COLLIDE_TERM)]);
     let collide_accept: bool = sqlx::query_scalar(&format!(
-        "SELECT '{hm_doc}'::public.eql_v3_json @> '{hm_needle}'::eql_v3.query_jsonb"
+        "SELECT '{hm_doc}'::public.eql_v3_json_search @> '{hm_needle}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
     let collide_reject: bool = sqlx::query_scalar(&format!(
-        "SELECT '{hm_doc}'::public.eql_v3_json @> '{op_needle}'::eql_v3.query_jsonb"
+        "SELECT '{hm_doc}'::public.eql_v3_json_search @> '{op_needle}'::eql_v3.query_jsonb"
     ))
     .fetch_one(&pool)
     .await?;
@@ -807,15 +807,15 @@ v3_jsonb_supported_null!(
     (entry_gt_lhs, "SELECT NULL::public.eql_v3_jsonb_entry > '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_jsonb_entry"),
     (entry_gte_lhs, "SELECT NULL::public.eql_v3_jsonb_entry >= '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_jsonb_entry"),
     // document containment: json @> json
-    (doc_contains_doc_lhs, "SELECT NULL::public.eql_v3_json @> '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json"),
-    (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json @> NULL::public.eql_v3_json"),
+    (doc_contains_doc_lhs, "SELECT NULL::public.eql_v3_json_search @> '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search"),
+    (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search @> NULL::public.eql_v3_json_search"),
     // json @> query_jsonb / json @> jsonb_entry
-    (doc_contains_query_lhs, "SELECT NULL::public.eql_v3_json @> '{\"sv\":[]}'::eql_v3.query_jsonb"),
-    (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json @> NULL::eql_v3.query_jsonb"),
-    (doc_contains_entry_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json @> NULL::public.eql_v3_jsonb_entry"),
+    (doc_contains_query_lhs, "SELECT NULL::public.eql_v3_json_search @> '{\"sv\":[]}'::eql_v3.query_jsonb"),
+    (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search @> NULL::eql_v3.query_jsonb"),
+    (doc_contains_entry_rhs, "SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search @> NULL::public.eql_v3_jsonb_entry"),
     // <@ reverses
-    (query_contained_lhs, "SELECT NULL::eql_v3.query_jsonb <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json"),
-    (entry_contained_lhs, "SELECT NULL::public.eql_v3_jsonb_entry <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json"),
+    (query_contained_lhs, "SELECT NULL::eql_v3.query_jsonb <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search"),
+    (entry_contained_lhs, "SELECT NULL::public.eql_v3_jsonb_entry <@ '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search"),
 );
 
 // The `-> text` / `-> int` / `->> text` accessors return non-boolean types, so
@@ -824,19 +824,19 @@ v3_jsonb_supported_null!(
 #[sqlx::test]
 async fn v3_jsonb_arrow_accessors_supported_null(pool: PgPool) -> anyhow::Result<()> {
     let arrow_text: Option<String> =
-        sqlx::query_scalar("SELECT (NULL::public.eql_v3_json -> 'x'::text)::jsonb::text")
+        sqlx::query_scalar("SELECT (NULL::public.eql_v3_json_search -> 'x'::text)::jsonb::text")
             .fetch_one(&pool)
             .await?;
     assert!(arrow_text.is_none(), "json -> text must propagate NULL");
 
     let arrow_int: Option<String> =
-        sqlx::query_scalar("SELECT (NULL::public.eql_v3_json -> 0::integer)::jsonb::text")
+        sqlx::query_scalar("SELECT (NULL::public.eql_v3_json_search -> 0::integer)::jsonb::text")
             .fetch_one(&pool)
             .await?;
     assert!(arrow_int.is_none(), "json -> int must propagate NULL");
 
     let arrow_text_text: Option<String> =
-        sqlx::query_scalar("SELECT NULL::public.eql_v3_json ->> 'x'::text")
+        sqlx::query_scalar("SELECT NULL::public.eql_v3_json_search ->> 'x'::text")
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -845,7 +845,7 @@ async fn v3_jsonb_arrow_accessors_supported_null(pool: PgPool) -> anyhow::Result
     );
 
     let arrow_int_text: Option<String> =
-        sqlx::query_scalar("SELECT NULL::public.eql_v3_json ->> 0::integer")
+        sqlx::query_scalar("SELECT NULL::public.eql_v3_json_search ->> 0::integer")
             .fetch_one(&pool)
             .await?;
     assert!(arrow_int_text.is_none(), "json ->> int must propagate NULL");
@@ -863,7 +863,7 @@ macro_rules! v3_jsonb_blocker_cases {
         $( paste::paste! {
             #[sqlx::test]
             async fn [<v3_jsonb_ $name _blocker>](pool: PgPool) -> anyhow::Result<()> {
-                let lhs = format!("'{}'::public.eql_v3_json", NN_DOC);
+                let lhs = format!("'{}'::public.eql_v3_json_search", NN_DOC);
                 let msg = "is not supported";
 
                 // Domain on the left, real-typed RHS — must raise.
@@ -872,16 +872,16 @@ macro_rules! v3_jsonb_blocker_cases {
 
                 // Non-STRICT proof: NULL domain LHS must STILL raise (a STRICT
                 // blocker would short-circuit to NULL and bypass the exception).
-                let null_lhs = format!("SELECT NULL::public.eql_v3_json {} {}", $op, $rhs);
+                let null_lhs = format!("SELECT NULL::public.eql_v3_json_search {} {}", $op, $rhs);
                 eql_tests::assert_raises(&pool, &null_lhs, &[], msg).await?;
 
                 // Domain on the RIGHT, only where the surface defines that form.
                 let rhs_dom: Option<&str> = $rhs_domain;
                 if let Some(_) = rhs_dom {
-                    let sql = format!("SELECT {} {} '{}'::public.eql_v3_json", $rhs, $op, NN_DOC);
+                    let sql = format!("SELECT {} {} '{}'::public.eql_v3_json_search", $rhs, $op, NN_DOC);
                     eql_tests::assert_raises(&pool, &sql, &[], msg).await?;
                     // Non-STRICT proof for the right-domain form.
-                    let null_rhs = format!("SELECT {} {} NULL::public.eql_v3_json", $rhs, $op);
+                    let null_rhs = format!("SELECT {} {} NULL::public.eql_v3_json_search", $rhs, $op);
                     eql_tests::assert_raises(&pool, &null_rhs, &[], msg).await?;
                 }
                 Ok(())
@@ -965,8 +965,8 @@ v3_jsonb_blocker_cases!(
 
 #[sqlx::test]
 async fn v3_jsonb_root_doc_doc_comparison_blockers(pool: PgPool) -> anyhow::Result<()> {
-    let lhs = format!("'{}'::public.eql_v3_json", NN_DOC);
-    let rhs = format!("'{}'::public.eql_v3_json", NN_DOC);
+    let lhs = format!("'{}'::public.eql_v3_json_search", NN_DOC);
+    let rhs = format!("'{}'::public.eql_v3_json_search", NN_DOC);
     for op in ["=", "<>", "<", "<=", ">", ">="] {
         let sql = format!("SELECT {lhs} {op} {rhs}");
         eql_tests::assert_raises(&pool, &sql, &[], "is not supported").await?;
@@ -976,7 +976,7 @@ async fn v3_jsonb_root_doc_doc_comparison_blockers(pool: PgPool) -> anyhow::Resu
 
 // D7 (negative control) — pins the domain-flattening rule that makes the typed
 // RHS in `v3_jsonb_blocker_cases!` LOAD-BEARING (file header, lines 13–20). A
-// BARE (unknown-typed) operand flattens `public.eql_v3_json` to native `jsonb`, so the
+// BARE (unknown-typed) operand flattens `public.eql_v3_json_search` to native `jsonb`, so the
 // SAME operator that RAISES with a typed RHS in D7 must SUCCEED here — resolving
 // to native and returning a value, never reaching our blocker. Without this, the
 // `::text` / `::jsonb` typing in D7 could silently become unnecessary (or, worse,
@@ -984,7 +984,7 @@ async fn v3_jsonb_root_doc_doc_comparison_blockers(pool: PgPool) -> anyhow::Resu
 // would notice. See the "Typed operands" caveat in `docs/reference/json-support.md`.
 #[sqlx::test]
 async fn v3_jsonb_bare_operand_flattens_to_native(pool: PgPool) -> anyhow::Result<()> {
-    let doc = format!("'{}'::public.eql_v3_json", NN_DOC);
+    let doc = format!("'{}'::public.eql_v3_json_search", NN_DOC);
 
     // `?` is blocked with a typed RHS in D7 (`question`). Bare `'sv'` is unknown
     // -> native `jsonb ? text` -> top-level key present -> TRUE, no raise.
@@ -1033,7 +1033,7 @@ async fn v3_jsonb_bare_operand_flattens_to_native(pool: PgPool) -> anyhow::Resul
 // D7 (negative control, finding #1) — the `->`/`->>` SUPPORTED operators are the
 // DANGEROUS face of domain-flattening. Unlike the blockers above (typed RHS
 // RAISES, bare RHS merely succeeds-as-native), `->`/`->>` SILENTLY return a WRONG
-// answer for a bare untyped selector: `doc -> 'sel'` flattens `public.eql_v3_json` to
+// answer for a bare untyped selector: `doc -> 'sel'` flattens `public.eql_v3_json_search` to
 // native `jsonb -> text` (a root-key lookup on the envelope), NOT the v3
 // selector-lookup operator. This pins BOTH which operator binds (`pg_typeof`) and
 // the user-visible divergence, so a future resolution change in either direction
@@ -1046,7 +1046,7 @@ async fn v3_jsonb_bare_operand_flattens_to_native(pool: PgPool) -> anyhow::Resul
 // "Typed operands" caveat in `docs/reference/json-support.md`.
 #[sqlx::test]
 async fn v3_jsonb_arrow_bare_operand_flattens_to_native(pool: PgPool) -> anyhow::Result<()> {
-    let doc = format!("'{}'::public.eql_v3_json", NN_DOC);
+    let doc = format!("'{}'::public.eql_v3_json_search", NN_DOC);
 
     // --- `->` : which operator binds? -------------------------------------
     // Bare selector -> NATIVE `jsonb -> text` (result type is `jsonb`).
@@ -1139,7 +1139,7 @@ macro_rules! v3_jsonb_payload_reject {
 
 v3_jsonb_payload_reject!(
     v3_jsonb_json_payload_check,
-    "public.eql_v3_json",
+    "public.eql_v3_json_search",
     [
         "[]",                                                                 // non-object
         "{\"v\":3,\"sv\":[]}",                                                // missing i
@@ -1192,7 +1192,7 @@ v3_jsonb_payload_reject!(
 #[sqlx::test]
 async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()> {
     let ok_doc: bool =
-        sqlx::query_scalar("SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json IS NOT NULL")
+        sqlx::query_scalar("SELECT '{\"i\":{},\"v\":3,\"sv\":[]}'::public.eql_v3_json_search IS NOT NULL")
             .fetch_one(&pool)
             .await?;
     assert!(ok_doc);
@@ -1213,7 +1213,7 @@ async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()
 
 /// D9 — the cipherstash-client SteVec envelope SHAPE (the extra top-level
 /// `k:"sv"` the generator emits, plus the per-entry `a` array marker) must pass
-/// the `public.eql_v3_json` domain CHECK. The static fixture lacked `k`; the generated
+/// the `public.eql_v3_json_search` domain CHECK. The static fixture lacked `k`; the generated
 /// fixture carries it, so this guards the generated fixture against a CHECK
 /// rejection independently of live encryption (no creds, no fixture load).
 #[sqlx::test]
@@ -1226,13 +1226,13 @@ async fn v3_jsonb_generator_envelope_shape_accepted(pool: PgPool) -> anyhow::Res
         ]
     }"#;
     let ok: bool = sqlx::query_scalar(&format!(
-        "SELECT '{envelope}'::public.eql_v3_json IS NOT NULL"
+        "SELECT '{envelope}'::public.eql_v3_json_search IS NOT NULL"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(
         ok,
-        "cipherstash SteVec envelope (root k:\"sv\" + per-entry a) must pass the public.eql_v3_json CHECK"
+        "cipherstash SteVec envelope (root k:\"sv\" + per-entry a) must pass the public.eql_v3_json_search CHECK"
     );
     Ok(())
 }
@@ -1254,14 +1254,14 @@ async fn v3_jsonb_path_query_match_and_miss(pool: PgPool) -> anyhow::Result<()> 
     let d = array_doc();
     // Matching selector returns exactly one entry row, whose selector is 'aa'.
     let hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json::jsonb, 'aa')"
+        "SELECT count(*) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'aa')"
     ))
     .fetch_one(&pool)
     .await?;
     assert_eq!(hits, 1, "one entry matches selector 'aa'");
 
     let sel: String = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector(e) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json::jsonb, 'aa') AS e"
+        "SELECT eql_v3.selector(e) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'aa') AS e"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1269,7 +1269,7 @@ async fn v3_jsonb_path_query_match_and_miss(pool: PgPool) -> anyhow::Result<()> 
 
     // Missing selector returns an empty set.
     let miss: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json::jsonb, 'zz')"
+        "SELECT count(*) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'zz')"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1281,14 +1281,14 @@ async fn v3_jsonb_path_query_match_and_miss(pool: PgPool) -> anyhow::Result<()> 
 async fn v3_jsonb_path_exists_and_first(pool: PgPool) -> anyhow::Result<()> {
     let d = array_doc();
     let exists: bool = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.jsonb_path_exists('{d}'::public.eql_v3_json::jsonb, 'bb')"
+        "SELECT eql_v3.jsonb_path_exists('{d}'::public.eql_v3_json_search::jsonb, 'bb')"
     ))
     .fetch_one(&pool)
     .await?;
     assert!(exists, "selector 'bb' exists");
 
     let missing: bool = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.jsonb_path_exists('{d}'::public.eql_v3_json::jsonb, 'zz')"
+        "SELECT eql_v3.jsonb_path_exists('{d}'::public.eql_v3_json_search::jsonb, 'zz')"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1296,7 +1296,7 @@ async fn v3_jsonb_path_exists_and_first(pool: PgPool) -> anyhow::Result<()> {
 
     // query_first returns the matching entry (selector 'bb').
     let first_sel: String = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector(eql_v3.jsonb_path_query_first('{d}'::public.eql_v3_json::jsonb, 'bb'))"
+        "SELECT eql_v3.selector(eql_v3.jsonb_path_query_first('{d}'::public.eql_v3_json_search::jsonb, 'bb'))"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1304,7 +1304,7 @@ async fn v3_jsonb_path_exists_and_first(pool: PgPool) -> anyhow::Result<()> {
 
     // query_first on a miss returns NULL.
     let first_miss: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector(eql_v3.jsonb_path_query_first('{d}'::public.eql_v3_json::jsonb, 'zz'))"
+        "SELECT eql_v3.selector(eql_v3.jsonb_path_query_first('{d}'::public.eql_v3_json_search::jsonb, 'zz'))"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1316,14 +1316,14 @@ async fn v3_jsonb_path_exists_and_first(pool: PgPool) -> anyhow::Result<()> {
 async fn v3_jsonb_array_length_and_elements(pool: PgPool) -> anyhow::Result<()> {
     let d = array_doc();
     let len: i32 = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.jsonb_array_length('{d}'::public.eql_v3_json::jsonb)"
+        "SELECT eql_v3.jsonb_array_length('{d}'::public.eql_v3_json_search::jsonb)"
     ))
     .fetch_one(&pool)
     .await?;
     assert_eq!(len, 2, "array doc has two elements");
 
     let n: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM eql_v3.jsonb_array_elements('{d}'::public.eql_v3_json::jsonb)"
+        "SELECT count(*) FROM eql_v3.jsonb_array_elements('{d}'::public.eql_v3_json_search::jsonb)"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1332,14 +1332,14 @@ async fn v3_jsonb_array_length_and_elements(pool: PgPool) -> anyhow::Result<()> 
     // jsonb_array_elements returns SETOF public.eql_v3_jsonb_entry — the rows are
     // valid entries (the entry extractor accepts them).
     let sels: Vec<String> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector(e) FROM eql_v3.jsonb_array_elements('{d}'::public.eql_v3_json::jsonb) AS e ORDER BY 1"
+        "SELECT eql_v3.selector(e) FROM eql_v3.jsonb_array_elements('{d}'::public.eql_v3_json_search::jsonb) AS e ORDER BY 1"
     ))
     .fetch_all(&pool)
     .await?;
     assert_eq!(sels, vec!["aa".to_string(), "bb".to_string()]);
 
     let texts: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM eql_v3.jsonb_array_elements_text('{d}'::public.eql_v3_json::jsonb)"
+        "SELECT count(*) FROM eql_v3.jsonb_array_elements_text('{d}'::public.eql_v3_json_search::jsonb)"
     ))
     .fetch_one(&pool)
     .await?;
@@ -1351,11 +1351,11 @@ async fn v3_jsonb_array_length_and_elements(pool: PgPool) -> anyhow::Result<()> 
 async fn v3_jsonb_array_length_non_array_raises(pool: PgPool) -> anyhow::Result<()> {
     // A document WITHOUT the `a:true` array flag is not an array.
     let not_array = r#"{"i":{},"v":3,"sv":[{"s":"aa","c":"x","hm":"00"}]}"#;
-    let sql = format!("SELECT eql_v3.jsonb_array_length('{not_array}'::public.eql_v3_json::jsonb)");
+    let sql = format!("SELECT eql_v3.jsonb_array_length('{not_array}'::public.eql_v3_json_search::jsonb)");
     eql_tests::assert_raises(&pool, &sql, &[], "non-array").await?;
 
     let sql2 = format!(
-        "SELECT count(*) FROM eql_v3.jsonb_array_elements('{not_array}'::public.eql_v3_json::jsonb)"
+        "SELECT count(*) FROM eql_v3.jsonb_array_elements('{not_array}'::public.eql_v3_json_search::jsonb)"
     );
     eql_tests::assert_raises(&pool, &sql2, &[], "non-array").await?;
     Ok(())
@@ -1462,19 +1462,19 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     );
 
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TEMP TABLE v3_jsonb_scale (payload public.eql_v3_json) ON COMMIT DROP")
+    sqlx::query("CREATE TEMP TABLE v3_jsonb_scale (payload public.eql_v3_json_search) ON COMMIT DROP")
         .execute(&mut *tx)
         .await?;
     // The bulk: 5000 copies of the filler document.
     sqlx::query(
         "INSERT INTO v3_jsonb_scale(payload) \
-         SELECT $1::jsonb::public.eql_v3_json FROM generate_series(1, 5000)",
+         SELECT $1::jsonb::public.eql_v3_json_search FROM generate_series(1, 5000)",
     )
     .bind(&filler_payload)
     .execute(&mut *tx)
     .await?;
     // The single selective pivot document.
-    sqlx::query("INSERT INTO v3_jsonb_scale(payload) VALUES ($1::jsonb::public.eql_v3_json)")
+    sqlx::query("INSERT INTO v3_jsonb_scale(payload) VALUES ($1::jsonb::public.eql_v3_json_search)")
         .bind(&pivot_payload)
         .execute(&mut *tx)
         .await?;
@@ -1563,21 +1563,21 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
     // `-> 0` / `-> 1` index the sv array positionally (native jsonb path), not a
     // selector lookup. Selectors come out in array order.
     let i0: String = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector('{d}'::public.eql_v3_json -> 0::integer)"
+        "SELECT eql_v3.selector('{d}'::public.eql_v3_json_search -> 0::integer)"
     ))
     .fetch_one(&pool)
     .await?;
     assert_eq!(i0, "aa", "-> 0 must index the first sv element");
 
     let i1: String = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector('{d}'::public.eql_v3_json -> 1::integer)"
+        "SELECT eql_v3.selector('{d}'::public.eql_v3_json_search -> 1::integer)"
     ))
     .fetch_one(&pool)
     .await?;
     assert_eq!(i1, "bb", "-> 1 must index the second sv element");
 
     let t1: String =
-        sqlx::query_scalar(&format!("SELECT '{d}'::public.eql_v3_json ->> 1::integer"))
+        sqlx::query_scalar(&format!("SELECT '{d}'::public.eql_v3_json_search ->> 1::integer"))
             .fetch_one(&pool)
             .await?;
     assert!(
@@ -1588,7 +1588,7 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
     // Regression: `-> 'sv'::text` is a SELECTOR lookup (our text operator), NOT
     // native key access — there is no element with selector 'sv', so NULL.
     let sv_lookup: Option<String> = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.selector('{d}'::public.eql_v3_json -> 'sv'::text)"
+        "SELECT eql_v3.selector('{d}'::public.eql_v3_json_search -> 'sv'::text)"
     ))
     .fetch_one(&pool)
     .await?;
