@@ -71,11 +71,12 @@ BEGIN
 END $$;
 SQL
 
-echo "==> smoke: v3 encrypted JSONB surface"
+echo "==> smoke: v3 searchable encrypted JSONB (SteVec document) surface"
 "${RUN[@]}" <<'SQL'
-CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.eql_v3_json);
+-- The searchable SteVec document domain is public.eql_v3_json_search (CIP-3512).
+CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.eql_v3_json_search);
 INSERT INTO v3_json_smoke VALUES
-  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json);
+  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json_search);
 
 -- Supported typed accessors and containment.
 SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
@@ -97,17 +98,58 @@ BEGIN
     PERFORM e ? 'sel'::text FROM v3_json_smoke WHERE id = 1;
   EXCEPTION WHEN OTHERS THEN
     raised := true;
-    IF SQLERRM <> 'operator ? is not supported for public.eql_v3_json' THEN
-      RAISE EXCEPTION 'json blocker raised an unexpected message: %', SQLERRM;
+    IF SQLERRM <> 'operator ? is not supported for public.eql_v3_json_search' THEN
+      RAISE EXCEPTION 'json_search blocker raised an unexpected message: %', SQLERRM;
     END IF;
   END;
 
   IF NOT raised THEN
-    RAISE EXCEPTION 'v3 json blocker did not raise';
+    RAISE EXCEPTION 'v3 json_search blocker did not raise';
   END IF;
 END $$;
 
 DROP TABLE v3_json_smoke;
+SQL
+
+echo "==> smoke: v3 storage-only encrypted JSON surface (CIP-3512)"
+"${RUN[@]}" <<'SQL'
+-- The storage-only / encryption-only domain public.eql_v3_json is a plain
+-- {v,i,c} envelope: it accepts a ciphertext-only payload and (its CHECK)
+-- rejects a SteVec document, and its native-jsonb firewall raises on any op.
+CREATE TABLE v3_json_storage_smoke (id int PRIMARY KEY, e public.eql_v3_json);
+INSERT INTO v3_json_storage_smoke VALUES
+  (1, '{"i":{"c":"v3_json_storage_smoke","t":"encrypted"},"v":3,"c":"ciphertext"}'::public.eql_v3_json);
+
+DO $$
+DECLARE
+  raised boolean := false;
+BEGIN
+  -- A SteVec document payload must NOT satisfy the storage-only CHECK.
+  BEGIN
+    PERFORM '{"i":{},"v":3,"sv":[{"s":"sel","c":"ct","hm":"00"}]}'::public.eql_v3_json;
+  EXCEPTION WHEN check_violation THEN
+    raised := true;
+  END;
+  IF NOT raised THEN
+    RAISE EXCEPTION 'storage-only json CHECK accepted a SteVec document payload';
+  END IF;
+
+  -- The native-jsonb firewall raises for the storage-only domain too.
+  raised := false;
+  BEGIN
+    PERFORM e @> '{}'::jsonb FROM v3_json_storage_smoke WHERE id = 1;
+  EXCEPTION WHEN OTHERS THEN
+    raised := true;
+    IF SQLERRM <> 'operator @> is not supported for public.eql_v3_json' THEN
+      RAISE EXCEPTION 'storage json blocker raised an unexpected message: %', SQLERRM;
+    END IF;
+  END;
+  IF NOT raised THEN
+    RAISE EXCEPTION 'v3 storage json blocker did not raise';
+  END IF;
+END $$;
+
+DROP TABLE v3_json_storage_smoke;
 SQL
 
 echo "clean v3 install OK (D11 + D4 proven)"
