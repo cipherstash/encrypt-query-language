@@ -30,8 +30,11 @@ impl Domain {
         // `public.eql_v3_json`) and searchable `json_search` (`Shape::SteVec`,
         // `public.eql_v3_json_search`) — keep their established literal names
         // rather than following the family+suffix convention (family is
-        // "jsonb", not "json"). CIP-3512.
-        if self.name == "json" || self.name == "json_search" {
+        // "jsonb", not "json"). Scoped to the `jsonb` family so an unrelated
+        // future family with a bare domain named "json"/"json_search" still
+        // takes the normal family+suffix join (mirrors the guard in
+        // `every_domain_name_starts_with_its_family_name`). CIP-3512.
+        if family_name == "jsonb" && (self.name == "json" || self.name == "json_search") {
             return self.name.to_string();
         }
         if matches!(self.shape, crate::Shape::SteVec) && self.name == "query" {
