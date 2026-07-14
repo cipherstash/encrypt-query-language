@@ -492,4 +492,18 @@ mod text_fn {
         })
         .await
     }
+
+    /// `text_search_ore` ([Hm, Ore, Bloom]) — the ORE twin of `text_search`. Same
+    /// eq/ord function facets plus eq_term + ord_term_ore identity, but ordering
+    /// rides the block-ORE term (`ord_term_ore`/`ob`) instead of the OPE term
+    /// (`ord_term`/`op`). The bloom `@>`/`<@` facet is covered by `match_smoke`.
+    #[sqlx::test]
+    async fn search_ore_fn_oracle(pool: PgPool) -> Result<()> {
+        run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
+            assert_eq_fn_oracle::<String>(&pool, Variant::SearchOre, &c).await?;
+            assert_ord_fn_oracle::<String>(&pool, Variant::SearchOre, &c).await?;
+            assert_extractor_oracle::<String>(&pool, Variant::SearchOre, &c).await
+        })
+        .await
+    }
 }

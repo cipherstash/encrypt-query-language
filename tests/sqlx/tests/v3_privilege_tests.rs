@@ -44,6 +44,16 @@ const ORD_QUERY: &str =
     "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
      WHERE a.payload::public.eql_v3_integer_ord < b.payload::public.eql_v3_integer_ord";
 
+/// The block-ORE counterpart of [`ORD_QUERY`]: the `<` *operator* on
+/// `integer_ord_ore`, dispatching through `eql_v3.lt` → `eql_v3.ord_term_ore` →
+/// the `eql_v3_internal.ore_block_256` comparator, whose comparison calls
+/// pgcrypto `encrypt()` (resolved through the `extensions` schema via the
+/// comparator's `SET search_path = pg_catalog, extensions, public`). Unlike the
+/// CLLW-OPE `ORD_QUERY`, this path needs USAGE on `extensions`.
+const ORD_ORE_QUERY: &str =
+    "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
+     WHERE a.payload::public.eql_v3_integer_ord_ore < b.payload::public.eql_v3_integer_ord_ore";
+
 /// A real aggregate (`eql_v3.min` on `integer_ord`). The public aggregate dispatches
 /// into its state function `eql_v3_internal.min_sfunc`, so it requires the
 /// internal grant.
@@ -155,6 +165,27 @@ fn assert_insufficient_privilege(err: sqlx::Error, context: &str) {
     );
 }
 
+/// Assert a query failed at the pgcrypto / `extensions` boundary: a database
+/// error whose message names pgcrypto's `encrypt` or the `extensions` schema.
+///
+/// The ORE comparator calls `encrypt()` unqualified, resolved through its
+/// `SET search_path = pg_catalog, extensions, public`. When the caller lacks
+/// USAGE on `extensions`, PostgreSQL skips that schema during name resolution,
+/// so this surfaces as `undefined_function` ("function encrypt(...) does not
+/// exist") rather than a plain `permission denied for schema extensions`
+/// (`insufficient_privilege`). Both name the boundary, so the assertion pins the
+/// message reference, not the exact SQLSTATE.
+fn assert_pgcrypto_boundary_error(err: sqlx::Error, context: &str) {
+    let db_err = err
+        .as_database_error()
+        .unwrap_or_else(|| panic!("{context}: expected a database error, got: {err:?}"));
+    let msg = db_err.message().to_ascii_lowercase();
+    assert!(
+        msg.contains("encrypt") || msg.contains("extensions"),
+        "{context}: expected an error naming the pgcrypto `encrypt` / `extensions` boundary, got: {db_err:?}"
+    );
+}
+
 // ============================================================================
 // Scalar operator surface
 // ============================================================================
@@ -233,6 +264,55 @@ async fn runtime_role_without_internal_grant_is_denied(pool: PgPool) -> Result<(
             ));
         assert_insufficient_privilege(err, label);
     }
+
+    sqlx::query("RESET ROLE").execute(&mut *conn).await?;
+    drop_role(&mut conn, &role).await?;
+    Ok(())
+}
+
+/// Boundary (OPE vs ORE): a runtime role granted USAGE + EXECUTE on BOTH EQL
+/// schemas and read on the fixture — but deliberately NOT USAGE on `extensions`
+/// (pgcrypto) — can run the default CLLW-OPE ordering path (`_ord`) yet is denied
+/// the block-ORE ordering path (`_ord_ore`). Pins the pgcrypto boundary that
+/// motivates preferring `_ord`: the OPE comparator (`eql_v3_internal.ope_cllw`)
+/// compares hex-decoded `bytea` natively and never touches pgcrypto, so it needs
+/// no `extensions` grant; the ORE comparator (`eql_v3_internal.ore_block_256`)
+/// calls pgcrypto `encrypt()` (resolved through `extensions`), so under the
+/// identical grant set the same `<` query fails at the crypto call.
+///
+/// The positive `runtime_role_with_both_schema_grants_can_query` already runs
+/// `_ord` without an `extensions` grant; this adds the contrasting ORE denial
+/// under the SAME grants, so the two ordering paths are proven to diverge on
+/// exactly the `extensions` grant — not on anything else.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("eql_v3_integer")))]
+async fn runtime_role_ope_ok_ore_needs_extensions(pool: PgPool) -> Result<()> {
+    let mut conn = pool.acquire().await?;
+    let role = create_isolated_role(&mut conn).await?;
+
+    grant_fixture_access(&mut conn, &role, &["eql_v3_integer"]).await?;
+    grant_schema(&mut conn, &role, "eql_v3").await?;
+    grant_schema(&mut conn, &role, "eql_v3_internal").await?;
+    // Deliberately NO grant on `extensions` (pgcrypto) — the whole point: it is
+    // what separates the OPE path (below, allowed) from the ORE path (denied).
+
+    sqlx::query(&format!("SET ROLE \"{role}\""))
+        .execute(&mut *conn)
+        .await?;
+
+    // (a) The CLLW-OPE `_ord` ordering path succeeds without the extensions grant.
+    let ope_pairs: i64 = sqlx::query_scalar(ORD_QUERY).fetch_one(&mut *conn).await?;
+    assert!(
+        ope_pairs > 0,
+        "the CLLW-OPE `_ord` ordering path must succeed without an `extensions` grant"
+    );
+
+    // (b) The block-ORE `_ord_ore` ordering path is denied: its comparator calls
+    // pgcrypto `encrypt()` in `extensions`, which this role cannot reach.
+    let err = sqlx::query(ORD_ORE_QUERY)
+        .fetch_one(&mut *conn)
+        .await
+        .expect_err("the block-ORE `_ord_ore` path must fail without an `extensions` grant");
+    assert_pgcrypto_boundary_error(err, "ore ordering without extensions grant");
 
     sqlx::query("RESET ROLE").execute(&mut *conn).await?;
     drop_role(&mut conn, &role).await?;
