@@ -131,7 +131,7 @@ fn term_key_for(index: IndexKind) -> Option<&'static str> {
 /// the single `json` document target for [`ScalarKind::Jsonb`].
 fn targets_for(kind: ScalarKind, indexes: &[IndexKind]) -> Result<Vec<TargetDomain>> {
     if kind == ScalarKind::Jsonb {
-        let target = TargetDomain::parse("eql_v3_json")
+        let target = TargetDomain::parse("eql_v3_json_search")
             .map_err(|e| anyhow!("resolving the SteVec document target: {e}"))?;
         return Ok(vec![target]);
     }

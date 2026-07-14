@@ -65,7 +65,7 @@ async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result
     let invalid: i64 = sqlx::query_scalar(&format!(
         "SELECT COUNT(*) FROM fixtures.v3_doc_integer \
          WHERE NOT public.eql_v3_is_valid_ste_vec_entry_payload((payload -> '{SELECTOR}'::text)::jsonb) \
-            OR eql_v3.ord_term((payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry) IS NULL",
+            OR eql_v3.ord_term((payload -> '{SELECTOR}'::text)::public.eql_v3_json_entry) IS NULL",
     ))
     .fetch_one(&pool)
     .await?;
@@ -105,8 +105,8 @@ async fn jsonb_entry_integer_fixture_shape(pool: sqlx::PgPool) -> anyhow::Result
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> anyhow::Result<()> {
     // The `$.field` CLLW-OPE entry is the sv element carrying `op`. Cast the
-    // `public.eql_v3_json` payload to bare jsonb FIRST so `-> 'sv'` is the native array
-    // accessor, not the custom `public.eql_v3_json -> text` selector-lookup operator.
+    // `public.eql_v3_json_search` payload to bare jsonb FIRST so `-> 'sv'` is the native array
+    // accessor, not the custom `public.eql_v3_json_search -> text` selector-lookup operator.
     let live: Vec<String> = sqlx::query_scalar(
         "SELECT DISTINCT elem ->> 's' \
          FROM fixtures.v3_doc_integer, \
@@ -145,8 +145,8 @@ async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::
          FROM fixtures.v3_doc_integer a \
          JOIN fixtures.v3_doc_integer b ON a.id < b.id \
          WHERE a.plaintext <> b.plaintext \
-           AND eql_v3.ord_term((a.payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry) \
-             = eql_v3.ord_term((b.payload -> '{SELECTOR}'::text)::public.eql_v3_jsonb_entry)",
+           AND eql_v3.ord_term((a.payload -> '{SELECTOR}'::text)::public.eql_v3_json_entry) \
+             = eql_v3.ord_term((b.payload -> '{SELECTOR}'::text)::public.eql_v3_json_entry)",
     ))
     .fetch_one(&pool)
     .await?;
@@ -162,7 +162,7 @@ async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::
 // driver, which sweeps a bare-jsonb RHS that flattens to native `jsonb < jsonb`
 // for entries). Builds the ord_term functional btree and asserts each ORDERING
 // op (which inlines to `ord_term(value) <op> ord_term(const)`) engages it, using
-// the domain-cast RHS (`'<lit>'::public.eql_v3_jsonb_entry`) so the entry operator
+// the domain-cast RHS (`'<lit>'::public.eql_v3_json_entry`) so the entry operator
 // resolves rather than native jsonb.
 //
 // VALIDITY ONLY: forces `enable_seqscan = off` on the ~17-row fixture, so a
@@ -180,12 +180,12 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
     let lit = payload.replace('\'', "''");
 
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TEMP TABLE entry_idx (value public.eql_v3_jsonb_entry) ON COMMIT DROP")
+    sqlx::query("CREATE TEMP TABLE entry_idx (value public.eql_v3_json_entry) ON COMMIT DROP")
         .execute(&mut *tx)
         .await?;
     sqlx::query(&format!(
         "INSERT INTO entry_idx(value) \
-         SELECT (payload -> '{sel}'::text)::public.eql_v3_jsonb_entry FROM fixtures.v3_doc_integer",
+         SELECT (payload -> '{sel}'::text)::public.eql_v3_json_entry FROM fixtures.v3_doc_integer",
     ))
     .execute(&mut *tx)
     .await?;
@@ -199,7 +199,7 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
 
     for op in ["<", "<=", ">", ">="] {
         let query =
-            format!("SELECT * FROM entry_idx WHERE value {op} '{lit}'::public.eql_v3_jsonb_entry",);
+            format!("SELECT * FROM entry_idx WHERE value {op} '{lit}'::public.eql_v3_json_entry",);
         eql_tests::matrix::assert_index_scan_uses(
             &mut *tx,
             &query,
@@ -229,7 +229,7 @@ async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
     pool: sqlx::PgPool,
 ) -> anyhow::Result<()> {
     let sel = SELECTOR;
-    // A valid public.eql_v3_jsonb_entry that is NOT orderable: string s, string c,
+    // A valid public.eql_v3_json_entry that is NOT orderable: string s, string c,
     // exactly one of hm/op — here `hm`, so `eql_v3.ord_term(entry)` is NULL.
     let op_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
 
@@ -242,18 +242,18 @@ async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
     let high = *sorted.last().expect("fixture is non-empty");
 
     let mut tx = pool.begin().await?;
-    sqlx::query("CREATE TEMP TABLE op_mix (value public.eql_v3_jsonb_entry) ON COMMIT DROP")
+    sqlx::query("CREATE TEMP TABLE op_mix (value public.eql_v3_json_entry) ON COMMIT DROP")
         .execute(&mut *tx)
         .await?;
     // SEED position: the op-less entry is inserted FIRST, so the STRICT seed is
     // non-orderable — the exact case the sfunc guard must survive.
-    sqlx::query("INSERT INTO op_mix(value) VALUES ($1::jsonb::public.eql_v3_jsonb_entry)")
+    sqlx::query("INSERT INTO op_mix(value) VALUES ($1::jsonb::public.eql_v3_json_entry)")
         .bind(op_less)
         .execute(&mut *tx)
         .await?;
     sqlx::query(&format!(
         "INSERT INTO op_mix(value) \
-         SELECT (payload -> '{sel}'::text)::public.eql_v3_jsonb_entry \
+         SELECT (payload -> '{sel}'::text)::public.eql_v3_json_entry \
          FROM fixtures.v3_doc_integer WHERE plaintext IN ({low}, {high})",
     ))
     .execute(&mut *tx)
@@ -262,13 +262,13 @@ async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
     // Expected extrema: the orderable entries for the smallest / largest integer,
     // NOT the op-less seed.
     let expect_min: String = sqlx::query_scalar(&format!(
-        "SELECT ((payload -> '{sel}'::text)::public.eql_v3_jsonb_entry)::text \
+        "SELECT ((payload -> '{sel}'::text)::public.eql_v3_json_entry)::text \
          FROM fixtures.v3_doc_integer WHERE plaintext = {low}",
     ))
     .fetch_one(&mut *tx)
     .await?;
     let expect_max: String = sqlx::query_scalar(&format!(
-        "SELECT ((payload -> '{sel}'::text)::public.eql_v3_jsonb_entry)::text \
+        "SELECT ((payload -> '{sel}'::text)::public.eql_v3_json_entry)::text \
          FROM fixtures.v3_doc_integer WHERE plaintext = {high}",
     ))
     .fetch_one(&mut *tx)

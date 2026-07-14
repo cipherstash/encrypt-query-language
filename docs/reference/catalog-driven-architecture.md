@@ -191,15 +191,15 @@ flowchart LR
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |
 | `boolean` | Bool | storage-only (2-value cardinality leak → no searchable index) |
 
-**`jsonb` sits outside this classification.** It carries three domains — `public.eql_v3_json`
-(document), `public.eql_v3_jsonb_entry` (one `sv` leaf), `eql_v3.query_jsonb` (containment
+**`jsonb` sits outside this classification.** It carries three domains — `public.eql_v3_json_search`
+(document), `public.eql_v3_json_entry` (one `sv` leaf), `eql_v3.query_json` (containment
 needle) — each tagged `Shape::SteVec` rather than `Shape::Scalar`, with an empty flat
 `terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`
 XOR `op`), not as a family-level `Term` set. `Domain.name` (`"json"`/`"entry"`/`"query"`)
 disambiguates which of the three a given domain is — see `Domain::rust_struct_name`.
 `scalar_families()` filters `CATALOG` down to the `Shape::Scalar` rows, so `jsonb` never
 reaches `every_type_uses_a_known_domain_shape`, the ordered-scalar materializer (§3), or
-the scalar SQLx matrix. Its SQL surface is hand-written under `src/v3/jsonb/`
+the scalar SQLx matrix. Its SQL surface is hand-written under `src/v3/json/`
 (`eql-codegen` renders SQL only for `scalar_families()`) and its Rust structs are
 hand-written in `crates/eql-bindings/src/v3/jsonb.rs` — only inventory membership and
 `CATALOG` order are catalog-driven. This is also why the class diagram in §2.1 lists

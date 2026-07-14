@@ -455,7 +455,7 @@ macro_rules! scalar_matrix {
 /// `JsonbEntryInteger`). Runs only the leaf drivers that are surface-agnostic
 /// once routed through the access-path seam: correctness (d,d only),
 /// supported_null, order_by(+nulls/+using), count, index_engages, and — once
-/// `src/v3/jsonb/aggregates.sql` exists — aggregate(+group_by/+parallel).
+/// `src/v3/json/aggregates.sql` exists — aggregate(+group_by/+parallel).
 /// Containment / blockers / payload_check / path-op / native-absent /
 /// planner-metadata stay in the hand-written `v3_jsonb_tests` suite — they have
 /// no scalar analogue or assert document-specific surface.
@@ -516,7 +516,7 @@ macro_rules! jsonb_entry_matrix {
         // the entry operator. The hand-written `jsonb_entry_integer_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
 
-        // Aggregates: eql_v3.min/max over jsonb_entry (src/v3/jsonb/aggregates.sql).
+        // Aggregates: eql_v3.min/max over json_entry (src/v3/json/aggregates.sql).
         // The aggregate leaf cases compare extrema via the ord-extractor seam
         // (eql_v3.ord_term for entries), so the entry min/max route through the
         // `oc` (CLLW ORE) term exactly like the comparison operators.

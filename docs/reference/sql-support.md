@@ -5,7 +5,7 @@ This page summarises which SQL operators and language features work against EQL-
 EQL ships its searchable-encryption surface as PostgreSQL **domains in the `public` schema**:
 
 - **per-scalar encrypted-domain types** — `public.eql_v3_integer`, `public.eql_v3_text`, `public.eql_v3_timestamp`, … — one family of domain *variants* per scalar; and
-- **an encrypted-JSON document type** — `public.eql_v3_json` — for structured-encryption (ste_vec) JSONB.
+- **an encrypted-JSON document type** — `public.eql_v3_json_search` — for structured-encryption (ste_vec) JSONB.
 
 The capability of a column is fixed by the **domain variant you type it as**. There is no database-side `add_search_config` / `add_column` step: which index terms travel in a value's payload is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)), and the column's domain variant is what makes the matching operators resolve. Unsupported operators are not silent no-ops — they route to blocker functions that `RAISE` an "operator not supported" exception (a `NULL` operand still raises; the blockers are deliberately not `STRICT`).
 
@@ -76,7 +76,7 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col = …` / `<>`               |                                                                                        | `_eq`, `_ord`, `text_search` |
 | `WHERE col <` / `<=` / `>` / `>=`    |                                                                                        | `_ord`, `text_search` |
 | `WHERE col BETWEEN … AND …`          | desugars to `>=` and `<=`                                                               | `_ord`, `text_search` |
-| `WHERE col @> …`                     | bloom-filter token containment (text), or document containment (`public.eql_v3_json`)         | `text_match`, `text_search`, `public.eql_v3_json` |
+| `WHERE col @> …`                     | bloom-filter token containment (text), or document containment (`public.eql_v3_json_search`)         | `text_match`, `text_search`, `public.eql_v3_json_search` |
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
 | `ORDER BY col`                       | meaningful only with an ordering term                                                   | `_ord`, `text_search` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |
@@ -112,9 +112,9 @@ See [Database Indexes for Encrypted Columns](./database-indexes.md) for the full
 
 ---
 
-## `public.eql_v3_json`: structured encryption for JSON
+## `public.eql_v3_json_search`: structured encryption for JSON
 
-`public.eql_v3_json` is the encrypted-JSON document domain (built on the structured-encryption "ste_vec" model). A JSONB document is encrypted into a searchable vector (`sv`) of terms — one element per path inside the document — each carrying:
+`public.eql_v3_json_search` is the encrypted-JSON document domain (built on the structured-encryption "ste_vec" model). A JSONB document is encrypted into a searchable vector (`sv`) of terms — one element per path inside the document — each carrying:
 
 - `s` — a deterministic **selector** hash for the JSON path (always present); and
 - one or more **value terms** depending on the JSON type of the leaf at that path.
@@ -135,24 +135,24 @@ The search capabilities available on a value extracted via `->` or `eql_v3.jsonb
 
 `hm` supports equality only; `op` is a CLLW OPE term that preserves order *and* collapses to equality on matching keys. JSON `null` here refers to a `null` literal *inside* the document — a SQL `NULL` column is not encrypted at all.
 
-### Operators and functions on `public.eql_v3_json`
+### Operators and functions on `public.eql_v3_json_search`
 
 | SQL form                         | Resolves to                                        | Returns / notes |
 | -------------------------------- | -------------------------------------------------- | --------------- |
-| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.query_jsonb`, another `public.eql_v3_json`, or an `public.eql_v3_jsonb_entry`). |
-| `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.eql_v3_jsonb_entry`. |
+| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.query_json`, another `public.eql_v3_json_search`, or an `public.eql_v3_json_entry`). |
+| `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.eql_v3_json_entry`. |
 | `doc ->> 'sel'::text`            | `eql_v3."->>"`                                     | the matching entry serialized as `text` (ciphertext JSON, **not** decrypted plaintext). |
-| extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.eql_v3_jsonb_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
-| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_term(public.eql_v3_jsonb_entry)`       | ordered comparison on an extracted String / Number leaf. |
-| `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.eql_v3_jsonb_entry)` / `max`         | over an extracted ordered leaf. |
+| extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.eql_v3_json_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
+| extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_term(public.eql_v3_json_entry)`       | ordered comparison on an extracted String / Number leaf. |
+| `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.eql_v3_json_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |
 | `eql_v3.jsonb_array_length/elements/elements_text(doc)` | array helpers                  | length / set-returning elements / element text. |
 
-> **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.query_jsonb`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `public.eql_v3_json` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
+> **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.query_json`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `public.eql_v3_json_search` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
 
 ### Blocked JSONB operators
 
-These native PostgreSQL JSONB operators are **blocked** on `public.eql_v3_json` (they `RAISE`, rather than falling through to native whole-document semantics): root-document `=` `<>` `<` `<=` `>` `>=`, and `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`. Use containment (`@>`), field access (`->` / `->>`), or the `eql_v3.jsonb_path_*` functions instead.
+These native PostgreSQL JSONB operators are **blocked** on `public.eql_v3_json_search` (they `RAISE`, rather than falling through to native whole-document semantics): root-document `=` `<>` `<` `<=` `>` `>=`, and `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`. Use containment (`@>`), field access (`->` / `->>`), or the `eql_v3.jsonb_path_*` functions instead.
 
 See [EQL with JSON and JSONB](./json-support.md) for worked examples.
 
@@ -162,7 +162,7 @@ See [EQL with JSON and JSONB](./json-support.md) for worked examples.
 
 - [EQL Functions Reference](./eql-functions.md) — full list of functions and operators.
 - [Database Indexes for Encrypted Columns](./database-indexes.md) — functional-index and GIN recipes, plus performance guidance.
-- [EQL with JSON and JSONB](./json-support.md) — end-to-end `public.eql_v3_json` examples.
+- [EQL with JSON and JSONB](./json-support.md) — end-to-end `public.eql_v3_json_search` examples.
 - Client-side searchable-encryption configuration — [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema) and [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
 ---

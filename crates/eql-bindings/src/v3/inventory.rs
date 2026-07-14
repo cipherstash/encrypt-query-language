@@ -57,9 +57,10 @@ pub fn all() -> Vec<Box<dyn DomainType>> {
         Box::new(PhantomData::<super::double::DoubleOrdOre>),
         Box::new(PhantomData::<super::double::DoubleOrd>),
         Box::new(PhantomData::<super::double::DoubleOrdOpe>),
-        Box::new(PhantomData::<super::jsonb::SteVecDocument>),
-        Box::new(PhantomData::<super::jsonb::SteVecEntry>),
-        Box::new(PhantomData::<super::jsonb::SteVecQuery>),
+        Box::new(PhantomData::<super::json::SteVecDocument>),
+        Box::new(PhantomData::<super::json::SteVecEntry>),
+        Box::new(PhantomData::<super::json::SteVecQuery>),
+        Box::new(PhantomData::<super::json::Json>),
     ]
 }
 /// Every v3 QUERY-operand twin (`eql_v3.query_<name>`, the enveloped

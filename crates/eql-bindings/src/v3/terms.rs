@@ -29,7 +29,7 @@ pub struct Ciphertext(pub String);
 pub struct Hmac256(pub String);
 
 /// A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an
-/// encrypted document (`public.eql_v3_json`); present on every entry and query element.
+/// encrypted document (`public.eql_v3_json_search`); present on every entry and query element.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct Selector(pub String);

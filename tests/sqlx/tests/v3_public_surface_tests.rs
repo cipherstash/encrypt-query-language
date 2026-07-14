@@ -107,7 +107,7 @@ fn user_domain_names() -> Vec<String> {
         }
     }
     names.extend(
-        ["eql_v3_json", "eql_v3_jsonb_entry"]
+        ["eql_v3_json_search", "eql_v3_json_entry"]
             .into_iter()
             .map(String::from),
     );
@@ -129,7 +129,7 @@ fn query_domain_names() -> Vec<String> {
                 .map(move |d| d.query_name(f.name))
         })
         .collect();
-    names.push("query_jsonb".to_string());
+    names.push("query_json".to_string());
     names.sort();
     names
 }

@@ -115,8 +115,10 @@ pub enum DomainPayload {
     DoubleOrd(super::double::DoubleOrd),
     /// The `public.eql_v3_double_ord_ope` payload.
     DoubleOrdOpe(super::double::DoubleOrdOpe),
+    /// The `public.eql_v3_json_search` payload.
+    SteVecDocument(super::json::SteVecDocument),
     /// The `public.eql_v3_json` payload.
-    SteVecDocument(super::jsonb::SteVecDocument),
+    Json(super::json::Json),
 }
 impl DomainPayload {
     /// Strictly parse `value` as `domain`'s payload, KEEPING the
@@ -257,9 +259,10 @@ impl DomainPayload {
             "eql_v3_double_ord_ope" => {
                 Some(super::double::DoubleOrdOpe::deserialize(value).map(Self::DoubleOrdOpe))
             }
-            "eql_v3_json" => {
-                Some(super::jsonb::SteVecDocument::deserialize(value).map(Self::SteVecDocument))
+            "eql_v3_json_search" => {
+                Some(super::json::SteVecDocument::deserialize(value).map(Self::SteVecDocument))
             }
+            "eql_v3_json" => Some(super::json::Json::deserialize(value).map(Self::Json)),
             _ => None,
         }
     }
@@ -316,6 +319,7 @@ impl DomainPayload {
             Self::DoubleOrd(payload) => payload,
             Self::DoubleOrdOpe(payload) => payload,
             Self::SteVecDocument(payload) => payload,
+            Self::Json(payload) => payload,
         }
     }
     /// Fully-qualified SQL domain name, e.g. `"public.eql_v3_integer_eq"`.

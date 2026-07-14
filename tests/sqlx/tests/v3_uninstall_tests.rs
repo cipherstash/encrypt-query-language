@@ -76,7 +76,7 @@ async fn table_exists(pool: &PgPool, table: &str) -> Result<bool> {
 }
 
 fn normalize_regtype_name(name: String) -> String {
-    name.replace("public.\"json\"", "public.eql_v3_json")
+    name.replace("public.\"json\"", "public.eql_v3_json_search")
 }
 
 #[sqlx::test]
@@ -142,7 +142,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname = 'public'
-          AND t.typname IN ('eql_v3_integer_eq', 'eql_v3_json', 'eql_v3_jsonb_entry')
+          AND t.typname IN ('eql_v3_integer_eq', 'eql_v3_json_search', 'eql_v3_json_entry')
         ORDER BY 1
         "#,
     )
@@ -156,8 +156,8 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         public_domains,
         vec![
             "public.eql_v3_integer_eq",
-            "public.eql_v3_json",
-            "public.eql_v3_jsonb_entry"
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_entry"
         ],
         "repeat install must keep public user-column domains available"
     );
@@ -170,7 +170,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         FROM pg_catalog.pg_type t
         JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
         WHERE n.nspname = 'eql_v3'
-          AND t.typname IN ('query_integer_eq', 'query_jsonb')
+          AND t.typname IN ('query_integer_eq', 'query_json')
         ORDER BY 1
         "#,
     )
@@ -182,7 +182,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
     query_domains.sort();
     assert_eq!(
         query_domains,
-        vec!["eql_v3.query_integer_eq", "eql_v3.query_jsonb"],
+        vec!["eql_v3.query_integer_eq", "eql_v3.query_json"],
         "repeat install must recreate the eql_v3 query-operand domains"
     );
 
@@ -208,8 +208,8 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         CREATE TABLE public.eql_v3_uninstall_preserve (
           id integer PRIMARY KEY,
           scalar_value public.eql_v3_integer_eq NOT NULL,
-          doc_value public.eql_v3_json NOT NULL,
-          entry_value public.eql_v3_jsonb_entry
+          doc_value public.eql_v3_json_search NOT NULL,
+          entry_value public.eql_v3_json_entry
         )
         "#,
     )
@@ -224,8 +224,8 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
           (
             1,
             $1::jsonb::public.eql_v3_integer_eq,
-            $2::jsonb::public.eql_v3_json,
-            $3::jsonb::public.eql_v3_jsonb_entry
+            $2::jsonb::public.eql_v3_json_search,
+            $3::jsonb::public.eql_v3_json_entry
           )
         "#,
     )
@@ -243,7 +243,7 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         r#"
         CREATE TABLE public.eql_v3_uninstall_query_misuse (
           id integer PRIMARY KEY,
-          misused_query_value eql_v3.query_jsonb
+          misused_query_value eql_v3.query_json
         )
         "#,
     )
@@ -293,8 +293,8 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
         vec![
             "pg_catalog.int4",
             "public.eql_v3_integer_eq",
-            "public.eql_v3_json",
-            "public.eql_v3_jsonb_entry",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_entry",
         ]
     );
 

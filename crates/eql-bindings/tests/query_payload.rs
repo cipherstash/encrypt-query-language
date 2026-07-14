@@ -67,12 +67,12 @@ fn typed_needle_yields_the_ste_vec_variant() {
         ]
     });
     let typed = assert_serialization_pin(&v2);
-    assert_eq!(typed.domain(), "query_jsonb");
-    assert_eq!(typed.sql_domain(), "eql_v3.query_jsonb");
+    assert_eq!(typed.domain(), "query_json");
+    assert_eq!(typed.sql_domain(), "eql_v3.query_json");
     match &typed {
         QueryPayload::SteVec(q) => {
             assert_eq!(q.sv.len(), 2, "entry order/count preserved");
-            assert_eq!(q.sql_domain(), "eql_v3.query_jsonb");
+            assert_eq!(q.sql_domain(), "eql_v3.query_json");
         }
         other => panic!("a jsonb target must yield the SteVec needle, got {other:?}"),
     }
@@ -190,7 +190,7 @@ fn typed_entry_term_errors_match_from_v2_query() {
     let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
     match from_v2_query_typed(&neither, TargetDomain::Json).unwrap_err() {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "query_jsonb");
+            assert_eq!(domain, "query_json");
             assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }
@@ -228,10 +228,10 @@ fn typed_rejects_the_same_envelopes_as_from_v2_query() {
 #[test]
 fn parse_constructs_the_needle_from_its_domain_name() {
     let needle = json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] });
-    let parsed = QueryPayload::parse("query_jsonb", &needle)
-        .expect("query_jsonb must be a QueryPayload domain")
+    let parsed = QueryPayload::parse("query_json", &needle)
+        .expect("query_json must be a QueryPayload domain")
         .expect("strict parse must succeed");
-    assert_eq!(parsed.domain(), "query_jsonb");
+    assert_eq!(parsed.domain(), "query_json");
     assert_eq!(serde_json::to_value(&parsed).unwrap(), needle);
 }
 
@@ -241,7 +241,7 @@ fn parse_is_strict_exactly_like_the_binding_struct() {
     // fails, exactly as the untyped path's validate_as does.
     let stray = json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ], "extra": 1 });
     assert!(
-        QueryPayload::parse("query_jsonb", &stray).unwrap().is_err(),
+        QueryPayload::parse("query_json", &stray).unwrap().is_err(),
         "deny_unknown_fields must reject a stray root key"
     );
 }
@@ -251,10 +251,10 @@ fn parse_returns_none_for_non_query_domains() {
     // Stored-payload domains (DomainPayload territory), the entry shape, and
     // unknown names are not query payloads.
     for name in [
-        "eql_v3_json",
-        "eql_v3_jsonb_entry",
+        "eql_v3_json_search",
+        "eql_v3_json_entry",
         "eql_v3_integer_eq",
-        "eql_v3.query_jsonb",
+        "eql_v3.query_json",
         "",
     ] {
         assert!(

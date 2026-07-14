@@ -16,11 +16,11 @@ use serde::Deserialize;
 pub const SQL_SCHEMA: &str = "public";
 
 /// The version prefix every public-schema column domain's typname carries
-/// (`eql_v3_integer_eq`, `eql_v3_json`, … — CIP-3472). Mirrors
+/// (`eql_v3_integer_eq`, `eql_v3_json_search`, … — CIP-3472). Mirrors
 /// `eql_domains::PUBLIC_TYPNAME_PREFIX` (a dev-dependency here, so the
 /// literal is repeated); parity with the catalog is pinned exhaustively by
 /// `tests/catalog_parity.rs`. Query-operand domains (`query_<name>`,
-/// `query_jsonb`) are NOT prefixed — the `eql_v3` schema they live in
+/// `query_json`) are NOT prefixed — the `eql_v3` schema they live in
 /// already versions them.
 pub const PUBLIC_TYPNAME_PREFIX: &str = "eql_v3_";
 
