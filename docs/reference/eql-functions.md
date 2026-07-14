@@ -1,6 +1,6 @@
 # EQL Functions Reference
 
-A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`public.<T>` and variants) and the encrypted-JSON document type (`public.eql_v3_json`).
+A reference for the functions and operators EQL exposes for querying encrypted data in PostgreSQL. The surface lives in the **`eql_v3`** schema and is organised around the per-scalar encrypted-domain types (`public.<T>` and variants) and the encrypted-JSON document type (`public.eql_v3_json_search`).
 
 > **There is no database-side configuration API.** Which index terms a value carries is chosen by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); a column's capability is fixed by the **domain variant** you type it as. See [SQL support matrix](./sql-support.md) for the variant/operator table.
 
@@ -9,7 +9,7 @@ A reference for the functions and operators EQL exposes for querying encrypted d
 - [Operators](#operators)
 - [Function Equivalents](#function-equivalents)
 - [Index Term Extraction](#index-term-extraction)
-- [Encrypted JSON (`public.eql_v3_json`)](#encrypted-json-eql_v3json)
+- [Encrypted JSON (`public.eql_v3_json_search`)](#encrypted-json-eql_v3json)
 - [Aggregate Functions](#aggregate-functions)
 
 ---
@@ -51,9 +51,9 @@ SELECT * FROM docs WHERE encrypted_content @> $1::public.eql_v3_text_match;
 
 `LIKE` / `ILIKE` (`~~` / `~~*`) are **not** part of the `eql_v3` surface — use `@>`.
 
-### JSON containment / path — `public.eql_v3_json`
+### JSON containment / path — `public.eql_v3_json_search`
 
-`@>` / `<@`, `->` / `->>`, and the path functions on `public.eql_v3_json` are documented in [EQL with JSON and JSONB](./json-support.md).
+`@>` / `<@`, `->` / `->>`, and the path functions on `public.eql_v3_json_search` are documented in [EQL with JSON and JSONB](./json-support.md).
 
 ---
 
@@ -68,7 +68,7 @@ eql_v3.lt(a, b)   -- <        (on _ord / _ord_ore / text_search)
 eql_v3.lte(a, b)  -- <=
 eql_v3.gt(a, b)   -- >
 eql_v3.gte(a, b)  -- >=
-eql_v3.contains(a, b)       -- @>  (on text_match / text_search / public.eql_v3_json)
+eql_v3.contains(a, b)       -- @>  (on text_match / text_search / public.eql_v3_json_search)
 eql_v3.contained_by(a, b)   -- <@
 ```
 
@@ -109,11 +109,11 @@ CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 
 > The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ope` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
-The `public.eql_v3_json` document type extracts entry-level terms with `eql_v3.eq_term(public.eql_v3_jsonb_entry)` and `eql_v3.ord_term(public.eql_v3_jsonb_entry)` — see [json-support.md](./json-support.md).
+The `public.eql_v3_json_search` document type extracts entry-level terms with `eql_v3.eq_term(public.eql_v3_jsonb_entry)` and `eql_v3.ord_term(public.eql_v3_jsonb_entry)` — see [json-support.md](./json-support.md).
 
 ---
 
-## Encrypted JSON (`public.eql_v3_json`)
+## Encrypted JSON (`public.eql_v3_json_search`)
 
 The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements` / `_elements_text`, `eql_v3.to_ste_vec_query`, `eql_v3.ste_vec_contains`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**.
 
@@ -146,7 +146,7 @@ SELECT eql_v3.max(price_encrypted) FROM products WHERE category = 'electronics';
 SELECT eql_v3.min(price_jsonb::public.eql_v3_integer_ord) FROM products;
 ```
 
-`MIN` / `MAX` over a value extracted from an `public.eql_v3_json` document use `eql_v3.min(public.eql_v3_jsonb_entry)` / `max` — see [json-support.md](./json-support.md).
+`MIN` / `MAX` over a value extracted from an `public.eql_v3_json_search` document use `eql_v3.min(public.eql_v3_jsonb_entry)` / `max` — see [json-support.md](./json-support.md).
 
 `SUM` / `AVG` and other arithmetic aggregates are **not** supported on encrypted columns (they would require homomorphic encryption) — decrypt at the application boundary. `MIN` / `MAX` only need comparator-revealing terms.
 
@@ -158,7 +158,7 @@ SELECT eql_v3.min(price_jsonb::public.eql_v3_integer_ord) FROM products;
 
 - [EQL Configuration Tutorial](../tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 - [Database Indexes](./database-indexes.md) — functional-index recipes and performance.
-- [JSON/JSONB Support](./json-support.md) — `public.eql_v3_json` worked examples.
+- [JSON/JSONB Support](./json-support.md) — `public.eql_v3_json_search` worked examples.
 - [SQL support matrix](./sql-support.md) — operators by domain variant.
 - [Payload / wire format](../../crates/eql-bindings/README.md) — canonical encrypted-payload wire types (envelope + index terms).
 - Client-side index configuration — [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).

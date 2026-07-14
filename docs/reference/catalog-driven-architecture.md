@@ -191,7 +191,7 @@ flowchart LR
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |
 | `boolean` | Bool | storage-only (2-value cardinality leak → no searchable index) |
 
-**`jsonb` sits outside this classification.** It carries three domains — `public.eql_v3_json`
+**`jsonb` sits outside this classification.** It carries three domains — `public.eql_v3_json_search`
 (document), `public.eql_v3_jsonb_entry` (one `sv` leaf), `eql_v3.query_jsonb` (containment
 needle) — each tagged `Shape::SteVec` rather than `Shape::Scalar`, with an empty flat
 `terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`

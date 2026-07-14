@@ -8,7 +8,7 @@ EQL (the `eql_v3` schema) and the encryption client split responsibilities:
 
 | Responsibility | Owner |
 | --- | --- |
-| Encrypted-column **types** and **operators** (`public.eql_v3_text_eq`, `public.eql_v3_json`, `=`, `@>`, …) | **EQL** (this repo) |
+| Encrypted-column **types** and **operators** (`public.eql_v3_text_eq`, `public.eql_v3_json_search`, `=`, `@>`, …) | **EQL** (this repo) |
 | PostgreSQL **functional indexes** on the term extractors | **EQL** / you |
 | **Which columns are encrypted** and **which index terms** each carries | The **encryption client** — [CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack) |
 | Performing **encryption / decryption** on the wire | The encryption client |
@@ -35,10 +35,10 @@ ALTER TABLE events ADD COLUMN encrypted_at    public.eql_v3_timestamp_ord;
 ALTER TABLE users  ADD COLUMN encrypted_name  public.eql_v3_text_match;
 
 -- searchable encrypted JSON document
-ALTER TABLE users  ADD COLUMN encrypted_profile public.eql_v3_json;
+ALTER TABLE users  ADD COLUMN encrypted_profile public.eql_v3_json_search;
 ```
 
-The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@>` token containment, `public.eql_v3_json` for encrypted JSON. The bare `eql_v3.<T>` variant is storage/decryption only.
+The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@>` token containment, `public.eql_v3_json_search` for searchable encrypted JSON. The bare storage/decryption-only variant carries no index terms — `public.eql_v3_<T>` for scalars, and `public.eql_v3_json` for a JSON value you encrypt but never search.
 
 ## 2. Configure searchable encryption in the client
 
@@ -99,7 +99,7 @@ SELECT * FROM events WHERE encrypted_at < $1 ORDER BY eql_v3.ord_term(encrypted_
 SELECT * FROM users WHERE encrypted_name @> $1::public.eql_v3_text_match;
 ```
 
-**Encrypted JSON** (`public.eql_v3_json`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
+**Encrypted JSON** (`public.eql_v3_json_search`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
 
 ```sql
 SELECT * FROM users WHERE encrypted_profile @> $1::eql_v3.query_jsonb;
@@ -114,7 +114,7 @@ SELECT encrypted_profile -> 'email_selector'::text FROM users;
 
 **Which operators are available on which column?** See the [SQL support matrix](../reference/sql-support.md).
 
-**Where is the data format documented?** See the [payload / wire format](../../crates/eql-bindings/README.md) for the scalar envelope and index terms, and [EQL with JSON and JSONB](../reference/json-support.md) for the `public.eql_v3_json` document format.
+**Where is the data format documented?** See the [payload / wire format](../../crates/eql-bindings/README.md) for the scalar envelope and index terms, and [EQL with JSON and JSONB](../reference/json-support.md) for the `public.eql_v3_json_search` document format.
 
 ## Troubleshooting
 
