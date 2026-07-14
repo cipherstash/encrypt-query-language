@@ -59,7 +59,7 @@ pub const ISSUE_FLOAT_SIGNED_ZERO_EQ: u64 = 387;
 /// ```ignore
 /// let equal = eq_cmp(&pool, a, b).await?;
 /// let want = if equal { Ok(()) } else { Err(anyhow!("encrypted `=` returned false")) };
-/// known_failure(ISSUE_FLOAT_SIGNED_ZERO_EQ, "-0.0 == +0.0 under public.double_eq", want)
+/// known_failure(ISSUE_FLOAT_SIGNED_ZERO_EQ, "-0.0 == +0.0 under public.eql_v3_double_eq", want)
 /// ```
 pub fn known_failure(issue: u64, what: &str, outcome: Result<()>) -> Result<()> {
     match outcome {

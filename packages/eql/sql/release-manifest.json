@@ -1,6 +1,6 @@
 {
   "eqlVersion": "3.0.0",
   "schemaVersion": 3,
-  "installSqlSha256": "9311a0c9faeaebe1397fba2abf9e581ce006e94bbd0255596c21e5ada5245afa",
+  "installSqlSha256": "285af0f88b9aca2924fd280c51043ffaf3ff8f5cbe6ed6582621c19469a7e75a",
   "uninstallSqlSha256": "b1b5131b8175c5d04da9ada108d25c81c5772b15fad79a6c419ebb32d18c60a9"
 }

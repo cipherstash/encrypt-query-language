@@ -1329,7 +1329,7 @@ impl Variant {
     /// domain for `token`, or `None` if unsupported (or `Storage`). Derived via
     /// `Term::extractor_for_operator` — the SAME single source codegen uses, so
     /// the harness routing cannot diverge from the generated SQL. For
-    /// `text_ord` `[Hm, Ore]`, `=` => `eql_v3.eq_term`, `<` => `eql_v3.ord_term`.
+    /// `text_ord` `[Hm, Ope]`, `=` => `eql_v3.eq_term`, `<` => `eql_v3.ord_term`.
     pub fn extractor_for_op(self, token: &str, op: &str) -> Option<String> {
         Term::extractor_for_operator(self.terms_for(token), op).map(|f| format!("eql_v3.{f}"))
     }
@@ -1362,13 +1362,14 @@ pub struct ScalarDomainSpec {
     /// terms. Call via [`ScalarDomainSpec::ord_extractor_expr`], which supplies
     /// `self.variant`.
     pub ord_extractor: fn(Variant, &str) -> String,
-    /// The variant's ordering term (`Term::Ope` for `_ord`, `Term::Ore` for
-    /// `_ord_ore` / `_search`), or `None` when the domain is not ordered.
+    /// The variant's ordering term (`Term::Ope` for `_ord` / `_search`,
+    /// `Term::Ore` for `_ord_ore` / `_search_ore`), or `None` when the domain is
+    /// not ordered.
     ///
     /// Read from `CATALOG` via `T::PG_TYPE`, so it is meaningless for a SteVec
     /// entry view, whose `PG_TYPE` names the wrapped scalar rather than its own
     /// structural term (`JsonbEntryInteger` reports `Some(Term::Ope)` but orders
-    /// by `oc`). Only the property oracles read this field, and they are
+    /// by `op`). Only the property oracles read this field, and they are
     /// instantiated solely with real scalar types — never with an entry view.
     /// Use [`ScalarDomainSpec::ord_extractor_expr`], which honours the
     /// `ord_extractor` override, when you need the extractor itself.

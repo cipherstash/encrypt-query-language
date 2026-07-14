@@ -5,7 +5,7 @@
 //! (query) role which uses the supported *operators* needs USAGE + EXECUTE on
 //! BOTH `eql_v3` and `eql_v3_internal` — the public wrappers/extractors inline a
 //! call to an `eql_v3_internal` index-term constructor (e.g. `eq_term` →
-//! `eql_v3_internal.hmac_256(jsonb)`, `ord_term_ore` → `eql_v3_internal.ore_block_256`),
+//! `eql_v3_internal.hmac_256(jsonb)`, `ord_term` → `eql_v3_internal.ope_cllw`),
 //! and aggregates dispatch into `eql_v3_internal.*_sfunc`, so granting only the
 //! public schema is not enough. These tests make that contract executable.
 //!
@@ -34,11 +34,12 @@ const EQ_QUERY: &str = "SELECT count(*) FROM fixtures.eql_v3_integer \
      WHERE payload::public.eql_v3_integer_eq = payload::public.eql_v3_integer_eq";
 
 /// A real ordering query using the `<` *operator* on `integer_ord`, which dispatches
-/// through `eql_v3.lt` → `eql_v3.ord_term_ore` → the `eql_v3_internal.ore_block_256`
-/// constructor + comparator. NB: `ORDER BY payload::public.eql_v3_integer_ord` alone does
-/// NOT work here — a bare domain has no ORE opclass, so it silently falls back to
-/// built-in jsonb ordering and never crosses into `eql_v3_internal`. The `<`
-/// operator is what genuinely exercises the encrypted ordering path.
+/// through `eql_v3.lt` → `eql_v3.ord_term` → the `eql_v3_internal.ope_cllw`
+/// constructor. NB: `ORDER BY payload::public.eql_v3_integer_ord` alone does
+/// NOT work here — a bare domain sorts by its jsonb base, not the encrypted
+/// ordering, so it silently falls back to built-in jsonb ordering and never
+/// crosses into `eql_v3_internal`. The `<` operator (which routes through
+/// `ord_term`) is what genuinely exercises the encrypted ordering path.
 const ORD_QUERY: &str =
     "SELECT count(*) FROM fixtures.eql_v3_integer a, fixtures.eql_v3_integer b \
      WHERE a.payload::public.eql_v3_integer_ord < b.payload::public.eql_v3_integer_ord";
@@ -169,13 +170,11 @@ async fn runtime_role_with_both_schema_grants_can_query(pool: PgPool) -> Result<
     grant_fixture_access(&mut conn, &role, &["eql_v3_integer"]).await?;
     grant_schema(&mut conn, &role, "eql_v3").await?;
     grant_schema(&mut conn, &role, "eql_v3_internal").await?;
-    // The ORE comparison (ordering / min-max) calls pgcrypto `encrypt()`, which
-    // the installer places in the `extensions` schema. Resolving it needs USAGE
-    // on that schema too — a runtime-role prerequisite beyond the two EQL
-    // schemas. (USAGE only; pgcrypto's own functions default EXECUTE to PUBLIC.)
-    sqlx::query(&format!("GRANT USAGE ON SCHEMA extensions TO \"{role}\""))
-        .execute(&mut *conn)
-        .await?;
+    // NB: no `extensions` (pgcrypto) grant is needed here. The default `_ord`
+    // ordering path is CLLW-OPE (`eql_v3.ord_term` → `eql_v3_internal.ope_cllw`),
+    // which compares hex-decoded `bytea` natively and never calls pgcrypto
+    // `encrypt()`. Only the by-name block-ORE variants (`_ord_ore` /
+    // `text_search_ore`) reach pgcrypto and would need USAGE on `extensions`.
 
     sqlx::query(&format!("SET ROLE \"{role}\""))
         .execute(&mut *conn)
