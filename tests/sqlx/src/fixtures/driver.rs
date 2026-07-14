@@ -212,8 +212,8 @@ where
     /// `encrypt_store` builds the `ColumnConfig` from the spec's indexes + cast
     /// — the fixture name is fed as the table identifier so the resulting
     /// payload's `i.t` field matches the working table, preserving the shape
-    /// Proxy used to emit — and returns payloads already converted to the v3
-    /// envelope via `eql_bindings::from_v2` (see `fixtures::v3_convert`).
+    /// Proxy used to emit — and returns payloads emitted natively in the v3
+    /// envelope by `cipherstash-client`'s `encrypt_eql_v3`.
     ///
     /// Batching means one ZeroKMS round trip per run regardless of value count;
     /// the INSERT loop is per-row because the working table is local Postgres and

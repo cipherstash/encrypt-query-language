@@ -170,7 +170,7 @@ impl<'a, T> FixtureSpec<'a, T> {
              -- DO NOT EDIT BY HAND. Re-run the generator to refresh.\n\
              --\n\
              -- Encrypted via cipherstash-client (HMAC + ORE block terms),\n\
-             -- converted to the v3 envelope via eql_bindings::from_v2.\n\
+             -- emitted natively in the v3 envelope by encrypt_eql_v3.\n\
              -- A SQLx fixture script: opt in with\n\
              --   #[sqlx::test(fixtures(path = \"../fixtures\", scripts(\"{name}\")))]\n\
              \n\
@@ -390,16 +390,14 @@ mod tests {
     }
 
     #[test]
-    fn fixture_script_preamble_records_the_v3_envelope_conversion() {
-        // The pinned client emits the v2 wire; the payloads in the generated
-        // script have been converted through eql_bindings::from_v2 to the v3
-        // envelope. The preamble must record that so a reader of the
-        // generated SQL can trace why the payloads differ from raw client
-        // output (v: 3, no k).
+    fn fixture_script_preamble_records_native_v3_emission() {
+        // The client emits the v3 envelope natively (encrypt_eql_v3); the
+        // preamble must record that so a reader of the generated SQL can trace
+        // where the `v: 3` payloads came from.
         let preamble = integer_spec().fixture_script_preamble();
         assert!(
-            preamble.contains("eql_bindings::from_v2"),
-            "preamble must record the v2 -> v3 conversion: {preamble}"
+            preamble.contains("encrypt_eql_v3"),
+            "preamble must name the native v3 emitter: {preamble}"
         );
         assert!(
             preamble.contains("v3 envelope"),

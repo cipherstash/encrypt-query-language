@@ -14,7 +14,11 @@ serde_json = "1"
 anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
-cipherstash-client = { version = "0.38.1", features = ["tokio"] }
+# TEMPORARY local path dep (CIP-3359 Workstream B): points at the
+# `encrypt_eql_v3` branch of cipherstash-client, which emits native v3 EQL
+# payloads so the fixture pipeline no longer needs `eql_bindings::from_v2`.
+# Revert to a crates.io version pin once that change is released.
+cipherstash-client = { path = "../../../cipherstash-suite/packages/cipherstash-client", features = ["tokio"] }
 # chrono is already in the tree transitively (cipherstash-client / ore-rs); pin
 # it as a direct dependency so the harness can name `chrono::NaiveDate` for the
 # `date` scalar (Encode/Decode/Type come from the sqlx `chrono` feature above).
@@ -26,10 +30,10 @@ chrono = { version = "0.4", default-features = false }
 rust_decimal = "1"
 paste = "1"
 eql-domains = { path = "../../crates/eql-domains" }
-# The fixture generator routes every cipherstash-client payload (v2 wire)
-# through `eql_bindings::from_v2` before staging (fixtures/v3_convert.rs), so
-# the bindings are a lib dependency now, not just a dev one (they remain a
-# dev-dependency consumer via tests/v3_jsonb_bindings_tests.rs too).
+# The fixture pipeline emits v3 natively now (encrypt_eql_v3), so it no longer
+# depends on `eql_bindings::from_v2`. The bindings remain a dependency for the
+# test suites that exercise them directly (tests/payload_schema_tests.rs,
+# tests/v3_jsonb_bindings_tests.rs).
 eql-bindings = { path = "../../crates/eql-bindings" }
 eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 # proptest is a regular dependency (not dev-only): `ScalarType::arbitrary_value`
