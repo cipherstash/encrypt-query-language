@@ -1,9 +1,91 @@
 //! The generated operator surface.
 
+/// The closed set of SQL operator symbols the generator knows about. Modelling
+/// the symbol as an enum (rather than a bare `&'static str`) makes the two
+/// methods that diverge on it — `wrapper_function_name` and `body_operator` —
+/// **exhaustive, compiler-checked matches**: adding a new operator forces a
+/// compile error at those match sites until the author explicitly classifies
+/// it, rather than silently inheriting a `_ =>` default.
+///
+/// `as_str` is the single source of truth for each variant's SQL text.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum OpSymbol {
+    /// `=`
+    Eq,
+    /// `<>`
+    Neq,
+    /// `<`
+    Lt,
+    /// `<=`
+    Lte,
+    /// `>`
+    Gt,
+    /// `>=`
+    Gte,
+    /// `@>`
+    Contains,
+    /// `<@`
+    ContainedBy,
+    /// `->`
+    Arrow,
+    /// `->>`
+    ArrowArrow,
+    /// `?`
+    Question,
+    /// `?|`
+    QuestionPipe,
+    /// `?&`
+    QuestionAmp,
+    /// `@?`
+    AtQuestion,
+    /// `@@`
+    Match,
+    /// `#>`
+    HashArrow,
+    /// `#>>`
+    HashArrowArrow,
+    /// `-`
+    Minus,
+    /// `#-`
+    HashMinus,
+    /// `||`
+    Concat,
+}
+
+impl OpSymbol {
+    /// The SQL operator text for this symbol (e.g. `OpSymbol::Eq => "="`). The
+    /// single source of truth for the string form — every raw-string use site
+    /// (SQL rendering, snapshot output, lookups) goes through here.
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            OpSymbol::Eq => "=",
+            OpSymbol::Neq => "<>",
+            OpSymbol::Lt => "<",
+            OpSymbol::Lte => "<=",
+            OpSymbol::Gt => ">",
+            OpSymbol::Gte => ">=",
+            OpSymbol::Contains => "@>",
+            OpSymbol::ContainedBy => "<@",
+            OpSymbol::Arrow => "->",
+            OpSymbol::ArrowArrow => "->>",
+            OpSymbol::Question => "?",
+            OpSymbol::QuestionPipe => "?|",
+            OpSymbol::QuestionAmp => "?&",
+            OpSymbol::AtQuestion => "@?",
+            OpSymbol::Match => "@@",
+            OpSymbol::HashArrow => "#>",
+            OpSymbol::HashArrowArrow => "#>>",
+            OpSymbol::Minus => "-",
+            OpSymbol::HashMinus => "#-",
+            OpSymbol::Concat => "||",
+        }
+    }
+}
+
 /// One operator in the generated surface.
 #[derive(Clone, Copy)]
 pub struct Operator {
-    pub symbol: &'static str,
+    pub symbol: OpSymbol,
     pub function_name: &'static str,
     pub signatures: &'static [OperatorSignature],
     pub metadata: OperatorMetadata,
@@ -222,7 +304,7 @@ pub fn operator(symbol: &str) -> Operator {
     OPERATORS
         .iter()
         .copied()
-        .find(|o| o.symbol == symbol)
+        .find(|o| o.symbol.as_str() == symbol)
         .unwrap_or_else(|| panic!("unknown operator symbol: {symbol}"))
 }
 
@@ -242,9 +324,10 @@ impl Operator {
         const COMPARISON: &[&str] = &["=", "<>", "<", "<=", ">", ">="];
         const CONTAINMENT: &[&str] = &["@>", "<@"];
         const PATH_SELECTOR: &[&str] = &["->", "->>"];
-        !COMPARISON.contains(&self.symbol)
-            && !CONTAINMENT.contains(&self.symbol)
-            && !PATH_SELECTOR.contains(&self.symbol)
+        let symbol = self.symbol.as_str();
+        !COMPARISON.contains(&symbol)
+            && !CONTAINMENT.contains(&symbol)
+            && !PATH_SELECTOR.contains(&symbol)
     }
 
     /// The name of the SUPPORTED comparison-wrapper function for this operator
@@ -254,9 +337,30 @@ impl Operator {
     /// blocker name `eql_v3_internal."@@"`. The blocker path always uses
     /// `function_name`; only the wrapper/supported path calls this.
     pub fn wrapper_function_name(&self) -> &'static str {
+        // Exhaustive on purpose: no `_ =>` fallthrough. A future operator that
+        // needs a divergent wrapper name must be classified here (compile error
+        // until it is), rather than silently inheriting `function_name`.
         match self.symbol {
-            "@@" => "matches",
-            _ => self.function_name,
+            OpSymbol::Match => "matches",
+            OpSymbol::Eq
+            | OpSymbol::Neq
+            | OpSymbol::Lt
+            | OpSymbol::Lte
+            | OpSymbol::Gt
+            | OpSymbol::Gte
+            | OpSymbol::Contains
+            | OpSymbol::ContainedBy
+            | OpSymbol::Arrow
+            | OpSymbol::ArrowArrow
+            | OpSymbol::Question
+            | OpSymbol::QuestionPipe
+            | OpSymbol::QuestionAmp
+            | OpSymbol::AtQuestion
+            | OpSymbol::HashArrow
+            | OpSymbol::HashArrowArrow
+            | OpSymbol::Minus
+            | OpSymbol::HashMinus
+            | OpSymbol::Concat => self.function_name,
         }
     }
 
@@ -269,9 +373,30 @@ impl Operator {
     /// `contains` wrapper produced — no new operator on the SEM bloom_filter type,
     /// and the proven single-level inline to the array `@>` GIN opclass is kept.
     pub fn body_operator(&self) -> &'static str {
+        // Exhaustive on purpose: no `_ =>` fallthrough. A future operator whose
+        // wrapper body must use a different SQL operator than its own symbol
+        // must be classified here (compile error until it is).
         match self.symbol {
-            "@@" => "@>",
-            _ => self.symbol,
+            OpSymbol::Match => "@>",
+            OpSymbol::Eq
+            | OpSymbol::Neq
+            | OpSymbol::Lt
+            | OpSymbol::Lte
+            | OpSymbol::Gt
+            | OpSymbol::Gte
+            | OpSymbol::Contains
+            | OpSymbol::ContainedBy
+            | OpSymbol::Arrow
+            | OpSymbol::ArrowArrow
+            | OpSymbol::Question
+            | OpSymbol::QuestionPipe
+            | OpSymbol::QuestionAmp
+            | OpSymbol::AtQuestion
+            | OpSymbol::HashArrow
+            | OpSymbol::HashArrowArrow
+            | OpSymbol::Minus
+            | OpSymbol::HashMinus
+            | OpSymbol::Concat => self.symbol.as_str(),
         }
     }
 }
@@ -283,7 +408,7 @@ pub fn native_jsonb_blocker_symbols() -> Vec<&'static str> {
     OPERATORS
         .iter()
         .filter(|o| o.is_native_jsonb_blocker())
-        .map(|o| o.symbol)
+        .map(|o| o.symbol.as_str())
         .collect()
 }
 
@@ -331,121 +456,121 @@ const fn match_metadata() -> OperatorMetadata {
 /// operators, then the remaining native jsonb operators.
 pub const OPERATORS: &[Operator] = &[
     Operator {
-        symbol: "=",
+        symbol: OpSymbol::Eq,
         function_name: "eq",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("eqsel", "eqjoinsel", "=", "<>"),
     },
     Operator {
-        symbol: "<>",
+        symbol: OpSymbol::Neq,
         function_name: "neq",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("neqsel", "neqjoinsel", "<>", "="),
     },
     Operator {
-        symbol: "<",
+        symbol: OpSymbol::Lt,
         function_name: "lt",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalarltsel", "scalarltjoinsel", ">", ">="),
     },
     Operator {
-        symbol: "<=",
+        symbol: OpSymbol::Lte,
         function_name: "lte",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalarlesel", "scalarlejoinsel", ">=", ">"),
     },
     Operator {
-        symbol: ">",
+        symbol: OpSymbol::Gt,
         function_name: "gt",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalargtsel", "scalargtjoinsel", "<", "<="),
     },
     Operator {
-        symbol: ">=",
+        symbol: OpSymbol::Gte,
         function_name: "gte",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalargesel", "scalargejoinsel", "<=", "<"),
     },
     Operator {
-        symbol: "@>",
+        symbol: OpSymbol::Contains,
         function_name: "contains",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: containment_metadata("<@"),
     },
     Operator {
-        symbol: "<@",
+        symbol: OpSymbol::ContainedBy,
         function_name: "contained_by",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: containment_metadata("@>"),
     },
     Operator {
-        symbol: "->",
+        symbol: OpSymbol::Arrow,
         function_name: "\"->\"",
         signatures: ARROW_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "->>",
+        symbol: OpSymbol::ArrowArrow,
         function_name: "\"->>\"",
         signatures: ARROW_TEXT_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "?",
+        symbol: OpSymbol::Question,
         function_name: "\"?\"",
         signatures: HAS_KEY_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "?|",
+        symbol: OpSymbol::QuestionPipe,
         function_name: "\"?|\"",
         signatures: HAS_ANY_KEYS_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "?&",
+        symbol: OpSymbol::QuestionAmp,
         function_name: "\"?&\"",
         signatures: HAS_ANY_KEYS_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "@?",
+        symbol: OpSymbol::AtQuestion,
         function_name: "\"@?\"",
         signatures: JSONPATH_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "@@",
+        symbol: OpSymbol::Match,
         function_name: "\"@@\"",
         signatures: MATCH_SIGNATURES,
         metadata: match_metadata(),
     },
     Operator {
-        symbol: "#>",
+        symbol: OpSymbol::HashArrow,
         function_name: "\"#>\"",
         signatures: PATH_EXTRACT_JSONB_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "#>>",
+        symbol: OpSymbol::HashArrowArrow,
         function_name: "\"#>>\"",
         signatures: PATH_EXTRACT_TEXT_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "-",
+        symbol: OpSymbol::Minus,
         function_name: "\"-\"",
         signatures: DELETE_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "#-",
+        symbol: OpSymbol::HashMinus,
         function_name: "\"#-\"",
         signatures: DELETE_PATH_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "||",
+        symbol: OpSymbol::Concat,
         function_name: "\"||\"",
         signatures: CONCAT_SIGNATURES,
         metadata: OperatorMetadata::none(),
@@ -621,7 +746,7 @@ mod tests {
     fn no_like_operators() {
         assert!(OPERATORS
             .iter()
-            .all(|o| o.symbol != "~~" && o.symbol != "~~*"));
+            .all(|o| o.symbol.as_str() != "~~" && o.symbol.as_str() != "~~*"));
     }
 
     #[test]
@@ -698,7 +823,7 @@ mod tests {
 
     #[test]
     fn catalog_symbols_match_expected_order() {
-        let keys: Vec<&str> = OPERATORS.iter().map(|o| o.symbol).collect();
+        let keys: Vec<&str> = OPERATORS.iter().map(|o| o.symbol.as_str()).collect();
         assert_eq!(
             keys,
             vec![
