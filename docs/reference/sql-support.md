@@ -51,20 +51,20 @@ Notes:
 
 A ✅ means the operator resolves on a column typed as that domain variant. A ❌ means the operator is blocked (it raises) for that variant.
 
-| SQL operator              | Meaning                        | `public.<T>` | `_eq` | `_ord` / `_ord_ore` / `_ord_ope` | `text_match` | `text_search` |
-| ------------------------- | ------------------------------ | :----------: | :---: | :-----------------: | :----------: | :-----------: |
-| `=`                       | Equality                       |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
-| `<>` / `!=`               | Inequality                     |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
-| `<` `<=` `>` `>=`         | Ordered comparison             |      ❌      |  ❌   |         ✅          |      ❌      |      ✅       |
-| `@@`                      | Bloom-filter token match       |      ❌      |  ❌   |         ❌          |      ✅      |      ✅       |
-| `@>` / `<@`               | Containment — **raises** (use `@@`) |  ❌      |  ❌   |         ❌          |      ❌      |      ❌       |
-| `LIKE` `ILIKE` (`~~`/`~~*`) | SQL pattern match            |      ❌      |  ❌   |         ❌          |      ❌      |      ❌       |
-| `IS NULL` / `IS NOT NULL` | Null check                     |      ✅      |  ✅   |         ✅          |      ✅      |      ✅       |
+| SQL operator              | Meaning                        | `public.<T>` | `_eq` | `_ord` / `_ord_ore` / `_ord_ope` | `text_match` | `text_search` | `text_search_ore` |
+| ------------------------- | ------------------------------ | :----------: | :---: | :-----------------: | :----------: | :-----------: | :---------------: |
+| `=`                       | Equality                       |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |        ✅         |
+| `<>` / `!=`               | Inequality                     |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |        ✅         |
+| `<` `<=` `>` `>=`         | Ordered comparison             |      ❌      |  ❌   |         ✅          |      ❌      |      ✅       |        ✅         |
+| `@@`                      | Bloom-filter token match       |      ❌      |  ❌   |         ❌          |      ✅      |      ✅       |        ✅         |
+| `@>` / `<@`               | Containment — **raises** (use `@@`) |  ❌      |  ❌   |         ❌          |      ❌      |      ❌       |        ❌         |
+| `LIKE` `ILIKE` (`~~`/`~~*`) | SQL pattern match            |      ❌      |  ❌   |         ❌          |      ❌      |      ❌       |        ❌         |
+| `IS NULL` / `IS NOT NULL` | Null check                     |      ✅      |  ✅   |         ✅          |      ✅      |      ✅       |        ✅         |
 
 Notes:
 
 - A SQL `NULL` column value is not encrypted, so `IS NULL` / `IS NOT NULL` always work regardless of variant.
-- `@@` on `text_match` / `text_search` tests whether the encrypted text **matches** the (encrypted) search terms via the bloom filter (n-gram token match, not containment; `@>` / `<@` raise here — CIP-3517). This replaces the old `LIKE`/`ILIKE`-on-`match`-index recipe: there is no `LIKE` on encrypted text — use `@@`.
+- `@@` on `text_match` / `text_search` / `text_search_ore` tests whether the encrypted text **matches** the (encrypted) search terms via the bloom filter (n-gram token match, not containment; `@>` / `<@` raise here — CIP-3517). This replaces the old `LIKE`/`ILIKE`-on-`match`-index recipe: there is no `LIKE` on encrypted text — use `@@`.
 
 ---
 
@@ -74,14 +74,14 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 
 | SQL feature                          | Notes                                                                                  | Required variant |
 | ------------------------------------ | -------------------------------------------------------------------------------------- | ---------------- |
-| `WHERE col = …` / `<>`               |                                                                                        | `_eq`, `_ord`, `text_search` |
-| `WHERE col <` / `<=` / `>` / `>=`    |                                                                                        | `_ord`, `text_search` |
-| `WHERE col BETWEEN … AND …`          | desugars to `>=` and `<=`                                                               | `_ord`, `text_search` |
-| `WHERE col @@ …`                     | bloom-filter token match (text)                                                        | `text_match`, `text_search` |
+| `WHERE col = …` / `<>`               |                                                                                        | `_eq`, `_ord`, `text_search`, `text_search_ore` |
+| `WHERE col <` / `<=` / `>` / `>=`    |                                                                                        | `_ord`, `text_search`, `text_search_ore` |
+| `WHERE col BETWEEN … AND …`          | desugars to `>=` and `<=`                                                               | `_ord`, `text_search`, `text_search_ore` |
+| `WHERE col @@ …`                     | bloom-filter token match (text)                                                        | `text_match`, `text_search`, `text_search_ore` |
 | `WHERE col @> …`                     | document containment (`public.eql_v3_json_search` only; raises on text match)           | `public.eql_v3_json_search` |
-| `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
-| `ORDER BY col`                       | meaningful only with an ordering term                                                   | `_ord`, `text_search` |
-| `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |
+| `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search`, `text_search_ore` |
+| `ORDER BY col`                       | meaningful only with an ordering term                                                   | `_ord`, `text_search`, `text_search_ore` |
+| `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search`, `text_search_ore` |
 | `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.eql_v3_integer_ord)`) | `_ord` |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | plain `COUNT(col)` needs no term; `DISTINCT` needs an equality term                     | any / `_eq` for `DISTINCT` |
 | `JOIN … ON lhs.col = rhs.col`        | both sides must share the same keyset and a matching variant                            | `_eq`, `_ord`, `text_search` |
@@ -106,7 +106,7 @@ CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email)
 -- Ordering / range (btree index on ord_term; use ord_term_ore for an _ord_ore column)
 CREATE INDEX events_at_ord ON events USING btree (eql_v3.ord_term(encrypted_at));
 
--- Text match (bloom containment — GIN on match_term)
+-- Text match (bloom fuzzy match — GIN on match_term)
 CREATE INDEX users_name_match ON users USING gin (eql_v3.match_term(encrypted_name));
 ```
 

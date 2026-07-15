@@ -43,7 +43,8 @@ SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 
 ### Text match — `@@`
 
-On `public.eql_v3_text_match` / `public.eql_v3_text_search` (carry a `bf` bloom term). This is **probabilistic ngram-bloom matching** (`eql_v3.matches`), not SQL `LIKE`, not JSONB containment, and not the containment operators — `@>` / `<@` **raise** on these domains (CIP-3517):
+On `public.eql_v3_text_match` / `public.eql_v3_text_search` /
+`public.eql_v3_text_search_ore` (carry a `bf` bloom term). This is **probabilistic ngram-bloom matching** (`eql_v3.matches`), not SQL `LIKE`, not JSONB containment, and not the containment operators — `@>` / `<@` **raise** on these domains (CIP-3517):
 
 ```sql
 SELECT * FROM docs WHERE encrypted_content @@ $1::public.eql_v3_text_match;

@@ -779,7 +779,7 @@ edits:
   comparators by `eql_v3_internal`-schema entries. A new scalar type inherits
   coverage; **a new term needs splinter entries for each new name it introduces
   — both its extractor and its comparison wrappers** (adding `Bloom` required
-  `match_term`, `contains`, `contained_by`, and the SEM `bloom_filter`; adding
+  `match_term`, `matches`, and the SEM `bloom_filter`; adding
   `Ope` required `ord_term` and the SEM `ope_cllw`).
 
 ---
@@ -958,10 +958,10 @@ lexicographic `min`/`max` pivots instead of `::MIN`/`::MAX` and a real median
 lexicographic text has no numeric origin, so it does not get the signed-only
 sign-boundary test, and the empty string is deliberately not a fixture (`""`
 encrypts to an empty ORE term; issue #262). `text` is also the first type to add
-a new index `Term` (`Bloom`) — giving it a `match` capability (`@>`/`<@`
-bloom-filter containment on the `public.eql_v3_text_match` domain) on top of equality
+a new index `Term` (`Bloom`) — giving it a `match` capability (`@@`
+bloom-filter fuzzy match on the `public.eql_v3_text_match` domain) on top of equality
 (`Hm`) and ordering (`Ore`). Match is deliberately **not** SQL `LIKE`: it is
-probabilistic ngram-bloom containment, exposed only on `text_match`, and never
+probabilistic ngram-bloom matching, exposed only on `text_match`, and never
 backs equality.
 
 `jsonb` is a **mixed** family. Its **searchable** SteVec surface remains out of
