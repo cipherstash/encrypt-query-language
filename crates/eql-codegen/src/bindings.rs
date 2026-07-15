@@ -326,14 +326,14 @@ pub fn render_family_bindings(family: &DomainFamily) -> String {
 }
 
 /// Render a bindings module for the **scalar domains only** of a mixed family —
-/// currently just `jsonb` (its bare `public.eql_v3_json` storage struct). A
+/// currently just `json` (its bare `public.eql_v3_json` storage struct). A
 /// filtered twin of [`render_family_bindings`]: the SteVec domains' structs stay
 /// hand-written in `json.rs` (their fields/serde aren't catalog-derivable), so
 /// this must skip them or it would emit clashing/incorrect struct bodies. The
 /// output is written to `<family>_storage.rs` (e.g. `json_storage.rs`), NOT
 /// `<family>.rs`, so it never clobbers the hand-written module — the hand-written
-/// `json.rs` re-exports the generated struct (`pub use ...::Jsonb;`) so
-/// `super::json::Jsonb` resolves for the inventory/payload renderers.
+/// `json.rs` re-exports the generated struct (`pub use ...::Json;`) so
+/// `super::json::Json` resolves for the inventory/payload renderers.
 pub fn render_scalar_only_bindings(family: &DomainFamily) -> String {
     let mut used: Vec<&'static str> = vec!["Ciphertext"];
     for d in family.domains.iter().filter(|d| d.is_scalar()) {
@@ -738,14 +738,16 @@ fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
             )
         })
         .collect();
-    // Mixed families (jsonb) are excluded from `scalar_families()`, so their
-    // scalar storage domain(s) render into a separate `<family>_storage.rs`
-    // module — the SteVec `<family>.rs` stays hand-written. Guarded so a family
-    // with no scalar domain emits nothing.
-    if eql_domains::JSON.domains.iter().any(|d| d.is_scalar()) {
+    // Mixed families (a family with ≥1 scalar domain that is not wholly scalar —
+    // `json` today) are excluded from `scalar_families()`, so their scalar
+    // storage domain(s) render into a separate `<family>_storage.rs` module while
+    // the SteVec `<family>.rs` stays hand-written. Derived from the same generic
+    // `families_with_scalar_domains()` seam the SQL materializer iterates rather
+    // than naming a family, so a second mixed family is picked up automatically.
+    for f in eql_domains::families_with_scalar_domains().filter(|f| !f.is_scalar()) {
         rendered.push((
-            dir.join(format!("{}_storage.rs", eql_domains::JSON.name)),
-            render_scalar_only_bindings(&eql_domains::JSON),
+            dir.join(format!("{}_storage.rs", f.name)),
+            render_scalar_only_bindings(f),
         ));
     }
     rendered.push((dir.join("payload.rs"), render_payload_rs()));
