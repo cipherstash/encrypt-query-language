@@ -25,11 +25,14 @@ fn is_valid_identifier(s: &str) -> bool {
 }
 
 /// Allowlist of generated `payload` column types. `jsonb` for the scalar
-/// fixtures; `public.eql_v3_json_search` for the v3 jsonb (SteVec document) fixture, whose
+/// fixtures; `public.eql_v3_json_search` for the v3 json (SteVec document) fixture, whose
 /// generated `payload` column is the `public.eql_v3_json_search` DOMAIN so the domain CHECK
-/// runs on load. Schema-qualified tokens are allowed — each is an exact,
-/// vetted entry here, never a free-form `&str`.
-pub const ALLOWED_COLUMN_TYPES: &[&str] = &["jsonb", "public.eql_v3_json_search"];
+/// runs on load; and `public.eql_v3_json` for the storage-only / encryption-only json
+/// fixture (CIP-3512), whose `payload` column is that DOMAIN so its `{v,i,c}` CHECK runs on
+/// load. Schema-qualified tokens are allowed — each is an exact, vetted entry here, never a
+/// free-form `&str`.
+pub const ALLOWED_COLUMN_TYPES: &[&str] =
+    &["jsonb", "public.eql_v3_json", "public.eql_v3_json_search"];
 
 fn is_valid_column_type(s: &str) -> bool {
     ALLOWED_COLUMN_TYPES.contains(&s)
