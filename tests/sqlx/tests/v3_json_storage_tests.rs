@@ -93,9 +93,19 @@ async fn storage_fixture_shape(pool: PgPool) -> anyhow::Result<()> {
     .await?;
 
     let obj = payload.as_object().expect("payload is an object");
-    assert_eq!(obj.get("v"), Some(&serde_json::json!(3)), "envelope version");
-    assert!(obj.contains_key("i"), "storage payload carries index metadata");
-    assert!(obj.contains_key("c"), "storage payload carries a ciphertext");
+    assert_eq!(
+        obj.get("v"),
+        Some(&serde_json::json!(3)),
+        "envelope version"
+    );
+    assert!(
+        obj.contains_key("i"),
+        "storage payload carries index metadata"
+    );
+    assert!(
+        obj.contains_key("c"),
+        "storage payload carries a ciphertext"
+    );
     // Storage-only: no SteVec array / form discriminator, and — crucially — no
     // index-term keys, because nothing is searchable.
     for absent in ["sv", "k", "hm", "ob", "bf", "op"] {
@@ -216,7 +226,9 @@ async fn storage_path_operators_unknown_literal_fall_through(pool: PgPool) -> an
     )
     .fetch_one(&pool)
     .await
-    .map_err(|e| anyhow::anyhow!("`payload -> 'c'` unexpectedly raised (resolution changed?): {e}"))?;
+    .map_err(|e| {
+        anyhow::anyhow!("`payload -> 'c'` unexpectedly raised (resolution changed?): {e}")
+    })?;
     anyhow::ensure!(
         matches!(c_val, Some(serde_json::Value::String(_))),
         "`payload -> 'c'` should echo the ciphertext string, got {c_val:?}"
@@ -227,7 +239,10 @@ async fn storage_path_operators_unknown_literal_fall_through(pool: PgPool) -> an
     )
     .fetch_one(&pool)
     .await?;
-    anyhow::ensure!(missing.is_none(), "`payload -> 'missing'` should be NULL, got {missing:?}");
+    anyhow::ensure!(
+        missing.is_none(),
+        "`payload -> 'missing'` should be NULL, got {missing:?}"
+    );
 
     // `?` (unknown literal) tests envelope-key presence and returns native bool.
     let has_c: bool = sqlx::query_scalar(
@@ -235,7 +250,10 @@ async fn storage_path_operators_unknown_literal_fall_through(pool: PgPool) -> an
     )
     .fetch_one(&pool)
     .await?;
-    anyhow::ensure!(has_c, "`payload ? 'c'` should be true (envelope has a `c` key)");
+    anyhow::ensure!(
+        has_c,
+        "`payload ? 'c'` should be true (envelope has a `c` key)"
+    );
 
     let has_absent: bool = sqlx::query_scalar(
         "SELECT payload ? 'absent' FROM fixtures.v3_json_storage ORDER BY id LIMIT 1",
