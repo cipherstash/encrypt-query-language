@@ -75,7 +75,7 @@ echo "==> smoke: v3 searchable encrypted-JSON (SteVec) surface"
 "${RUN[@]}" <<'SQL'
 CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.eql_v3_json_search);
 INSERT INTO v3_json_smoke VALUES
-  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json_search);
+  (1, '{"i":{"t":"v3_json_smoke","c":"e"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json_search);
 
 -- Supported typed accessors and containment.
 SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
@@ -125,7 +125,7 @@ DECLARE
 BEGIN
   -- A SteVec document (sv, no root c) must be rejected by the storage CHECK.
   BEGIN
-    PERFORM '{"v":"3","i":{},"sv":[{"s":"sel","hm":"00"}]}'::public.eql_v3_json;
+    PERFORM '{"v":3,"i":{"t":"v3_json_storage_smoke","c":"e"},"sv":[{"s":"sel","hm":"00"}]}'::public.eql_v3_json;
   EXCEPTION WHEN check_violation THEN
     raised := true;
   END;
