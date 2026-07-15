@@ -196,7 +196,7 @@ For ordered field-level access, index `eql_v3.ord_term(doc -> '<selector>'::text
 
 ## GIN Indexes for JSONB Containment
 
-For document-level containment (`@>` / `<@`) on `public.eql_v3_json_search` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
+For document-level containment (`@>`) on `public.eql_v3_json_search` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages (`jsonb_path_ops` indexes `@>` only, not `<@`):
 
 ```sql
 CREATE INDEX orders_data_gin
@@ -214,7 +214,7 @@ The needle must be typed — `$1::eql_v3.query_json`, another `public.eql_v3_jso
 | Feature        | hash / btree on extractor      | GIN on `to_ste_vec_query` |
 | -------------- | ------------------------------ | ------------------------- |
 | **Use case**   | equality, range, ordering      | JSONB document containment |
-| **Operators**  | `=`, `<>`, `<`, `>`, `<=`, `>=` | `@>`, `<@`                |
+| **Operators**  | `=`, `<>`, `<`, `>`, `<=`, `>=` | `@>`                     |
 | **Expression** | `eql_v3.eq_term` / `ord_term`  | `eql_v3.to_ste_vec_query(col)::jsonb` |
 
 ---

@@ -107,7 +107,7 @@ fn user_domain_names() -> Vec<String> {
         }
     }
     names.extend(
-        ["eql_v3_json_search", "eql_v3_json_entry"]
+        ["eql_v3_json", "eql_v3_json_search", "eql_v3_json_entry"]
             .into_iter()
             .map(String::from),
     );

@@ -156,8 +156,8 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
         public_domains,
         vec![
             "public.eql_v3_integer_eq",
-            "public.eql_v3_json_search",
-            "public.eql_v3_json_entry"
+            "public.eql_v3_json_entry",
+            "public.eql_v3_json_search"
         ],
         "repeat install must keep public user-column domains available"
     );

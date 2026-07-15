@@ -124,7 +124,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.eql_v3_json_search IS 'EQL encrypted JSONB document (containment, equality, ordering)';
+  COMMENT ON DOMAIN public.eql_v3_json_search IS 'EQL encrypted JSONB searchable document (containment)';
 END
 $$;
 

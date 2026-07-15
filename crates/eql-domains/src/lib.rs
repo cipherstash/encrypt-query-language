@@ -130,7 +130,7 @@ impl Role {
 
 /// The structural shape of a domain's payload. Every existing scalar family is
 /// [`Shape::Scalar`] (flat `{v,i,c,+terms}`). The SteVec shapes belong to the
-/// `jsonb` family and carry document/entry/query payloads whose keys are NOT the
+/// `json` family and carry document/entry/query payloads whose keys are NOT the
 /// flat envelope+term set — `Term`, `Role`, `operators_for_terms`, and
 /// `capability_label` continue to assume flat-scalar semantics and are simply
 /// never invoked on a SteVec domain (consumers filter/branch on `Shape`).
@@ -150,7 +150,7 @@ pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
     /// A `json` family SteVec payload: `public.eql_v3_json_search`
-    /// (`{v, i, sv: [entry]}`), `public.eql_v3_json_entry`
+    /// (`{v, k, i, sv: [entry]}`), `public.eql_v3_json_entry`
     /// (`{s, c, a?, #[flatten] SteVecTerm}`), or `eql_v3.query_json`
     /// (`{sv: [query-entry]}`). The three differ in payload body but share the
     /// non-flat-scalar shape, so a single variant covers them; `Domain.name`

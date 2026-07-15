@@ -102,7 +102,7 @@ impl QueryPayload {
     /// Strictly parse `value` as `domain`'s query payload, KEEPING the
     /// parsed value — the query-side counterpart of
     /// [`super::DomainPayload::parse`]. `domain` is the unqualified name
-    /// (`"query_integer_eq"`, `"query_jsonb"`, …). `None` when `domain`
+    /// (`"query_integer_eq"`, `"query_json"`, …). `None` when `domain`
     /// is not a query-operand domain; `Some(Err)` when the strict parse
     /// fails (`deny_unknown_fields` rejects a stray `c`).
     pub fn parse(
