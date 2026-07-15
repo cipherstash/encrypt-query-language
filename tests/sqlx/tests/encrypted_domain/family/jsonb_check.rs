@@ -158,20 +158,24 @@ async fn storage_cast_accepts(pool: &PgPool, payload: Option<&str>) -> Result<bo
 }
 
 /// The bare storage domain `public.eql_v3_json` (ciphertext-only encrypted
-/// JSON) accepts only a well-formed `{v,i,c}` envelope at `v == '3'`, and in
-/// particular REJECTS a SteVec document payload (`{v,i,sv}` with no root `c`) —
-/// the structural distinction from the searchable `public.eql_v3_json_search`.
+/// JSON) is the hand-written stand-in for the generated `matrix_*_payload_check`
+/// arm every scalar type gets automatically (json is outside the scalar matrix).
+/// Malformed payloads are produced by MUTATION, not encryption, so this corpus
+/// is synthetic by nature — the same way the generated payload-check driver
+/// mutates a baseline. It pins the rejection boundary: the CHECK accepts only a
+/// well-formed `{v,i,c}` envelope at `v == '3'` and REJECTS everything else,
+/// including a SteVec document payload (`{v,i,sv}` with no root `c`) — the
+/// structural distinction from the searchable `public.eql_v3_json_search`.
+///
+/// Positive `{v,i,c}` acceptance is NOT re-asserted here — it is proven over
+/// REAL crypto by the `v3_json_storage` fixture loading through this CHECK at
+/// INSERT and by `storage_fixture_shape` in `v3_json_storage_tests`.
 #[sqlx::test]
-async fn json_storage_check_accepts_envelope_rejects_malformed(pool: PgPool) -> Result<()> {
+async fn json_storage_check_rejects_malformed(pool: PgPool) -> Result<()> {
     let candidates: &[(Option<&str>, bool)] = &[
-        // SQL NULL — a domain accepts NULL (no CHECK is evaluated).
+        // SQL NULL — a domain accepts NULL (no CHECK is evaluated). The one
+        // non-rejection, kept as the boundary case: NULL is not "malformed".
         (None, true),
-        // Valid: the minimal `{v,i,c}` envelope; extra keys allowed.
-        (Some(r#"{"v":"3","i":{},"c":"ct"}"#), true),
-        (
-            Some(r#"{"v":"3","i":{"t":"tbl","c":"col"},"c":"ct","extra":1}"#),
-            true,
-        ),
         // Invalid: a SteVec document (`sv`, no root `c`) — belongs to
         // public.eql_v3_json_search, not the ciphertext-only storage domain.
         (
@@ -195,100 +199,6 @@ async fn json_storage_check_accepts_envelope_rejects_malformed(pool: PgPool) -> 
             cast == *expected,
             "public.eql_v3_json cast verdict for {payload:?}: accepted = {cast}, \
              expected = {expected}"
-        );
-    }
-    Ok(())
-}
-
-/// The comparison/containment native jsonb operators are BLOCKED on
-/// `public.eql_v3_json`: a value typed as the storage domain can never fall
-/// through to plaintext-jsonb equality/containment. Each raises
-/// `... is not supported ...` (a LANGUAGE plpgsql blocker the planner cannot
-/// elide). NB: the pure path/existence operators (`->`, `->>`, `?`) resolve to
-/// native jsonb on ANY jsonb-backed storage domain (`eql_v3_integer` included) —
-/// a pre-existing PostgreSQL operator-resolution quirk, not specific to `json`
-/// — so they are deliberately not asserted here.
-#[sqlx::test]
-async fn json_storage_blocks_native_comparison_operators(pool: PgPool) -> Result<()> {
-    let envelope = r#"{"v":"3","i":{},"c":"ct"}"#;
-    let ops: &[&str] = &[
-        "col = '{}'::jsonb",
-        "col @> '{}'::jsonb",
-        "col <@ '{}'::jsonb",
-        "col #> '{k}'::text[]",
-        "col || '{}'::jsonb",
-    ];
-    for frag in ops {
-        let sql = format!("SELECT {frag} FROM (SELECT $1::public.eql_v3_json AS col) t");
-        let err = sqlx::query_scalar::<_, serde_json::Value>(&sql)
-            .bind(envelope)
-            .fetch_one(&pool)
-            .await
-            .expect_err(&format!(
-                "native jsonb operator in `{frag}` must be blocked"
-            ));
-        anyhow::ensure!(
-            err.to_string().contains("is not supported"),
-            "expected a 'not supported' blocker error for `{frag}`, got: {err}"
-        );
-    }
-    Ok(())
-}
-
-/// KNOWN LIMITATION (characterization test — pins current behaviour, there is no
-/// fix). The pure path/existence native jsonb operators `->`, `->>`, and `?` are
-/// NOT blocked on `public.eql_v3_json`: they resolve to the native `jsonb`
-/// operator and return a plaintext result (`NULL` / `false`) instead of raising
-/// the blocker. This is a PostgreSQL operator-resolution quirk affecting EVERY
-/// jsonb-backed storage domain (`eql_v3_integer`, `eql_v3_boolean`, … — not
-/// specific to `json`): for these operators the planner binds the base-type
-/// `jsonb` operator rather than the domain-specific blocker. The
-/// comparison/containment operators (`=`, `@>`, `<@`, `#>`, `||`) DO engage the
-/// blocker — see `json_storage_blocks_native_comparison_operators`.
-///
-/// The encrypted ciphertext lives in `c`, so `->'c'` / `->>'c'` merely echo the
-/// already-opaque ciphertext string and `?` tests key presence in the envelope —
-/// none of which leaks plaintext. This test exists so that if a future
-/// PostgreSQL version (or an EQL change) starts routing these through the
-/// blocker, the change is noticed here rather than silently altering behaviour.
-#[sqlx::test]
-async fn json_storage_path_operators_fall_through_to_native_known_limitation(
-    pool: PgPool,
-) -> Result<()> {
-    let envelope = r#"{"v":"3","i":{},"c":"ct"}"#;
-    let of = |frag: &str| format!("SELECT {frag} FROM (SELECT $1::public.eql_v3_json AS col) t");
-
-    // `->` / `->>` return native jsonb: NULL for an absent key, and `-> 'c'`
-    // echoes the (already-opaque) ciphertext string — no plaintext leak. None raise.
-    let jsonb_cases: &[(&str, serde_json::Value)] = &[
-        ("col -> 'missing'", serde_json::Value::Null),
-        ("col ->> 'missing'", serde_json::Value::Null),
-        ("col -> 'c'", serde_json::json!("ct")),
-    ];
-    for (frag, expected) in jsonb_cases {
-        let got: Option<serde_json::Value> = sqlx::query_scalar(&of(frag))
-            .bind(envelope)
-            .fetch_one(&pool)
-            .await
-            .unwrap_or_else(|e| panic!("`{frag}` unexpectedly raised (limitation changed?): {e}"));
-        let got = got.unwrap_or(serde_json::Value::Null);
-        anyhow::ensure!(
-            &got == expected,
-            "path operator `{frag}` returned {got:?}, expected native {expected:?}"
-        );
-    }
-
-    // `?` tests envelope key presence and returns a native boolean (does not raise).
-    let key_cases: &[(&str, bool)] = &[("col ? 'c'", true), ("col ? 'absent'", false)];
-    for (frag, expected) in key_cases {
-        let got: bool = sqlx::query_scalar(&of(frag))
-            .bind(envelope)
-            .fetch_one(&pool)
-            .await
-            .unwrap_or_else(|e| panic!("`{frag}` unexpectedly raised (limitation changed?): {e}"));
-        anyhow::ensure!(
-            got == *expected,
-            "existence operator `{frag}` returned {got}, expected native {expected}"
         );
     }
     Ok(())
