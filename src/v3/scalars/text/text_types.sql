@@ -57,7 +57,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.eql_v3_text_match IS 'EQL encrypted text (containment)';
+  COMMENT ON DOMAIN public.eql_v3_text_match IS 'EQL encrypted text (matching)';
 
   --! @brief Encrypted domain public.eql_v3_text_ord_ore.
   IF NOT EXISTS (
@@ -138,7 +138,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.eql_v3_text_search_ore IS 'EQL encrypted text (equality, ordering, containment)';
+  COMMENT ON DOMAIN public.eql_v3_text_search_ore IS 'EQL encrypted text (equality, ordering, matching)';
 
   --! @brief Encrypted domain public.eql_v3_text_search.
   IF NOT EXISTS (
@@ -158,6 +158,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN public.eql_v3_text_search IS 'EQL encrypted text (equality, ordering, containment)';
+  COMMENT ON DOMAIN public.eql_v3_text_search IS 'EQL encrypted text (equality, ordering, matching)';
 END
 $$;

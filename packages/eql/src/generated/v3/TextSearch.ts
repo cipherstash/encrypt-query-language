@@ -9,6 +9,6 @@ import type { SchemaVersion } from "./SchemaVersion";
 /**
  * `public.eql_v3_text_search` — search domain.
  *
- * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `op` `bf`.
+ * Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `c` `hm` `op` `bf`.
  */
 export type TextSearch = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, op: OpeCllw, bf: BloomFilter, };

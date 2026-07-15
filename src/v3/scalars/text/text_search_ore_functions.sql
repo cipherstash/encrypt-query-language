@@ -178,11 +178,235 @@ CREATE FUNCTION eql_v3.gte(a jsonb, b public.eql_v3_text_search_ore)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term_ore(a::public.eql_v3_text_search_ore) >= eql_v3.ord_term_ore(b) $$;
 
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_search_ore, b public.eql_v3_text_search_ore)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b jsonb right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_search_ore, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a jsonb left operand of the blocked operator
+--! @param b public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.eql_v3_text_search_ore)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_search_ore, b public.eql_v3_text_search_ore)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b jsonb right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_search_ore, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a jsonb left operand of the blocked operator
+--! @param b public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.eql_v3_text_search_ore)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param selector text right operand of the blocked operator
+--! @return public.eql_v3_text_search_ore never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_text_search_ore, selector text)
+RETURNS public.eql_v3_text_search_ore IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param selector integer right operand of the blocked operator
+--! @return public.eql_v3_text_search_ore never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_text_search_ore, selector integer)
+RETURNS public.eql_v3_text_search_ore IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a jsonb left operand of the blocked operator
+--! @param selector public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return public.eql_v3_text_search_ore never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.eql_v3_text_search_ore)
+RETURNS public.eql_v3_text_search_ore IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param selector text right operand of the blocked operator
+--! @return text never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_text_search_ore, selector text)
+RETURNS text IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param selector integer right operand of the blocked operator
+--! @return text never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_text_search_ore, selector integer)
+RETURNS text IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a jsonb left operand of the blocked operator
+--! @param selector public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return text never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.eql_v3_text_search_ore)
+RETURNS text IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."?"(a public.eql_v3_text_search_ore, b text)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text[] right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."?|"(a public.eql_v3_text_search_ore, b text[])
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text[] right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."?&"(a public.eql_v3_text_search_ore, b text[])
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b jsonpath right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal."@?"(a public.eql_v3_text_search_ore, b jsonpath)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.eql_v3_text_search_ore'; END; $$
+LANGUAGE plpgsql;
+
 --! @brief Operator wrapper for public.eql_v3_text_search_ore.
 --! @param a public.eql_v3_text_search_ore
 --! @param b public.eql_v3_text_search_ore
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_search_ore, b public.eql_v3_text_search_ore)
+CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search_ore, b public.eql_v3_text_search_ore)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
@@ -190,7 +414,7 @@ AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 --! @param a public.eql_v3_text_search_ore
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_search_ore, b jsonb)
+CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search_ore, b jsonb)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.eql_v3_text_search_ore) $$;
 
@@ -198,209 +422,145 @@ AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.eql_v3_text_sea
 --! @param a jsonb
 --! @param b public.eql_v3_text_search_ore
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a jsonb, b public.eql_v3_text_search_ore)
+CREATE FUNCTION eql_v3.matches(a jsonb, b public.eql_v3_text_search_ore)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search_ore) @> eql_v3.match_term(b) $$;
 
---! @brief Operator wrapper for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b public.eql_v3_text_search_ore
---! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_search_ore, b public.eql_v3_text_search_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
-
---! @brief Operator wrapper for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b jsonb
---! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_search_ore, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b::public.eql_v3_text_search_ore) $$;
-
---! @brief Operator wrapper for public.eql_v3_text_search_ore.
---! @param a jsonb
---! @param b public.eql_v3_text_search_ore
---! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a jsonb, b public.eql_v3_text_search_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search_ore) <@ eql_v3.match_term(b) $$;
-
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param selector text
---! @return public.eql_v3_text_search_ore
-CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_text_search_ore, selector text)
-RETURNS public.eql_v3_text_search_ore IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param selector integer
---! @return public.eql_v3_text_search_ore
-CREATE FUNCTION eql_v3_internal."->"(a public.eql_v3_text_search_ore, selector integer)
-RETURNS public.eql_v3_text_search_ore IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a jsonb
---! @param selector public.eql_v3_text_search_ore
---! @return public.eql_v3_text_search_ore
-CREATE FUNCTION eql_v3_internal."->"(a jsonb, selector public.eql_v3_text_search_ore)
-RETURNS public.eql_v3_text_search_ore IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param selector text
---! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_text_search_ore, selector text)
-RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param selector integer
---! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a public.eql_v3_text_search_ore, selector integer)
-RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a jsonb
---! @param selector public.eql_v3_text_search_ore
---! @return text
-CREATE FUNCTION eql_v3_internal."->>"(a jsonb, selector public.eql_v3_text_search_ore)
-RETURNS text IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '->>', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text
---! @return boolean
-CREATE FUNCTION eql_v3_internal."?"(a public.eql_v3_text_search_ore, b text)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text[]
---! @return boolean
-CREATE FUNCTION eql_v3_internal."?|"(a public.eql_v3_text_search_ore, b text[])
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?|', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text[]
---! @return boolean
-CREATE FUNCTION eql_v3_internal."?&"(a public.eql_v3_text_search_ore, b text[])
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '?&', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b jsonpath
---! @return boolean
-CREATE FUNCTION eql_v3_internal."@?"(a public.eql_v3_text_search_ore, b jsonpath)
-RETURNS boolean IMMUTABLE PARALLEL SAFE
-AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.eql_v3_text_search_ore'; END; $$
-LANGUAGE plpgsql;
-
---! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b jsonpath
---! @return boolean
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b jsonpath right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_text_search_ore, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text[]
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text[] right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."#>"(a public.eql_v3_text_search_ore, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text[]
---! @return text
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text[] right operand of the blocked operator
+--! @return text never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."#>>"(a public.eql_v3_text_search_ore, b text[])
 RETURNS text IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#>>', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_text_search_ore, b text)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b integer
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b integer right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_text_search_ore, b integer)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text[]
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text[] right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."-"(a public.eql_v3_text_search_ore, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '-', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b text[]
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b text[] right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."#-"(a public.eql_v3_text_search_ore, b text[])
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '#-', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b public.eql_v3_text_search_ore
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."||"(a public.eql_v3_text_search_ore, b public.eql_v3_text_search_ore)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b jsonb
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_text_search_ore left operand of the blocked operator
+--! @param b jsonb right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."||"(a public.eql_v3_text_search_ore, b jsonb)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_text_search_ore'; END; $$
 LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search_ore.
---! @param a jsonb
---! @param b public.eql_v3_text_search_ore
---! @return jsonb
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_text_search_ore and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a jsonb left operand of the blocked operator
+--! @param b public.eql_v3_text_search_ore right operand of the blocked operator
+--! @return jsonb never returned — the function always raises "operator not supported"
 CREATE FUNCTION eql_v3_internal."||"(a jsonb, b public.eql_v3_text_search_ore)
 RETURNS jsonb IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '||', 'public.eql_v3_text_search_ore'; END; $$

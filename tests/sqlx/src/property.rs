@@ -550,11 +550,12 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
     Ok(())
 }
 
-/// Bloom-filter **match** smoke (text only, example-based). Bloom containment
+/// Bloom-filter **match** smoke (text only, example-based). Bloom matching
 /// admits false positives and the plaintext oracle is substring, not equality,
 /// so this is curated rather than a random property: three fixtures with known
 /// n-gram relationships (`haystack` ⊇ `needle`, `disjoint` shares none). Asserts
-/// `eql_v3.contains` / `contained_by` respect **left-contains-right** `@>` and
+/// `eql_v3.matches` (the `@@` fuzzy match, CIP-3517) respects
+/// **left-matches-right** (`match_term(a) @> match_term(b)`, a's bloom ⊇ b's) and
 /// that `match_term` yields a non-empty `bf` array. Operands are the payload
 /// JSON literals cast to `domain` (`public.eql_v3_text_match`).
 pub async fn assert_match_smoke(
@@ -568,62 +569,43 @@ pub async fn assert_match_smoke(
     let needle = cast(needle_json, domain);
     let disjoint = cast(disjoint_json, domain);
     // CIP-3432: the term-only query operands (bloom `bf`, no ciphertext `c`),
-    // consumed by the `(text_match, query_text_match)` containment operators.
+    // consumed by the `(text_match, query_text_match)` match operators.
     let needle_q = query_cast(needle_json, domain);
     let disjoint_q = query_cast(disjoint_json, domain);
 
-    // `contains(a, b)` = `match_term(a) @> match_term(b)` (a's bits ⊇ b's);
-    // `contained_by` is its mirror. Each row: (label, sql, expected). The last
-    // four rows drive the same containment through a term-only query operand.
-    let cases: [(&str, String, bool); 10] = [
+    // `matches(a, b)` = `match_term(a) @> match_term(b)` (a's bloom ⊇ b's) — a
+    // single directional operator (no `contained_by` reverse). Each row: (label,
+    // sql, expected). The last three rows drive the same match through a term-only
+    // query operand, exercising both `(storage, query)` and `(query, storage)`.
+    let cases: [(&str, String, bool); 6] = [
         (
-            "contains(haystack, needle)",
-            format!("eql_v3.contains({haystack}, {needle})"),
+            "matches(haystack, needle)",
+            format!("eql_v3.matches({haystack}, {needle})"),
             true,
         ),
         (
-            "contains(needle, haystack)",
-            format!("eql_v3.contains({needle}, {haystack})"),
+            "matches(needle, haystack)",
+            format!("eql_v3.matches({needle}, {haystack})"),
             false,
         ),
         (
-            "contains(haystack, disjoint)",
-            format!("eql_v3.contains({haystack}, {disjoint})"),
+            "matches(haystack, disjoint)",
+            format!("eql_v3.matches({haystack}, {disjoint})"),
             false,
         ),
         (
-            "contained_by(needle, haystack)",
-            format!("eql_v3.contained_by({needle}, {haystack})"),
+            "matches(haystack, needle_query) [CIP-3432]",
+            format!("eql_v3.matches({haystack}, {needle_q})"),
             true,
         ),
         (
-            "contained_by(haystack, needle)",
-            format!("eql_v3.contained_by({haystack}, {needle})"),
+            "matches(haystack, disjoint_query) [CIP-3432]",
+            format!("eql_v3.matches({haystack}, {disjoint_q})"),
             false,
         ),
         (
-            "contained_by(disjoint, haystack)",
-            format!("eql_v3.contained_by({disjoint}, {haystack})"),
-            false,
-        ),
-        (
-            "contains(haystack, needle_query) [CIP-3432]",
-            format!("eql_v3.contains({haystack}, {needle_q})"),
-            true,
-        ),
-        (
-            "contains(haystack, disjoint_query) [CIP-3432]",
-            format!("eql_v3.contains({haystack}, {disjoint_q})"),
-            false,
-        ),
-        (
-            "contained_by(needle_query, haystack) [CIP-3432]",
-            format!("eql_v3.contained_by({needle_q}, {haystack})"),
-            true,
-        ),
-        (
-            "contained_by(disjoint_query, haystack) [CIP-3432]",
-            format!("eql_v3.contained_by({disjoint_q}, {haystack})"),
+            "matches(needle_query, haystack) [CIP-3432]",
+            format!("eql_v3.matches({needle_q}, {haystack})"),
             false,
         ),
     ];

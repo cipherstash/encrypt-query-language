@@ -139,7 +139,7 @@ A `Term` answers every question the generators need, via exhaustive `impl` metho
 | `ctor()` | `hmac_256` | `ore_block_256` | `bloom_filter` | `ope_cllw` |
 | `binding_newtype()` | `Hmac256` | `OreBlock256` | `BloomFilter` | `OpeCllw` |
 | `role()` | `Eq` | `Ord` | `Match` | `Ord` |
-| `operators()` | `= <>` | `= <> < <= > >=` | `@> <@` | `= <> < <= > >=` |
+| `operators()` | `= <>` | `= <> < <= > >=` | `@@` | `= <> < <= > >=` |
 | `provides_ordering()` | `false` | `true` | `false` | `true` |
 
 `Ope` is the CLLW-OPE term: a hex-encoded ciphertext that is natively `bytea`-sortable after

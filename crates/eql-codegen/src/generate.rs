@@ -120,7 +120,9 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
         let extractor = Term::extractor_for_operator(domain.terms, op.symbol);
         for sig in op.signatures {
             let rendered = sig.render(&dom);
-            if is_supported(op.symbol) {
+            // A `blocker_only` overload (the `@@` jsonpath predicate) always falls
+            // through to the blocker, even when the domain supports the symbol.
+            if is_supported(op.symbol) && !sig.blocker_only {
                 if let Some(ex) = extractor {
                     entries.push(wrapper_entry(&dom, op, &rendered.left, &rendered.right, ex));
                     continue;
@@ -169,11 +171,13 @@ pub fn render_operators_file(family_name: &str, domain: &Domain) -> String {
             // CREATE OPERATOR only needs the operand types; `rendered.returns` is
             // intentionally discarded here (it matters only for the function body).
             let rendered = sig.render(&dom);
+            // A `blocker_only` overload (the `@@` jsonpath predicate) is bound to
+            // the internal blocker even on a domain that supports the symbol.
             operators.push(operator_entry(
                 op,
                 &rendered.left,
                 &rendered.right,
-                is_supported(op.symbol),
+                is_supported(op.symbol) && !sig.blocker_only,
             ));
         }
     }
@@ -949,9 +953,12 @@ mod tests {
     fn storage_functions_file_is_all_blockers() {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, ""));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 44);
+        // 44 native/comparison blockers + 3 `@@` symmetric-match blockers (a
+        // storage domain supports no operators, so `@@`'s match overloads render
+        // as blockers, exactly like `@>`/`<@`).
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 47);
         assert!(!sql.contains("SET search_path"));
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 44);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 47);
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -963,7 +970,9 @@ mod tests {
     fn eq_functions_file_counts() {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "eq"));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        // +3 vs the pre-`@@`-match surface: the three `@@` symmetric-match
+        // overloads render as blockers on this eq domain (it does not carry Bloom).
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 48);
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a public.eql_v3_integer_eq)"));
         assert!(sql.contains("RETURNS eql_v3_internal.hmac_256"));
         assert_eq!(
@@ -971,7 +980,7 @@ mod tests {
                 .count(),
             7
         );
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 38);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 41);
         assert!(!sql.contains("SET search_path"));
     }
 
@@ -981,7 +990,8 @@ mod tests {
     fn ore_functions_file_counts() {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord_ore"));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        // +3 vs the pre-`@@`-match surface (the three `@@` symmetric-match blockers).
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 48);
         assert!(
             sql.contains("CREATE FUNCTION eql_v3.ord_term_ore(a public.eql_v3_integer_ord_ore)")
         );
@@ -994,7 +1004,7 @@ mod tests {
                 .count(),
             19
         );
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 29);
     }
 
     /// The OPE ordered domains mirror the ORE one — same operator surface
@@ -1012,7 +1022,8 @@ mod tests {
         let s = spec("integer");
         for dom in ["ord", "ord_ope"] {
             let sql = render_functions_file(s.name, domain(s, dom));
-            assert_eq!(sql.matches("CREATE FUNCTION").count(), 45, "{dom}");
+            // +3 vs the pre-`@@`-match surface (the three `@@` symmetric-match blockers).
+            assert_eq!(sql.matches("CREATE FUNCTION").count(), 48, "{dom}");
             assert!(
                 sql.contains(&format!(
                     "CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_{dom})"
@@ -1034,15 +1045,49 @@ mod tests {
                 19,
                 "{dom}"
             );
-            assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26, "{dom}");
+            assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 29, "{dom}");
         }
     }
 
     #[test]
-    fn operators_file_has_forty_four() {
+    fn match_domain_renders_matches_wrapper_and_at_at_operator() {
+        let s = spec("text");
+        let fns = render_functions_file(s.name, domain(s, "match"));
+        // The supported `@@` overloads are `eql_v3.matches` wrappers whose body
+        // reduces to bloom array-containment `@>` on the extracted terms (so a
+        // functional GIN index on `eql_v3.match_term(col)` engages).
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_match, b public.eql_v3_text_match)"
+        ));
+        assert!(fns.contains("SELECT eql_v3.match_term(a) @> eql_v3.match_term(b)"));
+        assert!(!fns.contains("eql_v3.contains("));
+        assert!(!fns.contains("eql_v3.contained_by("));
+        // `@>` / `<@` are now blockers on the match domain.
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_match, b public.eql_v3_text_match)"
+        ));
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_match, b public.eql_v3_text_match)"
+        ));
+        // The `@@` jsonpath predicate stays a blocker even here (blocker_only).
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3_internal.\"@@\"(a public.eql_v3_text_match, b jsonpath)"
+        ));
+
+        let ops = render_operators_file(s.name, domain(s, "match"));
+        assert!(ops.contains("CREATE OPERATOR @@ ("));
+        assert!(ops.contains("FUNCTION = eql_v3.matches,"));
+        // The jsonpath `@@` operator binds the internal blocker.
+        assert!(ops.contains("FUNCTION = eql_v3_internal.\"@@\","));
+    }
+
+    #[test]
+    fn operators_file_operator_count() {
         let s = spec("integer");
         let sql = render_operators_file(s.name, domain(s, "eq"));
-        assert_eq!(sql.matches("CREATE OPERATOR").count(), 44);
+        // +3 vs the pre-`@@`-match surface: the three `@@` symmetric-match
+        // overloads render as blocked operators on this eq domain.
+        assert_eq!(sql.matches("CREATE OPERATOR").count(), 47);
     }
 
     #[test]
@@ -1082,11 +1127,13 @@ mod tests {
             );
         }
 
-        // Bloom text_match: containment wrappers are supported → public.
+        // Bloom text_match: the `@@` fuzzy-match wrapper is supported → public;
+        // the former containment operators `@>`/`<@` are now blockers (internal).
         let tm = spec("text");
         let tm_sql = render_operators_file(tm.name, domain(tm, "match"));
-        assert!(tm_sql.contains("FUNCTION = eql_v3.contains,"));
-        assert!(tm_sql.contains("FUNCTION = eql_v3.contained_by,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3.matches,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3_internal.contains,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3_internal.contained_by,"));
     }
 
     #[test]
@@ -1176,13 +1223,15 @@ mod tests {
                 .1
         };
         assert!(by("json_types.sql").contains("CREATE DOMAIN public.eql_v3_json AS jsonb"));
+        // Storage-only (no terms) → every operator overload is a blocker, incl.
+        // the three `@@` symmetric-match overloads (+3 vs the pre-match surface).
         assert_eq!(
             by("json_functions.sql").matches("CREATE FUNCTION").count(),
-            44
+            47
         );
         assert_eq!(
             by("json_operators.sql").matches("CREATE OPERATOR").count(),
-            44
+            47
         );
     }
 
