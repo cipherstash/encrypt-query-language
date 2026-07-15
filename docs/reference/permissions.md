@@ -108,7 +108,7 @@ in `eql_v3`**:
 | `=` | `eql_v3.eq(a, b)` |
 | `<>` | `eql_v3.neq(a, b)` |
 | `<` `<=` `>` `>=` | `eql_v3.lt` / `lte` / `gt` / `gte(a, b)` |
-| `@>` `<@` (text match) | `eql_v3.contains` / `contained_by(a, b)` |
+| `@@` (text match) | `eql_v3.matches(a, b)` |
 | `@>` `<@` (jsonb documents) | `eql_v3.jsonb_contains` / `jsonb_contained_by(a, b)`, and the typed `eql_v3.ste_vec_contains` |
 | `MIN` / `MAX` | `eql_v3.min` / `eql_v3.max` aggregates |
 

@@ -177,53 +177,59 @@ CREATE FUNCTION eql_v3.gte(a jsonb, b public.eql_v3_text_search)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.ord_term(a::public.eql_v3_text_search) >= eql_v3.ord_term(b) $$;
 
---! @brief Operator wrapper for public.eql_v3_text_search.
+--! @brief Unsupported operator blocker for public.eql_v3_text_search.
 --! @param a public.eql_v3_text_search
 --! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_search, b public.eql_v3_text_search)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_search, b public.eql_v3_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_search'; END; $$
+LANGUAGE plpgsql;
 
---! @brief Operator wrapper for public.eql_v3_text_search.
---! @param a public.eql_v3_text_search
---! @param b jsonb
---! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_search, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.eql_v3_text_search) $$;
-
---! @brief Operator wrapper for public.eql_v3_text_search.
---! @param a jsonb
---! @param b public.eql_v3_text_search
---! @return boolean
-CREATE FUNCTION eql_v3.contains(a jsonb, b public.eql_v3_text_search)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search) @> eql_v3.match_term(b) $$;
-
---! @brief Operator wrapper for public.eql_v3_text_search.
---! @param a public.eql_v3_text_search
---! @param b public.eql_v3_text_search
---! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_search, b public.eql_v3_text_search)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
-
---! @brief Operator wrapper for public.eql_v3_text_search.
+--! @brief Unsupported operator blocker for public.eql_v3_text_search.
 --! @param a public.eql_v3_text_search
 --! @param b jsonb
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_search, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b::public.eql_v3_text_search) $$;
+CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_search, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_search'; END; $$
+LANGUAGE plpgsql;
 
---! @brief Operator wrapper for public.eql_v3_text_search.
+--! @brief Unsupported operator blocker for public.eql_v3_text_search.
 --! @param a jsonb
 --! @param b public.eql_v3_text_search
 --! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a jsonb, b public.eql_v3_text_search)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search) <@ eql_v3.match_term(b) $$;
+CREATE FUNCTION eql_v3_internal.contains(a jsonb, b public.eql_v3_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@>', 'public.eql_v3_text_search'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search.
+--! @param a public.eql_v3_text_search
+--! @param b public.eql_v3_text_search
+--! @return boolean
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_search, b public.eql_v3_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_search'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search.
+--! @param a public.eql_v3_text_search
+--! @param b jsonb
+--! @return boolean
+CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_search, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_search'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_text_search.
+--! @param a jsonb
+--! @param b public.eql_v3_text_search
+--! @return boolean
+CREATE FUNCTION eql_v3_internal.contained_by(a jsonb, b public.eql_v3_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<@', 'public.eql_v3_text_search'; END; $$
+LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search.
 --! @param a public.eql_v3_text_search
@@ -314,6 +320,30 @@ CREATE FUNCTION eql_v3_internal."@?"(a public.eql_v3_text_search, b jsonpath)
 RETURNS boolean IMMUTABLE PARALLEL SAFE
 AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@?', 'public.eql_v3_text_search'; END; $$
 LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_text_search.
+--! @param a public.eql_v3_text_search
+--! @param b public.eql_v3_text_search
+--! @return boolean
+CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search, b public.eql_v3_text_search)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_text_search.
+--! @param a public.eql_v3_text_search
+--! @param b jsonb
+--! @return boolean
+CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search, b jsonb)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.eql_v3_text_search) $$;
+
+--! @brief Operator wrapper for public.eql_v3_text_search.
+--! @param a jsonb
+--! @param b public.eql_v3_text_search
+--! @return boolean
+CREATE FUNCTION eql_v3.matches(a jsonb, b public.eql_v3_text_search)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search) @> eql_v3.match_term(b) $$;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search.
 --! @param a public.eql_v3_text_search

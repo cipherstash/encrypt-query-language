@@ -295,11 +295,11 @@ pub trait SignedScalar: OrderedScalar {
     fn origin() -> Self;
 }
 
-/// A scalar with a **bloom-filter match** capability (`@>`/`<@` containment) —
-/// currently only `text`, the one kind that declares a `Bloom`-bearing domain
-/// (`_match`/`_search`). Provides three fixture plaintexts with known
-/// containment relationships so the generated match arms can assert true hits
-/// and a deterministic miss. The bound gates the match arms: a non-match scalar
+/// A scalar with a **bloom-filter match** capability (the `@@` fuzzy match /
+/// `eql_v3.matches`, CIP-3517) — currently only `text`, the one kind that
+/// declares a `Bloom`-bearing domain (`_match`/`_search`). Provides three fixture
+/// plaintexts with known n-gram relationships so the generated match arms can
+/// assert true hits and a deterministic miss. The bound gates the match arms: a non-match scalar
 /// never declares `_search`, so the `caps = [eq, ord, search]` matrix arm (the
 /// only one emitting match cases) is never instantiated for it.
 pub trait MatchScalar: ScalarType {
@@ -312,7 +312,7 @@ pub trait MatchScalar: ScalarType {
     fn needle() -> Self;
 
     /// A plaintext n-gram-**disjoint** from [`needle`](Self::needle), so
-    /// `needle @> disjoint` is a deterministic miss (a bloom filter only admits
+    /// `needle @@ disjoint` is a deterministic miss (a bloom filter only admits
     /// false positives, never false negatives). Present verbatim in
     /// `fixture_values()`.
     fn disjoint() -> Self;
@@ -629,7 +629,7 @@ impl MatchScalar for String {
     }
 
     /// `"zzzz"` — 3-gram-disjoint from `"aard"` (`zzz` vs `aar`/`ard`), so
-    /// `aard @> zzzz` is a deterministic miss. Kept disjoint in `TEXT_FIXTURES`
+    /// `aard @@ zzzz` is a deterministic miss. Kept disjoint in `TEXT_FIXTURES`
     /// precisely for this assertion.
     fn disjoint() -> Self {
         "zzzz".to_string()

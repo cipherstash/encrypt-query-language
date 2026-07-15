@@ -42,7 +42,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/eql_v3_text_match.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`public.eql_v3_text_match` — match domain.\n\nOperators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.",
+  "description": "`public.eql_v3_text_match` — match domain.\n\nOperators: `@@`. Required keys: `v` `i` `c` `bf`.",
   "properties": {
     "bf": {
       "$ref": "#/$defs/BloomFilter"

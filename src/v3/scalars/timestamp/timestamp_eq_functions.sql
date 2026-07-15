@@ -317,6 +317,33 @@ LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_timestamp_eq.
 --! @param a public.eql_v3_timestamp_eq
+--! @param b public.eql_v3_timestamp_eq
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_timestamp_eq, b public.eql_v3_timestamp_eq)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_timestamp_eq'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_eq.
+--! @param a public.eql_v3_timestamp_eq
+--! @param b jsonb
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_timestamp_eq, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_timestamp_eq'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_eq.
+--! @param a jsonb
+--! @param b public.eql_v3_timestamp_eq
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a jsonb, b public.eql_v3_timestamp_eq)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_timestamp_eq'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_timestamp_eq.
+--! @param a public.eql_v3_timestamp_eq
 --! @param b jsonpath
 --! @return boolean
 CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_timestamp_eq, b jsonpath)

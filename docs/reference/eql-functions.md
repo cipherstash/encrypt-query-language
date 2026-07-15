@@ -41,15 +41,15 @@ SELECT * FROM events WHERE encrypted_at >= $1::public.eql_v3_timestamp_ord;
 SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 ```
 
-### Text match — `@>` `<@`
+### Text match — `@@`
 
-On `public.eql_v3_text_match` / `public.eql_v3_text_search` (carry a `bf` bloom term). This is **probabilistic ngram-bloom containment**, not SQL `LIKE` and not JSONB containment:
+On `public.eql_v3_text_match` / `public.eql_v3_text_search` (carry a `bf` bloom term). This is **probabilistic ngram-bloom matching** (`eql_v3.matches`), not SQL `LIKE`, not JSONB containment, and not the containment operators — `@>` / `<@` **raise** on these domains (CIP-3517):
 
 ```sql
-SELECT * FROM docs WHERE encrypted_content @> $1::public.eql_v3_text_match;
+SELECT * FROM docs WHERE encrypted_content @@ $1::public.eql_v3_text_match;
 ```
 
-`LIKE` / `ILIKE` (`~~` / `~~*`) are **not** part of the `eql_v3` surface — use `@>`.
+`LIKE` / `ILIKE` (`~~` / `~~*`) are **not** part of the `eql_v3` surface — use `@@`.
 
 ### JSON containment / path — `public.eql_v3_json_search`
 
@@ -68,9 +68,10 @@ eql_v3.lt(a, b)   -- <        (on _ord / _ord_ore / text_search)
 eql_v3.lte(a, b)  -- <=
 eql_v3.gt(a, b)   -- >
 eql_v3.gte(a, b)  -- >=
-eql_v3.contains(a, b)       -- @>  (on text_match / text_search / public.eql_v3_json_search)
-eql_v3.contained_by(a, b)   -- <@
+eql_v3.matches(a, b)        -- @@  (bloom fuzzy match, on text_match / text_search / text_search_ore)
 ```
+
+JSON document containment has its own function forms (`eql_v3.jsonb_contains` / `jsonb_contained_by` / `ste_vec_contains`) — see [EQL with JSON and JSONB](./json-support.md).
 
 **Example:**
 
@@ -79,7 +80,7 @@ SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.eql_v3_text_eq);
 SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::public.eql_v3_timestamp_ord);
 ```
 
-There are no `like` / `ilike` function forms — text matching is `eql_v3.contains` (`@>`) on a `text_match` value.
+There are no `like` / `ilike` function forms — text matching is `eql_v3.matches` (`@@`) on a `text_match` value.
 
 ---
 

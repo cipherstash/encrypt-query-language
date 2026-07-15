@@ -939,7 +939,7 @@ mod tests {
         let text = render_family_bindings(family("text"));
         assert!(text.contains("Required keys: `v` `i` `c` `hm` `ob`."));
         assert!(text.contains("`public.eql_v3_text_match` — match domain."));
-        assert!(text.contains("Operators: `@>` `<@`."));
+        assert!(text.contains("Operators: `@@`."));
         assert!(text.contains("Required keys: `v` `i` `c` `bf`."));
     }
 

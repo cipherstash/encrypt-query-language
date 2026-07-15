@@ -314,6 +314,33 @@ LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_bigint.
 --! @param a public.eql_v3_bigint
+--! @param b public.eql_v3_bigint
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_bigint, b public.eql_v3_bigint)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_bigint'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_bigint.
+--! @param a public.eql_v3_bigint
+--! @param b jsonb
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_bigint, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_bigint'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_bigint.
+--! @param a jsonb
+--! @param b public.eql_v3_bigint
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a jsonb, b public.eql_v3_bigint)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_bigint'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_bigint.
+--! @param a public.eql_v3_bigint
 --! @param b jsonpath
 --! @return boolean
 CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_bigint, b jsonpath)

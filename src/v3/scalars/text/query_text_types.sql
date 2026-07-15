@@ -48,7 +48,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN eql_v3.query_text_match IS 'EQL text query operand (containment)';
+  COMMENT ON DOMAIN eql_v3.query_text_match IS 'EQL text query operand (matching)';
 
   --! @brief Query-operand domain eql_v3.query_text_ord_ore (term-only; no `c`).
   IF NOT EXISTS (
@@ -129,7 +129,7 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN eql_v3.query_text_search_ore IS 'EQL text query operand (equality, ordering, containment)';
+  COMMENT ON DOMAIN eql_v3.query_text_search_ore IS 'EQL text query operand (equality, ordering, matching)';
 
   --! @brief Query-operand domain eql_v3.query_text_search (term-only; no `c`).
   IF NOT EXISTS (
@@ -149,6 +149,6 @@ BEGIN
       );
   END IF;
 
-  COMMENT ON DOMAIN eql_v3.query_text_search IS 'EQL text query operand (equality, ordering, containment)';
+  COMMENT ON DOMAIN eql_v3.query_text_search IS 'EQL text query operand (equality, ordering, matching)';
 END
 $$;

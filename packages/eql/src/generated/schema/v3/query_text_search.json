@@ -46,7 +46,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/query_text_search.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`eql_v3.query_text_search` — search domain query operand.\n\nOperators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `op` `bf`.",
+  "description": "`eql_v3.query_text_search` — search domain query operand.\n\nOperators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `hm` `op` `bf`.",
   "properties": {
     "bf": {
       "$ref": "#/$defs/BloomFilter"

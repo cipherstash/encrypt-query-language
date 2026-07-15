@@ -306,6 +306,33 @@ LANGUAGE plpgsql;
 
 --! @brief Unsupported operator blocker for public.eql_v3_date_ord_ore.
 --! @param a public.eql_v3_date_ord_ore
+--! @param b public.eql_v3_date_ord_ore
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_date_ord_ore, b public.eql_v3_date_ord_ore)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_date_ord_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_date_ord_ore.
+--! @param a public.eql_v3_date_ord_ore
+--! @param b jsonb
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_date_ord_ore, b jsonb)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_date_ord_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_date_ord_ore.
+--! @param a jsonb
+--! @param b public.eql_v3_date_ord_ore
+--! @return boolean
+CREATE FUNCTION eql_v3_internal."@@"(a jsonb, b public.eql_v3_date_ord_ore)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '@@', 'public.eql_v3_date_ord_ore'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_date_ord_ore.
+--! @param a public.eql_v3_date_ord_ore
 --! @param b jsonpath
 --! @return boolean
 CREATE FUNCTION eql_v3_internal."@@"(a public.eql_v3_date_ord_ore, b jsonpath)

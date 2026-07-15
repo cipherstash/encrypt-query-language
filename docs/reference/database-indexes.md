@@ -31,7 +31,7 @@ CREATE INDEX users_email_eq
 CREATE INDEX events_at_ord
   ON events USING btree (eql_v3.ord_term(encrypted_at));
 
--- Text match (bloom-filter containment — GIN on the match_term extractor) — public.eql_v3_text_match / text_search
+-- Text match (bloom-filter fuzzy match `@@` — GIN on the match_term extractor) — public.eql_v3_text_match / text_search
 CREATE INDEX users_name_match
   ON users USING gin (eql_v3.match_term(encrypted_name));
 
@@ -52,7 +52,7 @@ Create indexes on encrypted columns when:
 
 - The table has a significant number of rows (typically > 1000).
 - You frequently query the column by the matching operator.
-- The column is typed as a variant that carries the required term (`_eq` for equality, `_ord` for range/ordering, `text_match` for containment).
+- The column is typed as a variant that carries the required term (`_eq` for equality, `_ord` for range/ordering, `text_match` for bloom fuzzy match `@@`).
 
 ---
 
@@ -80,7 +80,7 @@ Capability travels in the payload, chosen by the encryption client and reflected
 
 - **Equality** needs an `hm` (hmac_256) term — `public.<T>_eq`, `public.<T>_ord`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
 - **Range / ordering** needs an ordering term — `op` (ope_cllw) on `public.<T>_ord` / `_ord_ope` / `public.eql_v3_text_search`, or `ob` (ore_block_256) on `public.<T>_ord_ore` / `public.eql_v3_text_search_ore`.
-- **Text containment** needs a `bf` (bloom_filter) term — `public.eql_v3_text_match`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
+- **Text match** (`@@`) needs a `bf` (bloom_filter) term — `public.eql_v3_text_match`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
 
 A value with only a bloom term will not drive an equality index, and vice versa.
 

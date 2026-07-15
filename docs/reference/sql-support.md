@@ -21,7 +21,7 @@ Each scalar type `<T>` is a family of `jsonb`-backed domains in `public`. The ca
 
 Every scalar generates a storage-only variant plus the query variants its capabilities allow:
 
-| Domain variant                | Index term carried        | Extractor (for indexing) | `=` `<>` | `<` `<=` `>` `>=` | `MIN` / `MAX` | `@>` `<@` |
+| Domain variant                | Index term carried        | Extractor (for indexing) | `=` `<>` | `<` `<=` `>` `>=` | `MIN` / `MAX` | `@@` |
 | ----------------------------- | ------------------------- | ------------------------ | :------: | :---------------: | :-----------: | :-------: |
 | `public.<T>`                  | none (storage only)       | —                        |    ❌    |        ❌         |      ❌       |    ❌     |
 | `public.<T>_eq`               | `hm` (hmac_256)           | `eql_v3.eq_term(col)`    |    ✅    |        ❌         |      ❌       |    ❌     |
@@ -31,7 +31,7 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | `public.eql_v3_text_search`          | `hm` + `op` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 | `public.eql_v3_text_search_ore`      | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
-\* On `text_match` / `text_search` / `text_search_ore`, `@>` / `<@` are **bloom-filter token containment** (probabilistic ngram match), **not** JSONB containment and **not** SQL `LIKE`. See [Indexing](#indexing).
+\* On `text_match` / `text_search` / `text_search_ore`, `@@` (`eql_v3.matches`) is **bloom-filter token matching** (probabilistic ngram match), **not** containment and **not** SQL `LIKE`. The containment operators `@>` / `<@` **raise** on these domains (CIP-3517). See [Indexing](#indexing).
 
 Notes:
 
@@ -42,7 +42,7 @@ Notes:
 - `text_ord` accepts the empty string (its `op` term is well-formed and sorts first). `text_ord_ore` **rejects** it: encrypting `""` yields an empty ORE term (`ob: []`) that the domain CHECK refuses.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
 - `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `public.eql_v3_boolean` (no `_eq` / `_ord`).
-- `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@>` on `text_match`, not `LIKE`.
+- `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@@` (`eql_v3.matches`) on `text_match`, not `LIKE`.
 - `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(public.<T>_ord)` / `eql_v3.max(...)` (and likewise on `_ord_ope` / `_ord_ore`) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
 
 ---
@@ -56,14 +56,15 @@ A ✅ means the operator resolves on a column typed as that domain variant. A �
 | `=`                       | Equality                       |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
 | `<>` / `!=`               | Inequality                     |      ❌      |  ✅   |         ✅          |      ❌      |      ✅       |
 | `<` `<=` `>` `>=`         | Ordered comparison             |      ❌      |  ❌   |         ✅          |      ❌      |      ✅       |
-| `@>` / `<@`               | Bloom-filter token containment |      ❌      |  ❌   |         ❌          |      ✅      |      ✅       |
+| `@@`                      | Bloom-filter token match       |      ❌      |  ❌   |         ❌          |      ✅      |      ✅       |
+| `@>` / `<@`               | Containment — **raises** (use `@@`) |  ❌      |  ❌   |         ❌          |      ❌      |      ❌       |
 | `LIKE` `ILIKE` (`~~`/`~~*`) | SQL pattern match            |      ❌      |  ❌   |         ❌          |      ❌      |      ❌       |
 | `IS NULL` / `IS NOT NULL` | Null check                     |      ✅      |  ✅   |         ✅          |      ✅      |      ✅       |
 
 Notes:
 
 - A SQL `NULL` column value is not encrypted, so `IS NULL` / `IS NOT NULL` always work regardless of variant.
-- `@>` / `<@` on `text_match` / `text_search` test whether the encrypted text **contains** the (encrypted) search terms via the bloom filter. This replaces the old `LIKE`/`ILIKE`-on-`match`-index recipe: there is no `LIKE` on encrypted text — use `@>`.
+- `@@` on `text_match` / `text_search` tests whether the encrypted text **matches** the (encrypted) search terms via the bloom filter (n-gram token match, not containment; `@>` / `<@` raise here — CIP-3517). This replaces the old `LIKE`/`ILIKE`-on-`match`-index recipe: there is no `LIKE` on encrypted text — use `@@`.
 
 ---
 
@@ -76,7 +77,8 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col = …` / `<>`               |                                                                                        | `_eq`, `_ord`, `text_search` |
 | `WHERE col <` / `<=` / `>` / `>=`    |                                                                                        | `_ord`, `text_search` |
 | `WHERE col BETWEEN … AND …`          | desugars to `>=` and `<=`                                                               | `_ord`, `text_search` |
-| `WHERE col @> …`                     | bloom-filter token containment (text), or document containment (`public.eql_v3_json_search`)         | `text_match`, `text_search`, `public.eql_v3_json_search` |
+| `WHERE col @@ …`                     | bloom-filter token match (text)                                                        | `text_match`, `text_search` |
+| `WHERE col @> …`                     | document containment (`public.eql_v3_json_search` only; raises on text match)           | `public.eql_v3_json_search` |
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search` |
 | `ORDER BY col`                       | meaningful only with an ordering term                                                   | `_ord`, `text_search` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search` |

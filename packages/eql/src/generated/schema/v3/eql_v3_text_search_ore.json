@@ -53,7 +53,7 @@
   "$id": "https://schemas.cipherstash.com/eql/v3/eql_v3_text_search_ore.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`public.eql_v3_text_search_ore` — search domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.",
+  "description": "`public.eql_v3_text_search_ore` — search domain.\n\nOperators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.",
   "properties": {
     "bf": {
       "$ref": "#/$defs/BloomFilter"

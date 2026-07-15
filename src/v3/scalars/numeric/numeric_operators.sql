@@ -178,6 +178,21 @@ CREATE OPERATOR @? (
 
 CREATE OPERATOR @@ (
   FUNCTION = eql_v3_internal."@@",
+  LEFTARG = public.eql_v3_numeric, RIGHTARG = public.eql_v3_numeric
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3_internal."@@",
+  LEFTARG = public.eql_v3_numeric, RIGHTARG = jsonb
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3_internal."@@",
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_numeric
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3_internal."@@",
   LEFTARG = public.eql_v3_numeric, RIGHTARG = jsonpath
 );
 
