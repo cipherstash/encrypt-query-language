@@ -6,7 +6,7 @@ EQL encrypts, decrypts, and searches JSON / JSONB documents using structured enc
 
 - [Storing encrypted JSON](#storing-encrypted-json)
 - [Typed operands (important)](#typed-operands-important)
-- [Querying `public.eql_v3_json_search`](#querying-publicjson)
+- [Querying `public.eql_v3_json_search`](#querying-publiceql_v3_json_search)
   - [Containment queries (`@>`, `<@`)](#containment-queries)
   - [Field extraction (`jsonb_path_query`)](#field-extraction-jsonb_path_query)
   - [JSON path operators (`->`, `->>`)](#json-path-operators)
