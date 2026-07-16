@@ -18,6 +18,15 @@ const V3_ORE_OPCLASS: &str = "src/v3/sem/ore_block_256/operator_class.sql";
 /// layout is spelled out — keeps `types_path`/`scalar_path` and the REQUIRE
 /// vecs from drifting if the surface ever relocates again.
 const V3_SCALARS_DIR: &str = "src/v3/scalars";
+/// The fixed cross type: the extracted SteVec leaf. Hand-written under
+/// `src/v3/json/`; the generated cross operators bind it to each family's
+/// query operands.
+const V3_JSON_ENTRY: &str = "public.eql_v3_json_entry";
+/// REQUIRE edge for the hand-written json domain types (the json_entry domain).
+const V3_JSON_TYPES: &str = "src/v3/json/types.sql";
+/// REQUIRE edge for the hand-written json functions (the json_entry extractors
+/// `eq_term`/`ord_term`). No cycle: json/* never REQUIREs src/v3/scalars/*.
+const V3_JSON_FUNCTIONS: &str = "src/v3/json/functions.sql";
 
 /// REQUIRE path for a generated file `file` under a family's scalar dir.
 fn scalar_path(family_name: &str, file: &str) -> String {
@@ -324,6 +333,153 @@ pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String
         .expect("render query operators.sql")
 }
 
+/// The query operands a family binds to `public.eql_v3_json_entry`, in manifest
+/// file order: `_eq` (equality via `eq_term` → hmac_256), `_ord` (the OPE-backed
+/// default ordering operand — equality+ordering via `ord_term` → ope_cllw), and
+/// `_ord_ope` (its explicit OPE twin). A family lacking these (boolean is
+/// storage-only; json has no scalar `_eq`/`_ord`/`_ord_ope`) contributes only
+/// what it has, so both `boolean` and `json` yield an empty list and emit no
+/// cross files. Selection is by name but every emitted operator still resolves
+/// its extractor through `Term::extractor_for_operator` and is gated on
+/// `json_entry` providing that extractor (`eq_term`/`ord_term`) — so any
+/// Bloom/ORE operator a selected domain also carries is skipped, and further
+/// widening the scope is a one-line change here, not in the renderers.
+fn json_entry_cross_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
+    ["eq", "ord", "ord_ope"]
+        .iter()
+        .filter_map(|name| spec.domains.iter().find(|d| d.name == *name))
+        .collect()
+}
+
+/// True for the two extractors `public.eql_v3_json_entry` provides. `match_term`
+/// (Bloom) and `ord_term_ore` (block-ORE) are NOT provided, so those operators
+/// are skipped — the reason `_ord_ore`/`_match` operands never participate.
+fn json_entry_provides_extractor(extractor: &str) -> bool {
+    matches!(extractor, "eq_term" | "ord_term")
+}
+
+/// Body for a family's json_entry_<T>_functions.sql (CIP-3526): comparison
+/// WRAPPERS binding the fixed `public.eql_v3_json_entry` leaf to each of the
+/// family's `_eq` / `_ord` / `_ord_ope` query operands, for the operators
+/// json_entry can serve (eq via `eq_term` → hmac_256, ord via `ord_term` →
+/// ope_cllw), in both directions. Reuses the `functions.sql` template +
+/// `wrapper_entry`: the left operand is the fixed json_entry type instead of the
+/// family's storage domain, and no operand is `jsonb`, so each wrapper compares
+/// `extractor(a)` to `extractor(b)` with no cast. Emits only wrappers — no
+/// extractors, no blockers.
+pub fn render_json_entry_cross_functions(spec: &DomainFamily, domains: &[&Domain]) -> String {
+    use crate::consts::sql_str;
+    use crate::context::{environment, query_domain_name, wrapper_entry, FunctionsContext};
+
+    let family_name = spec.name;
+    let mut requires = vec![
+        V3_SCHEMA.to_string(),
+        V3_JSON_TYPES.to_string(),
+        V3_JSON_FUNCTIONS.to_string(),
+        query_types_path(family_name),
+    ];
+    let mut entries = Vec::new();
+
+    for d in domains {
+        let query_dom = query_domain_name(&d.query_name(family_name));
+        // The query-side extractor overload (eq_term/ord_term on the query
+        // operand) lives in the query domain's functions file.
+        requires.push(scalar_path(
+            family_name,
+            &format!("{}_functions.sql", d.query_name(family_name)),
+        ));
+        let supported = Term::operators_for_terms(d.terms);
+        for op in OPERATORS {
+            if !supported.contains(&op.symbol.as_str()) {
+                continue;
+            }
+            let extractor = Term::extractor_for_operator(d.terms, op.symbol.as_str())
+                .expect("a supported operator resolves an extractor");
+            if !json_entry_provides_extractor(extractor) {
+                continue;
+            }
+            // (json_entry, query) and its (query, json_entry) commutator. `dom`
+            // (first arg of wrapper_entry) only drives the jsonb→domain cast in
+            // extract_arg, which never fires here (neither operand is jsonb), so
+            // V3_JSON_ENTRY is a safe placeholder.
+            entries.push(wrapper_entry(
+                V3_JSON_ENTRY,
+                op,
+                V3_JSON_ENTRY,
+                &query_dom,
+                extractor,
+            ));
+            entries.push(wrapper_entry(
+                V3_JSON_ENTRY,
+                op,
+                &query_dom,
+                V3_JSON_ENTRY,
+                extractor,
+            ));
+        }
+    }
+
+    let ctx = FunctionsContext {
+        requires,
+        family_name: family_name.to_string(),
+        name: format!("json_entry_{family_name}"),
+        dom: V3_JSON_ENTRY.to_string(),
+        domain_lit: sql_str(V3_JSON_ENTRY),
+        entries,
+    };
+    environment()
+        .get_template("functions.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render json_entry cross functions")
+}
+
+/// Body for a family's json_entry_<T>_operators.sql (CIP-3526): a CREATE
+/// OPERATOR binding `(public.eql_v3_json_entry, query_<T>_<d>)` and its
+/// `(query_<T>_<d>, public.eql_v3_json_entry)` commutator for every operator the
+/// matching wrapper covers, with the same planner metadata the scalar cross
+/// operators carry (supported = true → COMMUTATOR/NEGATOR/RESTRICT/JOIN).
+pub fn render_json_entry_cross_operators(spec: &DomainFamily, domains: &[&Domain]) -> String {
+    use crate::context::{environment, operator_entry, query_domain_name, OperatorsContext};
+
+    let family_name = spec.name;
+    let mut operators = Vec::new();
+    for d in domains {
+        let query_dom = query_domain_name(&d.query_name(family_name));
+        let supported = Term::operators_for_terms(d.terms);
+        for op in OPERATORS {
+            if !supported.contains(&op.symbol.as_str()) {
+                continue;
+            }
+            let extractor = Term::extractor_for_operator(d.terms, op.symbol.as_str())
+                .expect("a supported operator resolves an extractor");
+            if !json_entry_provides_extractor(extractor) {
+                continue;
+            }
+            operators.push(operator_entry(op, V3_JSON_ENTRY, &query_dom, true));
+            operators.push(operator_entry(op, &query_dom, V3_JSON_ENTRY, true));
+        }
+    }
+
+    let ctx = OperatorsContext {
+        requires: vec![
+            V3_SCHEMA.to_string(),
+            V3_JSON_TYPES.to_string(),
+            query_types_path(family_name),
+            scalar_path(family_name, &format!("json_entry_{family_name}_functions.sql")),
+        ],
+        family_name: family_name.to_string(),
+        name: format!("json_entry_{family_name}"),
+        dom: V3_JSON_ENTRY.to_string(),
+        operators,
+    };
+    environment()
+        .get_template("operators.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render json_entry cross operators")
+}
+
 /// Body for a domain's _aggregates.sql, or None if not ord-capable.
 /// Port of `render_aggregates_file`.
 pub fn render_aggregates_file(family_name: &str, domain: &Domain) -> Option<String> {
@@ -508,6 +664,21 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
         if let Some(agg) = render_aggregates_file(family_name, d) {
             rendered.push((out_dir.join(format!("{name}_aggregates.sql")), agg));
         }
+    }
+    // json_entry cross-type operators (CIP-3526): bind the fixed
+    // public.eql_v3_json_entry leaf to this family's _eq / _ord / _ord_ope query
+    // operands. Empty for boolean (storage-only) and json (no scalar
+    // _eq/_ord/_ord_ope) → no cross files.
+    let cross_domains = json_entry_cross_domains(spec);
+    if !cross_domains.is_empty() {
+        rendered.push((
+            out_dir.join(format!("json_entry_{family_name}_functions.sql")),
+            render_json_entry_cross_functions(spec, &cross_domains),
+        ));
+        rendered.push((
+            out_dir.join(format!("json_entry_{family_name}_operators.sql")),
+            render_json_entry_cross_operators(spec, &cross_domains),
+        ));
     }
     rendered
 }
@@ -737,9 +908,13 @@ mod tests {
         assert!(names.contains(&"integer_ord_ore_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_ope_aggregates.sql".to_string()));
+        // Query-operand + json_entry cross-type files for the term-bearing domains.
+        assert!(names.contains(&"json_entry_integer_functions.sql".to_string()));
+        assert!(names.contains(&"json_entry_integer_operators.sql".to_string()));
         // 1 types + 1 query_types + 2 per domain (5) + 2 query per term-bearing
-        // domain (4) + 3 ord-capable aggregates = 1+1+10+8+3.
-        assert_eq!(written.len(), 23);
+        // domain (4) + 3 ord-capable aggregates = 1+1+10+8+3 = 23, plus the 2
+        // json_entry cross files (CIP-3526).
+        assert_eq!(written.len(), 25);
         for p in &written {
             assert!(fs::read_to_string(p)
                 .unwrap()
@@ -1235,6 +1410,21 @@ mod tests {
         );
     }
 
+    #[test]
+    fn storage_only_and_json_families_emit_no_json_entry_cross_files() {
+        for family in ["boolean", "json"] {
+            let rendered = render_type(spec(family), std::path::Path::new("out"));
+            assert!(
+                !rendered.iter().any(|(p, _)| p
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with("json_entry_")),
+                "{family} must emit no json_entry cross files"
+            );
+        }
+    }
+
     // --- Coarsened footgun invariant guards (whole-file scans) ---
 
     #[test]
@@ -1469,5 +1659,126 @@ mod tests {
         assert!(!fallback.exists(), "clean_all removes ore_fallback.sql");
         assert!(removed.contains(&fallback));
         assert!(hand.exists(), "hand-written depth-1 functions.sql survives");
+    }
+
+    // --- CIP-3526: json_entry <-> query_<T> cross-type operator surface ---
+
+    #[test]
+    fn json_entry_cross_domains_selects_eq_ord_and_ord_ope() {
+        let s = spec("integer");
+        let names: Vec<&str> = json_entry_cross_domains(s).iter().map(|d| d.name).collect();
+        // Manifest order among the json_entry-servable ordered domains (ord_ore is
+        // block-ORE, skipped): eq, ord, ord_ope. `_ord` is the OPE-backed default;
+        // `_ord_ope` is its explicit twin (OQ1 resolved: include `_ord`).
+        assert_eq!(names, vec!["eq", "ord", "ord_ope"]);
+        // boolean (storage-only) and json (no eq/ord/ord_ope) contribute nothing.
+        assert!(json_entry_cross_domains(spec("boolean")).is_empty());
+        assert!(json_entry_cross_domains(spec("json")).is_empty());
+    }
+
+    #[test]
+    fn json_entry_cross_functions_bind_json_entry_to_query_operands() {
+        let s = spec("integer");
+        let domains = json_entry_cross_domains(s);
+        let sql = render_json_entry_cross_functions(s, &domains);
+
+        // eq domain [Hm]:      =,<> via eq_term (hmac_256), both directions → 4.
+        // ord domain [Ope]:    =,<>,<,<=,>,>= via ord_term (ope_cllw), both dirs → 12.
+        // ord_ope domain [Ope]: same as ord (its twin), both dirs → 12.
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 28);
+        // eq direction (json_entry, query_integer_eq) uses eq_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_eq)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b)"));
+        // ord (default) direction (json_entry, query_integer_ord) uses ord_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
+        ));
+        // ord_ope twin direction (json_entry, query_integer_ord_ope) uses ord_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
+        // commutators exist (query on the left).
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.eq(a eql_v3.query_integer_eq, b public.eql_v3_json_entry)"
+        ));
+        // Footguns: inlinable, unpinned search_path, LANGUAGE sql (no blockers here).
+        assert!(!sql.contains("SET search_path"));
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(),
+            28
+        );
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 0);
+        // REQUIRE edges pull in both sides (no cycle: the cross file's json deps —
+        // json/types.sql + json/functions.sql — are themselves scalar-free; see D3).
+        assert!(sql.contains("-- REQUIRE: src/v3/json/types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/json/functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_types.sql"));
+        assert!(sql.contains(
+            "-- REQUIRE: src/v3/scalars/integer/query_integer_eq_functions.sql"
+        ));
+        assert!(sql.contains(
+            "-- REQUIRE: src/v3/scalars/integer/query_integer_ord_functions.sql"
+        ));
+        assert!(sql.contains(
+            "-- REQUIRE: src/v3/scalars/integer/query_integer_ord_ope_functions.sql"
+        ));
+    }
+
+    #[test]
+    fn json_entry_cross_operators_carry_planner_metadata() {
+        let s = spec("integer");
+        let domains = json_entry_cross_domains(s);
+        let sql = render_json_entry_cross_operators(s, &domains);
+        assert_eq!(sql.matches("CREATE OPERATOR").count(), 28);
+        // Supported operators carry commutator/negator/selectivity metadata.
+        assert!(sql.contains(
+            "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_eq"
+        ));
+        assert!(sql.contains("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"));
+        assert!(sql.contains(
+            "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord"
+        ));
+        assert!(sql.contains(
+            "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope"
+        ));
+        assert!(sql.contains("FUNCTION = eql_v3.lt,"));
+        // Backing functions are the PUBLIC wrappers (operator-free platforms).
+        assert!(!sql.contains("eql_v3_internal."));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/json_entry_integer_functions.sql"));
+    }
+
+    #[test]
+    fn json_entry_cross_functions_text_splits_routing_eq_vs_ord() {
+        // The honest-terms split's whole point: on a dual-term [Hm, Ope] family
+        // (text) `=`/`<>` route through eq_term (hm → hmac_256) while the four
+        // inequalities route through ord_term (ope_cllw). integer is Ope-only, so
+        // its `=` also routes through ord_term and would NOT catch a regression that
+        // sent text's `=` down ord_term — hence this text-specific case.
+        let s = spec("text");
+        let domains = json_entry_cross_domains(s);
+        assert_eq!(
+            domains.iter().map(|d| d.name).collect::<Vec<_>>(),
+            vec!["eq", "ord", "ord_ope"]
+        );
+        let sql = render_json_entry_cross_functions(s, &domains);
+
+        // text `ord` domain `=` uses eq_term (Hm precedes Ope), NOT ord_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b)"));
+        // text `ord` domain `<` uses ord_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
+        // Bloom never appears — no match_term operator on json_entry, and text's
+        // tri-term _search domains are not selected.
+        assert!(!sql.contains("match_term"));
+        assert!(!sql.contains("query_text_search"));
+        assert!(!sql.contains("query_text_match"));
     }
 }
