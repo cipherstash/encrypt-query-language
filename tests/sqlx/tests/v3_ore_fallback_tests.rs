@@ -304,17 +304,21 @@ async fn superuser_install_creates_opclass_and_poisons_nothing(pool: PgPool) -> 
         "a superuser install must not poison any domain"
     );
 
-    let ord = eql_domains::scalar_families()
+    // Re-point at the ORE domain: `_ord` is OPE (UNPOISONABLE by construction),
+    // so casting into it proves nothing about the superuser path. `_ord_ore` is
+    // the poisonable ORE domain — on a superuser install it must NOT be poisoned
+    // and must accept values, making this a meaningful positive control.
+    let ord_ore = eql_domains::scalar_families()
         .find(|s| s.name == "integer")
-        .and_then(|s| s.domains.iter().find(|d| d.name == "ord"))
-        .expect("integer_ord in catalog");
+        .and_then(|s| s.domains.iter().find(|d| d.name == "ord_ore"))
+        .expect("integer_ord_ore in catalog");
     try_cast(
         &pool,
-        "public.eql_v3_integer_ord",
-        &column_payload(ord.terms),
+        "public.eql_v3_integer_ord_ore",
+        &column_payload(ord_ore.terms),
     )
     .await
-    .expect("integer_ord accepts values on a superuser install");
+    .expect("integer_ord_ore accepts values on a superuser install");
     Ok(())
 }
 

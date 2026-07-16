@@ -160,7 +160,7 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// invocation shape is the same regardless of capability — only the `caps`
 /// marker differs. The emitted test names for an ordered type are byte-identical
 /// to the old `ordered_numeric_matrix!`; the eq-only name set is exactly that
-/// set minus the `_ord` / `order_by` / `routes_through_ordering_term` lines.
+/// set minus the `_ord` / `order_by` lines.
 ///
 /// Pivots — the comparison anchors swept by the correctness / cross-shape
 /// arms — are the `OrderedScalar` anchors: `min_pivot()`, `max_pivot()`, and the
@@ -519,7 +519,7 @@ macro_rules! jsonb_entry_matrix {
         // Aggregates: eql_v3.min/max over json_entry (src/v3/json/aggregates.sql).
         // The aggregate leaf cases compare extrema via the ord-extractor seam
         // (eql_v3.ord_term for entries), so the entry min/max route through the
-        // `oc` (CLLW ORE) term exactly like the comparison operators.
+        // `op` (CLLW-OPE) term exactly like the comparison operators.
         $crate::__scalar_matrix_aggregate_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
