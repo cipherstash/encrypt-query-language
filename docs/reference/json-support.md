@@ -125,7 +125,9 @@ SELECT * FROM examples
 WHERE encrypted_json -> 'name_selector'::text =  $1::eql_v3.query_text_ord;       -- equality
 ```
 
-All six comparisons (`=`, `<>`, `<`, `<=`, `>`, `>=`) are available against `eql_v3.query_<T>_ord` (and its explicit twin `eql_v3.query_<T>_ord_ope`) for every ordered family — `text` included. Both operands resolve through `eql_v3.ord_term` — byte-comparison on the deterministic CLLW-OPE `op` term, which serves ordering **and** equality (equal plaintext at the same selector ⇒ equal `op` bytes). A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for all of them, including `=`.
+All six comparisons (`=`, `<>`, `<`, `<=`, `>`, `>=`) are available against **every query operand that carries the CLLW-OPE `op` term** — `eql_v3.query_<T>_ord`, its explicit twin `eql_v3.query_<T>_ord_ope`, and (for `text`) `eql_v3.query_text_search`. Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic `op` term, which serves ordering **and** equality (equal plaintext at the same selector ⇒ equal `op` bytes). A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for all of them, including `=`.
+
+Operands whose only index terms an extracted leaf cannot produce are not bound: `eql_v3.query_<T>_eq` (HMAC only), `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` (block-ORE), and `eql_v3.query_text_match` (Bloom). Bloom's `@@` is likewise unavailable on an extracted leaf even via `query_text_search` — a leaf carries no `match_term`.
 
 > **Note.** There is no `eql_v3.query_<T>_eq` operator on `public.eql_v3_json_entry` for any type. A JSON scalar leaf carries only the `op` term — never a per-value equality (`hm`) term — so equality is served exclusively by the `op`-based `query_<T>_ord` path above. (For `text`, `eql_v3.query_text_ord` requires an `hm` key to satisfy its domain CHECK because the same operand type also serves scalar `text` columns; when querying a JSON leaf that `hm` is not part of the comparison.)
 
