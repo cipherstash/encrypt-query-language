@@ -309,10 +309,13 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
 
 #[sqlx::test]
 async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> anyhow::Result<()> {
-    // (op, left, right) — a representative slice across eq / ord / ord_ope.
+    // (op, left, right) — a representative slice across ord / ord_ope. The `_eq`
+    // operand is deliberately NOT bound to json_entry (CIP-3526): a JSON scalar
+    // leaf carries no per-value `hm`, so equality is served by `= query_<T>_ord`
+    // (op byte-equality) — the `=` row below asserts exactly that.
     let expected: &[(&str, &str, &str)] = &[
-        ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_eq"),
-        ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_eq"),
+        ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
+        ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         (">", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         (">=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord_ope"),
     ];
@@ -334,6 +337,27 @@ async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> an
         .await?;
         assert!(found, "missing cross-type operator {op}({l}, {r})");
     }
+
+    // Negative lock: NO `query_<T>_eq` operand is ever bound to json_entry. Such an
+    // operator would be dead surface — a JSON scalar leaf has no per-value `hm`, so
+    // `eq_term(json_entry) = eq_term(query_<T>_eq)` can never match (CIP-3526).
+    let eq_bound: i64 = sqlx::query_scalar(
+        r#"
+        SELECT count(*)
+        FROM pg_operator o
+        JOIN pg_type rt ON rt.oid = o.oprright
+        JOIN pg_namespace rn ON rn.oid = rt.typnamespace
+        WHERE o.oprleft = 'public.eql_v3_json_entry'::regtype
+          AND rn.nspname = 'eql_v3'
+          AND rt.typname LIKE 'query\_%\_eq'
+        "#,
+    )
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        eq_bound, 0,
+        "no eql_v3.query_<T>_eq operand may be bound to json_entry (dead surface)"
+    );
     Ok(())
 }
 
