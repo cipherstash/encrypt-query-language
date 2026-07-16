@@ -47,7 +47,7 @@ while IFS= read -r line; do
   entries+=("$line")
 done < <(
   sed -n -E \
-    's/^[[:space:]]*pub const (ISSUE_[A-Z0-9_]+)[[:space:]]*:[[:space:]]*u64[[:space:]]*=[[:space:]]*([0-9_]+)[[:space:]]*;.*$/\1 \2/p' \
+    's/^[[:space:]]*pub const (ISSUE_[A-Z0-9_]+)[[:space:]]*:[[:space:]]*u64[[:space:]]*=[[:space:]]*([0-9_]+)[[:space:]]*;[[:space:]]*(\/\/.*)?$/\1 \2/p' \
     "$REGISTRY"
 )
 parsed=${#entries[@]}

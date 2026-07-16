@@ -126,7 +126,8 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **build-archive** | `test:sqlx:archive` | Build EQL, run prep, **generate fixtures**, compile every `tests/sqlx` binary (**default features**) into a nextest archive; upload archive + `release/*.sql` | yes (PG17) | **yes (sole holder)** |
 | **test** (sharded) | `test:sqlx:partition` | Run the archived sqlx binaries (default features), hash-partitioned across shards | yes (per PG) | no (replays archive) |
 | **e2e** | `test:sqlx:e2e` | The `proptest-e2e` fresh-encryption suites (`e2e_oracle` **and** `float_special`) — PG17 only, version-independent | yes (PG17) | **yes** |
-| **known-failures** | `test:known-failures` | Every `known_failure` marker names a real, OPEN issue and is referenced by a test (DB-free, needs `gh`) | no | no |
+| **known-failures** | `test:known-failures:parser` + `test:known-failures` | The gate's strict `ISSUE_` parser is sound; every `known_failure` marker names a real, OPEN issue and is referenced by a test (DB-free, needs `gh`) | no | no |
+| **doc-anchors** | `test:doc-anchors` | Every intra-document markdown anchor link resolves to a real heading (DB-free; not relevance-gated — its inputs are the docs) | no | no |
 | **validate** (per PG) | `docs:validate:documented-sql` + `test:clean_install_v3` | DB-backed SQL doc-syntax check; clean-DB `eql_v3` install smoke | yes | no |
 | **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); relevance-gated like the other heavy jobs (its inputs — `src/**`, the `crates/**` codegen build, `tasks/docs/**` — are a subset of the `relevant` filter) | no | no |
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |

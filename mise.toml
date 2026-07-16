@@ -146,6 +146,24 @@ description = "Drift gate: every known_failure marker must name a real, OPEN iss
 dir = "{{config_root}}"
 run = "bash tasks/test/known-failures.sh"
 
+[tasks."test:known-failures:parser"]
+description = "Unit-test the known-failure gate's strict ISSUE_ parser (no gh, no database)"
+# The gate above is only as trustworthy as its strict parser: it detects drift by
+# cross-checking a loose declaration count against that parse, so a regex that
+# over-accepts defeats the cross-check silently. Hermetic and offline — every
+# case is decided before the gate reaches a `gh` call.
+dir = "{{config_root}}"
+run = "bash tasks/test/known-failures-parser.test.sh"
+
+[tasks."test:doc-anchors"]
+description = "Drift gate: every intra-document markdown anchor link resolves (no database)"
+# The upgrade guides cross-link their numbered U-NNN notes from the summary and
+# the compatibility table, so a stale fragment strands the reader on exactly the
+# passage meant to explain a breaking change — and renders as a working link
+# while doing it. Hand-written markdown only; docs/api is generated + gitignored.
+dir = "{{config_root}}"
+run = "bash tasks/test/doc-anchors.sh"
+
 [tasks."test:sqlx:watch"]
 description = "Run SQLx tests in watch mode (rebuild EQL on changes)"
 # Same prep as test:sqlx so watch mode starts from a migrated DB + fresh

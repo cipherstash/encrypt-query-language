@@ -1,15 +1,15 @@
 # EQL with JSON and JSONB
 
-EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json_search`** document domain. An `public.eql_v3_json_search` column stores an encrypted document whose every path is searchable — without decryption — via containment, field/array access, and entry-level equality / range on extracted leaves.
+EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json_search`** document domain. A `public.eql_v3_json_search` column stores an encrypted document whose every path is searchable — without decryption — via containment, field/array access, and entry-level equality / range on extracted leaves.
 
 ## On this page
 
 - [Storing encrypted JSON](#storing-encrypted-json)
 - [Typed operands (important)](#typed-operands-important)
 - [Querying `public.eql_v3_json_search`](#querying-publiceql_v3_json_search)
-  - [Containment queries (`@>`, `<@`)](#containment-queries)
+  - [Containment queries (`@>`, `<@`)](#containment-queries--)
   - [Field extraction (`jsonb_path_query`)](#field-extraction-jsonb_path_query)
-  - [JSON path operators (`->`, `->>`)](#json-path-operators)
+  - [JSON path operators (`->`, `->>`)](#json-path-operators----)
   - [Array operations](#array-operations)
   - [Grouping data](#grouping-data)
 - [`eql_v3` functions for JSONB and ste_vec](#eql_v3-functions-for-jsonb-and-ste_vec)

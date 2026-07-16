@@ -534,6 +534,14 @@ jobs:
           version: 2026.4.0
           install: true
           cache: true
+      # The gate detects drift by cross-checking a loose declaration count against
+      # a strict parse, so an over-accepting parser defeats it silently. Runs
+      # first, and needs no token: a broken parser makes the gate below
+      # meaningless, not merely wrong.
+      - name: The gate's strict ISSUE_ parser is sound
+        run: |
+          mise run test:known-failures:parser
+
       - name: Every suppressed test names an open issue
         env:
           # `gh` needs a token to read issue state; the default job token is
@@ -541,6 +549,26 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           mise run test:known-failures
+
+  # Markdown anchor links. DB-free, credential-free and fast, and deliberately
+  # NOT relevance-gated: its inputs are the docs themselves, so gating it on the
+  # `relevant` filter (src/**, crates/**) would skip it on exactly the docs-only
+  # PRs it exists to check.
+  doc-anchors:
+    name: "doc anchor links"
+    runs-on: blacksmith-16vcpu-ubuntu-2204
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: jdx/mise-action@1648a7812b9aeae629881980618f079932869151 # v4
+        with:
+          version: 2026.4.0
+          install: true
+          cache: true
+      - name: Every intra-document anchor link resolves
+        run: |
+          mise run test:doc-anchors
 
   # The e2e (fresh-encryption) property suite. Encrypts random values through
   # ZeroKMS at run time, so it needs CS_* creds and is PG-version-independent —
@@ -595,7 +623,7 @@ jobs:
     name: "ci-required"
     needs: [changes, setup, build-archive, test, validate, schema, rust-crates,
             codegen, self-contained-v3, matrix-coverage, splinter, docs-static,
-            known-failures, e2e]
+            known-failures, doc-anchors, e2e]
     if: always()
     runs-on: blacksmith-16vcpu-ubuntu-2204
     steps:

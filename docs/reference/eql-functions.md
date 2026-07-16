@@ -9,7 +9,7 @@ A reference for the functions and operators EQL exposes for querying encrypted d
 - [Operators](#operators)
 - [Function Equivalents](#function-equivalents)
 - [Index Term Extraction](#index-term-extraction)
-- [Encrypted JSON (`public.eql_v3_json_search`)](#encrypted-json-eql_v3json)
+- [Encrypted JSON (`public.eql_v3_json_search`)](#encrypted-json-publiceql_v3_json_search)
 - [Aggregate Functions](#aggregate-functions)
 
 ---

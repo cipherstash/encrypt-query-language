@@ -64,7 +64,7 @@ or [CipherStash Stack](https://github.com/cipherstash/stack):
 - `public.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
 - `public.<T>_ord` (and the `_ord_ope` twin) carries an `op` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`. `public.<T>_ord_ore` is the block-ORE (`ob`) equivalent.
 - `public.eql_v3_text_match` carries a `bf` term — supports bloom-filter token match (`@@` / `eql_v3.matches`; `@>` / `<@` raise).
-- `public.eql_v3_text_search` carries all three terms — equality, ordering, and containment on `text`. `public.eql_v3_text_search_ore` is its block-ORE equivalent.
+- `public.eql_v3_text_search` carries all three terms — equality, ordering, and bloom-filter token match (`@@` / `eql_v3.matches`) on `text`. `public.eql_v3_text_search_ore` is its block-ORE equivalent.
 
 Configuring those columns is a client-side concern. See:
 
