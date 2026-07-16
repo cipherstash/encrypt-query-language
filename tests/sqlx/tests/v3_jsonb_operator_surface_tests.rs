@@ -246,24 +246,37 @@ async fn v3_jsonb_surface_root_comparisons_blocked(pool: PgPool) -> anyhow::Resu
 
 #[sqlx::test]
 async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Result<()> {
+    // Mixed-shape entry comparisons are allowed ONLY against an eql_v3.query_*
+    // operand (CIP-3526 cross-type operators); a raw `jsonb` partner is still
+    // forbidden (it would let an untyped operand flatten past the domain).
     let mixed: Vec<(String, String, String)> = sqlx::query_as(
         r#"
         SELECT o.oprname,
                pg_catalog.format_type(o.oprleft, NULL),
                pg_catalog.format_type(o.oprright, NULL)
         FROM pg_operator o
+        JOIN pg_type lt ON lt.oid = o.oprleft
+        JOIN pg_namespace ln ON ln.oid = lt.typnamespace
+        JOIN pg_type rt ON rt.oid = o.oprright
+        JOIN pg_namespace rn ON rn.oid = rt.typnamespace
         WHERE o.oprname IN ('=', '<>', '<', '<=', '>', '>=')
           AND ('public.eql_v3_json_entry'::regtype IN (o.oprleft, o.oprright))
           AND NOT (o.oprleft = 'public.eql_v3_json_entry'::regtype
                    AND o.oprright = 'public.eql_v3_json_entry'::regtype)
+          -- Allow the cross-type partner: an eql_v3 query-operand domain.
+          AND NOT (
+            (lt.typname = 'eql_v3_json_entry' AND rn.nspname = 'eql_v3' AND rt.typname LIKE 'query\_%')
+            OR
+            (rt.typname = 'eql_v3_json_entry' AND ln.nspname = 'eql_v3' AND lt.typname LIKE 'query\_%')
+          )
         "#,
     )
     .fetch_all(&pool)
     .await?;
     assert!(
         mixed.is_empty(),
-        "entry comparison operators must be (jsonb_entry, jsonb_entry) only; \
-         found mixed-shape signature(s): {mixed:#?}"
+        "entry comparison operators must be (json_entry, json_entry) or \
+         (json_entry, eql_v3.query_<T>_*) only; found illegal mixed shape(s): {mixed:#?}"
     );
 
     // Sanity: all six entry symbols ARE present in the symmetric shape.
@@ -284,6 +297,42 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
             present.contains(*sym),
             "entry operator {sym} missing on (jsonb_entry, jsonb_entry)"
         );
+    }
+    Ok(())
+}
+
+// ============================================================================
+// CIP-3526: cross-type operators binding json_entry to per-type query operands
+// ARE present (positive intent, complementing the "no illegal mixed shapes"
+// negative guard above).
+// ============================================================================
+
+#[sqlx::test]
+async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> anyhow::Result<()> {
+    // (op, left, right) — a representative slice across eq / ord / ord_ope.
+    let expected: &[(&str, &str, &str)] = &[
+        ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_eq"),
+        ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_eq"),
+        (">", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
+        (">=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord_ope"),
+    ];
+    for (op, l, r) in expected {
+        let found: bool = sqlx::query_scalar(
+            r#"
+            SELECT EXISTS (
+              SELECT 1 FROM pg_operator o
+              WHERE o.oprname = $1
+                AND o.oprleft = $2::regtype
+                AND o.oprright = $3::regtype
+            )
+            "#,
+        )
+        .bind(op)
+        .bind(l)
+        .bind(r)
+        .fetch_one(&pool)
+        .await?;
+        assert!(found, "missing cross-type operator {op}({l}, {r})");
     }
     Ok(())
 }
