@@ -461,14 +461,12 @@ macro_rules! scalar_matrix {
 /// no scalar analogue or assert document-specific surface.
 /// `ord_routes_through_ordering_term` and scalar `ore_injectivity` are also excluded: they
 /// are scalar-term invariants and are not semantically correct for
-/// `jsonb_entry` (entry equality routes through `eq_entry_term`, not ORE).
+/// `jsonb_entry` (entry equality routes through `eq_term`, not ORE).
 ///
 /// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
-/// has one domain. Equality reduces through `eql_v3.eq_entry_term` (the
-/// `coalesce(hm, op)` byte discriminator, since the pinned selector points at
-/// the field's `op` entry); ordering, index, count-distinct, and aggregates
-/// reduce through `eql_v3.ord_term` via the `JsonbEntryInteger` extractor
-/// overrides.
+/// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
+/// count-distinct, and aggregates reduce through `eql_v3.ord_term` via the
+/// `JsonbEntryInteger` extractor overrides.
 #[macro_export]
 macro_rules! jsonb_entry_matrix {
     (

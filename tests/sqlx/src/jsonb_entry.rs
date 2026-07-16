@@ -87,14 +87,8 @@ impl ScalarType for JsonbEntryInteger {
         r#"{"s":"placeholder","c":"sample","op":"00"}"#
     }
 
-    /// The matrix runs against the pinned `SELECTOR`, which points at the field's
-    /// `op` entry (it carries no `hm`), so the honest hm-only `eql_v3.eq_term`
-    /// would return NULL there. The by-name equality seam (GROUP BY /
-    /// count-distinct / equality-index over an entry of mixed eq/ord capability)
-    /// must use `eq_entry_term`, the `coalesce(hm, op)` byte discriminator that
-    /// document containment and entry-to-entry `=`/`<>` also use.
     fn eq_extractor_expr(value_expr: &str) -> String {
-        format!("eql_v3.eq_entry_term({value_expr})")
+        format!("eql_v3.eq_term({value_expr})")
     }
 
     /// A SteVec entry orders by its structural CLLW-OPE term (`op`), whatever
@@ -158,7 +152,7 @@ mod tests {
         );
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::eq_extractor_expr("value"),
-            "eql_v3.eq_entry_term(value)",
+            "eql_v3.eq_term(value)",
         );
     }
 
