@@ -42,9 +42,21 @@ async fn json_entry_cross_operators_are_public_and_present(pool: PgPool) -> Resu
         ("=", "eql_v3.query_integer_ord", "public.eql_v3_json_entry"),
         (">", "eql_v3.query_integer_ord", "public.eql_v3_json_entry"),
         // _ord_ope — the explicit OPE twin.
-        ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord_ope"),
-        (">", "public.eql_v3_json_entry", "eql_v3.query_integer_ord_ope"),
-        ("<=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord_ope"),
+        (
+            "=",
+            "public.eql_v3_json_entry",
+            "eql_v3.query_integer_ord_ope",
+        ),
+        (
+            ">",
+            "public.eql_v3_json_entry",
+            "eql_v3.query_integer_ord_ope",
+        ),
+        (
+            "<=",
+            "public.eql_v3_json_entry",
+            "eql_v3.query_integer_ord_ope",
+        ),
     ];
     // Build the schema-qualified type names from pg_namespace/pg_type joins
     // rather than `::regtype::text`, which drops the schema prefix for any type
@@ -70,7 +82,9 @@ async fn json_entry_cross_operators_are_public_and_present(pool: PgPool) -> Resu
     .fetch_all(&pool)
     .await?;
     for (op, l, r) in expected {
-        let hit = rows.iter().find(|(n, ll, rr, _)| n == op && ll == l && rr == r);
+        let hit = rows
+            .iter()
+            .find(|(n, ll, rr, _)| n == op && ll == l && rr == r);
         let (_, _, _, backing) =
             hit.unwrap_or_else(|| panic!("missing cross operator {op}({l},{r})"));
         assert!(

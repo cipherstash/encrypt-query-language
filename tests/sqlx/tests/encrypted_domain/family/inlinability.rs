@@ -221,6 +221,15 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
     Ok(())
 }
 
+/// One offending opclass helper: `(proname, lanname, provolatile, description, pinned)`.
+type OpclassHelperRow = (
+    String,
+    Option<String>,
+    Option<String>,
+    Option<String>,
+    Option<bool>,
+);
+
 /// Dedicated guard for the two `ore_block_256` opclass-path helpers
 /// (`jsonb_array_to_bytea_array`, `jsonb_array_to_ore_block_256`) — issue #353.
 ///
@@ -236,13 +245,7 @@ async fn eql_v3_sem_inline_critical_helpers_carry_marker(pool: PgPool) -> Result
 /// switching in the same hot path.
 #[sqlx::test]
 async fn eql_v3_ore_block_256_opclass_helpers_are_plpgsql_and_unpinned(pool: PgPool) -> Result<()> {
-    let offenders: Vec<(
-        String,
-        Option<String>,
-        Option<String>,
-        Option<String>,
-        Option<bool>,
-    )> = sqlx::query_as(
+    let offenders: Vec<OpclassHelperRow> = sqlx::query_as(
         r#"
         WITH expected(proname) AS (
           VALUES ('jsonb_array_to_bytea_array'), ('jsonb_array_to_ore_block_256')

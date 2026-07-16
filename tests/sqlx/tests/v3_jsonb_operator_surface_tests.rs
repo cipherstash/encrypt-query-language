@@ -317,7 +317,11 @@ async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> an
         ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         (">", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
-        (">=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord_ope"),
+        (
+            ">=",
+            "public.eql_v3_json_entry",
+            "eql_v3.query_integer_ord_ope",
+        ),
     ];
     for (op, l, r) in expected {
         let found: bool = sqlx::query_scalar(

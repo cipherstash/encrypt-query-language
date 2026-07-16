@@ -1777,7 +1777,10 @@ mod tests {
         for expected in ["=", "<>", "<", "<=", ">", ">="] {
             assert!(ops.contains(&expected), "Term::Ope must provide {expected}");
         }
-        assert!(!ops.contains(&"@@"), "Bloom's @@ must never reach this surface");
+        assert!(
+            !ops.contains(&"@@"),
+            "Bloom's @@ must never reach this surface"
+        );
         assert!(!ops.contains(&"@>"));
         // And the extractor is the term's own, not a spelled-out literal.
         assert_eq!(json_entry_extractor(), Term::Ope.extractor());
@@ -1830,7 +1833,8 @@ mod tests {
         // Footguns: inlinable, unpinned search_path, LANGUAGE sql (no blockers here).
         assert!(!sql.contains("SET search_path"));
         assert_eq!(
-            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(),
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
             24
         );
         assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 0);
@@ -1839,12 +1843,10 @@ mod tests {
         assert!(sql.contains("-- REQUIRE: src/v3/json/types.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/json/functions.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_types.sql"));
-        assert!(sql.contains(
-            "-- REQUIRE: src/v3/scalars/integer/query_integer_ord_functions.sql"
-        ));
-        assert!(sql.contains(
-            "-- REQUIRE: src/v3/scalars/integer/query_integer_ord_ope_functions.sql"
-        ));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_ord_functions.sql"));
+        assert!(
+            sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_ord_ope_functions.sql")
+        );
         // The dropped `_eq` operand's functions file is NOT required.
         assert!(!sql.contains("query_integer_eq_functions.sql"));
     }
@@ -1857,9 +1859,9 @@ mod tests {
         assert_eq!(sql.matches("CREATE OPERATOR").count(), 24);
         // Supported operators carry commutator/negator/selectivity metadata.
         assert!(sql.contains("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"));
-        assert!(sql.contains(
-            "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord"
-        ));
+        assert!(
+            sql.contains("LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord")
+        );
         assert!(sql.contains(
             "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope"
         ));
@@ -1910,7 +1912,10 @@ mod tests {
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_search)"
         ));
-        assert!(!sql.contains("eql_v3.matches"), "Bloom @@ must not be emitted");
+        assert!(
+            !sql.contains("eql_v3.matches"),
+            "Bloom @@ must not be emitted"
+        );
         // The eq_term/hm route never appears for the entry side.
         assert!(!sql.contains("eql_v3.eq_term"));
         // 6 ops × 2 dirs × 3 Ope-carrying operands (ord, ord_ope, search) = 36.

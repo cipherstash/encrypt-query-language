@@ -18,7 +18,8 @@
 //!   - `storage_native_absent_ops`  ~ `matrix_boolean_storage_native_absent_ops`
 //!   - `storage_aggregate_typecheck`~ `matrix_boolean_storage_aggregate_typecheck_{min,max}`
 //!   - `storage_row_count`          ~ `matrix_boolean_storage_count`
-//! plus two json-specific tests with no scalar analogue: the `Json` binding
+//!
+//! Plus two json-specific tests with no scalar analogue: the `Json` binding
 //! parse, and the storage/search domain mutual-exclusion.
 //!
 //! `storage_aggregate_typecheck` asserts on the SQLSTATE, not the message text —
@@ -185,10 +186,8 @@ async fn storage_native_jsonb_blockers(pool: PgPool) -> anyhow::Result<()> {
     assert_blocks(&pool, &format!("SELECT '{{}}'::jsonb || payload {FROM}")).await?;
     assert_blocks(
         &pool,
-        &format!(
-            "SELECT a.payload || b.payload \
-             FROM fixtures.v3_json_storage a, fixtures.v3_json_storage b LIMIT 1"
-        ),
+        "SELECT a.payload || b.payload \
+         FROM fixtures.v3_json_storage a, fixtures.v3_json_storage b LIMIT 1",
     )
     .await?;
     Ok(())

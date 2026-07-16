@@ -59,6 +59,17 @@ pub struct Row<T> {
     pub payload_json: String,
 }
 
+/// One equality-oracle result row for a pair: the storage operators
+/// `(eq, neq)` followed by the CIP-3432 query-operand operators
+/// `(eq_q, neq_q, eq_qc)`.
+type EqRow = (
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+);
+
 /// One ordering-oracle result row for a pair: the storage operators
 /// `(lt, lte, gt, gte, ord_term_lt)` followed by the CIP-3432 query-operand
 /// operators `(lt_q, lte_q, gt_q, gte_q)`.
@@ -137,16 +148,11 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
                 "SELECT ({a_dom}) = ({b_dom}), ({a_dom}) <> ({b_dom}), \
                         ({a_dom}) = ({b_qry}), ({a_dom}) <> ({b_qry}), ({a_qry}) = ({b_dom})"
             );
-            let (eq, neq, eq_q, neq_q, eq_qc): (
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-            ) = sqlx::query_as(&sql)
-                .fetch_one(pool)
-                .await
-                .with_context(|| format!("eq-oracle pair query: {sql}"))?;
+            let (eq, neq, eq_q, neq_q, eq_qc): EqRow =
+                sqlx::query_as(&sql)
+                    .fetch_one(pool)
+                    .await
+                    .with_context(|| format!("eq-oracle pair query: {sql}"))?;
             anyhow::ensure!(
                 eq == Some(want),
                 "eq mismatch on {domain}: plaintext {:?}=={:?} is {want}, SQL `=` returned {eq:?}",

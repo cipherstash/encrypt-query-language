@@ -57,8 +57,8 @@ macro_rules! ope_ord_smoke {
             for (lo, hi) in [("00ff", "0100"), ("00", "0100"), ("0a", "ff")] {
                 let lt: bool = sqlx::query_scalar(&format!(
                     "SELECT ({}) < ({})",
-                    crate::ope_support::ope_cast($domain, "aa", lo),
-                    crate::ope_support::ope_cast($domain, "bb", hi)
+                    $crate::ope_support::ope_cast($domain, "aa", lo),
+                    $crate::ope_support::ope_cast($domain, "bb", hi)
                 ))
                 .fetch_one(&pool)
                 .await?;
@@ -66,8 +66,8 @@ macro_rules! ope_ord_smoke {
 
                 let gt: bool = sqlx::query_scalar(&format!(
                     "SELECT ({}) > ({})",
-                    crate::ope_support::ope_cast($domain, "aa", hi),
-                    crate::ope_support::ope_cast($domain, "bb", lo)
+                    $crate::ope_support::ope_cast($domain, "aa", hi),
+                    $crate::ope_support::ope_cast($domain, "bb", lo)
                 ))
                 .fetch_one(&pool)
                 .await?;
@@ -82,8 +82,8 @@ macro_rules! ope_ord_smoke {
             // the integer families, `hm` for text).
             let eq: bool = sqlx::query_scalar(&format!(
                 "SELECT ({}) = ({})",
-                crate::ope_support::ope_cast($domain, "aa", "00ffab"),
-                crate::ope_support::ope_cast($domain, "aa", "00ffab")
+                $crate::ope_support::ope_cast($domain, "aa", "00ffab"),
+                $crate::ope_support::ope_cast($domain, "aa", "00ffab")
             ))
             .fetch_one(&pool)
             .await?;
@@ -92,8 +92,8 @@ macro_rules! ope_ord_smoke {
             // Differ in BOTH terms => not-equal under either routing.
             let neq: bool = sqlx::query_scalar(&format!(
                 "SELECT ({}) <> ({})",
-                crate::ope_support::ope_cast($domain, "aa", "00ffab"),
-                crate::ope_support::ope_cast($domain, "bb", "00ffac")
+                $crate::ope_support::ope_cast($domain, "aa", "00ffab"),
+                $crate::ope_support::ope_cast($domain, "bb", "00ffac")
             ))
             .fetch_one(&pool)
             .await?;
