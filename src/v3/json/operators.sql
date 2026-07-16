@@ -257,7 +257,7 @@ CREATE OPERATOR <@(
 -- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on jsonb_entry via eq_entry_term (hm-or-op byte equality).
+--! @brief Equality on jsonb_entry via eq_term (hm-or-op byte equality).
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
 --! @return boolean True if the entries are equal
@@ -265,7 +265,7 @@ CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b public.eql_v3_json_entry
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.eq_entry_term(a) = eql_v3.eq_entry_term(b)
+  SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b)
 $$;
 
 CREATE OPERATOR = (
@@ -278,7 +278,7 @@ CREATE OPERATOR = (
   JOIN     = eqjoinsel
 );
 
---! @brief Inequality on jsonb_entry via eq_entry_term.
+--! @brief Inequality on jsonb_entry via eq_term.
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
 --! @return boolean True if the entries are not equal
@@ -286,7 +286,7 @@ CREATE FUNCTION eql_v3.neq(a public.eql_v3_json_entry, b public.eql_v3_json_entr
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.eq_entry_term(a) <> eql_v3.eq_entry_term(b)
+  SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b)
 $$;
 
 CREATE OPERATOR <> (

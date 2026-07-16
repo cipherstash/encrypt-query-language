@@ -334,38 +334,51 @@ pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String
 }
 
 /// The query operands a family binds to `public.eql_v3_json_entry`, in manifest
-/// file order: `_eq` (equality via `eq_term` → hmac_256), `_ord` (the OPE-backed
-/// default ordering operand — equality+ordering via `ord_term` → ope_cllw), and
-/// `_ord_ope` (its explicit OPE twin). A family lacking these (boolean is
-/// storage-only; json has no scalar `_eq`/`_ord`/`_ord_ope`) contributes only
-/// what it has, so both `boolean` and `json` yield an empty list and emit no
-/// cross files. Selection is by name but every emitted operator still resolves
-/// its extractor through `Term::extractor_for_operator` and is gated on
-/// `json_entry` providing that extractor (`eq_term`/`ord_term`) — so any
-/// Bloom/ORE operator a selected domain also carries is skipped, and further
-/// widening the scope is a one-line change here, not in the renderers.
+/// file order: `_ord` (the OPE-backed default ordering operand) and `_ord_ope`
+/// (its explicit OPE twin). Both resolve every operator through `ord_term` →
+/// `ope_cllw`, i.e. byte-comparison on the deterministic CLLW-OPE `op` term —
+/// which serves ordering AND equality (equal plaintext + equal selector ⇒ equal
+/// `op` bytes). A family lacking these (boolean is storage-only; json has no
+/// scalar `_ord`/`_ord_ope`) yields an empty list and emits no cross files.
+///
+/// `_eq` is deliberately NOT bound (CIP-3526): its equality term is the per-value
+/// `hmac_256` `hm`, which a SteVec scalar (number/string) leaf never carries —
+/// such a leaf emits only the order-preserving `op` term (cipherstash-client
+/// `ste_plaintext_term.rs`: `Number`/`String` → `Orderable` → `op`; only
+/// `Bool`/`Null`/`Object`/`Array` → a value-independent structural `hm`). So a
+/// `(json_entry, query_<T>_eq)` operator could never match real JSON field data —
+/// `eq_term(json_entry)` reads a missing `hm` → NULL → silently zero rows.
+/// Equality on encrypted JSON scalars is therefore served by `= query_<T>_ord`
+/// (the `op` term), which is also what the stack adapter emits.
 fn json_entry_cross_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
-    ["eq", "ord", "ord_ope"]
+    ["ord", "ord_ope"]
         .iter()
         .filter_map(|name| spec.domains.iter().find(|d| d.name == *name))
         .collect()
 }
 
-/// True for the two extractors `public.eql_v3_json_entry` provides. `match_term`
-/// (Bloom) and `ord_term_ore` (block-ORE) are NOT provided, so those operators
-/// are skipped — the reason `_ord_ore`/`_match` operands never participate.
+/// The single extractor `public.eql_v3_json_entry` serves for cross-type
+/// operators: `ord_term` (→ `ope_cllw`, the CLLW-OPE `op` term). It does NOT
+/// serve `eq_term` here — the entry `eq_term` is the `coalesce(hm, op)` bytea
+/// discriminator (document containment), type-incompatible with a query
+/// operand's `hmac_256` `eq_term`, and a JSON scalar leaf carries no per-value
+/// `hm` anyway. `match_term` (Bloom) / `ord_term_ore` (block-ORE) are likewise
+/// not provided. Consequence: on a dual-term `[Hm, Ope]` operand (text's `_ord`),
+/// `=`/`<>` (which route through `eq_term`) are skipped, leaving the four `op`
+/// inequalities; on the `[Ope]`-only numeric families all six operators route
+/// through `ord_term` and are emitted (their `=`/`<>` included).
 fn json_entry_provides_extractor(extractor: &str) -> bool {
-    matches!(extractor, "eq_term" | "ord_term")
+    matches!(extractor, "ord_term")
 }
 
 /// Body for a family's json_entry_<T>_functions.sql (CIP-3526): comparison
-/// WRAPPERS binding the fixed `public.eql_v3_json_entry` leaf to each of the
-/// family's `_eq` / `_ord` / `_ord_ope` query operands, for the operators
-/// json_entry can serve (eq via `eq_term` → hmac_256, ord via `ord_term` →
-/// ope_cllw), in both directions. Reuses the `functions.sql` template +
+/// WRAPPERS binding the fixed `public.eql_v3_json_entry` leaf to the family's
+/// `_ord` / `_ord_ope` query operands, for every operator json_entry can serve
+/// through `ord_term` → ope_cllw (op byte-comparison, which covers ordering and
+/// equality), in both directions. Reuses the `functions.sql` template +
 /// `wrapper_entry`: the left operand is the fixed json_entry type instead of the
 /// family's storage domain, and no operand is `jsonb`, so each wrapper compares
-/// `extractor(a)` to `extractor(b)` with no cast. Emits only wrappers — no
+/// `ord_term(a)` to `ord_term(b)` with no cast. Emits only wrappers — no
 /// extractors, no blockers.
 pub fn render_json_entry_cross_functions(spec: &DomainFamily, domains: &[&Domain]) -> String {
     use crate::consts::sql_str;
@@ -1664,14 +1677,15 @@ mod tests {
     // --- CIP-3526: json_entry <-> query_<T> cross-type operator surface ---
 
     #[test]
-    fn json_entry_cross_domains_selects_eq_ord_and_ord_ope() {
+    fn json_entry_cross_domains_selects_ord_and_ord_ope() {
         let s = spec("integer");
         let names: Vec<&str> = json_entry_cross_domains(s).iter().map(|d| d.name).collect();
-        // Manifest order among the json_entry-servable ordered domains (ord_ore is
-        // block-ORE, skipped): eq, ord, ord_ope. `_ord` is the OPE-backed default;
-        // `_ord_ope` is its explicit twin (OQ1 resolved: include `_ord`).
-        assert_eq!(names, vec!["eq", "ord", "ord_ope"]);
-        // boolean (storage-only) and json (no eq/ord/ord_ope) contribute nothing.
+        // Only the OPE-backed operands bind: `_ord` (default) and its explicit
+        // `_ord_ope` twin. `_eq` is NOT bound (CIP-3526): a SteVec scalar leaf
+        // carries no per-value `hm`, so `= query_<T>_eq` would be dead surface.
+        // (`_ord_ore` is block-ORE, unservable by json_entry.)
+        assert_eq!(names, vec!["ord", "ord_ope"]);
+        // boolean (storage-only) and json (no ord/ord_ope) contribute nothing.
         assert!(json_entry_cross_domains(spec("boolean")).is_empty());
         assert!(json_entry_cross_domains(spec("json")).is_empty());
     }
@@ -1682,33 +1696,37 @@ mod tests {
         let domains = json_entry_cross_domains(s);
         let sql = render_json_entry_cross_functions(s, &domains);
 
-        // eq domain [Hm]:      =,<> via eq_term (hmac_256), both directions → 4.
-        // ord domain [Ope]:    =,<>,<,<=,>,>= via ord_term (ope_cllw), both dirs → 12.
-        // ord_ope domain [Ope]: same as ord (its twin), both dirs → 12.
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 28);
-        // eq direction (json_entry, query_integer_eq) uses eq_term.
+        // integer's ord/ord_ope are [Ope]-only, so ALL six operators route through
+        // ord_term (op byte-comparison, covering equality too), both directions:
+        // ord 6×2 = 12, ord_ope 6×2 = 12 → 24.
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 24);
+        // `=` on query_integer_ord routes through ord_term (op equality), NOT the
+        // dropped eq_term/hmac_256 path.
         assert!(sql.contains(
-            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_eq)"
+            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
         ));
-        assert!(sql.contains("SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b)"));
-        // ord (default) direction (json_entry, query_integer_ord) uses ord_term.
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"));
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
         ));
-        // ord_ope twin direction (json_entry, query_integer_ord_ope) uses ord_term.
+        // ord_ope twin direction.
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)"
         ));
         assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
         // commutators exist (query on the left).
         assert!(sql.contains(
-            "CREATE FUNCTION eql_v3.eq(a eql_v3.query_integer_eq, b public.eql_v3_json_entry)"
+            "CREATE FUNCTION eql_v3.eq(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)"
         ));
+        // The dropped `_eq` operand never appears, and the entry `eq_term`/hmac_256
+        // route is never used.
+        assert!(!sql.contains("query_integer_eq"));
+        assert!(!sql.contains("eql_v3.eq_term"));
         // Footguns: inlinable, unpinned search_path, LANGUAGE sql (no blockers here).
         assert!(!sql.contains("SET search_path"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE").count(),
-            28
+            24
         );
         assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 0);
         // REQUIRE edges pull in both sides (no cycle: the cross file's json deps —
@@ -1717,14 +1735,13 @@ mod tests {
         assert!(sql.contains("-- REQUIRE: src/v3/json/functions.sql"));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_types.sql"));
         assert!(sql.contains(
-            "-- REQUIRE: src/v3/scalars/integer/query_integer_eq_functions.sql"
-        ));
-        assert!(sql.contains(
             "-- REQUIRE: src/v3/scalars/integer/query_integer_ord_functions.sql"
         ));
         assert!(sql.contains(
             "-- REQUIRE: src/v3/scalars/integer/query_integer_ord_ope_functions.sql"
         ));
+        // The dropped `_eq` operand's functions file is NOT required.
+        assert!(!sql.contains("query_integer_eq_functions.sql"));
     }
 
     #[test]
@@ -1732,11 +1749,8 @@ mod tests {
         let s = spec("integer");
         let domains = json_entry_cross_domains(s);
         let sql = render_json_entry_cross_operators(s, &domains);
-        assert_eq!(sql.matches("CREATE OPERATOR").count(), 28);
+        assert_eq!(sql.matches("CREATE OPERATOR").count(), 24);
         // Supported operators carry commutator/negator/selectivity metadata.
-        assert!(sql.contains(
-            "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_eq"
-        ));
         assert!(sql.contains("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"));
         assert!(sql.contains(
             "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord"
@@ -1745,40 +1759,47 @@ mod tests {
             "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope"
         ));
         assert!(sql.contains("FUNCTION = eql_v3.lt,"));
+        // The dropped `_eq` operand never appears.
+        assert!(!sql.contains("query_integer_eq"));
         // Backing functions are the PUBLIC wrappers (operator-free platforms).
         assert!(!sql.contains("eql_v3_internal."));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/json_entry_integer_functions.sql"));
     }
 
     #[test]
-    fn json_entry_cross_functions_text_splits_routing_eq_vs_ord() {
-        // The honest-terms split's whole point: on a dual-term [Hm, Ope] family
-        // (text) `=`/`<>` route through eq_term (hm → hmac_256) while the four
-        // inequalities route through ord_term (ope_cllw). integer is Ope-only, so
-        // its `=` also routes through ord_term and would NOT catch a regression that
-        // sent text's `=` down ord_term — hence this text-specific case.
+    fn json_entry_cross_functions_text_ord_emits_inequalities_only() {
+        // json_entry serves ONLY ord_term. On text's dual-term [Hm, Ope] `_ord`,
+        // `=`/`<>` route through eq_term (hm) — which json_entry cannot serve (a
+        // text scalar leaf carries `op`, not a per-value `hm`, and the entry
+        // eq_term is a bytea coalesce, type-incompatible with the operand's
+        // hmac_256). So those are skipped, leaving the four `op` inequalities.
+        // (Contrast: integer's [Ope]-only `_ord` routes `=` through ord_term and
+        // keeps all six.)
         let s = spec("text");
         let domains = json_entry_cross_domains(s);
         assert_eq!(
             domains.iter().map(|d| d.name).collect::<Vec<_>>(),
-            vec!["eq", "ord", "ord_ope"]
+            vec!["ord", "ord_ope"]
         );
         let sql = render_json_entry_cross_functions(s, &domains);
 
-        // text `ord` domain `=` uses eq_term (Hm precedes Ope), NOT ord_term.
-        assert!(sql.contains(
-            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
-        ));
-        assert!(sql.contains("SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b)"));
-        // text `ord` domain `<` uses ord_term.
+        // The four inequalities on text's `_ord` are emitted via ord_term.
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
         ));
         assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
-        // Bloom never appears — no match_term operator on json_entry, and text's
-        // tri-term _search domains are not selected.
+        // `=`/`<>` on text's `_ord` are NOT emitted (eq_term route unservable),
+        // and the entry eq_term never appears.
+        assert!(!sql.contains(
+            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+        assert!(!sql.contains("eql_v3.eq_term"));
+        // text ord [Hm,Ope]: 4 inequalities × 2 dirs × 2 domains (ord, ord_ope) = 16.
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 16);
+        // Bloom / eq operand never appear.
         assert!(!sql.contains("match_term"));
         assert!(!sql.contains("query_text_search"));
         assert!(!sql.contains("query_text_match"));
+        assert!(!sql.contains("query_text_eq"));
     }
 }

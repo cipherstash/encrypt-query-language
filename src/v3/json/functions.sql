@@ -2,7 +2,6 @@
 -- REQUIRE: src/v3/json/types.sql
 -- REQUIRE: src/v3/sem/ope_cllw/types.sql
 -- REQUIRE: src/v3/sem/ope_cllw/functions.sql
--- REQUIRE: src/v3/sem/hmac_256/functions.sql
 
 --! @file v3/json/functions.sql
 --! @brief Extractors, containment engine, and path/array functions for the
@@ -80,45 +79,23 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Entry discriminator (XOR-aware: coalesce(hm, op)) + hm-only equality term
+-- Equality-term extractor (XOR-aware: coalesce(hm, op))
 ------------------------------------------------------------------------------
 
---! @brief Entry-scoped deterministic discriminator for public.eql_v3_json_entry.
+--! @brief XOR-aware equality term extractor for public.eql_v3_json_entry.
 --!
 --! Returns the bytea of whichever deterministic term the sv entry carries —
 --! `hm` (HMAC-256) or `op` (CLLW OPE). The two byte distributions are disjoint
---! by construction, so byte equality on the coalesce is unambiguous. This is the
---! discriminator document CONTAINMENT and entry-to-entry `=`/`<>` use, because a
---! document spans selectors of mixed eq (`hm`) / ord (`op`) capability. For the
---! honest hm-only equality term (used by cross-type `= query_<T>_eq`), see
---! `eql_v3.eq_term(public.eql_v3_json_entry)`.
+--! by construction, so byte equality on the coalesce is unambiguous. Canonical
+--! equality extractor used by `=` / `<>` on jsonb_entry.
 --!
 --! @param entry public.eql_v3_json_entry
 --! @return bytea Decoded `hm` or `op` bytes (NULL if entry is NULL).
-CREATE FUNCTION eql_v3.eq_entry_term(entry public.eql_v3_json_entry)
+CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT decode(coalesce(entry ->> 'hm', entry ->> 'op'), 'hex')
-$$;
-
---! @brief Equality index term (hm-only) for public.eql_v3_json_entry.
---!
---! Returns the leaf's HMAC-256 equality term as eql_v3_internal.hmac_256, or SQL
---! NULL when the leaf carries no `hm` (an ordered / `op`-only leaf). This is the
---! honest per-entry twin of the scalar `eql_v3.eq_term(eql_v3.query_<T>_eq)`
---! extractor: it returns the SAME eql_v3_internal.hmac_256 type, so the generated
---! cross-type operators `(public.eql_v3_json_entry, eql_v3.query_<T>_eq)` compare
---! `hmac_256 = hmac_256` — symmetric with ordering's `ope_cllw = ope_cllw`. On an
---! op-only leaf it returns NULL and the row is correctly declined.
---!
---! @param entry public.eql_v3_json_entry
---! @return eql_v3_internal.hmac_256 The `hm` equality term, or NULL when absent.
-CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
-  RETURNS eql_v3_internal.hmac_256
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3_internal.hmac_256(entry::jsonb)
 $$;
 
 ------------------------------------------------------------------------------
@@ -275,8 +252,8 @@ COMMENT ON FUNCTION eql_v3.jsonb_contained_by(jsonb, jsonb) IS
 
 --! @brief Check if an sv array contains a specific sv element.
 --!
---! Match = selector equal AND eq_entry_term equal (byte-equality over
---! coalesce(hm, op)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
+--! Match = selector equal AND eq_term equal (byte-equality over coalesce(hm,
+--! op)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
 --! are deterministic and byte-disjoint, so either one is a valid equality
 --! discriminator and a single byte comparison is correct.
 --!
@@ -308,7 +285,7 @@ AS $$
       _a := a[idx];
       result := result OR (
         eql_v3.selector(_a) = eql_v3.selector(b)
-        AND eql_v3.eq_entry_term(_a::public.eql_v3_json_entry) = eql_v3.eq_entry_term(b::public.eql_v3_json_entry)
+        AND eql_v3.eq_term(_a::public.eql_v3_json_entry) = eql_v3.eq_term(b::public.eql_v3_json_entry)
       );
       EXIT WHEN result;
     END LOOP;
@@ -319,7 +296,7 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Does encrypted value `a` contain all sv elements of `b`?
 --!
---! Empty b is always contained. Each element of b must match selector + eq_entry_term
+--! Empty b is always contained. Each element of b must match selector + eq_term
 --! in some element of a.
 --!
 --! @param a public.eql_v3_json_search Container.
