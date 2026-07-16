@@ -117,12 +117,12 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
         entries.push(extractor_entry(term));
     }
     for op in OPERATORS {
-        let extractor = Term::extractor_for_operator(domain.terms, op.symbol);
+        let extractor = Term::extractor_for_operator(domain.terms, op.symbol.as_str());
         for sig in op.signatures {
             let rendered = sig.render(&dom);
             // A `blocker_only` overload (the `@@` jsonpath predicate) always falls
             // through to the blocker, even when the domain supports the symbol.
-            if is_supported(op.symbol) && !sig.blocker_only {
+            if is_supported(op.symbol.as_str()) && !sig.blocker_only {
                 if let Some(ex) = extractor {
                     entries.push(wrapper_entry(&dom, op, &rendered.left, &rendered.right, ex));
                     continue;
@@ -134,7 +134,7 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
                     ty: rendered.left,
                 },
                 SqlParam {
-                    name: arg_b_name(op.symbol),
+                    name: arg_b_name(op.symbol.as_str()),
                     ty: rendered.right,
                 },
             ];
@@ -177,7 +177,7 @@ pub fn render_operators_file(family_name: &str, domain: &Domain) -> String {
                 op,
                 &rendered.left,
                 &rendered.right,
-                is_supported(op.symbol) && !sig.blocker_only,
+                is_supported(op.symbol.as_str()) && !sig.blocker_only,
             ));
         }
     }
@@ -243,10 +243,10 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
     // jsonb`, which no caller writes; blocking them would mean emitting the full
     // blocker matrix against every query twin for zero real-world coverage.
     for op in OPERATORS {
-        if !supported.contains(&op.symbol) {
+        if !supported.contains(&op.symbol.as_str()) {
             continue;
         }
-        let extractor = Term::extractor_for_operator(domain.terms, op.symbol)
+        let extractor = Term::extractor_for_operator(domain.terms, op.symbol.as_str())
             .expect("a supported operator resolves an extractor");
         entries.push(wrapper_entry(
             &query_dom,
@@ -299,7 +299,7 @@ pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String
 
     let mut operators = Vec::new();
     for op in OPERATORS {
-        if !supported.contains(&op.symbol) {
+        if !supported.contains(&op.symbol.as_str()) {
             continue;
         }
         operators.push(operator_entry(op, &storage_dom, &query_dom, true));

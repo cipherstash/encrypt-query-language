@@ -289,7 +289,7 @@ pub fn wrapper_entry(
 pub fn unsupported_entry(op: &Operator, args: [SqlParam; 2], returns: &str) -> FnEntry {
     FnEntry::Unsupported {
         // operator_lit is sql_str-escaped defensively for the single-quoted RAISE literal.
-        operator_lit: sql_str(op.symbol),
+        operator_lit: sql_str(op.symbol.as_str()),
         function_name: op.function_name.to_string(),
         args,
         returns: returns.to_string(),
@@ -344,7 +344,7 @@ pub fn operator_entry(op: &Operator, leftarg: &str, rightarg: &str, supported: b
         op.function_name
     };
     OpEntry {
-        symbol: op.symbol.to_string(),
+        symbol: op.symbol.as_str().to_string(),
         function_name: function_name.to_string(),
         function_schema: function_schema.to_string(),
         leftarg: leftarg.to_string(),
