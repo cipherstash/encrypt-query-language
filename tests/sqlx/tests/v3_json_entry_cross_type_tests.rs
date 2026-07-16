@@ -285,15 +285,27 @@ async fn json_entry_text_eq_cross_type_matches_plaintext_equality(pool: PgPool) 
     // `query_text_ord`'s CHECK requires both `hm` and `op` keys (it also serves
     // scalar text columns, whose equality uses `hm`). `ord_term` reads only `op`,
     // so for a JSON leaf the `hm` is a shape requirement, never part of the
-    // comparison — a placeholder is sufficient and makes that explicit.
+    // comparison. Every byte of the operand is still REAL ciphertext from the
+    // fixture (per CLAUDE.md: tests run against real encrypted data, never
+    // synthetic blobs): the `op` is the row's own `$.hello` term, and the inert
+    // `hm` is lifted from a real `hm`-carrying entry of the same document rather
+    // than fabricated.
     let operand: String = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
-                'hm', repeat('0', 64), \
+                'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
+                       WHERE e ? 'hm' LIMIT 1), \
                 'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
          FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
     .fetch_one(&mut *tx)
     .await?;
+    // Guard the guard: the operand must carry real terms, not NULLs — a NULL `hm`
+    // would fail the domain CHECK and a NULL `op` would make every comparison NULL,
+    // turning the assertions below into vacuous passes.
+    assert!(
+        !operand.contains("\"hm\": null") && !operand.contains("\"op\": null"),
+        "operand must carry real hm/op terms from the fixture, got: {operand}"
+    );
 
     sqlx::query(
         "CREATE TEMP TABLE entry_t (id bigint, hello text, value public.eql_v3_json_entry) \
