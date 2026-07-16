@@ -357,19 +357,26 @@ fn json_entry_cross_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
         .collect()
 }
 
-/// The single extractor `public.eql_v3_json_entry` serves for cross-type
-/// operators: `ord_term` (→ `ope_cllw`, the CLLW-OPE `op` term). It does NOT
-/// serve `eq_term` here — the entry `eq_term` is the `coalesce(hm, op)` bytea
-/// discriminator (document containment), type-incompatible with a query
-/// operand's `hmac_256` `eq_term`, and a JSON scalar leaf carries no per-value
-/// `hm` anyway. `match_term` (Bloom) / `ord_term_ore` (block-ORE) are likewise
-/// not provided. Consequence: on a dual-term `[Hm, Ope]` operand (text's `_ord`),
-/// `=`/`<>` (which route through `eq_term`) are skipped, leaving the four `op`
-/// inequalities; on the `[Ope]`-only numeric families all six operators route
-/// through `ord_term` and are emitted (their `=`/`<>` included).
-fn json_entry_provides_extractor(extractor: &str) -> bool {
-    matches!(extractor, "ord_term")
-}
+/// The single extractor the json_entry cross surface uses: `ord_term`
+/// (→ `ope_cllw`, the deterministic CLLW-OPE `op` term).
+///
+/// This is deliberately FORCED for every operator rather than resolved through
+/// `Term::extractor_for_operator`. That generic rule picks the first capable
+/// term, so on a dual-term `[Hm, Ope]` operand (text's `_ord`) it routes `=`/`<>`
+/// through `eq_term` — the per-value HMAC, which a SteVec scalar leaf never
+/// carries (a number/string leaf emits only `op`). Routing those through
+/// `eq_term` would emit an operator that can never match; skipping them would
+/// leave text with range-only support. Neither is right: the `op` term is
+/// deterministic, so byte-equality on it IS value equality (equal plaintext at a
+/// fixed selector ⇒ equal `op` bytes). Forcing `ord_term` therefore gives every
+/// family all six operators, uniformly and correctly.
+///
+/// Safe for both operands: json_entry provides `ord_term`, and every domain this
+/// surface binds (`_ord` / `_ord_ope`) carries `Term::Ope`, so `ord_term`
+/// resolves on the query side too (asserted below). `match_term` (Bloom) and
+/// `ord_term_ore` (block-ORE) are never used — the reason `_match` / `_ord_ore`
+/// operands are not bound at all.
+const JSON_ENTRY_EXTRACTOR: &str = "ord_term";
 
 /// Body for a family's json_entry_<T>_functions.sql (CIP-3526): comparison
 /// WRAPPERS binding the fixed `public.eql_v3_json_entry` leaf to the family's
@@ -401,14 +408,16 @@ pub fn render_json_entry_cross_functions(spec: &DomainFamily, domains: &[&Domain
             family_name,
             &format!("{}_functions.sql", d.query_name(family_name)),
         ));
+        // Every bound operand carries Ope, so `ord_term` resolves on the query
+        // side as well as on json_entry. See JSON_ENTRY_EXTRACTOR.
+        assert!(
+            d.terms.contains(&Term::Ope),
+            "json_entry cross surface binds only Ope-carrying operands; {} lacks Term::Ope",
+            d.name
+        );
         let supported = Term::operators_for_terms(d.terms);
         for op in OPERATORS {
             if !supported.contains(&op.symbol.as_str()) {
-                continue;
-            }
-            let extractor = Term::extractor_for_operator(d.terms, op.symbol.as_str())
-                .expect("a supported operator resolves an extractor");
-            if !json_entry_provides_extractor(extractor) {
                 continue;
             }
             // (json_entry, query) and its (query, json_entry) commutator. `dom`
@@ -420,14 +429,14 @@ pub fn render_json_entry_cross_functions(spec: &DomainFamily, domains: &[&Domain
                 op,
                 V3_JSON_ENTRY,
                 &query_dom,
-                extractor,
+                JSON_ENTRY_EXTRACTOR,
             ));
             entries.push(wrapper_entry(
                 V3_JSON_ENTRY,
                 op,
                 &query_dom,
                 V3_JSON_ENTRY,
-                extractor,
+                JSON_ENTRY_EXTRACTOR,
             ));
         }
     }
@@ -464,11 +473,9 @@ pub fn render_json_entry_cross_operators(spec: &DomainFamily, domains: &[&Domain
             if !supported.contains(&op.symbol.as_str()) {
                 continue;
             }
-            let extractor = Term::extractor_for_operator(d.terms, op.symbol.as_str())
-                .expect("a supported operator resolves an extractor");
-            if !json_entry_provides_extractor(extractor) {
-                continue;
-            }
+            // Mirrors render_json_entry_cross_functions: every operator is backed
+            // by the ord_term wrapper (JSON_ENTRY_EXTRACTOR), so the operator set
+            // and the wrapper set stay in lockstep.
             operators.push(operator_entry(op, V3_JSON_ENTRY, &query_dom, true));
             operators.push(operator_entry(op, &query_dom, V3_JSON_ENTRY, true));
         }
@@ -1767,14 +1774,15 @@ mod tests {
     }
 
     #[test]
-    fn json_entry_cross_functions_text_ord_emits_inequalities_only() {
-        // json_entry serves ONLY ord_term. On text's dual-term [Hm, Ope] `_ord`,
-        // `=`/`<>` route through eq_term (hm) — which json_entry cannot serve (a
-        // text scalar leaf carries `op`, not a per-value `hm`, and the entry
-        // eq_term is a bytea coalesce, type-incompatible with the operand's
-        // hmac_256). So those are skipped, leaving the four `op` inequalities.
-        // (Contrast: integer's [Ope]-only `_ord` routes `=` through ord_term and
-        // keeps all six.)
+    fn json_entry_cross_functions_text_routes_every_operator_through_ord_term() {
+        // The dual-term [Hm, Ope] case, and the reason the extractor is FORCED to
+        // ord_term rather than resolved per-operator. `Term::extractor_for_operator`
+        // would route text's `=`/`<>` through eq_term (the per-value HMAC), which a
+        // SteVec string leaf never carries — emitting an operator that can never
+        // match. Forcing ord_term routes them through the deterministic `op` term
+        // instead, so text gets the SAME six operators as the [Ope]-only families.
+        // integer alone would not catch a regression here (its `=` resolves to
+        // ord_term either way) — hence this text-specific case.
         let s = spec("text");
         let domains = json_entry_cross_domains(s);
         assert_eq!(
@@ -1783,19 +1791,24 @@ mod tests {
         );
         let sql = render_json_entry_cross_functions(s, &domains);
 
-        // The four inequalities on text's `_ord` are emitted via ord_term.
+        // text `=` routes through ord_term (op equality), NOT eq_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"));
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.neq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+        // text ranges likewise.
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
         ));
         assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
-        // `=`/`<>` on text's `_ord` are NOT emitted (eq_term route unservable),
-        // and the entry eq_term never appears.
-        assert!(!sql.contains(
-            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
-        ));
+        // The eq_term/hm route never appears for the entry side.
         assert!(!sql.contains("eql_v3.eq_term"));
-        // text ord [Hm,Ope]: 4 inequalities × 2 dirs × 2 domains (ord, ord_ope) = 16.
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 16);
+        // text gets the full six, same as every other family:
+        // 6 ops × 2 dirs × 2 domains (ord, ord_ope) = 24.
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 24);
         // Bloom / eq operand never appear.
         assert!(!sql.contains("match_term"));
         assert!(!sql.contains("query_text_search"));

@@ -7,6 +7,30 @@
 --! @file encrypted_domain/text/json_entry_text_operators.sql
 --! @brief Operators for public.eql_v3_json_entry.
 
+CREATE OPERATOR = (
+  FUNCTION = eql_v3.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3.eq,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3.neq,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+);
+
 CREATE OPERATOR < (
   FUNCTION = eql_v3.lt,
   LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
@@ -53,6 +77,30 @@ CREATE OPERATOR >= (
   FUNCTION = eql_v3.gte,
   LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope,
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3.eq,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope,
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3.neq,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
 );
 
 CREATE OPERATOR < (

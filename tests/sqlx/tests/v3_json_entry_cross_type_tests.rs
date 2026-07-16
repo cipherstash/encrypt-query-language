@@ -265,3 +265,87 @@ async fn json_entry_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Re
     tx.commit().await?;
     Ok(())
 }
+
+/// The `v3_ste_vec` `$.hello` **string** leaf's `op` selector, pinned from the
+/// generated fixture (same value as `v3_jsonb_tests::SEL_HELLO_OP`).
+const SEL_HELLO_OP: &str = "3a114ad13d25b030f41175114347de59";
+
+/// #5 — TEXT equality end-to-end. A `text` family is dual-term (`[Hm, Ope]`), so
+/// the generic extractor rule would route its `=` through `eq_term` (the per-value
+/// HMAC) — which a SteVec string leaf never carries. The cross surface forces
+/// `ord_term` instead, so a string leaf compares on the same deterministic `op`
+/// term as the numeric families. This pins that text is NOT second-class: `=`
+/// against `eql_v3.query_text_ord` matches exactly the rows whose `$.hello`
+/// plaintext equals the operand's, and `<>` the complement — real string
+/// ciphertext, positive and negative, against the plaintext oracle.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
+async fn json_entry_text_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    // `query_text_ord`'s CHECK requires both `hm` and `op` keys (it also serves
+    // scalar text columns, whose equality uses `hm`). `ord_term` reads only `op`,
+    // so for a JSON leaf the `hm` is a shape requirement, never part of the
+    // comparison — a placeholder is sufficient and makes that explicit.
+    let operand: String = sqlx::query_scalar(&format!(
+        "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
+                'hm', repeat('0', 64), \
+                'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
+         FROM fixtures.v3_ste_vec WHERE id = 1"
+    ))
+    .fetch_one(&mut *tx)
+    .await?;
+
+    sqlx::query(
+        "CREATE TEMP TABLE entry_t (id bigint, hello text, value public.eql_v3_json_entry) \
+         ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "INSERT INTO entry_t(id, hello, value) \
+         SELECT id, plaintext ->> 'hello', \
+                (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
+         FROM fixtures.v3_ste_vec"
+    ))
+    .execute(&mut *tx)
+    .await?;
+
+    let expected_eq: Vec<i64> = sqlx::query_scalar(
+        "SELECT id FROM entry_t WHERE hello = (SELECT hello FROM entry_t WHERE id = 1) ORDER BY id",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    let expected_neq: Vec<i64> = sqlx::query_scalar(
+        "SELECT id FROM entry_t WHERE hello <> (SELECT hello FROM entry_t WHERE id = 1) ORDER BY id",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    assert!(
+        expected_eq.contains(&1) && !expected_neq.is_empty(),
+        "fixture must have row 1 plus at least one differing $.hello"
+    );
+
+    let esc = operand.replace('\'', "''");
+    let matched_eq: Vec<i64> = sqlx::query_scalar(&format!(
+        "SELECT id FROM entry_t WHERE value = '{esc}'::eql_v3.query_text_ord ORDER BY id"
+    ))
+    .fetch_all(&mut *tx)
+    .await?;
+    assert_eq!(
+        matched_eq, expected_eq,
+        "text `value = query_text_ord` must match exactly the plaintext-equal rows"
+    );
+
+    let matched_neq: Vec<i64> = sqlx::query_scalar(&format!(
+        "SELECT id FROM entry_t WHERE value <> '{esc}'::eql_v3.query_text_ord ORDER BY id"
+    ))
+    .fetch_all(&mut *tx)
+    .await?;
+    assert_eq!(
+        matched_neq, expected_neq,
+        "text `value <> query_text_ord` must match exactly the plaintext-differing rows"
+    );
+
+    tx.commit().await?;
+    Ok(())
+}
