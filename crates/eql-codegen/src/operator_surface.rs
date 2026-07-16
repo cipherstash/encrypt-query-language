@@ -60,7 +60,7 @@ impl OperatorMetadata {
 /// A type position in a PostgreSQL operator overload. `Domain` renders to the
 /// concrete encrypted domain being generated; every other slot renders to a
 /// fixed PostgreSQL type name.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TypeSlot {
     Domain,
     Jsonb,
@@ -92,6 +92,14 @@ pub struct OperatorSignature {
     pub left: TypeSlot,
     pub right: TypeSlot,
     pub returns: TypeSlot,
+    /// When true this overload is ALWAYS rendered as a blocker, even on a domain
+    /// whose terms otherwise support the operator's symbol. The only user is the
+    /// `@@` `(domain, jsonpath)` native-jsonb-predicate overload: `@@` is the
+    /// SUPPORTED bloom fuzzy-match operator on match domains for its symmetric
+    /// domain/jsonb overloads, but its jsonpath overload must keep raising (the
+    /// "no silent native jsonb ops" guarantee) on every domain including the
+    /// match domains. Normal operators leave this `false`.
+    pub blocker_only: bool,
 }
 
 /// An `OperatorSignature` with every slot resolved to a concrete SQL type name.
@@ -117,6 +125,17 @@ const fn sig(left: TypeSlot, right: TypeSlot, returns: TypeSlot) -> OperatorSign
         left,
         right,
         returns,
+        blocker_only: false,
+    }
+}
+
+/// Constructor for an always-blocked overload (see `OperatorSignature::blocker_only`).
+const fn sig_blocker(left: TypeSlot, right: TypeSlot, returns: TypeSlot) -> OperatorSignature {
+    OperatorSignature {
+        left,
+        right,
+        returns,
+        blocker_only: true,
     }
 }
 
@@ -153,9 +172,23 @@ const HAS_ANY_KEYS_SIGNATURES: &[OperatorSignature] = &[sig(
     TypeSlot::Boolean,
 )];
 
-/// `@?` / `@@` jsonpath-predicate overloads.
+/// `@?` jsonpath-predicate overload (also the shape `@@` blocks on non-match
+/// domains — see `MATCH_SIGNATURES`).
 const JSONPATH_SIGNATURES: &[OperatorSignature] =
     &[sig(TypeSlot::Domain, TypeSlot::Jsonpath, TypeSlot::Boolean)];
+
+/// `@@` bloom fuzzy-match overloads: the symmetric domain/jsonb match shapes
+/// (SUPPORTED on Bloom-carrying domains, backed by `eql_v3.matches`), plus the
+/// native-jsonb `(domain, jsonpath)` predicate overload marked `blocker_only`
+/// so it keeps raising on every domain (including match domains). On non-Bloom
+/// domains all four render as blockers, exactly as `@>`/`<@` do for a domain
+/// that does not support containment.
+const MATCH_SIGNATURES: &[OperatorSignature] = &[
+    sig(TypeSlot::Domain, TypeSlot::Domain, TypeSlot::Boolean),
+    sig(TypeSlot::Domain, TypeSlot::Jsonb, TypeSlot::Boolean),
+    sig(TypeSlot::Jsonb, TypeSlot::Domain, TypeSlot::Boolean),
+    sig_blocker(TypeSlot::Domain, TypeSlot::Jsonpath, TypeSlot::Boolean),
+];
 
 /// `#>` path-extract overload (returns jsonb).
 const PATH_EXTRACT_JSONB_SIGNATURES: &[OperatorSignature] =
@@ -213,6 +246,34 @@ impl Operator {
             && !CONTAINMENT.contains(&self.symbol)
             && !PATH_SELECTOR.contains(&self.symbol)
     }
+
+    /// The name of the SUPPORTED comparison-wrapper function for this operator
+    /// (the `eql_v3.<name>` public wrapper). Equal to `function_name` for every
+    /// operator except `@@`, whose supported form is the bloom fuzzy-match
+    /// `eql_v3.matches` while its blocked `(domain, jsonpath)` overload keeps the
+    /// blocker name `eql_v3_internal."@@"`. The blocker path always uses
+    /// `function_name`; only the wrapper/supported path calls this.
+    pub fn wrapper_function_name(&self) -> &'static str {
+        match self.symbol {
+            "@@" => "matches",
+            _ => self.function_name,
+        }
+    }
+
+    /// The SQL operator used INSIDE the wrapper body
+    /// (`extractor(a) <body_operator> extractor(b)`). Equal to `symbol` for every
+    /// operator except `@@`, whose body performs bloom array-containment `@>` on
+    /// the extracted `eql_v3_internal.bloom_filter` (`smallint[]`) terms. So the
+    /// public `@@` fuzzy-match operator reduces, through inlining, to exactly the
+    /// GIN-indexable `match_term(col) @> match_term(needle)` expression the former
+    /// `contains` wrapper produced — no new operator on the SEM bloom_filter type,
+    /// and the proven single-level inline to the array `@>` GIN opclass is kept.
+    pub fn body_operator(&self) -> &'static str {
+        match self.symbol {
+            "@@" => "@>",
+            _ => self.symbol,
+        }
+    }
 }
 
 /// The native-jsonb operator symbols that every encrypted domain blocks, in
@@ -249,6 +310,19 @@ const fn containment_metadata(commutator: &'static str) -> OperatorMetadata {
         restrict: Some("contsel"),
         join: Some("contjoinsel"),
         commutator: Some(commutator),
+        negator: None,
+    }
+}
+
+/// Match-operator metadata (`@@`): the bloom fuzzy-match is array containment
+/// under the hood, so it reuses the containment selectivity estimators, but it
+/// is a single directional operator with no reverse — hence no commutator and
+/// no negator.
+const fn match_metadata() -> OperatorMetadata {
+    OperatorMetadata {
+        restrict: Some("contsel"),
+        join: Some("contjoinsel"),
+        commutator: None,
         negator: None,
     }
 }
@@ -343,8 +417,8 @@ pub const OPERATORS: &[Operator] = &[
     Operator {
         symbol: "@@",
         function_name: "\"@@\"",
-        signatures: JSONPATH_SIGNATURES,
-        metadata: OperatorMetadata::none(),
+        signatures: MATCH_SIGNATURES,
+        metadata: match_metadata(),
     },
     Operator {
         symbol: "#>",
@@ -397,6 +471,7 @@ mod tests {
             left: TypeSlot::Domain,
             right: TypeSlot::Text,
             returns: TypeSlot::Boolean,
+            blocker_only: false,
         };
         let rendered = sig.render("public.eql_v3_integer_eq");
         assert_eq!(rendered.left, "public.eql_v3_integer_eq");
@@ -631,6 +706,45 @@ mod tests {
                 "@@", "#>", "#>>", "-", "#-", "||"
             ]
         );
+    }
+
+    #[test]
+    fn match_operator_carries_symmetric_and_blocker_only_signatures() {
+        // `@@` is the bloom fuzzy-match operator: three symmetric match overloads
+        // plus the always-blocked `(domain, jsonpath)` native-jsonb predicate.
+        let at_at = operator("@@");
+        assert_eq!(at_at.signatures.len(), 4);
+        let symmetric: Vec<_> = at_at
+            .signatures
+            .iter()
+            .filter(|s| !s.blocker_only)
+            .map(|s| (s.left, s.right))
+            .collect();
+        assert_eq!(
+            symmetric,
+            vec![
+                (TypeSlot::Domain, TypeSlot::Domain),
+                (TypeSlot::Domain, TypeSlot::Jsonb),
+                (TypeSlot::Jsonb, TypeSlot::Domain),
+            ]
+        );
+        let blocker_only: Vec<_> = at_at
+            .signatures
+            .iter()
+            .filter(|s| s.blocker_only)
+            .map(|s| (s.left, s.right))
+            .collect();
+        assert_eq!(blocker_only, vec![(TypeSlot::Domain, TypeSlot::Jsonpath)]);
+    }
+
+    #[test]
+    fn wrapper_function_name_overrides_only_for_match() {
+        // The supported wrapper for `@@` is `matches`; its blocker name stays
+        // `"@@"`. Every other operator's wrapper and blocker names coincide.
+        assert_eq!(operator("@@").wrapper_function_name(), "matches");
+        assert_eq!(operator("@@").function_name, "\"@@\"");
+        assert_eq!(operator("=").wrapper_function_name(), "eq");
+        assert_eq!(operator("@>").wrapper_function_name(), "contains");
     }
 
     #[test]

@@ -9,6 +9,6 @@ import type { SchemaVersion } from "./SchemaVersion";
 /**
  * `public.eql_v3_text_search_ore` — search domain.
  *
- * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
+ * Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
  */
 export type TextSearchOre = { v: SchemaVersion, i: Identifier, c: Ciphertext, hm: Hmac256, ob: OreBlock256, bf: BloomFilter, };

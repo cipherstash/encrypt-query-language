@@ -2255,7 +2255,7 @@ macro_rules! __scalar_matrix_match_case {
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
-            async fn [<matrix_ $suite _ $dom_name _match_contains_self>](
+            async fn [<matrix_ $suite _ $dom_name _match_self>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::MatchScalar;
@@ -2264,14 +2264,14 @@ macro_rules! __scalar_matrix_match_case {
                 let hay = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
                     &pool, <$scalar as MatchScalar>::haystack()).await?;
                 let hit: bool = sqlx::query_scalar(&format!(
-                    "SELECT ($1::jsonb::{d}) @> ($1::jsonb::{d})",
+                    "SELECT ($1::jsonb::{d}) @@ ($1::jsonb::{d})",
                 )).bind(&hay).fetch_one(&pool).await?;
-                anyhow::ensure!(hit, "{d}: a value's bloom filter must contain itself");
+                anyhow::ensure!(hit, "{d}: a value's bloom filter must match itself");
                 Ok(())
             }
 
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
-            async fn [<matrix_ $suite _ $dom_name _match_contains_needle>](
+            async fn [<matrix_ $suite _ $dom_name _match_needle>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::MatchScalar;
@@ -2282,10 +2282,10 @@ macro_rules! __scalar_matrix_match_case {
                 let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
                     &pool, <$scalar as MatchScalar>::needle()).await?;
                 let hit: bool = sqlx::query_scalar(&format!(
-                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                    "SELECT ($1::jsonb::{d}) @@ ($2::jsonb::{d})",
                 )).bind(&hay).bind(&needle).fetch_one(&pool).await?;
                 anyhow::ensure!(hit,
-                    "{d}: haystack bloom must contain its shared-ngram needle");
+                    "{d}: haystack bloom must match its shared-ngram needle");
                 Ok(())
             }
 
@@ -2301,16 +2301,16 @@ macro_rules! __scalar_matrix_match_case {
                 let disjoint = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
                     &pool, <$scalar as MatchScalar>::disjoint()).await?;
                 let hit: bool = sqlx::query_scalar(&format!(
-                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                    "SELECT ($1::jsonb::{d}) @@ ($2::jsonb::{d})",
                 )).bind(&needle).bind(&disjoint).fetch_one(&pool).await?;
                 anyhow::ensure!(!hit,
-                    "{d}: needle bloom must NOT contain an ngram-disjoint value");
+                    "{d}: needle bloom must NOT match an ngram-disjoint value");
                 Ok(())
             }
 
             // VALIDITY, NOT PREFERENCE: `enable_seqscan = off` on the small
             // fixture forces the planner onto the only usable alternative. A
-            // green assertion proves the bare `@>` operator inlines through
+            // green assertion proves the bare `@@` operator inlines through
             // `match_term` to the native array containment the GIN index
             // supports — NOT that the planner would prefer it at scale. The
             // assertion is node-type-aware (a genuine Bitmap/Index Scan node
@@ -2351,9 +2351,9 @@ macro_rules! __scalar_matrix_match_case {
                 let lit = needle.replace('\'', "''");
                 $crate::matrix::assert_index_scan_uses(
                     &mut *tx,
-                    &format!("SELECT * FROM {table} WHERE value @> '{lit}'::jsonb::{d}"),
+                    &format!("SELECT * FROM {table} WHERE value @@ '{lit}'::jsonb::{d}"),
                     index,
-                    "bare @> must engage the eql_v3.match_term functional GIN index",
+                    "bare @@ must engage the eql_v3.match_term functional GIN index",
                 ).await?;
 
                 tx.commit().await?;

@@ -271,7 +271,7 @@ mod term_tests {
         assert_eq!(b.extractor(), "match_term");
         assert_eq!(b.ctor(), "bloom_filter");
         assert_eq!(b.role(), Role::Match);
-        assert_eq!(b.operators(), &["@>", "<@"]);
+        assert_eq!(b.operators(), &["@@"]);
         assert_eq!(b.requires(), &["src/v3/sem/bloom_filter/functions.sql"]);
     }
 
@@ -315,13 +315,13 @@ mod term_tests {
     fn bloom_extractor_routes_match_operators() {
         let terms = &[Term::Bloom];
         assert_eq!(
-            Term::extractor_for_operator(terms, "@>"),
+            Term::extractor_for_operator(terms, "@@"),
             Some("match_term")
         );
-        assert_eq!(
-            Term::extractor_for_operator(terms, "<@"),
-            Some("match_term")
-        );
+        // Containment operators are no longer routed by Bloom — the match
+        // domains use `@@`, and `@>`/`<@` fall through to blockers.
+        assert_eq!(Term::extractor_for_operator(terms, "@>"), None);
+        assert_eq!(Term::extractor_for_operator(terms, "<@"), None);
         assert_eq!(Term::extractor_for_operator(terms, "="), None);
     }
 
@@ -832,7 +832,7 @@ mod catalog_tests {
             Some("ord_term")
         );
         assert_eq!(
-            Term::extractor_for_operator(search.terms, "@>"),
+            Term::extractor_for_operator(search.terms, "@@"),
             Some("match_term")
         );
     }
@@ -878,7 +878,7 @@ mod catalog_tests {
             Some("ord_term_ore")
         );
         assert_eq!(
-            Term::extractor_for_operator(search_ore.terms, "@>"),
+            Term::extractor_for_operator(search_ore.terms, "@@"),
             Some("match_term")
         );
     }

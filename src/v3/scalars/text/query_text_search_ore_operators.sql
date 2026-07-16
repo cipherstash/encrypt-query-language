@@ -78,26 +78,14 @@ CREATE OPERATOR >= (
   COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
 );
 
-CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3.matches,
   LEFTARG = public.eql_v3_text_search_ore, RIGHTARG = eql_v3.query_text_search_ore,
-  COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
+  RESTRICT = contsel, JOIN = contjoinsel
 );
 
-CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3.matches,
   LEFTARG = eql_v3.query_text_search_ore, RIGHTARG = public.eql_v3_text_search_ore,
-  COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
-);
-
-CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.eql_v3_text_search_ore, RIGHTARG = eql_v3.query_text_search_ore,
-  COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
-);
-
-CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
-  LEFTARG = eql_v3.query_text_search_ore, RIGHTARG = public.eql_v3_text_search_ore,
-  COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
+  RESTRICT = contsel, JOIN = contjoinsel
 );

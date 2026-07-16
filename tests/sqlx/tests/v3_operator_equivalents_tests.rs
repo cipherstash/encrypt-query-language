@@ -156,8 +156,10 @@ async fn core_public_function_equivalents_exist_in_eql_v3(pool: PgPool) -> Resul
         "lte",
         "gt",
         "gte",
-        "contains",
-        "contained_by",
+        // Bloom fuzzy match (`@@`) on the text match/search domains. `contains`
+        // /`contained_by` are NO LONGER public wrappers — they are now internal
+        // blockers on the text match domains (CIP-3517).
+        "matches",
         "jsonb_contains",
         "jsonb_contained_by",
         "jsonb_array",

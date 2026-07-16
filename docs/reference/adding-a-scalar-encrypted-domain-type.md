@@ -163,7 +163,7 @@ behaviour change, not a refactor:
 | ------- | -------- | -------------- | -------------------------------- | -------------------------- |
 | `Hm`    | `hm`     | `eq_term`      | `eql_v3_internal.hmac_256`       | `=` `<>`                   |
 | `Ore`   | `ob`     | `ord_term_ore`     | `eql_v3_internal.ore_block_256`  | `=` `<>` `<` `<=` `>` `>=` |
-| `Bloom` | `bf`     | `match_term`   | `eql_v3_internal.bloom_filter`   | `@>` `<@`                  |
+| `Bloom` | `bf`     | `match_term`   | `eql_v3_internal.bloom_filter`   | `@@`                       |
 | `Ope`   | `op`     | `ord_term` | `eql_v3_internal.ope_cllw`       | `=` `<>` `<` `<=` `>` `>=` |
 
 (`Ope` is the CLLW-OPE term: a hex-encoded, order-preserving ciphertext whose
@@ -446,14 +446,14 @@ change the wide `numeric` / `timestamp` terms rely on.
 ### New-capability domains (e.g. `_match` / `Bloom`)
 
 A domain carrying a capability the matrix does not model — `text`'s `_match`
-(`Bloom`, `@>`/`<@`) is the only example today — is **not** covered by the
+(`Bloom`, `@@`) is the only example today — is **not** covered by the
 auto-generated `scalar_matrix!`, which only understands the eq/ord caps. So for
 such a domain you must, in addition to the catalog row:
 
 - **write hand-written behavioural suites** — see
-  `tests/sqlx/tests/encrypted_domain/text/text_match.rs` (fixture-backed
-  bloom-containment) and `text_smoke.rs` (literal-payload `@>`/`<@` engage, `=`
-  raises, `~~`/`~~*` absent, CHECK requires `bf`);
+  `tests/sqlx/tests/encrypted_domain/text/text_match.rs` (fixture-backed bloom
+  fuzzy match) and `text_smoke.rs` (literal-payload `@@` engages, `=`/`@>`/`<@`
+  raise, `~~`/`~~*` absent, CHECK requires `bf`);
 - **register them via `#[path]` mod declarations** in
   `tests/sqlx/tests/encrypted_domain.rs`, kept **outside** the `scalars::` module
   on purpose: the matrix-inventory gate treats every `scalars::<X>::` prefix as a
@@ -529,7 +529,7 @@ generated SQL committed under `src/v3/scalars/<T>/` (regenerate with
 per-type domain *shapes* differ — ordered types (including `timestamp`) carry
 `_ord`/`_ord_ore` + aggregates, a hypothetical equality-only type
 (`EQ_ONLY_DOMAINS`) would omit them, and the Bloom `text_match` domain renders
-`@>`/`<@` as supported containment operators no ordered type emits — so
+`@@` as the supported fuzzy-match operator no ordered type emits — so
 committing every type catches a regression in any shape, not just the ordered
 one. `committed_scalar_dirs_match_catalog_tokens` (in
 `crates/eql-codegen/tests/parity.rs`) fails CI if a catalog row has no committed
@@ -597,16 +597,17 @@ Every generated domain declares supported scalar comparison operators plus
 blockers for the native `jsonb` operator surface PostgreSQL could otherwise
 reach through domain-to-base-type fallback. The surface is a fixed 20 operators
 (`crates/eql-codegen/src/operator_surface.rs`, `OPERATORS`), each with its
-PostgreSQL-shaped signatures, summing to **44 `CREATE OPERATOR` statements per
+PostgreSQL-shaped signatures, summing to **47 `CREATE OPERATOR` statements per
 domain**:
 
 | Operators | Forms |
 |---|---|
-| `=` `<>` `<` `<=` `>` `>=` `@>` `<@` | `(domain, domain)` · `(domain, jsonb)` · `(jsonb, domain)` |
+| `=` `<>` `<` `<=` `>` `>=` `@>` `<@` `@@` | `(domain, domain)` · `(domain, jsonb)` · `(jsonb, domain)` |
 | `->` `->>` | `(domain, text)` · `(domain, integer)` · `(jsonb, domain)` |
 | `?` | `(domain, text)` |
 | `?\|` `?&` | `(domain, text[])` |
-| `@?` `@@` | `(domain, jsonpath)` |
+| `@?` | `(domain, jsonpath)` |
+| `@@` | `(domain, jsonpath)` — **blocker-only** (the native-jsonb predicate guard; always raises, even on match domains where the symmetric `@@` overloads above are the supported fuzzy match) |
 | `#>` `#>>` `#-` | `(domain, text[])` |
 | `-` | `(domain, text)` · `(domain, integer)` · `(domain, text[])` |
 | `\|\|` | `(domain, domain)` · `(domain, jsonb)` · `(jsonb, domain)` |
@@ -617,42 +618,43 @@ the operator. Supported operators are emitted with full planner metadata
 (`COMMUTATOR`, `NEGATOR`, `RESTRICT`, `JOIN` selectivity estimators) backing
 onto inlinable wrappers; everything else carries minimal metadata backing onto
 blockers. Path operators always back onto blockers — neither current term
-enables them — and the native `jsonb` operators are blocker-only **except
-`@>`/`<@`**, which back onto inlinable containment wrappers (`eql_v3.contains` /
-`eql_v3.contained_by`) on any domain carrying the `Bloom` term — the
+enables them — and the native `jsonb` operators are blocker-only **except the
+three symmetric `@@` overloads**, which back onto the inlinable bloom fuzzy-match
+wrapper (`eql_v3.matches`) on any domain carrying the `Bloom` term — the
 single-capability `_match` domain (e.g. `public.eql_v3_text_match`) **and** the combined
-`_search` domain (`public.eql_v3_text_search`, `[Hm, Ore, Bloom]`) — and elsewhere stay
+`_search` domain (`public.eql_v3_text_search`, `[Hm, Ope, Bloom]`) — and elsewhere stay
 blockers — matching the per-domain table just below, where every `Bloom`-bearing
-row carries six containment wrappers.
+row carries three match wrappers. (`@>`/`<@` are **containment**, distinct from the
+`@@` fuzzy match — CIP-3517 — and are blockers on every scalar domain.)
 
-The wrapper/blocker split per domain (the 44-operator total never moves). A
+The wrapper/blocker split per domain (the 47-operator total never moves). A
 domain's wrappers are the **union** of its terms' operators
 (`Term::operators_for_terms`), so a multi-term domain advertises every operator
 any of its terms provides; the rest stay blockers. `Functions` =
-`44 + <extractor count>` (one extractor function per distinct extractor):
+`47 + <extractor count>` (one extractor function per distinct extractor):
 
 | Domain terms      | Extractors | Wrappers | Blockers | Functions | Operators |
 | ----------------- | ---------: | -------: | -------: | --------: | --------: |
-| none              |          0 |        0 |       44 |        44 |        44 |
-| `&[Term::Hm]`     |          1 (`eq_term`)    |  6 | 38 | 45 | 44 |
-| `&[Term::Bloom]`  |          1 (`match_term`) |  6 | 38 | 45 | 44 |
-| `&[Term::Ore]`    |          1 (`ord_term_ore`)   | 18 | 26 | 45 | 44 |
-| `&[Term::Ope]`    |          1 (`ord_term`) | 18 | 26 | 45 | 44 |
-| `&[Term::Hm, Term::Ore]` | 2 (`eq_term`, `ord_term_ore`) | 18 | 26 | 46 | 44 |
-| `&[Term::Hm, Term::Ope]` | 2 (`eq_term`, `ord_term`) | 18 | 26 | 46 | 44 |
-| `&[Term::Hm, Term::Ore, Term::Bloom]` | 3 (`eq_term`, `ord_term_ore`, `match_term`) | 24 | 20 | 47 | 44 |
+| none              |          0 |        0 |       47 |        47 |        47 |
+| `&[Term::Hm]`     |          1 (`eq_term`)    |  6 | 41 | 48 | 47 |
+| `&[Term::Bloom]`  |          1 (`match_term`) |  3 | 44 | 48 | 47 |
+| `&[Term::Ore]`    |          1 (`ord_term_ore`)   | 18 | 29 | 48 | 47 |
+| `&[Term::Ope]`    |          1 (`ord_term`) | 18 | 29 | 48 | 47 |
+| `&[Term::Hm, Term::Ore]` | 2 (`eq_term`, `ord_term_ore`) | 18 | 29 | 49 | 47 |
+| `&[Term::Hm, Term::Ope]` | 2 (`eq_term`, `ord_term`) | 18 | 29 | 49 | 47 |
+| `&[Term::Hm, Term::Ore, Term::Bloom]` | 3 (`eq_term`, `ord_term_ore`, `match_term`) | 21 | 26 | 50 | 47 |
 
-Six wrappers for `Hm` = `=` and `<>` × three shapes; six for `Bloom` = `@>` and
-`<@` × three shapes; eighteen for `Ore` = six operators × three shapes (`Ope`
+Six wrappers for `Hm` = `=` and `<>` × three shapes; three for `Bloom` = `@@` ×
+three shapes; eighteen for `Ore` = six operators × three shapes (`Ope`
 mirrors `Ore`'s eighteen — same six operators through `ord_term`). For the
 multi-term rows the wrapper set is the **deduplicated union**: `[Hm, Ore]` is
 `{=, <>, <, <=, >, >=}` (Ore's `=`/`<>` collapse onto Hm's — only the *extractor*
 differs, so the count stays 18, but `=`/`<>` now resolve through `eq_term`, exact
 HMAC, not ORE); `[Hm, Ope]` (the `text_ord_ope` shape) collapses identically, so
 `=`/`<>` stay exact HMAC while range operators route through `ord_term`;
-`[Hm, Ore, Bloom]` adds `@>`/`<@` for 24. The extra extractor
-functions are the only thing that grows `Functions` past 45 — the operator total
-is always 44.
+`[Hm, Ore, Bloom]` adds `@@` for 21. The extra extractor
+functions are the only thing that grows `Functions` past 47 — the operator total
+is always 47.
 
 **Untyped-literal resolver edge.** PostgreSQL's operator resolver still prefers
 the built-in `jsonb` operator for untyped string literals in forms such as
@@ -770,14 +772,14 @@ edits:
   `DOMAIN` argument in the `eql_v3` schema. New scalar types need no edit.
 - **`tasks/test/splinter.sh`** — name-based allowlist. The converged wrapper /
   extractor names (`eq`, `neq`, `lt`, `lte`, `gt`, `gte`, `eq_term`, `ord_term_ore`,
-  `ord_term`, the `Bloom` term's `match_term` extractor and its `contains` /
-  `contained_by` containment wrappers) plus the generated `min` / `max`
+  `ord_term`, the `Bloom` term's `match_term` extractor and its `matches`
+  fuzzy-match wrapper) plus the generated `min` / `max`
   aggregates are covered by `eql_v3`-schema entries, and the SEM
   `hmac_256` / `ore_block_256` / `bloom_filter` / `ope_cllw` constructors and
   comparators by `eql_v3_internal`-schema entries. A new scalar type inherits
   coverage; **a new term needs splinter entries for each new name it introduces
   — both its extractor and its comparison wrappers** (adding `Bloom` required
-  `match_term`, `contains`, `contained_by`, and the SEM `bloom_filter`; adding
+  `match_term`, `matches`, and the SEM `bloom_filter`; adding
   `Ope` required `ord_term` and the SEM `ope_cllw`).
 
 ---
@@ -956,10 +958,10 @@ lexicographic `min`/`max` pivots instead of `::MIN`/`::MAX` and a real median
 lexicographic text has no numeric origin, so it does not get the signed-only
 sign-boundary test, and the empty string is deliberately not a fixture (`""`
 encrypts to an empty ORE term; issue #262). `text` is also the first type to add
-a new index `Term` (`Bloom`) — giving it a `match` capability (`@>`/`<@`
-bloom-filter containment on the `public.eql_v3_text_match` domain) on top of equality
+a new index `Term` (`Bloom`) — giving it a `match` capability (`@@`
+bloom-filter fuzzy match on the `public.eql_v3_text_match` domain) on top of equality
 (`Hm`) and ordering (`Ore`). Match is deliberately **not** SQL `LIKE`: it is
-probabilistic ngram-bloom containment, exposed only on `text_match`, and never
+probabilistic ngram-bloom matching, exposed only on `text_match`, and never
 backs equality.
 
 `jsonb` is a **mixed** family. Its **searchable** SteVec surface remains out of

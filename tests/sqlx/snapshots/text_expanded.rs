@@ -35971,20 +35971,18 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_search_match_contains_self"]
+    #[rustc_test_marker = "scalars::text::matrix_text_search_match_self"]
     #[doc(hidden)]
-    pub const matrix_text_search_match_contains_self: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_search_match_self: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
-            name: test::StaticTestName(
-                "scalars::text::matrix_text_search_match_contains_self",
-            ),
+            name: test::StaticTestName("scalars::text::matrix_text_search_match_self"),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
             start_line: 2258usize,
             start_col: 22usize,
             end_line: 2258usize,
-            end_col: 73usize,
+            end_col: 64usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -35992,11 +35990,11 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_search_match_contains_self()),
+            || test::assert_test_result(matrix_text_search_match_self()),
         ),
     };
-    fn matrix_text_search_match_contains_self() -> anyhow::Result<()> {
-        async fn matrix_text_search_match_contains_self(
+    fn matrix_text_search_match_self() -> anyhow::Result<()> {
+        async fn matrix_text_search_match_self(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -36013,7 +36011,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT ($1::jsonb::{0}) @> ($1::jsonb::{0})",
+                                    "SELECT ($1::jsonb::{0}) @@ ($1::jsonb::{0})",
                                     d,
                                 ),
                             )
@@ -36026,7 +36024,7 @@ pub mod text {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "{0}: a value\'s bloom filter must contain itself",
+                                "{0}: a value\'s bloom filter must match itself",
                                 d,
                             ),
                         );
@@ -36037,7 +36035,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_search_match_contains_self",
+            "encrypted_domain::scalars::text::matrix_text_search_match_self",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -36073,24 +36071,22 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_search_match_contains_self;
+        let f: fn(_) -> _ = matrix_text_search_match_self;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_search_match_contains_needle"]
+    #[rustc_test_marker = "scalars::text::matrix_text_search_match_needle"]
     #[doc(hidden)]
-    pub const matrix_text_search_match_contains_needle: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_search_match_needle: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
-            name: test::StaticTestName(
-                "scalars::text::matrix_text_search_match_contains_needle",
-            ),
+            name: test::StaticTestName("scalars::text::matrix_text_search_match_needle"),
             ignore: false,
             ignore_message: ::core::option::Option::None,
             source_file: "tests/sqlx/src/matrix.rs",
             start_line: 2274usize,
             start_col: 22usize,
             end_line: 2274usize,
-            end_col: 75usize,
+            end_col: 66usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -36098,11 +36094,11 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_search_match_contains_needle()),
+            || test::assert_test_result(matrix_text_search_match_needle()),
         ),
     };
-    fn matrix_text_search_match_contains_needle() -> anyhow::Result<()> {
-        async fn matrix_text_search_match_contains_needle(
+    fn matrix_text_search_match_needle() -> anyhow::Result<()> {
+        async fn matrix_text_search_match_needle(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -36123,7 +36119,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT ($1::jsonb::{0}) @> ($2::jsonb::{0})",
+                                    "SELECT ($1::jsonb::{0}) @@ ($2::jsonb::{0})",
                                     d,
                                 ),
                             )
@@ -36137,7 +36133,7 @@ pub mod text {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "{0}: haystack bloom must contain its shared-ngram needle",
+                                "{0}: haystack bloom must match its shared-ngram needle",
                                 d,
                             ),
                         );
@@ -36148,7 +36144,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_search_match_contains_needle",
+            "encrypted_domain::scalars::text::matrix_text_search_match_needle",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -36184,7 +36180,7 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_search_match_contains_needle;
+        let f: fn(_) -> _ = matrix_text_search_match_needle;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -36234,7 +36230,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT ($1::jsonb::{0}) @> ($2::jsonb::{0})",
+                                    "SELECT ($1::jsonb::{0}) @@ ($2::jsonb::{0})",
                                     d,
                                 ),
                             )
@@ -36248,7 +36244,7 @@ pub mod text {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "{0}: needle bloom must NOT contain an ngram-disjoint value",
+                                "{0}: needle bloom must NOT match an ngram-disjoint value",
                                 d,
                             ),
                         );
@@ -36395,7 +36391,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT * FROM {0} WHERE value @> \'{1}\'::jsonb::{2}",
+                                    "SELECT * FROM {0} WHERE value @@ \'{1}\'::jsonb::{2}",
                                     table,
                                     lit,
                                     d,
@@ -36403,7 +36399,7 @@ pub mod text {
                             )
                         }),
                         index,
-                        "bare @> must engage the eql_v3.match_term functional GIN index",
+                        "bare @@ must engage the eql_v3.match_term functional GIN index",
                     )
                     .await?;
                 tx.commit().await?;
@@ -36451,12 +36447,12 @@ pub mod text {
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_contains_self"]
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_self"]
     #[doc(hidden)]
-    pub const matrix_text_search_ore_match_contains_self: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_search_ore_match_self: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::text::matrix_text_search_ore_match_contains_self",
+                "scalars::text::matrix_text_search_ore_match_self",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
@@ -36464,7 +36460,7 @@ pub mod text {
             start_line: 2258usize,
             start_col: 22usize,
             end_line: 2258usize,
-            end_col: 73usize,
+            end_col: 64usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -36472,11 +36468,11 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_search_ore_match_contains_self()),
+            || test::assert_test_result(matrix_text_search_ore_match_self()),
         ),
     };
-    fn matrix_text_search_ore_match_contains_self() -> anyhow::Result<()> {
-        async fn matrix_text_search_ore_match_contains_self(
+    fn matrix_text_search_ore_match_self() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_match_self(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -36493,7 +36489,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT ($1::jsonb::{0}) @> ($1::jsonb::{0})",
+                                    "SELECT ($1::jsonb::{0}) @@ ($1::jsonb::{0})",
                                     d,
                                 ),
                             )
@@ -36506,7 +36502,7 @@ pub mod text {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "{0}: a value\'s bloom filter must contain itself",
+                                "{0}: a value\'s bloom filter must match itself",
                                 d,
                             ),
                         );
@@ -36517,7 +36513,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_search_ore_match_contains_self",
+            "encrypted_domain::scalars::text::matrix_text_search_ore_match_self",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -36553,16 +36549,16 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_search_ore_match_contains_self;
+        let f: fn(_) -> _ = matrix_text_search_ore_match_self;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
-    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_contains_needle"]
+    #[rustc_test_marker = "scalars::text::matrix_text_search_ore_match_needle"]
     #[doc(hidden)]
-    pub const matrix_text_search_ore_match_contains_needle: test::TestDescAndFn = test::TestDescAndFn {
+    pub const matrix_text_search_ore_match_needle: test::TestDescAndFn = test::TestDescAndFn {
         desc: test::TestDesc {
             name: test::StaticTestName(
-                "scalars::text::matrix_text_search_ore_match_contains_needle",
+                "scalars::text::matrix_text_search_ore_match_needle",
             ),
             ignore: false,
             ignore_message: ::core::option::Option::None,
@@ -36570,7 +36566,7 @@ pub mod text {
             start_line: 2274usize,
             start_col: 22usize,
             end_line: 2274usize,
-            end_col: 75usize,
+            end_col: 66usize,
             compile_fail: false,
             no_run: false,
             should_panic: test::ShouldPanic::No,
@@ -36578,11 +36574,11 @@ pub mod text {
         },
         testfn: test::StaticTestFn(
             #[coverage(off)]
-            || test::assert_test_result(matrix_text_search_ore_match_contains_needle()),
+            || test::assert_test_result(matrix_text_search_ore_match_needle()),
         ),
     };
-    fn matrix_text_search_ore_match_contains_needle() -> anyhow::Result<()> {
-        async fn matrix_text_search_ore_match_contains_needle(
+    fn matrix_text_search_ore_match_needle() -> anyhow::Result<()> {
+        async fn matrix_text_search_ore_match_needle(
             pool: sqlx::PgPool,
         ) -> anyhow::Result<()> {
             {
@@ -36603,7 +36599,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT ($1::jsonb::{0}) @> ($2::jsonb::{0})",
+                                    "SELECT ($1::jsonb::{0}) @@ ($2::jsonb::{0})",
                                     d,
                                 ),
                             )
@@ -36617,7 +36613,7 @@ pub mod text {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "{0}: haystack bloom must contain its shared-ngram needle",
+                                "{0}: haystack bloom must match its shared-ngram needle",
                                 d,
                             ),
                         );
@@ -36628,7 +36624,7 @@ pub mod text {
             }
         }
         let mut args = ::sqlx::testing::TestArgs::new(
-            "encrypted_domain::scalars::text::matrix_text_search_ore_match_contains_needle",
+            "encrypted_domain::scalars::text::matrix_text_search_ore_match_needle",
         );
         args.migrator(
             &::sqlx::migrate::Migrator {
@@ -36664,7 +36660,7 @@ pub mod text {
                 },
             ],
         );
-        let f: fn(_) -> _ = matrix_text_search_ore_match_contains_needle;
+        let f: fn(_) -> _ = matrix_text_search_ore_match_needle;
         ::sqlx::testing::TestFn::run_test(f, args)
     }
     extern crate test;
@@ -36714,7 +36710,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT ($1::jsonb::{0}) @> ($2::jsonb::{0})",
+                                    "SELECT ($1::jsonb::{0}) @@ ($2::jsonb::{0})",
                                     d,
                                 ),
                             )
@@ -36728,7 +36724,7 @@ pub mod text {
                     return ::anyhow::__private::Err({
                         let error = ::anyhow::__private::format_err(
                             format_args!(
-                                "{0}: needle bloom must NOT contain an ngram-disjoint value",
+                                "{0}: needle bloom must NOT match an ngram-disjoint value",
                                 d,
                             ),
                         );
@@ -36875,7 +36871,7 @@ pub mod text {
                         &::alloc::__export::must_use({
                             ::alloc::fmt::format(
                                 format_args!(
-                                    "SELECT * FROM {0} WHERE value @> \'{1}\'::jsonb::{2}",
+                                    "SELECT * FROM {0} WHERE value @@ \'{1}\'::jsonb::{2}",
                                     table,
                                     lit,
                                     d,
@@ -36883,7 +36879,7 @@ pub mod text {
                             )
                         }),
                         index,
-                        "bare @> must engage the eql_v3.match_term functional GIN index",
+                        "bare @@ must engage the eql_v3.match_term functional GIN index",
                     )
                     .await?;
                 tx.commit().await?;

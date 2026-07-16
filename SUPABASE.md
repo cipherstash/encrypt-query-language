@@ -63,7 +63,7 @@ or [CipherStash Stack](https://github.com/cipherstash/stack):
 
 - `public.<T>_eq` carries an `hm` term — supports `=` / `<>`, `GROUP BY`, `DISTINCT`.
 - `public.<T>_ord` (and the `_ord_ope` twin) carries an `op` term — adds `<` `<=` `>` `>=`, `ORDER BY`, `MIN` / `MAX`. `public.<T>_ord_ore` is the block-ORE (`ob`) equivalent.
-- `public.eql_v3_text_match` carries a `bf` term — supports bloom-filter token containment (`@>` / `<@`).
+- `public.eql_v3_text_match` carries a `bf` term — supports bloom-filter token match (`@@` / `eql_v3.matches`; `@>` / `<@` raise).
 - `public.eql_v3_text_search` carries all three terms — equality, ordering, and containment on `text`. `public.eql_v3_text_search_ore` is its block-ORE equivalent.
 
 Configuring those columns is a client-side concern. See:
@@ -88,11 +88,10 @@ is awkward to express.
 | `<=`     | `eql_v3.lte(col, $1)`                              | `SELECT * FROM events WHERE eql_v3.lte(encrypted_at, $1)`         |
 | `>`      | `eql_v3.gt(col, $1)`                               | `SELECT * FROM events WHERE eql_v3.gt(encrypted_at, $1)`          |
 | `>=`     | `eql_v3.gte(col, $1)`                              | `SELECT * FROM events WHERE eql_v3.gte(encrypted_at, $1)`         |
-| `@>`     | `eql_v3.contains(col, $1)`                         | `SELECT * FROM users WHERE eql_v3.contains(encrypted_name, $1)`   |
-| `<@`     | `eql_v3.contained_by(col, $1)`                     | `SELECT * FROM users WHERE eql_v3.contained_by(encrypted_name, $1)` |
+| `@@`     | `eql_v3.matches(col, $1)`                          | `SELECT * FROM users WHERE eql_v3.matches(encrypted_name, $1)`    |
 
-`eql_v3.eq` / `neq` / `lt` / `lte` / `gt` / `gte` / `contains` /
-`contained_by` are each overloaded for `(domain, domain)`, `(domain, jsonb)`,
+`eql_v3.eq` / `neq` / `lt` / `lte` / `gt` / `gte` / `matches`
+are each overloaded for `(domain, domain)`, `(domain, jsonb)`,
 and `(jsonb, domain)`, so a `jsonb` operand is accepted directly and resolved
 against the typed side.
 
@@ -162,16 +161,18 @@ There is **no SQL `LIKE` / `ILIKE` pattern matching on encrypted text in
 `eql_v3`**. The `LIKE` / `ILIKE` operators (`~~` / `~~*`) are blocked on every
 encrypted domain variant and raise an "operator not supported" exception.
 
-Text search is now **bloom-filter token containment** via `@>` / `<@` on a
-column typed `public.eql_v3_text_match` or `public.eql_v3_text_search`. This tests whether
-the encrypted text contains the (encrypted) search terms — a probabilistic
-ngram match, not a SQL pattern match:
+Text search is now **bloom-filter token matching** via the `@@` operator
+(`eql_v3.matches`) on a column typed `public.eql_v3_text_match` or
+`public.eql_v3_text_search`. This tests whether the encrypted text matches the
+(encrypted) search terms — a probabilistic ngram match, not a SQL pattern match
+and not containment (the `@>` / `<@` containment operators raise on these
+domains):
 
 ```sql
 -- Column typed public.eql_v3_text_match or public.eql_v3_text_search,
 -- with: CREATE INDEX ... USING gin (eql_v3.match_term(encrypted_name));
-SELECT * FROM users WHERE encrypted_name @> $1;
-SELECT * FROM users WHERE eql_v3.contains(encrypted_name, $1);
+SELECT * FROM users WHERE encrypted_name @@ $1;
+SELECT * FROM users WHERE eql_v3.matches(encrypted_name, $1);
 ```
 
 Case sensitivity and tokenisation are properties of how the value was

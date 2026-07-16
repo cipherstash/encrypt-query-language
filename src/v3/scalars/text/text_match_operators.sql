@@ -97,39 +97,33 @@ CREATE OPERATOR >= (
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
-  LEFTARG = public.eql_v3_text_match, RIGHTARG = public.eql_v3_text_match,
-  COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
+  FUNCTION = eql_v3_internal.contains,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = public.eql_v3_text_match
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
-  LEFTARG = public.eql_v3_text_match, RIGHTARG = jsonb,
-  COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
+  FUNCTION = eql_v3_internal.contains,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR @> (
-  FUNCTION = eql_v3.contains,
-  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_match,
-  COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel
+  FUNCTION = eql_v3_internal.contains,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_match
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.eql_v3_text_match, RIGHTARG = public.eql_v3_text_match,
-  COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
+  FUNCTION = eql_v3_internal.contained_by,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = public.eql_v3_text_match
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
-  LEFTARG = public.eql_v3_text_match, RIGHTARG = jsonb,
-  COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
+  FUNCTION = eql_v3_internal.contained_by,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = jsonb
 );
 
 CREATE OPERATOR <@ (
-  FUNCTION = eql_v3.contained_by,
-  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_match,
-  COMMUTATOR = @>, RESTRICT = contsel, JOIN = contjoinsel
+  FUNCTION = eql_v3_internal.contained_by,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_match
 );
 
 CREATE OPERATOR -> (
@@ -180,6 +174,24 @@ CREATE OPERATOR ?& (
 CREATE OPERATOR @? (
   FUNCTION = eql_v3_internal."@?",
   LEFTARG = public.eql_v3_text_match, RIGHTARG = jsonpath
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3.matches,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = public.eql_v3_text_match,
+  RESTRICT = contsel, JOIN = contjoinsel
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3.matches,
+  LEFTARG = public.eql_v3_text_match, RIGHTARG = jsonb,
+  RESTRICT = contsel, JOIN = contjoinsel
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3.matches,
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_text_match,
+  RESTRICT = contsel, JOIN = contjoinsel
 );
 
 CREATE OPERATOR @@ (

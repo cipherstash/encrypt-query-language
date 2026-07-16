@@ -71,7 +71,7 @@ impl DomainType for TextEq {
 }
 /// `public.eql_v3_text_match` — match domain.
 ///
-/// Operators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.
+/// Operators: `@@`. Required keys: `v` `i` `c` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -202,7 +202,7 @@ impl DomainType for TextOrdOpe {
 }
 /// `public.eql_v3_text_search_ore` — search domain.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `c` `hm` `ob` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -236,7 +236,7 @@ impl DomainType for TextSearchOre {
 }
 /// `public.eql_v3_text_search` — search domain.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `c` `hm` `op` `bf`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `c` `hm` `op` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -301,7 +301,7 @@ impl DomainType for TextEqQuery {
 }
 /// `eql_v3.query_text_match` — match domain query operand.
 ///
-/// Operators: `@>` `<@`. Required keys: `v` `i` `bf`.
+/// Operators: `@@`. Required keys: `v` `i` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -428,7 +428,7 @@ impl DomainType for TextOrdOpeQuery {
 }
 /// `eql_v3.query_text_search_ore` — search domain query operand.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `ob` `bf`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `hm` `ob` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -461,7 +461,7 @@ impl DomainType for TextSearchOreQuery {
 }
 /// `eql_v3.query_text_search` — search domain query operand.
 ///
-/// Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `op` `bf`.
+/// Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `hm` `op` `bf`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]

@@ -57,8 +57,9 @@ pub struct OpeCllw(pub String);
 #[ts(export, export_to = "v3/")]
 pub struct OreBlock256(pub Vec<String>);
 
-/// Bloom-filter match term — the `bf` wire key. Backs the `_match` domains
-/// (`@>`/`<@` containment).
+/// Bloom-filter match term — the `bf` wire key. Backs the fuzzy-match `@@`
+/// (`eql_v3.matches`) surface on the `_match` domains; the containment operators
+/// `@>`/`<@` survive only as internal blockers that raise (CIP-3517).
 ///
 /// **Signed** i16, not u16: EQL stores the filter as PostgreSQL `smallint[]`,
 /// and filters sized above 32768 emit upper-half bit positions as negative
@@ -89,8 +90,10 @@ impl schemars::JsonSchema for BloomFilter {
                 "minimum": i16::MIN,
                 "maximum": i16::MAX,
             },
-            "description": "Bloom-filter match term — the `bf` wire key. Backs the `_match` \
-                            domains (`@>`/`<@` containment). Signed i16: EQL stores the filter \
+            "description": "Bloom-filter match term — the `bf` wire key. Backs the fuzzy-match \
+                            `@@` (`eql_v3.matches`) surface on the `_match` domains; the \
+                            containment operators `@>`/`<@` survive only as internal blockers \
+                            that raise (CIP-3517). Signed i16: EQL stores the filter \
                             as PostgreSQL `smallint[]`, and filters sized above 32768 emit \
                             upper-half bit positions as negative signed values.",
         })
