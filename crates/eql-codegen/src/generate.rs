@@ -46,9 +46,13 @@ pub fn render_types_file(spec: &DomainFamily) -> String {
     use crate::context::{domain_block, environment, TypesContext};
     let ctx = TypesContext {
         family_name: spec.name.to_string(),
+        // Only scalar domains are generated. For a fully-scalar family this is
+        // every domain (unchanged); for a mixed family (jsonb) it renders the
+        // bare scalar storage domain and skips the hand-written SteVec domains.
         domains: spec
             .domains
             .iter()
+            .filter(|d| d.is_scalar())
             .map(|d| domain_block(spec.name, d))
             .collect(),
     };
@@ -469,7 +473,11 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
             render_query_types_file(spec),
         ));
     }
-    for d in spec.domains {
+    // Generate only scalar domains: identical to iterating every domain for a
+    // fully-scalar family; for a mixed family (jsonb) it emits the bare scalar
+    // storage surface and skips the hand-written SteVec domains under
+    // `src/v3/json/`.
+    for d in spec.domains.iter().filter(|d| d.is_scalar()) {
         let name = d.full_name(family_name);
         rendered.push((
             out_dir.join(format!("{name}_functions.sql")),
@@ -530,7 +538,10 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     let scalars_root = out_root.join(V3_SCALARS_DIR);
     let mut all_written: Vec<PathBuf> = Vec::new();
-    for spec in eql_domains::scalar_families() {
+    // Every family with at least one scalar domain: fully-scalar families are
+    // unchanged; a mixed family (jsonb) contributes only its scalar storage
+    // domain (the per-domain renderers filter `is_scalar()`).
+    for spec in eql_domains::families_with_scalar_domains() {
         let family_name = spec.name;
         let out_dir = scalars_root.join(family_name);
         let written = generate_type(spec, &out_dir)?;
@@ -596,7 +607,9 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
     }
 
-    let names: Vec<&str> = eql_domains::scalar_families().map(|s| s.name).collect();
+    let names: Vec<&str> = eql_domains::families_with_scalar_domains()
+        .map(|s| s.name)
+        .collect();
     println!("codegen: ok ({} types: {})", names.len(), names.join(", "));
     Ok(0)
 }
@@ -1132,6 +1145,44 @@ mod tests {
             norm(render_functions_file(s.name, ord), "ord"),
             norm(render_functions_file(s.name, ore), "ord_ore"),
             "_ord (ope) and _ord_ore (ore) must not render identically"
+        );
+    }
+
+    #[test]
+    fn json_family_generates_only_its_scalar_storage_surface() {
+        // The mixed json family renders exactly the bare scalar storage domain
+        // (`public.eql_v3_json`): a types file + a functions file + an operators
+        // file, all named for the bare family name. No query twin, no aggregates
+        // (storage-only), and NONE of the hand-written SteVec domains
+        // (`search`/`entry`/`query`) may leak a generated file.
+        let s = spec("json");
+        let rendered = render_type(s, std::path::Path::new("out"));
+        let names: Vec<String> = rendered
+            .iter()
+            .map(|(p, _)| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["json_types.sql", "json_functions.sql", "json_operators.sql"],
+            "json must emit exactly the bare scalar storage surface — the exact \
+             file list also proves no SteVec domain (search/entry/query) leaked a \
+             generated file"
+        );
+        let by = |suffix: &str| {
+            &rendered
+                .iter()
+                .find(|(p, _)| p.file_name().unwrap().to_string_lossy().ends_with(suffix))
+                .unwrap()
+                .1
+        };
+        assert!(by("json_types.sql").contains("CREATE DOMAIN public.eql_v3_json AS jsonb"));
+        assert_eq!(
+            by("json_functions.sql").matches("CREATE FUNCTION").count(),
+            44
+        );
+        assert_eq!(
+            by("json_operators.sql").matches("CREATE OPERATOR").count(),
+            44
         );
     }
 

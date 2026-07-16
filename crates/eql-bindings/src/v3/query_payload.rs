@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 /// Every v3 QUERY-operand shape in one type: one variant per term-bearing
 /// scalar query twin (`eql_v3.query_<name>`, the enveloped term-only
 /// operand — `{v, i, <terms>}`, no `c`) plus the SteVec containment
-/// needle (`eql_v3.query_jsonb`). Generated from the catalog, so it
+/// needle (`eql_v3.query_json`). Generated from the catalog, so it
 /// cannot drift when the catalog grows.
 ///
 /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -95,14 +95,14 @@ pub enum QueryPayload {
     DoubleOrdQuery(super::double::DoubleOrdQuery),
     /// The `eql_v3.query_double_ord_ope` query operand.
     DoubleOrdOpeQuery(super::double::DoubleOrdOpeQuery),
-    /// The `eql_v3.query_jsonb` query operand.
-    SteVec(super::jsonb::SteVecQuery),
+    /// The `eql_v3.query_json` query operand.
+    SteVec(super::json::SteVecQuery),
 }
 impl QueryPayload {
     /// Strictly parse `value` as `domain`'s query payload, KEEPING the
     /// parsed value — the query-side counterpart of
     /// [`super::DomainPayload::parse`]. `domain` is the unqualified name
-    /// (`"query_integer_eq"`, `"query_jsonb"`, …). `None` when `domain`
+    /// (`"query_integer_eq"`, `"query_json"`, …). `None` when `domain`
     /// is not a query-operand domain; `Some(Err)` when the strict parse
     /// fails (`deny_unknown_fields` rejects a stray `c`).
     pub fn parse(
@@ -236,7 +236,7 @@ impl QueryPayload {
             "query_double_ord_ope" => Some(
                 super::double::DoubleOrdOpeQuery::deserialize(value).map(Self::DoubleOrdOpeQuery),
             ),
-            "query_jsonb" => Some(super::jsonb::SteVecQuery::deserialize(value).map(Self::SteVec)),
+            "query_json" => Some(super::json::SteVecQuery::deserialize(value).map(Self::SteVec)),
             _ => None,
         }
     }

@@ -404,7 +404,7 @@ fn timestamp_round_trips_and_enforces_term_capabilities() {
 
 #[test]
 fn stevec_document_round_trips_and_enforces_envelope() {
-    use eql_bindings::v3::jsonb::SteVecDocument;
+    use eql_bindings::v3::json::SteVecDocument;
     use eql_bindings::v3::DomainType;
     // The real cipherstash SteVec document envelope carries the `k` form
     // discriminator (`"sv"`), required by the canonical eql-payload-v2.3
@@ -422,7 +422,10 @@ fn stevec_document_round_trips_and_enforces_envelope() {
     });
     let parsed: SteVecDocument = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json");
+    assert_eq!(
+        SteVecDocument::sql_domain_static(),
+        "public.eql_v3_json_search"
+    );
 
     // Envelope negatives (parity with the scalar integer tests) — now including `k`.
     for missing in ["v", "k", "i", "sv"] {
@@ -456,7 +459,7 @@ fn stevec_document_round_trips_and_enforces_envelope() {
 
 #[test]
 fn stevec_entry_untagged_term_and_neither_term_rejected() {
-    use eql_bindings::v3::jsonb::{SteVecEntry, SteVecTerm};
+    use eql_bindings::v3::json::{SteVecEntry, SteVecTerm};
     // hm arm.
     let hm: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
@@ -488,7 +491,7 @@ fn stevec_entry_both_terms_present_resolves_to_first_untagged_arm() {
     // rather than erroring. This pins that resolution so a reorder of the
     // `SteVecTerm` variants (which would silently flip the winner to `oc`) is a
     // test failure, and documents that client-side parsing does not enforce XOR.
-    use eql_bindings::v3::jsonb::{SteVecEntry, SteVecTerm};
+    use eql_bindings::v3::json::{SteVecEntry, SteVecTerm};
     let both: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef", "oc": "cllw" }))
             .expect(
@@ -503,12 +506,12 @@ fn stevec_entry_both_terms_present_resolves_to_first_untagged_arm() {
 
 #[test]
 fn stevec_query_round_trips() {
-    use eql_bindings::v3::jsonb::SteVecQuery;
+    use eql_bindings::v3::json::SteVecQuery;
     use eql_bindings::v3::DomainType;
     let wire = json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] });
     let parsed: SteVecQuery = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
-    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_jsonb");
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_json");
     // Unknown top-level key rejected (SteVecQuery has no flatten field).
     assert!(serde_json::from_value::<SteVecQuery>(json!({ "sv": [], "bogus": 1 })).is_err());
     // NOTE: a query ELEMENT carrying `c` is NOT rejected here — SteVecQueryEntry
@@ -519,7 +522,7 @@ fn stevec_query_round_trips() {
 
 #[test]
 fn stevec_document_and_query_schemas_are_strict() {
-    use eql_bindings::v3::jsonb::{SteVecDocument, SteVecForm, SteVecQuery};
+    use eql_bindings::v3::json::{SteVecDocument, SteVecForm, SteVecQuery};
     use eql_bindings::v3::DomainType;
     use eql_bindings::{Identifier, SchemaVersion};
     let doc = SteVecDocument {
@@ -551,8 +554,11 @@ fn stevec_document_and_query_schemas_are_strict() {
     let sq = serde_json::to_value(q.schema()).unwrap();
     assert_eq!(sq.pointer("/additionalProperties"), Some(&json!(false)));
     // SteVecDocument/Query domain names.
-    assert_eq!(SteVecDocument::sql_domain_static(), "public.eql_v3_json");
-    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_jsonb");
+    assert_eq!(
+        SteVecDocument::sql_domain_static(),
+        "public.eql_v3_json_search"
+    );
+    assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_json");
 }
 
 #[test]

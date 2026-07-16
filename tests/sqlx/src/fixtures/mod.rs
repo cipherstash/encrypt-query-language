@@ -31,11 +31,17 @@ pub mod driver;
 // written fixture satisfies the `v = '3'` domain CHECKs (CIP-3347).
 pub mod v3_convert;
 
-// The v3 jsonb (SteVec document) fixture — a hand-written `FixtureSpec`
+// The v3 json (SteVec document) fixture — a hand-written `FixtureSpec`
 // over `serde_json::Value`, generated through the same pipeline as the
 // scalar `eql_v3_<T>` fixtures. Not a CATALOG scalar, so it is registered
 // here directly rather than via `scalar_types!`.
 pub mod v3_ste_vec;
+
+// The storage-only / encryption-only json fixture (CIP-3512) — a hand-written
+// `FixtureSpec<serde_json::Value>` with NO index, so each document encrypts to a
+// plain `{v, i, c}` envelope for the storage-only `public.eql_v3_json` domain.
+// Same pipeline as `v3_ste_vec`, minus the SteVec index.
+pub mod v3_json_storage;
 
 // The scalar-shaped SteVec document fixture — a SteVec document carrying one
 // integer scalar at `$.field` per `eql_domains::INTEGER_VALUES`. A SPLIT fixture

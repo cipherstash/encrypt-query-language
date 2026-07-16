@@ -176,7 +176,7 @@ Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payl
 
 ### Field-level equality index (ste_vec elements)
 
-For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `public.eql_v3_json` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `public.eql_v3_jsonb_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
+For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `public.eql_v3_json_search` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `public.eql_v3_json_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
 
 ```sql
 CREATE INDEX users_data_email_eq
@@ -187,7 +187,7 @@ SELECT count(*) FROM users
   GROUP BY eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text);
 
 SELECT * FROM users
-  WHERE data_encrypted -> '<selector-for-email>'::text = $1::public.eql_v3_jsonb_entry;
+  WHERE data_encrypted -> '<selector-for-email>'::text = $1::public.eql_v3_json_entry;
 ```
 
 For ordered field-level access, index `eql_v3.ord_term(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ord_term(doc -> '<selector>'::text)` — the same sort-key rule as above. The extracted CLLW-OPE term is a bytea domain that orders under the DEFAULT btree operator class, so this index needs no superuser-installed operator class (it works on Supabase / managed Postgres). The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
@@ -196,25 +196,25 @@ For ordered field-level access, index `eql_v3.ord_term(doc -> '<selector>'::text
 
 ## GIN Indexes for JSONB Containment
 
-For document-level containment (`@>` / `<@`) on `public.eql_v3_json` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
+For document-level containment (`@>`) on `public.eql_v3_json_search` columns, use a GIN index over the ste_vec query shape. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages (`jsonb_path_ops` indexes `@>` only, not `<@`):
 
 ```sql
 CREATE INDEX orders_data_gin
   ON orders USING gin (eql_v3.to_ste_vec_query(data_encrypted)::jsonb jsonb_path_ops);
 ANALYZE orders;
 
-SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_jsonb;
+SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_json;
 -- Bitmap Index Scan on orders_data_gin
 ```
 
-The needle must be typed — `$1::eql_v3.query_jsonb`, another `public.eql_v3_json`, or an `public.eql_v3_jsonb_entry`. A bare untyped literal falls through to native `jsonb @>`.
+The needle must be typed — `$1::eql_v3.query_json`, another `public.eql_v3_json_search`, or an `public.eql_v3_json_entry`. A bare untyped literal falls through to native `jsonb @>`.
 
 ### GIN vs B-tree / hash
 
 | Feature        | hash / btree on extractor      | GIN on `to_ste_vec_query` |
 | -------------- | ------------------------------ | ------------------------- |
 | **Use case**   | equality, range, ordering      | JSONB document containment |
-| **Operators**  | `=`, `<>`, `<`, `>`, `<=`, `>=` | `@>`, `<@`                |
+| **Operators**  | `=`, `<>`, `<`, `>`, `<=`, `>=` | `@>`                     |
 | **Expression** | `eql_v3.eq_term` / `ord_term`  | `eql_v3.to_ste_vec_query(col)::jsonb` |
 
 ---
@@ -267,7 +267,7 @@ A `hash` functional index on a 10M-row encrypted-JSONB column has been observed 
 
 ### The de-TOAST floor
 
-A functional index over a large encrypted column [de-TOASTs](https://www.postgresql.org/docs/current/storage-toast.html) the whole stored value once per row to evaluate the extractor — and an `public.eql_v3_json` document is large. This cost is unavoidable and identical across access methods; it sets the build's *floor* rate. (There is no partial de-TOAST — `doc -> 'selector'::text` materialises the entire document.)
+A functional index over a large encrypted column [de-TOASTs](https://www.postgresql.org/docs/current/storage-toast.html) the whole stored value once per row to evaluate the extractor — and an `public.eql_v3_json_search` document is large. This cost is unavoidable and identical across access methods; it sets the build's *floor* rate. (There is no partial de-TOAST — `doc -> 'selector'::text` materialises the entire document.)
 
 ### Storage matters more than it does for queries
 
@@ -325,7 +325,7 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
 
 - [SQL support matrix](./sql-support.md) — which operators work against which domain variant.
 - [EQL Functions Reference](./eql-functions.md) — complete function API.
-- [EQL with JSON and JSONB](./json-support.md) — `public.eql_v3_json` worked examples.
+- [EQL with JSON and JSONB](./json-support.md) — `public.eql_v3_json_search` worked examples.
 - [Configuration Tutorial](../tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 
 ---

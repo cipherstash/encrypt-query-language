@@ -71,19 +71,19 @@ BEGIN
 END $$;
 SQL
 
-echo "==> smoke: v3 encrypted JSONB surface"
+echo "==> smoke: v3 searchable encrypted-JSON (SteVec) surface"
 "${RUN[@]}" <<'SQL'
-CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.eql_v3_json);
+CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.eql_v3_json_search);
 INSERT INTO v3_json_smoke VALUES
-  (1, '{"i":{"c":"v3_json_smoke","t":"encrypted"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json);
+  (1, '{"i":{"t":"v3_json_smoke","c":"e"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json_search);
 
 -- Supported typed accessors and containment.
 SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
 SELECT e ->> 'sel'::text FROM v3_json_smoke WHERE id = 1;
 SELECT count(*) FROM v3_json_smoke
-WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.query_jsonb;
+WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.query_json;
 SELECT count(*) FROM v3_json_smoke
-WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.query_jsonb <@ e;
+WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.query_json <@ e;
 
 -- Documented GIN expression installs cleanly in a v3-only database.
 CREATE INDEX v3_json_smoke_gin
@@ -97,7 +97,7 @@ BEGIN
     PERFORM e ? 'sel'::text FROM v3_json_smoke WHERE id = 1;
   EXCEPTION WHEN OTHERS THEN
     raised := true;
-    IF SQLERRM <> 'operator ? is not supported for public.eql_v3_json' THEN
+    IF SQLERRM <> 'operator ? is not supported for public.eql_v3_json_search' THEN
       RAISE EXCEPTION 'json blocker raised an unexpected message: %', SQLERRM;
     END IF;
   END;
@@ -108,6 +108,33 @@ BEGIN
 END $$;
 
 DROP TABLE v3_json_smoke;
+SQL
+
+echo "==> smoke: v3 storage-only encrypted-JSON surface"
+"${RUN[@]}" <<'SQL'
+-- The bare public.eql_v3_json is ciphertext-only: it accepts a {v,i,c} envelope
+-- and rejects a SteVec document (no root c).
+CREATE TABLE v3_json_storage_smoke (id int PRIMARY KEY, e public.eql_v3_json);
+INSERT INTO v3_json_storage_smoke VALUES
+  (1, '{"v":"3","i":{"t":"v3_json_storage_smoke","c":"e"},"c":"ciphertext"}'::public.eql_v3_json);
+SELECT count(*) FROM v3_json_storage_smoke WHERE id = 1;
+
+DO $$
+DECLARE
+  raised boolean := false;
+BEGIN
+  -- A SteVec document (sv, no root c) must be rejected by the storage CHECK.
+  BEGIN
+    PERFORM '{"v":3,"i":{"t":"v3_json_storage_smoke","c":"e"},"sv":[{"s":"sel","hm":"00"}]}'::public.eql_v3_json;
+  EXCEPTION WHEN check_violation THEN
+    raised := true;
+  END;
+  IF NOT raised THEN
+    RAISE EXCEPTION 'v3 storage json CHECK accepted a SteVec document';
+  END IF;
+END $$;
+
+DROP TABLE v3_json_storage_smoke;
 SQL
 
 echo "clean v3 install OK (D11 + D4 proven)"

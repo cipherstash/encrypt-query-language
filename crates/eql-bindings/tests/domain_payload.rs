@@ -150,8 +150,8 @@ fn typed_scalar_multi_term_yields_text_search_ore() {
 #[test]
 fn typed_ste_vec_document_yields_ste_vec_document() {
     let typed = assert_serialization_pin(&v2_sv(), TargetDomain::Json);
-    assert_eq!(typed.domain(), "eql_v3_json");
-    assert_eq!(typed.sql_domain(), "public.eql_v3_json");
+    assert_eq!(typed.domain(), "eql_v3_json_search");
+    assert_eq!(typed.sql_domain(), "public.eql_v3_json_search");
     match &typed {
         DomainPayload::SteVecDocument(doc) => {
             assert_eq!(doc.sv.len(), 2, "entry order/count preserved");
@@ -228,13 +228,13 @@ fn parse_constructs_every_stored_payload_domain() {
     for family in eql_domains::CATALOG {
         for domain in family.domains {
             let name = family.domain_name(domain);
-            let stored = domain.is_scalar() || name == "eql_v3_json";
-            let value = if name == "eql_v3_json" {
+            let stored = domain.is_scalar() || name == "eql_v3_json_search";
+            let value = if name == "eql_v3_json_search" {
                 from_v2(&v2_sv(), TargetDomain::Json).unwrap()
             } else if stored {
                 from_v2(&v2_ct_full(), target(&name)).unwrap()
             } else {
-                // jsonb_entry / query_jsonb: inventory members but not stored
+                // jsonb_entry / query_json: inventory members but not stored
                 // payloads — no DomainPayload variant, parse returns None.
                 assert!(
                     DomainPayload::parse(&name, &json!({})).is_none(),
@@ -258,8 +258,8 @@ fn parse_returns_none_for_unknown_domains() {
         "public.eql_v3_integer_eq",
         "",
         "jsonb",
-        "eql_v3_jsonb_entry",
-        "query_jsonb",
+        "eql_v3_json_entry",
+        "query_json",
     ] {
         assert!(
             DomainPayload::parse(name, &json!({})).is_none(),

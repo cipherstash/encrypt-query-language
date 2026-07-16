@@ -128,12 +128,12 @@ pub const DOUBLE_FIXTURES: TypeFixtures = TypeFixtures {
         "0", "0.001", "1", "1.5", "1000000", "1e300", "inf"),
 };
 
-/// jsonb fixtures — PLAINTEXT JSON document strings (NOT ciphertext). Mirrors
+/// json fixtures — PLAINTEXT JSON document strings (NOT ciphertext). Mirrors
 /// the `v3_ste_vec` document shape (`hello`/`number`/`nested`), distinct by
 /// value. The ENCRYPTED SteVec fixture the binding conformance test uses is
 /// generated separately by `tests/sqlx/src/fixtures/v3_ste_vec.rs` (FixtureSpec).
-pub const JSONB_FIXTURES: TypeFixtures = TypeFixtures {
-    family: &crate::JSONB,
+pub const JSON_FIXTURES: TypeFixtures = TypeFixtures {
+    family: &crate::JSON,
     kind: ScalarKind::Jsonb,
     values: fixtures!(jsonb;
         "{\"hello\":\"world-1\",\"number\":1,\"nested\":{\"deep\":\"constant\"}}",
@@ -155,7 +155,7 @@ pub const FIXTURES: &[TypeFixtures] = &[
     BOOLEAN_FIXTURES,
     REAL_FIXTURES,
     DOUBLE_FIXTURES,
-    JSONB_FIXTURES,
+    JSON_FIXTURES,
 ];
 
 /// Compile-time `&str` equality, usable in `const` context. `str::eq` /
@@ -221,7 +221,7 @@ const fn expected_kind(name: &str) -> ScalarKind {
         ScalarKind::F32
     } else if str_eq(name, "double") {
         ScalarKind::F64
-    } else if str_eq(name, "jsonb") {
+    } else if str_eq(name, "json") {
         ScalarKind::Jsonb
     } else {
         panic!("unmapped scalar token in expected_kind — name its kind here")

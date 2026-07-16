@@ -1,9 +1,9 @@
--- REQUIRE: src/v3/jsonb/types.sql
--- REQUIRE: src/v3/jsonb/functions.sql
+-- REQUIRE: src/v3/json/types.sql
+-- REQUIRE: src/v3/json/functions.sql
 -- REQUIRE: src/v3/sem/ope_cllw/types.sql
 
---! @file v3/jsonb/aggregates.sql
---! @brief min / max aggregates over public.eql_v3_jsonb_entry.
+--! @file v3/json/aggregates.sql
+--! @brief min / max aggregates over public.eql_v3_json_entry.
 --!
 --! SteVec document entries extracted at a selector (`doc -> 'sel'`) order by
 --! their CLLW OPE (`op`) term, so the extremum is picked by comparing
@@ -29,20 +29,20 @@
 --!   row is `op`-less. An all-`op`-less input has no orderable extremum and
 --!   returns the (arbitrary) STRICT seed.
 
---! @brief State function for min on public.eql_v3_jsonb_entry.
+--! @brief State function for min on public.eql_v3_json_entry.
 --!
 --! Keeps whichever orderable entry has the lesser CLLW OPE term. STRICT, so SQL
 --! NULL entries are skipped by the aggregate machinery; `op`-less (non-orderable)
 --! entries are skipped explicitly (see the @note on this file).
 --!
---! @param state public.eql_v3_jsonb_entry Running extremum.
---! @param value public.eql_v3_jsonb_entry Candidate entry.
---! @return public.eql_v3_jsonb_entry The lesser orderable entry by `ord_term`.
+--! @param state public.eql_v3_json_entry Running extremum.
+--! @param value public.eql_v3_json_entry Candidate entry.
+--! @return public.eql_v3_json_entry The lesser orderable entry by `ord_term`.
 CREATE FUNCTION eql_v3_internal.jsonb_entry_min_sfunc(
-  state public.eql_v3_jsonb_entry,
-  value public.eql_v3_jsonb_entry
+  state public.eql_v3_json_entry,
+  value public.eql_v3_json_entry
 )
-RETURNS public.eql_v3_jsonb_entry
+RETURNS public.eql_v3_json_entry
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -63,29 +63,29 @@ BEGIN
 END;
 $$;
 
---! @brief min aggregate over public.eql_v3_jsonb_entry.
---! @param input public.eql_v3_jsonb_entry
---! @return public.eql_v3_jsonb_entry The entry with the smallest CLLW OPE term.
-CREATE AGGREGATE eql_v3.min(public.eql_v3_jsonb_entry) (
+--! @brief min aggregate over public.eql_v3_json_entry.
+--! @param input public.eql_v3_json_entry
+--! @return public.eql_v3_json_entry The entry with the smallest CLLW OPE term.
+CREATE AGGREGATE eql_v3.min(public.eql_v3_json_entry) (
   sfunc = eql_v3_internal.jsonb_entry_min_sfunc,
-  stype = public.eql_v3_jsonb_entry,
+  stype = public.eql_v3_json_entry,
   combinefunc = eql_v3_internal.jsonb_entry_min_sfunc,
   parallel = safe
 );
 
---! @brief State function for max on public.eql_v3_jsonb_entry.
+--! @brief State function for max on public.eql_v3_json_entry.
 --!
 --! Keeps whichever orderable entry has the greater CLLW OPE term. `op`-less
 --! entries are skipped, mirroring `jsonb_entry_min_sfunc` (see the file @note).
 --!
---! @param state public.eql_v3_jsonb_entry Running extremum.
---! @param value public.eql_v3_jsonb_entry Candidate entry.
---! @return public.eql_v3_jsonb_entry The greater orderable entry by `ord_term`.
+--! @param state public.eql_v3_json_entry Running extremum.
+--! @param value public.eql_v3_json_entry Candidate entry.
+--! @return public.eql_v3_json_entry The greater orderable entry by `ord_term`.
 CREATE FUNCTION eql_v3_internal.jsonb_entry_max_sfunc(
-  state public.eql_v3_jsonb_entry,
-  value public.eql_v3_jsonb_entry
+  state public.eql_v3_json_entry,
+  value public.eql_v3_json_entry
 )
-RETURNS public.eql_v3_jsonb_entry
+RETURNS public.eql_v3_json_entry
 LANGUAGE plpgsql IMMUTABLE STRICT PARALLEL SAFE
 SET search_path = pg_catalog, extensions, public
 AS $$
@@ -106,12 +106,12 @@ BEGIN
 END;
 $$;
 
---! @brief max aggregate over public.eql_v3_jsonb_entry.
---! @param input public.eql_v3_jsonb_entry
---! @return public.eql_v3_jsonb_entry The entry with the largest CLLW OPE term.
-CREATE AGGREGATE eql_v3.max(public.eql_v3_jsonb_entry) (
+--! @brief max aggregate over public.eql_v3_json_entry.
+--! @param input public.eql_v3_json_entry
+--! @return public.eql_v3_json_entry The entry with the largest CLLW OPE term.
+CREATE AGGREGATE eql_v3.max(public.eql_v3_json_entry) (
   sfunc = eql_v3_internal.jsonb_entry_max_sfunc,
-  stype = public.eql_v3_jsonb_entry,
+  stype = public.eql_v3_json_entry,
   combinefunc = eql_v3_internal.jsonb_entry_max_sfunc,
   parallel = safe
 );

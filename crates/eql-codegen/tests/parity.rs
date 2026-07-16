@@ -63,14 +63,17 @@ fn committed_scalar_tokens(root: &Path) -> BTreeSet<String> {
 fn committed_scalar_dirs_match_catalog_tokens() {
     let root = repo_root();
     let dirs = committed_scalar_tokens(&root);
-    let catalog: BTreeSet<String> = eql_domains::scalar_families()
+    // `families_with_scalar_domains()`, not `scalar_families()`: the mixed `json`
+    // family is non-scalar (it carries SteVec domains) but its bare scalar storage
+    // domain IS generated into `src/v3/scalars/json/`, so its token must appear.
+    let catalog: BTreeSet<String> = eql_domains::families_with_scalar_domains()
         .map(|s| s.name.to_string())
         .collect();
     assert_eq!(
         dirs, catalog,
-        "committed src/v3/scalars/<token>/ dirs must equal the catalog token set: a new \
-         catalog type needs its regenerated SQL committed (run `mise run build` and commit \
-         src/v3/scalars), and a stale dir with no catalog row must be removed"
+        "committed src/v3/scalars/<token>/ dirs must equal the scalar-bearing catalog token \
+         set: a new catalog type needs its regenerated SQL committed (run `mise run build` and \
+         commit src/v3/scalars), and a stale dir with no catalog row must be removed"
     );
 }
 

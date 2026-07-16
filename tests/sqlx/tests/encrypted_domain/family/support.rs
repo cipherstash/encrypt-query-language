@@ -156,17 +156,17 @@ async fn no_cross_variant_operator_is_declared(pool: PgPool) -> Result<()> {
     // `=`. If someone accidentally adds such an operator, this test fails.
     //
     // The jsonb DOCUMENT surface is excluded: it intentionally defines
-    // cross-type containment operators (`json @> query_jsonb`,
+    // cross-type containment operators (`json @> query_json`,
     // `json @> jsonb_entry` and their `<@` commutators) — the documented
     // document-containment API, not scalar capability variants that must
-    // resolve to a blocker. So `json` / `jsonb_entry` / `query_jsonb` are
+    // resolve to a blocker. So `json` / `jsonb_entry` / `query_json` are
     // out of scope for this scalar-variant guard.
     //
     // The check is structural (`pg_operator`) rather than dynamic
     // ("invoke and see it raise") so a future PG version with stricter
     // operator resolution doesn't mask the regression.
     // Derive the excluded (non-scalar) domain names from the catalog rather than
-    // hardcoding `'json', 'jsonb_entry', 'query_jsonb'` — a future rename or a
+    // hardcoding `'json', 'jsonb_entry', 'query_json'` — a future rename or a
     // second non-scalar family stays covered automatically (the names come from
     // the same `DomainFamily::domain_name` the SQL surface is generated through).
     let excluded: Vec<String> = eql_domains::CATALOG

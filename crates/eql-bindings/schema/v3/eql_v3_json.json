@@ -4,10 +4,6 @@
       "description": "mp_base85 source ciphertext — the `c` envelope key.\n\nRequired by every v3 domain CHECK; present on every payload.",
       "type": "string"
     },
-    "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.",
-      "type": "string"
-    },
     "Identifier": {
       "additionalProperties": false,
       "description": "Table + column identifier — wire shape `{\"t\": \"...\", \"c\": \"...\"}`.\n\nShared by every payload.",
@@ -27,87 +23,22 @@
       ],
       "type": "object"
     },
-    "OpeCllw": {
-      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the\ndefault ordering domain), `_ord_ope`, and `text_search` domains, their\n`query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered entries\nof a SteVec document (exactly one of `hm` (equality) XOR `op` (ordering)\nper entry — enforced by the SQL domain CHECK): a hex-encoded CLLW OPE\nciphertext, sortable via native bytea comparison after hex-decode —\nunlike `ob` (block-ORE) it needs no custom comparator. Extracted by\n`eql_v3.ord_term` (scalar domains and the `public.jsonb_entry` overload\nalike); SQL-side constructor: `eql_v3_internal.ope_cllw`.",
-      "type": "string"
-    },
     "SchemaVersion": {
       "const": 3,
       "description": "The envelope version field (`v`) — always exactly `3` on the wire.",
       "type": "integer"
-    },
-    "Selector": {
-      "description": "A SteVec selector — the `s` wire key. Addresses a JSON path leaf within an\nencrypted document (`public.eql_v3_json`); present on every entry and query element.",
-      "type": "string"
-    },
-    "SteVecEntry": {
-      "anyOf": [
-        {
-          "properties": {
-            "hm": {
-              "$ref": "#/$defs/Hmac256"
-            }
-          },
-          "required": [
-            "hm"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "op": {
-              "$ref": "#/$defs/OpeCllw"
-            }
-          },
-          "required": [
-            "op"
-          ],
-          "type": "object"
-        }
-      ],
-      "description": "`public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector\n`s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of\n`hm` XOR `op`. LAX (flatten precludes `deny_unknown_fields`): tolerates the\nroot `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.",
-      "properties": {
-        "a": {
-          "type": [
-            "boolean",
-            "null"
-          ]
-        },
-        "c": {
-          "$ref": "#/$defs/Ciphertext"
-        },
-        "s": {
-          "$ref": "#/$defs/Selector"
-        }
-      },
-      "required": [
-        "s",
-        "c"
-      ],
-      "type": "object"
-    },
-    "SteVecForm": {
-      "const": "sv",
-      "description": "The `k` envelope form discriminator — always `\"sv\"` for a SteVec document.",
-      "type": "string"
     }
   },
   "$id": "https://schemas.cipherstash.com/eql/v3/eql_v3_json.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "`public.eql_v3_json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,\nno root ciphertext). Strict. `k` is the `\"sv\"` form discriminator (see\n[`SteVecForm`]) — carried on the real wire, so the strict struct models it.",
+  "description": "`public.eql_v3_json` — storage-only domain.\n\nOperators: none. Required keys: `v` `i` `c`.",
   "properties": {
+    "c": {
+      "$ref": "#/$defs/Ciphertext"
+    },
     "i": {
       "$ref": "#/$defs/Identifier"
-    },
-    "k": {
-      "$ref": "#/$defs/SteVecForm"
-    },
-    "sv": {
-      "items": {
-        "$ref": "#/$defs/SteVecEntry"
-      },
-      "type": "array"
     },
     "v": {
       "$ref": "#/$defs/SchemaVersion"
@@ -115,10 +46,9 @@
   },
   "required": [
     "v",
-    "k",
     "i",
-    "sv"
+    "c"
   ],
-  "title": "SteVecDocument",
+  "title": "Json",
   "type": "object"
 }

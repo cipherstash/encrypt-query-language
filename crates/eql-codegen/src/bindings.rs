@@ -325,6 +325,67 @@ pub fn render_family_bindings(family: &DomainFamily) -> String {
     format_rs(file)
 }
 
+/// Render a bindings module for the **scalar domains only** of a mixed family —
+/// currently just `json` (its bare `public.eql_v3_json` storage struct). A
+/// filtered twin of [`render_family_bindings`]: the SteVec domains' structs stay
+/// hand-written in `json.rs` (their fields/serde aren't catalog-derivable), so
+/// this must skip them or it would emit clashing/incorrect struct bodies. The
+/// output is written to `<family>_storage.rs` (e.g. `json_storage.rs`), NOT
+/// `<family>.rs`, so it never clobbers the hand-written module — the hand-written
+/// `json.rs` re-exports the generated struct (`pub use ...::Json;`) so
+/// `super::json::Json` resolves for the inventory/payload renderers.
+pub fn render_scalar_only_bindings(family: &DomainFamily) -> String {
+    let mut used: Vec<&'static str> = vec!["Ciphertext"];
+    for d in family.domains.iter().filter(|d| d.is_scalar()) {
+        for term in Term::payload_terms(d.terms) {
+            let t = term.binding_newtype();
+            if !used.contains(&t) {
+                used.push(t);
+            }
+        }
+    }
+    let used_idents: Vec<_> = used.iter().map(|t| format_ident!("{t}")).collect();
+
+    // Scalar storage structs only, then a query twin for each term-bearing scalar
+    // domain (a bare storage domain has empty terms, so no query operand).
+    let structs: TokenStream = family
+        .domains
+        .iter()
+        .filter(|d| d.is_scalar())
+        .map(|d| render_struct(family, d))
+        .chain(
+            family
+                .domains
+                .iter()
+                .filter(|d| d.is_scalar() && !d.terms.is_empty())
+                .map(|d| render_query_struct(family, d)),
+        )
+        .collect();
+
+    let mod_doc = format!(
+        " The generated scalar (storage) domain(s) of the `{}` encrypted-domain family — \
+         generated from the eql-domains catalog. The family's SteVec domains are hand-written \
+         in `{}.rs`.",
+        family.name, family.name
+    );
+
+    let file = quote! {
+        #![doc = #mod_doc]
+
+        use schemars::{schema_for, JsonSchema, Schema};
+
+        use crate::v3::terms::{ #(#used_idents),* };
+        use crate::v3::DomainType;
+        use crate::{Identifier, SchemaVersion};
+        use serde::{Deserialize, Serialize};
+        use ts_rs::TS;
+
+        #structs
+    };
+
+    format_rs(file)
+}
+
 /// Render the generated `crates/eql-bindings/src/v3/inventory.rs`: just `all()`
 /// in CATALOG order, referencing the family structs through `super::`. The
 /// `pub mod` declarations, the trait re-export, the trait/newtypes, and the
@@ -404,15 +465,16 @@ pub fn render_inventory_rs() -> String {
 }
 
 /// The stored-payload domains of the catalog, in CATALOG order: every flat
-/// scalar domain plus the SteVec document (`public.eql_v3_json`). The SteVec
-/// entry/query shapes are inventory members but not stored column payloads,
-/// so they are excluded — exactly the set `eql_bindings::from_v2` accepts as
-/// conversion targets ([`render_payload_rs`]'s `DomainPayload` variants).
+/// scalar domain (including the bare `public.eql_v3_json` storage domain) plus
+/// the SteVec document (`public.eql_v3_json_search`). The SteVec entry/query
+/// shapes are inventory members but not stored column payloads, so they are
+/// excluded — exactly the set `eql_bindings::from_v2` accepts as conversion
+/// targets ([`render_payload_rs`]'s `DomainPayload` variants).
 fn stored_payload_domains() -> impl Iterator<Item = (&'static DomainFamily, &'static Domain)> {
     CATALOG
         .iter()
         .flat_map(|f| f.domains.iter().map(move |d| (f, d)))
-        .filter(|(f, d)| d.is_scalar() || d.full_name(f.name) == "json")
+        .filter(|(f, d)| d.is_scalar() || d.full_name(f.name) == "json_search")
 }
 
 /// Render the generated `crates/eql-bindings/src/v3/payload.rs`: the
@@ -527,7 +589,7 @@ pub fn render_payload_rs() -> String {
 
 /// The catalog's QUERY-operand domains, in a stable order: a query twin for
 /// every term-bearing scalar domain (`eql_v3.query_<name>`), then the SteVec
-/// containment needle (`eql_v3.query_jsonb`). Exactly the shapes the generated
+/// containment needle (`eql_v3.query_json`). Exactly the shapes the generated
 /// `QueryPayload` spans and `from_v2_query` can target. Returned as
 /// `(module, variant ident, struct ident, unqualified query-domain name)`; the
 /// SteVec needle keeps the `SteVec` variant name the `from_v2` query path
@@ -545,10 +607,10 @@ fn query_payload_domains() -> Vec<(String, String, String, String)> {
         })
         .collect();
     out.push((
-        "jsonb".into(),
+        "json".into(),
         "SteVec".into(),
         "SteVecQuery".into(),
-        "query_jsonb".into(),
+        "query_json".into(),
     ));
     out
 }
@@ -556,7 +618,7 @@ fn query_payload_domains() -> Vec<(String, String, String, String)> {
 /// Render the generated `crates/eql-bindings/src/v3/query_payload.rs`: the
 /// `QueryPayload` enum spanning every QUERY-operand domain — a variant per
 /// term-bearing scalar query twin (`eql_v3.query_<name>`) plus the SteVec
-/// containment needle (`eql_v3.query_jsonb`) — with its
+/// containment needle (`eql_v3.query_json`) — with its
 /// construct-from-known-domain `parse` constructor.
 ///
 /// Generated for the same reason as [`render_payload_rs`]'s `DomainPayload`:
@@ -602,7 +664,7 @@ pub fn render_query_payload_rs() -> String {
         /// Every v3 QUERY-operand shape in one type: one variant per term-bearing
         /// scalar query twin (`eql_v3.query_<name>`, the enveloped term-only
         /// operand — `{v, i, <terms>}`, no `c`) plus the SteVec containment
-        /// needle (`eql_v3.query_jsonb`). Generated from the catalog, so it
+        /// needle (`eql_v3.query_json`). Generated from the catalog, so it
         /// cannot drift when the catalog grows.
         ///
         /// Serialization is exactly the inner struct's (`#[serde(untagged)]`
@@ -621,7 +683,7 @@ pub fn render_query_payload_rs() -> String {
             /// Strictly parse `value` as `domain`'s query payload, KEEPING the
             /// parsed value — the query-side counterpart of
             /// [`super::DomainPayload::parse`]. `domain` is the unqualified name
-            /// (`"query_integer_eq"`, `"query_jsonb"`, …). `None` when `domain`
+            /// (`"query_integer_eq"`, `"query_json"`, …). `None` when `domain`
             /// is not a query-operand domain; `Some(Err)` when the strict parse
             /// fails (`deny_unknown_fields` rejects a stray `c`).
             pub fn parse(
@@ -676,6 +738,18 @@ fn render_bindings(dir: &Path) -> Vec<(PathBuf, String)> {
             )
         })
         .collect();
+    // Mixed families (a family with ≥1 scalar domain that is not wholly scalar —
+    // `json` today) are excluded from `scalar_families()`, so their scalar
+    // storage domain(s) render into a separate `<family>_storage.rs` module while
+    // the SteVec `<family>.rs` stays hand-written. Derived from the same generic
+    // `families_with_scalar_domains()` seam the SQL materializer iterates rather
+    // than naming a family, so a second mixed family is picked up automatically.
+    for f in eql_domains::families_with_scalar_domains().filter(|f| !f.is_scalar()) {
+        rendered.push((
+            dir.join(format!("{}_storage.rs", f.name)),
+            render_scalar_only_bindings(f),
+        ));
+    }
     rendered.push((dir.join("payload.rs"), render_payload_rs()));
     rendered.push((dir.join("query_payload.rs"), render_query_payload_rs()));
     rendered.push((dir.join("inventory.rs"), render_inventory_rs()));
@@ -931,9 +1005,11 @@ mod tests {
         let tmp = crate::writer::test_support::tempdir();
         let written = generate_bindings(tmp.path()).unwrap();
         let dir = tmp.path().join("crates/eql-bindings/src/v3");
-        assert_eq!(written.len(), eql_domains::scalar_families().count() + 3);
+        // scalar families + jsonb_storage + payload + query_payload + inventory.
+        assert_eq!(written.len(), eql_domains::scalar_families().count() + 4);
         assert!(dir.join("integer.rs").is_file());
         assert!(dir.join("text.rs").is_file());
+        assert!(dir.join("json_storage.rs").is_file());
         assert!(dir.join("payload.rs").is_file());
         assert!(dir.join("inventory.rs").is_file());
         assert!(
@@ -964,7 +1040,7 @@ mod tests {
 
         let rendered = render_bindings(&dir);
 
-        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 3);
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 4);
         assert_eq!(
             std::fs::read_to_string(&sentinel).unwrap(),
             "SENTINEL",
@@ -998,19 +1074,21 @@ mod tests {
         assert!(out.starts_with(crate::consts::RUST_GENERATED_MARKER));
 
         // One variant per catalog (family, domain) pair that is a stored
-        // payload: every scalar domain plus the SteVec document. The SteVec
+        // payload: every scalar domain (incl. the bare `eql_v3_json` storage
+        // domain) plus the SteVec document (`eql_v3_json_search`). The SteVec
         // entry/query shapes are inventory members but not stored payloads.
         let expected: Vec<String> = CATALOG
             .iter()
             .flat_map(|f| {
                 f.domains
                     .iter()
-                    .filter(|d| d.is_scalar() || d.full_name(f.name) == "json")
+                    .filter(|d| d.is_scalar() || d.full_name(f.name) == "json_search")
                     .map(|d| d.rust_struct_name(f.name))
             })
             .collect();
         assert_eq!(variant_idents(&out, "DomainPayload"), expected);
-        assert!(out.contains("SteVecDocument(super::jsonb::SteVecDocument)"));
+        assert!(out.contains("SteVecDocument(super::json::SteVecDocument)"));
+        assert!(out.contains("Json(super::json::Json)"));
         assert!(!expected.contains(&"SteVecEntry".to_string()));
         assert!(!expected.contains(&"SteVecQuery".to_string()));
 
@@ -1021,7 +1099,10 @@ mod tests {
         ));
         assert!(out.contains(r#""eql_v3_integer_eq" =>"#));
         assert!(out.contains("IntegerEq::deserialize(value).map(Self::IntegerEq)"));
+        // The bare storage domain and the searchable document have distinct arms.
         assert!(out.contains(r#""eql_v3_json" =>"#));
+        assert!(out.contains("Json::deserialize(value).map(Self::Json)"));
+        assert!(out.contains(r#""eql_v3_json_search" =>"#));
         assert!(out.contains("SteVecDocument::deserialize(value).map(Self::SteVecDocument)"));
         assert!(out.contains("_ => None,"));
         assert!(out.contains("pub fn as_domain_type(&self) -> &dyn DomainType"));
@@ -1057,7 +1138,7 @@ mod tests {
         // parse arms keyed on the unqualified query-domain names.
         assert!(out.contains(r#""query_integer_eq" =>"#));
         assert!(out.contains("IntegerEqQuery::deserialize(value).map(Self::IntegerEqQuery)"));
-        assert!(out.contains(r#""query_jsonb" =>"#));
+        assert!(out.contains(r#""query_json" =>"#));
         assert!(out.contains("SteVecQuery::deserialize(value).map(Self::SteVec)"));
         assert!(out.contains("_ => None,"));
 
@@ -1216,12 +1297,20 @@ mod tests {
         let tmp = crate::writer::test_support::tempdir();
         let dir = tmp.path().join(V3_BINDINGS_DIR);
         let rendered = render_bindings(&dir);
+        // The hand-written SteVec module `json.rs` is never generated...
         assert!(
-            !rendered.iter().any(|(p, _)| p.ends_with("jsonb.rs")),
-            "jsonb.rs is hand-written; the generator must not emit it"
+            !rendered.iter().any(|(p, _)| p.ends_with("json.rs")),
+            "json.rs is hand-written; the generator must not emit it"
         );
-        // One file per scalar family + payload + inventory.
-        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 3);
+        // ...but the json family's bare scalar storage domain IS generated into a
+        // separate `json_storage.rs` module.
+        assert!(
+            rendered.iter().any(|(p, _)| p.ends_with("json_storage.rs")),
+            "the json family's scalar storage domain must generate json_storage.rs"
+        );
+        // One file per scalar family + jsonb_storage + payload + query_payload +
+        // inventory.
+        assert_eq!(rendered.len(), eql_domains::scalar_families().count() + 4);
     }
 
     #[test]

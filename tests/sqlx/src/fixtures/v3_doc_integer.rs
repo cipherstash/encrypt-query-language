@@ -25,9 +25,9 @@ use super::spec::FixtureSpec;
 /// `v3_doc_integer.sql`, SQLx ref `scripts("v3_doc_integer")`.
 const NAME: &str = "v3_doc_integer";
 
-/// The generated `payload` column type — the `public.eql_v3_json` document DOMAIN, so
+/// The generated `payload` column type — the `public.eql_v3_json_search` document DOMAIN, so
 /// the domain CHECK runs when the fixture loads.
-const PAYLOAD_TYPE: &str = "public.eql_v3_json";
+const PAYLOAD_TYPE: &str = "public.eql_v3_json_search";
 
 /// JSON path encrypted in each document. The SteVec selector hash for this
 /// path is pinned in `SELECTOR` below.
