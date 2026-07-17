@@ -101,8 +101,8 @@ fn capability_phrase(domain: &Domain) -> String {
     if ops.contains(&"<") {
         caps.push("ordering");
     }
-    if ops.contains(&"@>") {
-        caps.push("containment");
+    if ops.contains(&"@@") {
+        caps.push("matching");
     }
     if caps.is_empty() {
         "storage only".to_string()
@@ -263,8 +263,11 @@ pub fn wrapper_entry(
     extractor: &str,
 ) -> FnEntry {
     FnEntry::Wrapper {
-        op: op.symbol.to_string(),
-        function_name: op.function_name.to_string(),
+        // Body operator: `symbol` for all but `@@`, whose body uses bloom `@>`.
+        op: op.body_operator().to_string(),
+        // Supported path → the public wrapper name. Differs from `function_name`
+        // (the blocker name) only for `@@`, whose wrapper is `eql_v3.matches`.
+        function_name: op.wrapper_function_name().to_string(),
         args: [
             SqlParam {
                 name: "a",
@@ -286,7 +289,7 @@ pub fn wrapper_entry(
 pub fn unsupported_entry(op: &Operator, args: [SqlParam; 2], returns: &str) -> FnEntry {
     FnEntry::Unsupported {
         // operator_lit is sql_str-escaped defensively for the single-quoted RAISE literal.
-        operator_lit: sql_str(op.symbol),
+        operator_lit: sql_str(op.symbol.as_str()),
         function_name: op.function_name.to_string(),
         args,
         returns: returns.to_string(),
@@ -333,9 +336,16 @@ pub fn operator_entry(op: &Operator, leftarg: &str, rightarg: &str, supported: b
     // Some`, so `render_functions_file` always emits a wrapper for a supported
     // operator and a blocker otherwise.
     let function_schema = if supported { SCHEMA } else { INTERNAL_SCHEMA };
+    // Supported → the public wrapper name (`eql_v3.matches` for `@@`); blocked →
+    // the blocker name (`eql_v3_internal."@@"`). They differ only for `@@`.
+    let function_name = if supported {
+        op.wrapper_function_name()
+    } else {
+        op.function_name
+    };
     OpEntry {
-        symbol: op.symbol.to_string(),
-        function_name: op.function_name.to_string(),
+        symbol: op.symbol.as_str().to_string(),
+        function_name: function_name.to_string(),
         function_schema: function_schema.to_string(),
         leftarg: leftarg.to_string(),
         rightarg: rightarg.to_string(),
@@ -515,16 +525,26 @@ mod tests {
             ("=", "public.eql_v3_integer", false, None),
             // Supported but metadata-less operator (`->`) → still no metadata.
             ("->", "public.eql_v3_integer_eq", true, None),
-            // `@>` carries containment metadata when supported (the Bloom
-            // `text_match` path).
+            // `@@` (bloom fuzzy match) carries containment-style selectivity when
+            // supported (the Bloom `text_match` path) — no commutator/negator, so
+            // just the RESTRICT/JOIN estimators.
+            (
+                "@@",
+                "public.eql_v3_text_match",
+                true,
+                Some("RESTRICT = contsel, JOIN = contjoinsel"),
+            ),
+            // `@>` carries containment metadata when explicitly supported (retained
+            // for the hand-written JSON containment surface; the generated scalar
+            // catalog no longer marks `@>` supported on any domain).
             (
                 "@>",
                 "public.eql_v3_text_match",
                 true,
                 Some("COMMUTATOR = <@, RESTRICT = contsel, JOIN = contjoinsel"),
             ),
-            // ... but suppressed when `@>` is a blocker (non-Bloom domains),
-            // which is why the integer reference is unchanged.
+            // ... but suppressed when `@>` is a blocker (its actual catalog state
+            // on every domain now), which is why the integer reference is unchanged.
             ("@>", "public.eql_v3_integer_eq", false, None),
         ];
 

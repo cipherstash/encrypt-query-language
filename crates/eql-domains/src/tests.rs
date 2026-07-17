@@ -271,7 +271,7 @@ mod term_tests {
         assert_eq!(b.extractor(), "match_term");
         assert_eq!(b.ctor(), "bloom_filter");
         assert_eq!(b.role(), Role::Match);
-        assert_eq!(b.operators(), &["@>", "<@"]);
+        assert_eq!(b.operators(), &["@@"]);
         assert_eq!(b.requires(), &["src/v3/sem/bloom_filter/functions.sql"]);
     }
 
@@ -315,13 +315,13 @@ mod term_tests {
     fn bloom_extractor_routes_match_operators() {
         let terms = &[Term::Bloom];
         assert_eq!(
-            Term::extractor_for_operator(terms, "@>"),
+            Term::extractor_for_operator(terms, "@@"),
             Some("match_term")
         );
-        assert_eq!(
-            Term::extractor_for_operator(terms, "<@"),
-            Some("match_term")
-        );
+        // Containment operators are no longer routed by Bloom — the match
+        // domains use `@@`, and `@>`/`<@` fall through to blockers.
+        assert_eq!(Term::extractor_for_operator(terms, "@>"), None);
+        assert_eq!(Term::extractor_for_operator(terms, "<@"), None);
         assert_eq!(Term::extractor_for_operator(terms, "="), None);
     }
 
@@ -652,7 +652,7 @@ mod catalog_tests {
                 "boolean",
                 "real",
                 "double",
-                "jsonb"
+                "json"
             ]
         );
     }
@@ -832,7 +832,7 @@ mod catalog_tests {
             Some("ord_term")
         );
         assert_eq!(
-            Term::extractor_for_operator(search.terms, "@>"),
+            Term::extractor_for_operator(search.terms, "@@"),
             Some("match_term")
         );
     }
@@ -878,7 +878,7 @@ mod catalog_tests {
             Some("ord_term_ore")
         );
         assert_eq!(
-            Term::extractor_for_operator(search_ore.terms, "@>"),
+            Term::extractor_for_operator(search_ore.terms, "@@"),
             Some("match_term")
         );
     }
@@ -1050,7 +1050,7 @@ mod catalog_tests {
                 "boolean" => ScalarKind::Bool,
                 "real" => ScalarKind::F32,
                 "double" => ScalarKind::F64,
-                "jsonb" => ScalarKind::Jsonb,
+                "json" => ScalarKind::Jsonb,
                 other => panic!("unmapped scalar token {other} in FIXTURES"),
             };
             assert_eq!(
@@ -1309,18 +1309,13 @@ mod invariant_tests {
     fn every_domain_name_starts_with_its_family_name() {
         for s in CATALOG {
             for d in s.domains {
-                // The one documented exception: `public.eql_v3_json` (the jsonb
-                // family's document domain) predates the catalog and keeps
-                // its established name rather than following the
-                // family+suffix convention — see `Domain::full_name`.
-                if s.name == "jsonb" && d.name == "json" {
-                    continue;
-                }
-                // The jsonb containment needle follows the query-operand
-                // PREFIX convention (CIP-3442) instead: `query_<family>`,
-                // matching the scalar `query_<name>` twins — see
-                // `Domain::full_name`.
-                if s.name == "jsonb" && d.name == "query" {
+                // The one documented exception: the json containment needle
+                // follows the query-operand PREFIX convention (CIP-3442):
+                // `query_<family>`, matching the scalar `query_<name>` twins —
+                // see `Domain::full_name`. (Every other json domain — bare
+                // storage, `_search` document, `_entry` — follows the standard
+                // family+suffix join.)
+                if s.name == "json" && d.name == "query" {
                     assert_eq!(s.domain_name(d), format!("query_{}", s.name));
                     continue;
                 }
@@ -1533,15 +1528,22 @@ mod shape_tests {
 
     #[test]
     fn jsonb_family_is_non_scalar_and_in_catalog_after_flip() {
-        use crate::{Shape, CATALOG, JSONB};
-        assert!(!JSONB.is_scalar());
-        assert_eq!(JSONB.domains.len(), 3);
-        assert!(matches!(JSONB.domains[0].shape, Shape::SteVec));
-        assert_eq!(JSONB.domains[0].name, "json");
-        assert!(JSONB.domains.iter().all(|d| d.terms.is_empty()));
+        use crate::{Shape, CATALOG, JSON};
+        // Mixed family: three SteVec domains (indices 0-2) + one appended bare
+        // scalar storage domain (index 3, `public.eql_v3_json`). The family is
+        // still non-scalar because `is_scalar()` is `.all()`.
+        assert!(!JSON.is_scalar());
+        assert_eq!(JSON.domains.len(), 4);
+        assert!(matches!(JSON.domains[0].shape, Shape::SteVec));
+        assert_eq!(JSON.domains[0].name, "search");
+        // The appended storage domain is the sole scalar: bare name, empty terms.
+        assert!(matches!(JSON.domains[3].shape, Shape::Scalar));
+        assert_eq!(JSON.domains[3].name, "");
+        assert_eq!(JSON.domains.iter().filter(|d| d.is_scalar()).count(), 1);
+        assert!(JSON.domains.iter().all(|d| d.terms.is_empty()));
         assert!(
-            CATALOG.iter().any(|f| f.name == "jsonb"),
-            "JSONB must be catalogued at the flip"
+            CATALOG.iter().any(|f| f.name == "json"),
+            "JSON must be catalogued at the flip"
         );
     }
 }

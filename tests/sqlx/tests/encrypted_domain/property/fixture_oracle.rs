@@ -340,7 +340,7 @@ fixture_oracle_suite!(double, eql_tests::scalar_domains::F8, ordered);
 //
 // The same fixture rows, but calling the generated `eql_v3.*` comparison
 // functions by name across all three overloads and asserting term-extractor
-// identity (eq_term==hm / ord_term_ore==ob). Free of fresh encryption — read-only
+// identity (eq_term==hm / ord_term==op / ord_term_ore==ob). Free of fresh encryption — read-only
 // SQL over the already-encrypted fixtures. integer is the reference family with
 // explicit tests; the other types go through `fixture_fn_oracle_suite!`.
 
@@ -442,13 +442,14 @@ fixture_fn_oracle_suite!(timestamp_fn, chrono::DateTime<chrono::Utc>, ordered);
 fixture_fn_oracle_suite!(numeric_fn, rust_decimal::Decimal, ordered);
 
 // text is bespoke rather than `fixture_fn_oracle_suite!`: its ordered domains
-// carry both [Hm, Ore], so they support the FULL six comparisons (eq/neq route
-// through `hm`, the four ord ops through ORE) — the generic `ordered` arm only
-// runs the four ord ops on the ordered twins. text also declares `_search`
-// ([Hm, Ore, Bloom]), which `Variant::Search` reaches but the generic macro
-// never instantiates. The generated text fixture is encrypted with
-// [Unique, Ore, Match], so its payload carries hm+ob+bf and casts cleanly to
-// every text domain. The fixture rows excludes the empty string (issue #262),
+// carry `hm` plus an ordering term (`Ope` for `text_ord`, `Ore` for
+// `text_ord_ore`), so they support the FULL six comparisons (eq/neq route
+// through `hm`, the four ord ops through the ordering term) — the generic
+// `ordered` arm only runs the four ord ops on the ordered twins. text also
+// declares `_search` ([Hm, Ope, Bloom]), which `Variant::Search` reaches but
+// the generic macro never instantiates. The generated text fixture is encrypted
+// with [Unique, Ore, Match, Ope], so its payload carries hm+ob+bf+op and casts
+// cleanly to every text domain. The fixture rows excludes the empty string (issue #262),
 // so no generator filtering is needed here.
 mod text_fn {
     use super::*;
@@ -464,7 +465,8 @@ mod text_fn {
     }
 
     /// `text_ord` / `text_ord_ore` — full six comparisons (eq/neq + the four ord
-    /// ops) plus eq_term(`hm`) + ord_term_ore(`ob`) identity on each ordered twin.
+    /// ops) plus eq_term(`hm`) identity on both, and each twin's ordering-term
+    /// identity (ord_term(`op`) for `text_ord`, ord_term_ore(`ob`) for `text_ord_ore`).
     #[sqlx::test]
     async fn ord_fn_oracle(pool: PgPool) -> Result<()> {
         run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
@@ -478,8 +480,8 @@ mod text_fn {
         .await
     }
 
-    /// `text_search` ([Hm, Ore, Bloom]) — the eq/ord function facets plus
-    /// eq_term + ord_term_ore identity (the bloom `@>`/`<@` facet is covered by the
+    /// `text_search` ([Hm, Ope, Bloom]) — the eq/ord function facets plus
+    /// eq_term + ord_term identity (the bloom `@>`/`<@` facet is covered by the
     /// example-based `match_smoke`, not a random oracle).
     #[sqlx::test]
     async fn search_fn_oracle(pool: PgPool) -> Result<()> {
@@ -487,6 +489,20 @@ mod text_fn {
             assert_eq_fn_oracle::<String>(&pool, Variant::Search, &c).await?;
             assert_ord_fn_oracle::<String>(&pool, Variant::Search, &c).await?;
             assert_extractor_oracle::<String>(&pool, Variant::Search, &c).await
+        })
+        .await
+    }
+
+    /// `text_search_ore` ([Hm, Ore, Bloom]) — the ORE twin of `text_search`. Same
+    /// eq/ord function facets plus eq_term + ord_term_ore identity, but ordering
+    /// rides the block-ORE term (`ord_term_ore`/`ob`) instead of the OPE term
+    /// (`ord_term`/`op`). The bloom `@>`/`<@` facet is covered by `match_smoke`.
+    #[sqlx::test]
+    async fn search_ore_fn_oracle(pool: PgPool) -> Result<()> {
+        run_fn_property::<String, _, _>(pool, 32, |pool, c| async move {
+            assert_eq_fn_oracle::<String>(&pool, Variant::SearchOre, &c).await?;
+            assert_ord_fn_oracle::<String>(&pool, Variant::SearchOre, &c).await?;
+            assert_extractor_oracle::<String>(&pool, Variant::SearchOre, &c).await
         })
         .await
     }

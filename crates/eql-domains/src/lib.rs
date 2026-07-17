@@ -29,7 +29,7 @@ mod term;
 pub use fixtures::{
     BoundedIntKind, Fixture, ScalarKind, TypeFixtures, BIGINT_FIXTURES, BIGINT_VALUES,
     BOOLEAN_FIXTURES, DATE_FIXTURES, DOUBLE_FIXTURES, FIXTURES, INTEGER_FIXTURES, INTEGER_VALUES,
-    JSONB_FIXTURES, NUMERIC_FIXTURES, REAL_FIXTURES, SMALLINT_FIXTURES, SMALLINT_VALUES,
+    JSON_FIXTURES, NUMERIC_FIXTURES, REAL_FIXTURES, SMALLINT_FIXTURES, SMALLINT_VALUES,
     TEXT_FIXTURES, TEXT_VALUES, TIMESTAMP_FIXTURES,
 };
 
@@ -130,7 +130,7 @@ impl Role {
 
 /// The structural shape of a domain's payload. Every existing scalar family is
 /// [`Shape::Scalar`] (flat `{v,i,c,+terms}`). The SteVec shapes belong to the
-/// `jsonb` family and carry document/entry/query payloads whose keys are NOT the
+/// `json` family and carry document/entry/query payloads whose keys are NOT the
 /// flat envelope+term set — `Term`, `Role`, `operators_for_terms`, and
 /// `capability_label` continue to assume flat-scalar semantics and are simply
 /// never invoked on a SteVec domain (consumers filter/branch on `Shape`).
@@ -149,13 +149,15 @@ impl Role {
 pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
-    /// A `jsonb` family payload: `public.eql_v3_json` (`{v, i, sv: [entry]}`),
-    /// `public.eql_v3_jsonb_entry` (`{s, c, a?, #[flatten] SteVecTerm}`), or
-    /// `public.query_jsonb` (`{sv: [query-entry]}`). The three differ in
-    /// payload body but share the non-flat-scalar shape, so a single variant
-    /// covers them; `Domain.name` (`"json"`/`"entry"`/`"query"`) already
-    /// disambiguates which one a given domain is (see `Domain::full_name` /
-    /// `Domain::rust_struct_name`).
+    /// A `json` family SteVec payload: `public.eql_v3_json_search`
+    /// (`{v, k, i, sv: [entry]}`), `public.eql_v3_json_entry`
+    /// (`{s, c, a?, #[flatten] SteVecTerm}`), or `eql_v3.query_json`
+    /// (`{sv: [query-entry]}`). The three differ in payload body but share the
+    /// non-flat-scalar shape, so a single variant covers them; `Domain.name`
+    /// (`"search"`/`"entry"`/`"query"`) already disambiguates which one a given
+    /// domain is (see `Domain::full_name` / `Domain::rust_struct_name`). The
+    /// family's fourth domain, the bare storage domain `public.eql_v3_json`, is
+    /// `Shape::Scalar`, not SteVec.
     SteVec,
 }
 
@@ -444,27 +446,39 @@ pub const DOUBLE: DomainFamily = DomainFamily {
     domains: ORDERED_INT_DOMAINS,
 };
 
-/// The SteVec (encrypted-JSONB) domains of the `jsonb` family. Every one has
-/// empty `terms` — but these domains ARE searchable: each carries its index
-/// terms *structurally*, inside the payload (`hm` for hash-equality, `op` for
-/// CLLW-OPE ordering, one per `sv` leaf), not as a flat family-level `Term`.
-/// Empty `terms` records "no flat-scalar term surface," never "no index
-/// capability"; the capability is described by the `Shape` and enforced by the
-/// hand-written SQL CHECKs under `src/v3/jsonb/`. The coupling is pinned by
-/// `tests::shape_and_terms_are_consistent`. The SQL
-/// surface is hand-written under `src/v3/jsonb/` (the SQL generator SKIPS these),
-/// and the Rust payload structs are hand-written in
-/// `crates/eql-bindings/src/v3/jsonb.rs` (their fields/serde are not derivable
-/// from the catalog); the catalog drives only their inventory membership + order.
-const JSONB_DOMAINS: &[Domain] = &[
+/// The domains of the `json` family — a **mixed** family: three SteVec
+/// (encrypted-JSON) domains plus one bare scalar storage domain.
+///
+/// The three SteVec domains (`search`/`entry`/`query`) all have empty `terms`
+/// but ARE searchable: each carries its index terms *structurally*, inside the
+/// payload (`hm` for hash-equality, `op` for CLLW-OPE ordering, one per `sv`
+/// leaf), not as a flat family-level `Term`. Empty `terms` records "no
+/// flat-scalar term surface," never "no index capability"; the capability is
+/// described by the `Shape` and enforced by the hand-written SQL CHECKs under
+/// `src/v3/json/`. Their SQL surface is hand-written under `src/v3/json/` and
+/// their Rust payload structs are hand-written in
+/// `crates/eql-bindings/src/v3/json.rs` (fields/serde not catalog-derivable);
+/// the catalog drives only their inventory membership + order. The SQL/bindings
+/// generators SKIP these SteVec domains (they iterate scalar domains only).
+///
+/// The fourth, `Shape::Scalar` domain (bare `name: ""`, `public.eql_v3_json`)
+/// is a ciphertext-only storage domain and IS generated — by the scalar
+/// materializer, exactly like `public.eql_v3_boolean`. It is why the family is
+/// "mixed": `families_with_scalar_domains()` renders its scalar domain(s) while
+/// `scalar_families()` still excludes the family wholesale (`is_scalar()` is
+/// `.all()`), leaving the hand-written SteVec surface untouched. The
+/// scalar/SteVec coupling is pinned by `tests::shape_and_terms_are_consistent`.
+///
+/// Naming: the bare storage domain is `public.eql_v3_json` (bare = storage,
+/// like every scalar), and the searchable SteVec **document** carries the
+/// `search` suffix (`public.eql_v3_json_search`), mirroring text's `_search`.
+const JSON_DOMAINS: &[Domain] = &[
     Domain {
-        // The established document name `public.eql_v3_json` predates the catalog and
-        // does not follow the family+suffix convention (family is "jsonb", not
-        // "json") — an explicit literal name, not the empty-suffix
-        // bare-family-name convention every scalar storage domain uses.
-        // `Domain::full_name` special-cases the name `"json"` to return it
-        // verbatim instead of concatenating.
-        name: "json",
+        // The searchable SteVec document: `public.eql_v3_json_search`. The
+        // `search` suffix follows the standard family+suffix convention (like
+        // text's `_search`); the bare `public.eql_v3_json` name belongs to the
+        // storage domain below.
+        name: "search",
         terms: &[],
         shape: Shape::SteVec,
     },
@@ -478,36 +492,70 @@ const JSONB_DOMAINS: &[Domain] = &[
         terms: &[],
         shape: Shape::SteVec,
     },
+    // Bare ciphertext-only storage domain `public.eql_v3_json`: a flat `{v,i,c}`
+    // envelope with a root ciphertext and NO SEM index terms (encrypt-at-rest,
+    // decrypt-in-proxy, never searched server-side) — structurally a scalar, NOT
+    // SteVec. `Shape::Scalar` (so `full_name("json")` → `json` →
+    // `sql_typname` → `eql_v3_json`, following the uniform prefix convention),
+    // generated by the scalar materializer like every other storage-only domain
+    // (cf. `public.eql_v3_boolean`). It is APPENDED (index 3) so the SteVec
+    // domains keep indices 0-2 that the index-based `spec` tests rely on. The
+    // family stays non-scalar (`is_scalar()` is `.all()`), so `scalar_families()`
+    // still excludes it and the hand-written SteVec SQL/bindings are untouched;
+    // only the new `families_with_scalar_domains()` seam picks up this one domain.
+    Domain {
+        name: "",
+        terms: &[],
+        shape: Shape::Scalar,
+    },
 ];
 
-/// `jsonb` — the encrypted-JSONB (SteVec) family: `public.eql_v3_json` (document, the
-/// one explicit-name exception — see `JSONB_DOMAINS`), `public.eql_v3_jsonb_entry`
-/// (one sv element), `public.query_jsonb` (containment needle). The Rust
-/// struct *bodies* are hand-written (`crates/eql-bindings/src/v3/jsonb.rs`,
-/// not derivable from the catalog); `Domain::rust_struct_name` derives their
-/// *identifiers* (`SteVecDocument`/`SteVecEntry`/`SteVecQuery`) from
-/// `Domain.name` so codegen's inventory renderer doesn't need its own copy of
-/// the mapping. Added to `CATALOG` at the flip task.
-pub const JSONB: DomainFamily = DomainFamily {
-    name: "jsonb",
-    domains: JSONB_DOMAINS,
+/// `json` — the encrypted-JSON family (a **mixed** family). Three hand-written
+/// SteVec domains: `public.eql_v3_json_search` (searchable document),
+/// `public.eql_v3_json_entry` (one sv element), `eql_v3.query_json` (containment
+/// needle); their Rust struct *bodies* are hand-written
+/// (`crates/eql-bindings/src/v3/json.rs`, not derivable from the catalog), while
+/// `Domain::rust_struct_name` derives their *identifiers*
+/// (`SteVecDocument`/`SteVecEntry`/`SteVecQuery`) from `Domain.name`. Plus one
+/// generated `Shape::Scalar` storage domain, `public.eql_v3_json`
+/// (ciphertext-only, no index terms), materialized like every other
+/// storage-only scalar.
+pub const JSON: DomainFamily = DomainFamily {
+    name: "json",
+    domains: JSON_DOMAINS,
 };
 
 /// The domain-family catalog — the single source of truth. Includes both the
-/// scalar (flat) families and the non-scalar SteVec `jsonb` family; scalar-only
-/// consumers should iterate [`scalar_families`] instead. Order is significant
-/// (it drives inventory/generation order). New types are appended as their SQL
-/// surface lands.
+/// scalar (flat) families and the mixed `json` family (SteVec domains + a bare
+/// scalar storage domain); scalar-only consumers should iterate
+/// [`scalar_families`] instead. Order is significant (it drives
+/// inventory/generation order). New types are appended as their SQL surface
+/// lands.
 pub const CATALOG: &[DomainFamily] = &[
-    INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSONB,
+    INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSON,
 ];
 
 /// The scalar (flat) families of `CATALOG`, in order — everything except the
-/// SteVec `jsonb` family. The DRY entry point for the ~9 scalar-only consumers
-/// (`generate_all`, `list-types`, the scalar matrix) so they never re-inline the
-/// `is_scalar()` filter.
+/// mixed `json` family (which is non-scalar because it carries SteVec domains).
+/// The DRY entry point for the ~9 scalar-only consumers (`list-types`, the
+/// scalar matrix) so they never re-inline the `is_scalar()` filter.
 pub fn scalar_families() -> impl Iterator<Item = &'static DomainFamily> {
     CATALOG.iter().filter(|f| f.is_scalar())
+}
+
+/// The families of `CATALOG` that contain **at least one** scalar (flat) domain,
+/// in order. A superset of [`scalar_families`]: it additionally admits *mixed*
+/// families (a family that is not wholly scalar but has some scalar domain — the
+/// `json` family, whose bare `public.eql_v3_json` storage domain is scalar
+/// while its SteVec domains are not). The seam the SQL/bindings materializers
+/// iterate: they render each family's scalar domains and skip its non-scalar
+/// ones, so a fully-scalar family is handled identically to before, and a mixed
+/// family contributes only its scalar surface. Callers pair this with a
+/// per-domain `d.is_scalar()` filter.
+pub fn families_with_scalar_domains() -> impl Iterator<Item = &'static DomainFamily> {
+    CATALOG
+        .iter()
+        .filter(|f| f.domains.iter().any(|d| d.is_scalar()))
 }
 
 #[cfg(test)]

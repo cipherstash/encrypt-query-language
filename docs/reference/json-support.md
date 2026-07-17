@@ -1,12 +1,12 @@
 # EQL with JSON and JSONB
 
-EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json`** document domain. An `public.eql_v3_json` column stores an encrypted document whose every path is searchable — without decryption — via containment, field/array access, and entry-level equality / range on extracted leaves.
+EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json_search`** document domain. An `public.eql_v3_json_search` column stores an encrypted document whose every path is searchable — without decryption — via containment, field/array access, and entry-level equality / range on extracted leaves.
 
 ## On this page
 
 - [Storing encrypted JSON](#storing-encrypted-json)
 - [Typed operands (important)](#typed-operands-important)
-- [Querying `public.eql_v3_json`](#querying-publicjson)
+- [Querying `public.eql_v3_json_search`](#querying-publiceql_v3_json_search)
   - [Containment queries (`@>`, `<@`)](#containment-queries)
   - [Field extraction (`jsonb_path_query`)](#field-extraction-jsonb_path_query)
   - [JSON path operators (`->`, `->>`)](#json-path-operators)
@@ -17,12 +17,12 @@ EQL encrypts, decrypts, and searches JSON / JSONB documents using structured enc
 
 ## Storing encrypted JSON
 
-Type the column as `public.eql_v3_json`. There is no database-side `add_search_config` step — which terms a document carries is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); typing the column as `public.eql_v3_json` is what makes the encrypted operators and functions resolve.
+Type the column as `public.eql_v3_json_search`. There is no database-side `add_search_config` step — which terms a document carries is decided by the encryption client ([CipherStash Proxy](https://github.com/cipherstash/proxy) / [CipherStash Stack](https://github.com/cipherstash/stack)); typing the column as `public.eql_v3_json_search` is what makes the encrypted operators and functions resolve.
 
 ```sql
 CREATE TABLE users (
   id BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-  encrypted_json public.eql_v3_json
+  encrypted_json public.eql_v3_json_search
 );
 ```
 
@@ -36,31 +36,31 @@ The stored value is the encrypted ste_vec document — an envelope (`v`, `i`, `c
 
 ## Typed operands (important)
 
-`public.eql_v3_json` is a PostgreSQL **domain over `jsonb`**. PostgreSQL resolves `domain OP untyped_literal` to the **native** `jsonb` operator, because it flattens the domain to its base type when the right-hand side is an unknown-typed literal. A bare literal therefore **bypasses the encrypted operator (and the blockers) and silently returns native jsonb semantics** — typically a root-key lookup that yields `NULL` — instead of querying the encrypted document or raising.
+`public.eql_v3_json_search` is a PostgreSQL **domain over `jsonb`**. PostgreSQL resolves `domain OP untyped_literal` to the **native** `jsonb` operator, because it flattens the domain to its base type when the right-hand side is an unknown-typed literal. A bare literal therefore **bypasses the encrypted operator (and the blockers) and silently returns native jsonb semantics** — typically a root-key lookup that yields `NULL` — instead of querying the encrypted document or raising.
 
 Always give the operand a known type:
 
 ```sql
 -- ✅ correct — typed operand resolves to the eql_v3 operator
 WHERE doc -> 'email'::text = $1
-WHERE doc @> $1::eql_v3.query_jsonb
+WHERE doc @> $1::eql_v3.query_json
 WHERE doc -> $1            -- a text parameter (the CipherStash Proxy interface)
 
 -- ⚠ wrong — bare untyped literal resolves to native jsonb -> text, returns NULL
 WHERE doc -> 'email'
 ```
 
-This is **intrinsic to the domain type-kind**, not a bug: the only way to remove it would be to make `public.eql_v3_json` a base type (losing free `jsonb` interop). The CipherStash Proxy always passes typed parameters, so applications routing through the Proxy are unaffected; the caveat matters only for hand-written ad-hoc SQL.
+This is **intrinsic to the domain type-kind**, not a bug: the only way to remove it would be to make `public.eql_v3_json_search` a base type (losing free `jsonb` interop). The CipherStash Proxy always passes typed parameters, so applications routing through the Proxy are unaffected; the caveat matters only for hand-written ad-hoc SQL.
 
-## Querying `public.eql_v3_json`
+## Querying `public.eql_v3_json_search`
 
 ### Containment queries (`@>`, `<@`)
 
-`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.eql_v3_json`, an `eql_v3.query_jsonb`, or an `public.eql_v3_jsonb_entry`:
+`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.eql_v3_json_search`, an `eql_v3.query_json`, or an `public.eql_v3_json_entry`:
 
 ```sql
 SELECT * FROM examples
-WHERE encrypted_json @> $1::eql_v3.query_jsonb;
+WHERE encrypted_json @> $1::eql_v3.query_json;
 ```
 
 This is the encrypted equivalent of the plaintext `jsonb_column @> '{"top":{"nested":["a"]}}'`.
@@ -72,7 +72,7 @@ CREATE INDEX examples_json_gin
   ON examples USING gin (eql_v3.to_ste_vec_query(encrypted_json)::jsonb jsonb_path_ops);
 ANALYZE examples;
 
-SELECT * FROM examples WHERE encrypted_json @> $1::eql_v3.query_jsonb;
+SELECT * FROM examples WHERE encrypted_json @> $1::eql_v3.query_json;
 ```
 
 See [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) for the full setup.
@@ -94,24 +94,24 @@ SELECT eql_v3.jsonb_path_exists(encrypted_json, 'abc123def456...') FROM examples
 
 ### JSON path operators (`->`, `->>`)
 
-`->` returns the matched entry as an `public.eql_v3_jsonb_entry`; `->>` returns it serialized as `text` (ciphertext JSON, not decrypted plaintext). The selector operand must be typed:
+`->` returns the matched entry as an `public.eql_v3_json_entry`; `->>` returns it serialized as `text` (ciphertext JSON, not decrypted plaintext). The selector operand must be typed:
 
 ```sql
--- Field access by selector (returns public.eql_v3_jsonb_entry)
+-- Field access by selector (returns public.eql_v3_json_entry)
 SELECT encrypted_json -> 'selector_hash'::text FROM examples;
 
 -- Field access as text (returns the entry as ciphertext text)
 SELECT encrypted_json ->> 'selector_hash'::text FROM examples;
 
--- Array element by 0-based index (returns public.eql_v3_jsonb_entry)
+-- Array element by 0-based index (returns public.eql_v3_json_entry)
 SELECT encrypted_json -> 0 FROM examples;
 ```
 
-The extracted `public.eql_v3_jsonb_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (on String / Number leaves):
+The extracted `public.eql_v3_json_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (on String / Number leaves):
 
 ```sql
 SELECT * FROM examples
-WHERE encrypted_json -> 'email_selector'::text = $1::public.eql_v3_jsonb_entry;
+WHERE encrypted_json -> 'email_selector'::text = $1::public.eql_v3_json_entry;
 ```
 
 ### Array operations
@@ -137,16 +137,16 @@ FROM examples
 GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 ```
 
-`MIN` / `MAX` over an extracted ordered leaf use the `eql_v3.min(public.eql_v3_jsonb_entry)` / `max` aggregates.
+`MIN` / `MAX` over an extracted ordered leaf use the `eql_v3.min(public.eql_v3_json_entry)` / `max` aggregates.
 
 ## `eql_v3` functions for JSONB and ste_vec
 
 ### Core functions
 
 - **`eql_v3.ste_vec(val jsonb) RETURNS jsonb[]`** — extracts the ste_vec index array from an encrypted payload.
-- **`eql_v3.ste_vec_contains(a public.eql_v3_json, b public.eql_v3_json) RETURNS boolean`** — true if all ste_vec terms in `b` exist in `a`; backs the `@>` operator.
-- **`eql_v3.to_ste_vec_query(val public.eql_v3_json) RETURNS eql_v3.query_jsonb`** — the GIN-indexable query shape `@>` inlines to.
-- **`eql_v3.meta_data(val jsonb)`**, **`eql_v3.ciphertext(val jsonb)`**, **`eql_v3.selector(val jsonb)` / `(entry public.eql_v3_jsonb_entry)`** — envelope / ciphertext / selector accessors.
+- **`eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search) RETURNS boolean`** — true if all ste_vec terms in `b` exist in `a`; backs the `@>` operator.
+- **`eql_v3.to_ste_vec_query(val public.eql_v3_json_search) RETURNS eql_v3.query_json`** — the GIN-indexable query shape `@>` inlines to.
+- **`eql_v3.meta_data(val jsonb)`**, **`eql_v3.ciphertext(val jsonb)`**, **`eql_v3.selector(val jsonb)` / `(entry public.eql_v3_json_entry)`** — envelope / ciphertext / selector accessors.
 
 ### Path query functions
 
@@ -162,15 +162,15 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 
 ### Entry comparison / aggregate
 
-- **`eql_v3.eq_term(entry public.eql_v3_jsonb_entry)`** — equality term (backs `=` / `<>` / `GROUP BY`).
-- **`eql_v3.ord_term(entry public.eql_v3_jsonb_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
-- **`eql_v3.min(public.eql_v3_jsonb_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
+- **`eql_v3.eq_term(entry public.eql_v3_json_entry)`** — equality term (backs `=` / `<>` / `GROUP BY`).
+- **`eql_v3.ord_term(entry public.eql_v3_json_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
+- **`eql_v3.min(public.eql_v3_json_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
 For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops`).
 
 ### Blocked operators
 
-The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, and root-document `=` `<>` `<` `<=` `>` `>=` are **blocked** on `public.eql_v3_json` — they `RAISE` rather than running plaintext-jsonb semantics on the encrypted payload. Use containment, field access, or the `eql_v3.jsonb_path_*` functions instead.
+The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, and root-document `=` `<>` `<` `<=` `>` `>=` are **blocked** on `public.eql_v3_json_search` — they `RAISE` rather than running plaintext-jsonb semantics on the encrypted payload. Use containment, field access, or the `eql_v3.jsonb_path_*` functions instead.
 
 ## How ste_vec indexing works
 
@@ -197,7 +197,7 @@ Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
 ```sql
 -- Find records where account.email = "alice@example.com"
-WHERE encrypted_data @> $1::eql_v3.query_jsonb;
+WHERE encrypted_data @> $1::eql_v3.query_json;
 ```
 
 Encryption and selector generation are handled by CipherStash Proxy or CipherStash Stack, not by EQL directly.

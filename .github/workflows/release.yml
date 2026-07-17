@@ -3,8 +3,11 @@ name: "Release"
 # Single release entry point for the EQL release line.
 #
 # - `main` uses Changesets to version and publish the production release.
-# - `eql_v3` can cut prereleases from an explicit conventional release commit.
-#   The release commit itself is the marker: `chore(release): ...`.
+# - Any non-`main` branch can cut a prerelease from an explicit conventional
+#   release commit, triggered via workflow_dispatch against that branch (e.g.
+#   `gh workflow run release.yml --ref eql-3.0.1`). The release commit itself is
+#   the marker: `chore(release): ...`. This lets a batching branch ship an
+#   alpha/rc for pre-merge testing without merging to `main`.
 #
 # Prereleases publish the npm package directly from this workflow and dispatch
 # the Rust crate publish through `release-plz.yml` so crates.io Trusted
@@ -23,7 +26,6 @@ on:
   push:
     branches:
       - main
-      - eql_v3
   workflow_dispatch: {}
 
 concurrency:
@@ -60,10 +62,14 @@ jobs:
 
           if [[ "$branch" == "main" ]]; then
             mode="production"
-          elif [[ "$branch" == "eql_v3" ]]; then
-            # Exactly `chore(release):` — a bare `release:` prefix would let an
-            # unrelated commit ("release: fix runbook") re-trigger the publish
-            # pipeline for the currently pinned identity.
+          else
+            # Any non-main branch cuts a prerelease from an explicit
+            # conventional release commit (dispatched via workflow_dispatch).
+            # Safety comes from the three guards below — the marker commit, the
+            # prerelease-shaped version, and the tag-idempotency short-circuit —
+            # not from the branch name. Exactly `chore(release):`; a bare
+            # `release:` prefix must NOT re-trigger the publish pipeline for the
+            # currently pinned identity.
             case "$subject" in
               chore\(release\):*)
                 mode="prerelease"

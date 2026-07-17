@@ -36,9 +36,12 @@
 //! identical by construction, and the merge fails closed if they ever
 //! disagree. Every merged key still came out of a validated `from_v2` call.
 //!
-//! The SteVec document fixtures (`v3_ste_vec`, `v3_doc_integer`) convert with
-//! the single [`TargetDomain::Json`] target — the v3 document keeps
-//! `k: "sv"` (the #336 wire shape) and its per-entry `hm` XOR `op` terms.
+//! The SteVec-indexed document fixtures (`v3_ste_vec`, `v3_doc_integer`) convert
+//! with the single [`TargetDomain::Json`] target (`eql_v3_json_search`) — the v3
+//! document keeps `k: "sv"` (the #336 wire shape) and its per-entry `hm` XOR `op`
+//! terms. A storage-only / encryption-only json fixture (`v3_json_storage`, no
+//! index) instead converts to the bare `eql_v3_json` scalar storage target — a
+//! plain `{v,i,c}` envelope, no `k`/`sv` (CIP-3512); see `targets_for`.
 //! Their payloads first pass through [`ste_vec_oc_to_op`], a TEMPORARY shim:
 //! the pinned 0.38.1 client serializes Compat-mode (CLLW-OPE) sv terms under
 //! the v2.3 `oc` key, because the v2.3 schema predates a distinct sv-level
@@ -131,8 +134,17 @@ fn term_key_for(index: IndexKind) -> Option<&'static str> {
 /// the single `json` document target for [`ScalarKind::Jsonb`].
 fn targets_for(kind: ScalarKind, indexes: &[IndexKind]) -> Result<Vec<TargetDomain>> {
     if kind == ScalarKind::Jsonb {
-        let target = TargetDomain::parse("eql_v3_json")
-            .map_err(|e| anyhow!("resolving the SteVec document target: {e}"))?;
+        // A SteVec-indexed jsonb fixture converts to the searchable document
+        // domain (`eql_v3_json_search`, `k: "sv"`); an unindexed / storage-only
+        // jsonb fixture converts to the storage-only `eql_v3_json` domain — a
+        // plain `{v,i,c}` envelope (CIP-3512).
+        let name = if indexes.contains(&IndexKind::SteVec) {
+            "eql_v3_json_search"
+        } else {
+            "eql_v3_json"
+        };
+        let target = TargetDomain::parse(name)
+            .map_err(|e| anyhow!("resolving the jsonb conversion target {name:?}: {e}"))?;
         return Ok(vec![target]);
     }
 
@@ -394,6 +406,28 @@ mod tests {
         );
         assert!(sv[1].get("oc").is_none(), "no `oc` may survive conversion");
         assert_eq!(sv[1].get("a"), Some(&json!(false)));
+    }
+
+    #[test]
+    fn storage_only_jsonb_converts_to_the_bare_envelope() {
+        // A storage-only / encryption-only json fixture (CIP-3512): kind Jsonb
+        // but NO SteVec index, so the client encrypts the whole document as one
+        // `k: "ct"` ciphertext and the v3 payload is exactly `{v, i, c}` for the
+        // storage-only `eql_v3_json` domain — NOT a SteVec document.
+        let payload = json!({
+            "v": 2,
+            "k": "ct",
+            "i": { "t": "_fixture_v3_json_storage", "c": "payload" },
+            "c": "mBbKmsMMkbKAJcY2ZE!ceh0e1t",
+        });
+        let out = to_v3_payloads(vec![payload], ScalarKind::Jsonb, &[]).unwrap();
+        let obj = out[0].as_object().unwrap();
+        assert_eq!(obj.get("v"), Some(&json!(3)));
+        assert!(!obj.contains_key("k"), "storage-only json carries no `k`");
+        assert!(!obj.contains_key("sv"), "storage-only json carries no `sv`");
+        let mut keys: Vec<&str> = obj.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        assert_eq!(keys, ["c", "i", "v"]);
     }
 
     #[test]

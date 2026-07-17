@@ -79,7 +79,7 @@ fn parse_resolves_every_catalog_scalar_domain_and_json() {
                     matches!(parsed, Ok(TargetDomain::Scalar(_))),
                     "{name} must parse to Scalar, got {parsed:?}"
                 );
-            } else if name == "eql_v3_json" {
+            } else if name == "eql_v3_json_search" {
                 assert_eq!(parsed.unwrap(), TargetDomain::Json);
             } else {
                 assert!(
@@ -410,7 +410,7 @@ fn ste_vec_entry_with_neither_term_is_missing() {
     let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
     match err {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "eql_v3_json");
+            assert_eq!(domain, "eql_v3_json_search");
             assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }
@@ -457,12 +457,12 @@ fn ste_vec_query_entry_term_errors_match_document_rules() {
         from_v2_query(&both, TargetDomain::Json).unwrap_err(),
         FromV2Error::AmbiguousTerm { entry: 0 }
     ));
-    // The query path names ITS shape (query_jsonb, not json) and locates the
+    // The query path names ITS shape (query_json, not json) and locates the
     // entry.
     let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
     match from_v2_query(&neither, TargetDomain::Json).unwrap_err() {
         FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "query_jsonb");
+            assert_eq!(domain, "query_json");
             assert_eq!(key, "hm|op");
             assert_eq!(entry, Some(1));
         }

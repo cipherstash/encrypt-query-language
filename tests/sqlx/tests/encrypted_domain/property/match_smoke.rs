@@ -1,9 +1,9 @@
 //! fixture-suite (CIP-3141) bloom-filter **match** smoke for the text `_match`
 //! domain.
 //!
-//! Unlike the eq/ord oracles, bloom containment is not a random property:
-//! `@>`/`<@` admit false positives and the plaintext oracle is *substring*, not
-//! equality. So this is an example-based smoke over three curated fixtures with
+//! Unlike the eq/ord oracles, bloom matching is not a random property: `@@`
+//! (`eql_v3.matches`) admits false positives and the plaintext oracle is
+//! *substring*, not equality. So this is an example-based smoke over three curated fixtures with
 //! known n-gram relationships — `"aardvark"` ⊇ `"aard"`, `"zzzz"` disjoint from
 //! both — pinned by the `MatchScalar` trait and the
 //! `text_match_pivots_are_in_fixture_values` guard.
@@ -21,7 +21,7 @@ use eql_tests::property::assert_match_smoke;
 use eql_tests::scalar_domains::{fetch_fixture_payload, MatchScalar};
 use sqlx::PgPool;
 
-/// `public.eql_v3_text_match` — the bloom-filter (`bf`) domain (`@>`/`<@`).
+/// `public.eql_v3_text_match` — the bloom-filter (`bf`) domain (`@@` fuzzy match).
 const TEXT_MATCH_DOMAIN: &str = "public.eql_v3_text_match";
 
 #[sqlx::test]

@@ -31,6 +31,7 @@ splinter_sql="$work_dir/splinter.sql"
 all_findings_tsv="$work_dir/all_findings.tsv"
 findings_tsv="$work_dir/findings.tsv"
 allowlisted_tsv="$work_dir/allowlisted.tsv"
+unused_allow_tsv="$work_dir/unused_allow.tsv"
 summary_by_rule="$work_dir/by_rule.tsv"
 
 echo "Fetching splinter@${SPLINTER_SHA}..."
@@ -64,12 +65,11 @@ cat > "$work_dir/allowlist.tsv" <<'ALLOW'
 # tasks/pin_search_path_v3.sql and do not surface here.
 function_search_path_mutable	eql_v3	eq_term	function	HMAC equality term extractor for the public *_eq domains: returns eql_v3.hmac_256. Must inline so `eql_v3.eq_term(col)` folds into the calling query and matches the functional hash/btree index built on the same expression. SET search_path would disable SQL function inlining (see PostgreSQL inline_function).
 function_search_path_mutable	eql_v3	ord_term_ore	function	ORE-block order term extractor for the public *_ord_ore domains: returns eql_v3_internal.ore_block_256 (carrying the main DEFAULT btree opclass). Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term_ore(col)); must inline. One overload per *_ord_ore domain (public.eql_v3_integer_ord_ore, eql_v3.query_integer_ord_ore).
-function_search_path_mutable	eql_v3	match_term	function	Bloom-filter match term extractor for the public *_match domains: returns eql_v3.bloom_filter. Used inside the inlinable @>/<@ containment wrappers and as the functional-index expression USING gin (eql_v3.match_term(col)); must inline so the GIN index engages. SET search_path would disable SQL function inlining.
-function_search_path_mutable	eql_v3	contains	function	Containment (@>) comparison wrapper on the public *_match domains — the public function-form equivalent of @> (callable without the operator on Supabase/PostgREST); the CREATE OPERATOR also lives in eql_v3. Inlines to `match_term(a) @> match_term(b)`; must reach the functional GIN index on eql_v3.match_term(col) for bloom-filter match to engage Bitmap Index Scan.
-function_search_path_mutable	eql_v3	contained_by	function	Contained-by (<@) comparison wrapper on the public *_match domains — public function-form equivalent of <@. Same rationale as eql_v3.contains.
+function_search_path_mutable	eql_v3	match_term	function	Bloom-filter match term extractor for the public *_match domains: returns eql_v3.bloom_filter. Used inside the inlinable @@ fuzzy-match wrapper (eql_v3.matches) and as the functional-index expression USING gin (eql_v3.match_term(col)); must inline so the GIN index engages. SET search_path would disable SQL function inlining.
+function_search_path_mutable	eql_v3	matches	function	Bloom fuzzy-match (@@) comparison wrapper on the public *_match domains — the public function-form equivalent of @@ (callable without the operator on Supabase/PostgREST); the CREATE OPERATOR also lives in eql_v3. Inlines to `match_term(a) @> match_term(b)` (bloom array-containment on the extracted terms); must reach the functional GIN index on eql_v3.match_term(col) for bloom-filter match to engage Bitmap Index Scan. (Renamed from eql_v3.contains — CIP-3517; @>/<@ are containment, not the match, and now raise on the *_match domains.)
 function_search_path_mutable	eql_v3	eq	function	Equality comparison wrapper on the public domains — the public function-form equivalent of = (callable without the operator). Inlines to `eq_term(a) = eq_term(b)`; must reach the functional index on eql_v3.eq_term(col) for bare-form equality to engage Index Scan. Covers the converged eq wrappers on the public scalar variants, and the jsonb_entry eq wrapper (jsonb/operators.sql) which shares the same (schema, name, type) key.
 function_search_path_mutable	eql_v3	neq	function	Inequality comparison wrapper on the public domains — public function-form equivalent of <>. Same rationale as eql_v3.eq.
-function_search_path_mutable	eql_v3	lt	function	Less-than comparison wrapper on the public ordered domains — public function-form equivalent of <. Inlines to `ord_term(a) < ord_term(b)`; must reach the functional btree index on eql_v3.ord_term(col) for range queries to engage Index Scan. Also covers the jsonb_entry lt wrapper (via ore_cllw), which shares the same (schema, name, type) key.
+function_search_path_mutable	eql_v3	lt	function	Less-than comparison wrapper on the public ordered domains — public function-form equivalent of <. Inlines to `ord_term(a) < ord_term(b)`; must reach the functional btree index on eql_v3.ord_term(col) for range queries to engage Index Scan. Also covers the jsonb_entry lt wrapper (via ord_term → ope_cllw), which shares the same (schema, name, type) key.
 function_search_path_mutable	eql_v3	lte	function	Less-than-or-equal comparison wrapper on the public ordered domains — public function-form equivalent of <=. Same rationale as eql_v3.lt.
 function_search_path_mutable	eql_v3	gt	function	Greater-than comparison wrapper on the public ordered domains — public function-form equivalent of >. Same rationale as eql_v3.lt.
 function_search_path_mutable	eql_v3	gte	function	Greater-than-or-equal comparison wrapper on the public ordered domains — public function-form equivalent of >=. Same rationale as eql_v3.lt.
@@ -85,12 +85,6 @@ function_search_path_mutable	eql_v3_internal	hmac_256	function	HMAC equality ext
 function_search_path_mutable	eql_v3_internal	bloom_filter	function	Bloom-filter match extractor for the eql_v3 SEM fork (now in eql_v3_internal): inlinable SQL (jsonb) constructor used inside eql_v3.match_term. Must inline so the functional GIN index on eql_v3.match_term(col) engages. Mirrors eql_v3_internal.hmac_256.
 function_search_path_mutable	eql_v3_internal	jsonb_array_to_bytea_array	function	Hand-written jsonb→bytea[] helper for the eql_v3 SEM fork (now in eql_v3_internal): inlinable SQL (no SET, IMMUTABLE). Reached per-encrypted-value through eql_v3_internal.ore_block_256; must inline so the planner can fold it into the calling query. Pinned by neither the structural skip (it takes bare jsonb, not a jsonb-backed domain) nor an inline-critical OID clause — it carries the documented `eql-inline-critical` COMMENT marker that tasks/pin_search_path_v3.sql honours.
 function_search_path_mutable	eql_v3_internal	jsonb_array_to_ore_block_256	function	Hand-written jsonb→ore_block composite helper for the eql_v3 SEM fork (now in eql_v3_internal): inlinable SQL (no SET, IMMUTABLE). Same rationale as eql_v3_internal.jsonb_array_to_bytea_array — reached per-encrypted-value through eql_v3_internal.ore_block_256, carries the `eql-inline-critical` COMMENT marker.
-function_search_path_mutable	eql_v3_internal	ore_cllw_eq	function	Inner comparator for the eql_v3_internal.ore_cllw composite type's `=` operator (self-contained SEM fork, DEFAULT FOR TYPE btree opclass eql_v3_internal.ore_cllw_ops). The outer same-type operators back the opclass; the planner only carries the inlined form through to functional-index match if this inner function is also inlinable (no SET, IMMUTABLE). The plpgsql FUNCTION 1 comparator (compare_ore_cllw_term) stays pinned by design.
-function_search_path_mutable	eql_v3_internal	ore_cllw_neq	function	Inner comparator for the eql_v3_internal.ore_cllw `<>` operator. Same rationale as eql_v3_internal.ore_cllw_eq.
-function_search_path_mutable	eql_v3_internal	ore_cllw_lt	function	Inner comparator for the eql_v3_internal.ore_cllw `<` operator. Same rationale as eql_v3_internal.ore_cllw_eq.
-function_search_path_mutable	eql_v3_internal	ore_cllw_lte	function	Inner comparator for the eql_v3_internal.ore_cllw `<=` operator. Same rationale as eql_v3_internal.ore_cllw_eq.
-function_search_path_mutable	eql_v3_internal	ore_cllw_gt	function	Inner comparator for the eql_v3_internal.ore_cllw `>` operator. Same rationale as eql_v3_internal.ore_cllw_eq.
-function_search_path_mutable	eql_v3_internal	ore_cllw_gte	function	Inner comparator for the eql_v3_internal.ore_cllw `>=` operator. Same rationale as eql_v3_internal.ore_cllw_eq.
 function_search_path_mutable	eql_v3	ord_term	function	CLLW-OPE order term extractor for the public *_ord / *_ord_ope domains: returns eql_v3_internal.ope_cllw, a domain over bytea that inherits the native bytea comparison operators and DEFAULT btree opclass. Used inside the inlinable comparison wrappers and as the functional-index expression USING btree (eql_v3.ord_term(col)); must inline so the whole chain folds to native bytea comparisons the index can match. OPE backs the default _ord domain, so it takes the unqualified extractor name; block-ORE takes ord_term_ore. One overload per *_ord / *_ord_ope domain.
 function_search_path_mutable	eql_v3_internal	ope_cllw	function	CLLW-OPE extractor for the eql_v3 SEM fork (now in eql_v3_internal): inlinable SQL (jsonb) constructor used inside eql_v3.ord_term, hex-decoding `op` to the bytea-backed eql_v3_internal.ope_cllw domain. The domain inherits bytea's native comparison operators and btree opclass, so the WHOLE comparison chain (wrapper -> ord_term -> this) is inlinable SQL and the functional btree index on eql_v3.ord_term(col) engages structurally — the hmac_256 pattern. Carries the `eql-inline-critical` COMMENT marker (bare jsonb arg escapes the structural domain-arg skip).
 # Encrypted-JSONB document surface (src/v3/jsonb): the hand-written public.eql_v3_json /
@@ -100,14 +94,10 @@ function_search_path_mutable	eql_v3_internal	ope_cllw	function	CLLW-OPE extracto
 # the structural jsonb-domain-arg skip or the documented `eql-inline-critical`
 # COMMENT marker (the plpgsql blockers in blockers.sql are pinned and do not
 # surface). Splinter matches by (schema, name, type), so they need their own rows.
-function_search_path_mutable	eql_v3	->	function	Typed sv-element selector lookup on the eql_v3 encrypted-JSONB surface: inlinable SQL over a public.eql_v3_json domain arg so `col -> '<sel>'` folds into the calling query, preserving functional-index match for the chained ste_vec recipes (eq_term / ore_cllw on the extracted entry). Left unpinned by the structural domain-arg skip in pin_search_path_v3.sql. Two overloads: (json, text), (json, int).
+function_search_path_mutable	eql_v3	->	function	Typed sv-element selector lookup on the eql_v3 encrypted-JSONB surface: inlinable SQL over a public.eql_v3_json domain arg so `col -> '<sel>'` folds into the calling query, preserving functional-index match for the chained ste_vec recipes (eq_term / ord_term on the extracted entry). Left unpinned by the structural domain-arg skip in pin_search_path_v3.sql. Two overloads: (json, text), (json, int).
 function_search_path_mutable	eql_v3	->>	function	Text sv-element selector lookup on the eql_v3 encrypted-JSONB surface: inlinable SQL over a public.eql_v3_json domain arg, text-returning counterpart to eql_v3.->. Structural domain-arg skip. Two overloads: (json, text), (json, int).
 function_search_path_mutable	eql_v3	@>	function	Containment (@>) operator wrapper on the eql_v3 encrypted-JSONB surface: inlinable SQL so the planner can match the functional GIN index on eql_v3.to_ste_vec_query(col)::jsonb. Structural domain-arg skip (public.eql_v3_json). Three overloads.
 function_search_path_mutable	eql_v3	<@	function	Contained-by (<@) operator wrapper on the eql_v3 encrypted-JSONB surface: same rationale as eql_v3.@>. Three overloads.
-function_search_path_mutable	eql_v3	ore_cllw	function	ORE-CLLW extractor on the eql_v3 encrypted-JSONB surface: inlinable SQL so `eql_v3.ore_cllw(col -> 'sel')` folds into the calling query and reaches the functional btree opclass on eql_v3_internal.ore_cllw. Structural domain-arg skip. Single (public.eql_v3_jsonb_entry) overload — the (jsonb) SEM-fork overload moved to eql_v3_internal.ore_cllw (its own allowlist row below).
-function_search_path_mutable	eql_v3	has_ore_cllw	function	ORE-CLLW presence check on the eql_v3 encrypted-JSONB surface: inlinable SQL counterpart to eql_v3.ore_cllw, structural domain-arg skip. Single (public.eql_v3_jsonb_entry) overload — the (jsonb) SEM-fork overload moved to eql_v3_internal.has_ore_cllw.
-function_search_path_mutable	eql_v3_internal	ore_cllw	function	ORE-CLLW constructor for the eql_v3 SEM fork (now in eql_v3_internal): inlinable SQL (jsonb) constructor. Takes bare jsonb, not a jsonb-backed domain, so it is left unpinned via the explicit inline-critical OID clause in pin_search_path_v3.sql (mirrors eql_v3_internal.hmac_256/bloom_filter) rather than the structural skip. Distinct from the eql_v3.ore_cllw(jsonb_entry) extractor overload, which stays public.
-function_search_path_mutable	eql_v3_internal	has_ore_cllw	function	ORE-CLLW presence check for the eql_v3 SEM fork (now in eql_v3_internal): inlinable SQL (jsonb) counterpart to eql_v3_internal.ore_cllw. Same inline-critical OID rationale. Distinct from the eql_v3.has_ore_cllw(jsonb_entry) overload, which stays public.
 function_search_path_mutable	eql_v3	selector	function	STE-vec entry selector extractor: typed (public.eql_v3_jsonb_entry) overload, inlinable so `eql_v3.selector(col -> 'sel')` folds into the calling query. Structural domain-arg skip. The (jsonb) overload is plpgsql with a pinned search_path and does not surface.
 function_search_path_mutable	eql_v3	to_ste_vec_query	function	Encrypted-JSONB query-document constructor (CAST WITH FUNCTION for eql_v3.query_jsonb): inlinable SQL over a public.eql_v3_json domain arg, structural domain-arg skip. Builds the ste_vec query value the @>/<@ wrappers compare against; must inline to fold into the calling query.
 function_search_path_mutable	eql_v3	jsonb_array	function	ste_vec deterministic-field array extractor on the eql_v3 encrypted-JSONB surface: public inlinable SQL (raw jsonb arg) behind the documented functional GIN index expression eql_v3.jsonb_array(col). Takes bare jsonb, so it carries the documented `eql-inline-critical` COMMENT marker that pin_search_path_v3.sql honours rather than the structural skip.
@@ -154,27 +144,44 @@ fi
 # Split: allowlisted entries match all of (rule, schema, name, type).
 # Use FILENAME as the discriminator rather than NR == FNR so behavior is
 # robust to either file being empty.
+#
+# The END block also emits allowlist rows that matched NO finding. An allowlist
+# row is a standing waiver; once the function it covers is gone (e.g. the
+# `ore_cllw` surface removed in the CLLW-OPE migration) the row is dead weight
+# that would silently pre-waive a future re-introduction. Reporting unused rows
+# enforces the same "registered but referenced by nothing" invariant the
+# known-failures gate applies to suppressed tests. Comment (`#…`) and blank lines
+# in the allowlist heredoc are skipped so they are never counted as unused rows.
 awk -F'\t' \
   -v allowlist_file="$work_dir/allowlist.tsv" \
   -v allow_out="$allowlisted_tsv" \
-  -v deny_out="$findings_tsv" '
+  -v deny_out="$findings_tsv" \
+  -v unused_out="$unused_allow_tsv" '
   FILENAME == allowlist_file {
+    if (NF < 5 || $1 ~ /^[[:space:]]*#/) next
     key = $1 SUBSEP $2 SUBSEP $3 SUBSEP $4
     allow[key] = $5
+    allow_desc[key] = $1 "\t" $2 "\t" $3 "\t" $4
     next
   }
   {
     key = $1 SUBSEP $4 SUBSEP $5 SUBSEP $6
     if (key in allow) {
+      used[key] = 1
       print $0 "\t" allow[key] > allow_out
     } else {
       print $0 > deny_out
     }
   }
+  END {
+    for (k in allow)
+      if (!(k in used))
+        print allow_desc[k] > unused_out
+  }
 ' "$work_dir/allowlist.tsv" "$all_findings_tsv"
 
-# Touch in case awk didn't write either file (no findings at all).
-touch "$findings_tsv" "$allowlisted_tsv"
+# Touch in case awk didn't write a file (no findings, or no unused rows).
+touch "$findings_tsv" "$allowlisted_tsv" "$unused_allow_tsv"
 
 # Summary scoped to the same schemas the gate considers, so the count line
 # matches what was actually checked.
@@ -193,6 +200,7 @@ SQL
 
 raw_total="$(wc -l < "$all_findings_tsv" | tr -d ' ')"
 allowlisted_total="$(wc -l < "$allowlisted_tsv" | tr -d ' ')"
+unused_total="$(wc -l < "$unused_allow_tsv" | tr -d ' ')"
 total="$(wc -l < "$findings_tsv" | tr -d ' ')"
 errors="$(awk -F'\t' '$2 == "ERROR"' "$findings_tsv" | wc -l | tr -d ' ')"
 warns="$(awk -F'\t' '$2 == "WARN"' "$findings_tsv" | wc -l | tr -d ' ')"
@@ -214,6 +222,12 @@ if [[ "$total" -gt 0 ]]; then
   echo
   echo "Findings not covered by the allowlist:"
   awk -F'\t' '{ printf "  - [%s] %s — %s\n", $2, $1, $3 }' "$findings_tsv"
+fi
+
+if [[ "$unused_total" -gt 0 ]]; then
+  echo
+  echo "Allowlist rows that matched NO finding (stale — remove them from tasks/test/splinter.sh):"
+  awk -F'\t' '{ printf "  - [%s] %s.%s (%s)\n", $1, $2, $3, $4 }' "$unused_allow_tsv"
 fi
 
 # Write a GitHub Actions step summary if we're in CI.
@@ -243,6 +257,16 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
       echo "EQL is splinter-clean (all findings covered by the allowlist)."
       echo
     fi
+    if [[ "$unused_total" -gt 0 ]]; then
+      echo "### Stale allowlist rows (action required)"
+      echo
+      echo "These allowlist rows matched no splinter finding — the function they waived is gone. Remove them from \`tasks/test/splinter.sh\`."
+      echo
+      echo "| Rule | Schema | Name | Type |"
+      echo "| --- | --- | --- | --- |"
+      awk -F'\t' '{ printf "| `%s` | `%s` | `%s` | %s |\n", $1, $2, $3, $4 }' "$unused_allow_tsv"
+      echo
+    fi
     if [[ "$allowlisted_total" -gt 0 ]]; then
       echo "<details><summary>Allowlisted findings (${allowlisted_total})</summary>"
       echo
@@ -258,7 +282,8 @@ if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
   } >> "$GITHUB_STEP_SUMMARY"
 fi
 
-# Fail only on findings that aren't allowlisted.
-if [[ "$total" -gt 0 ]]; then
+# Fail on unmatched findings OR on stale (unused) allowlist rows — both are
+# drift the gate exists to catch.
+if [[ "$total" -gt 0 || "$unused_total" -gt 0 ]]; then
   exit 1
 fi

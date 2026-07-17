@@ -151,14 +151,24 @@ async fn check_rejects_payload_missing_hm(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn check_rejects_payload_missing_ob(pool: PgPool) -> Result<()> {
-    // The _ord and _ord_ore domain CHECKs both require `ob`. A payload without
-    // it must be rejected at the cast on either ordered twin.
-    let no_ob = r#"{"v":3,"i":{"t":"edge","c":"payload"},"c":"AAAA","hm":"deadbeef"}"#;
-    for variant in [Variant::Ord, Variant::OrdOre] {
-        let d = integer(variant);
-        let sql = format!("SELECT $1::jsonb::{d}");
-        assert_raises(&pool, &sql, &[Some(no_ob)], "violates check constraint").await?;
-    }
-    Ok(())
+async fn check_ord_rejects_payload_missing_op(pool: PgPool) -> Result<()> {
+    // Post CLLW-OPE flip, the `_ord` domain is OPE-backed and its CHECK requires
+    // `op` (not `ob`). A payload carrying `ob` (and `hm`) but no `op` must be
+    // rejected at the cast — proving `_ord` genuinely needs the OPE term, not the
+    // ORE `ob` array it no longer references.
+    let d = integer(Variant::Ord);
+    let no_op = r#"{"v":3,"i":{"t":"edge","c":"payload"},"c":"AAAA","hm":"deadbeef","ob":["00"]}"#;
+    let sql = format!("SELECT $1::jsonb::{d}");
+    assert_raises(&pool, &sql, &[Some(no_op)], "violates check constraint").await
+}
+
+#[sqlx::test]
+async fn check_ord_ore_rejects_payload_missing_ob(pool: PgPool) -> Result<()> {
+    // The `_ord_ore` domain is ORE-backed and its CHECK requires the `ob` array.
+    // A payload carrying `op` (and `hm`) but no `ob` must be rejected at the cast
+    // — proving `_ord_ore` genuinely needs the ORE term, not the OPE `op` scalar.
+    let d = integer(Variant::OrdOre);
+    let no_ob = r#"{"v":3,"i":{"t":"edge","c":"payload"},"c":"AAAA","hm":"deadbeef","op":"00"}"#;
+    let sql = format!("SELECT $1::jsonb::{d}");
+    assert_raises(&pool, &sql, &[Some(no_ob)], "violates check constraint").await
 }

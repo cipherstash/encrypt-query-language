@@ -46,9 +46,13 @@ pub fn render_types_file(spec: &DomainFamily) -> String {
     use crate::context::{domain_block, environment, TypesContext};
     let ctx = TypesContext {
         family_name: spec.name.to_string(),
+        // Only scalar domains are generated. For a fully-scalar family this is
+        // every domain (unchanged); for a mixed family (jsonb) it renders the
+        // bare scalar storage domain and skips the hand-written SteVec domains.
         domains: spec
             .domains
             .iter()
+            .filter(|d| d.is_scalar())
             .map(|d| domain_block(spec.name, d))
             .collect(),
     };
@@ -113,10 +117,12 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
         entries.push(extractor_entry(term));
     }
     for op in OPERATORS {
-        let extractor = Term::extractor_for_operator(domain.terms, op.symbol);
+        let extractor = Term::extractor_for_operator(domain.terms, op.symbol.as_str());
         for sig in op.signatures {
             let rendered = sig.render(&dom);
-            if is_supported(op.symbol) {
+            // A `blocker_only` overload (the `@@` jsonpath predicate) always falls
+            // through to the blocker, even when the domain supports the symbol.
+            if is_supported(op.symbol.as_str()) && !sig.blocker_only {
                 if let Some(ex) = extractor {
                     entries.push(wrapper_entry(&dom, op, &rendered.left, &rendered.right, ex));
                     continue;
@@ -128,7 +134,7 @@ pub fn render_functions_file(family_name: &str, domain: &Domain) -> String {
                     ty: rendered.left,
                 },
                 SqlParam {
-                    name: arg_b_name(op.symbol),
+                    name: arg_b_name(op.symbol.as_str()),
                     ty: rendered.right,
                 },
             ];
@@ -165,11 +171,13 @@ pub fn render_operators_file(family_name: &str, domain: &Domain) -> String {
             // CREATE OPERATOR only needs the operand types; `rendered.returns` is
             // intentionally discarded here (it matters only for the function body).
             let rendered = sig.render(&dom);
+            // A `blocker_only` overload (the `@@` jsonpath predicate) is bound to
+            // the internal blocker even on a domain that supports the symbol.
             operators.push(operator_entry(
                 op,
                 &rendered.left,
                 &rendered.right,
-                is_supported(op.symbol),
+                is_supported(op.symbol.as_str()) && !sig.blocker_only,
             ));
         }
     }
@@ -235,10 +243,10 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
     // jsonb`, which no caller writes; blocking them would mean emitting the full
     // blocker matrix against every query twin for zero real-world coverage.
     for op in OPERATORS {
-        if !supported.contains(&op.symbol) {
+        if !supported.contains(&op.symbol.as_str()) {
             continue;
         }
-        let extractor = Term::extractor_for_operator(domain.terms, op.symbol)
+        let extractor = Term::extractor_for_operator(domain.terms, op.symbol.as_str())
             .expect("a supported operator resolves an extractor");
         entries.push(wrapper_entry(
             &query_dom,
@@ -291,7 +299,7 @@ pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String
 
     let mut operators = Vec::new();
     for op in OPERATORS {
-        if !supported.contains(&op.symbol) {
+        if !supported.contains(&op.symbol.as_str()) {
             continue;
         }
         operators.push(operator_entry(op, &storage_dom, &query_dom, true));
@@ -469,7 +477,11 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
             render_query_types_file(spec),
         ));
     }
-    for d in spec.domains {
+    // Generate only scalar domains: identical to iterating every domain for a
+    // fully-scalar family; for a mixed family (jsonb) it emits the bare scalar
+    // storage surface and skips the hand-written SteVec domains under
+    // `src/v3/json/`.
+    for d in spec.domains.iter().filter(|d| d.is_scalar()) {
         let name = d.full_name(family_name);
         rendered.push((
             out_dir.join(format!("{name}_functions.sql")),
@@ -530,7 +542,10 @@ pub fn generate_type(spec: &DomainFamily, out_dir: &Path) -> Result<Vec<PathBuf>
 pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
     let scalars_root = out_root.join(V3_SCALARS_DIR);
     let mut all_written: Vec<PathBuf> = Vec::new();
-    for spec in eql_domains::scalar_families() {
+    // Every family with at least one scalar domain: fully-scalar families are
+    // unchanged; a mixed family (jsonb) contributes only its scalar storage
+    // domain (the per-domain renderers filter `is_scalar()`).
+    for spec in eql_domains::families_with_scalar_domains() {
         let family_name = spec.name;
         let out_dir = scalars_root.join(family_name);
         let written = generate_type(spec, &out_dir)?;
@@ -596,7 +611,9 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
     }
 
-    let names: Vec<&str> = eql_domains::scalar_families().map(|s| s.name).collect();
+    let names: Vec<&str> = eql_domains::families_with_scalar_domains()
+        .map(|s| s.name)
+        .collect();
     println!("codegen: ok ({} types: {})", names.len(), names.join(", "));
     Ok(0)
 }
@@ -936,9 +953,12 @@ mod tests {
     fn storage_functions_file_is_all_blockers() {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, ""));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 44);
+        // 44 native/comparison blockers + 3 `@@` symmetric-match blockers (a
+        // storage domain supports no operators, so `@@`'s match overloads render
+        // as blockers, exactly like `@>`/`<@`).
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 47);
         assert!(!sql.contains("SET search_path"));
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 44);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 47);
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
@@ -950,7 +970,9 @@ mod tests {
     fn eq_functions_file_counts() {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "eq"));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        // +3 vs the pre-`@@`-match surface: the three `@@` symmetric-match
+        // overloads render as blockers on this eq domain (it does not carry Bloom).
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 48);
         assert!(sql.contains("CREATE FUNCTION eql_v3.eq_term(a public.eql_v3_integer_eq)"));
         assert!(sql.contains("RETURNS eql_v3_internal.hmac_256"));
         assert_eq!(
@@ -958,7 +980,7 @@ mod tests {
                 .count(),
             7
         );
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 38);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 41);
         assert!(!sql.contains("SET search_path"));
     }
 
@@ -968,7 +990,8 @@ mod tests {
     fn ore_functions_file_counts() {
         let s = spec("integer");
         let sql = render_functions_file(s.name, domain(s, "ord_ore"));
-        assert_eq!(sql.matches("CREATE FUNCTION").count(), 45);
+        // +3 vs the pre-`@@`-match surface (the three `@@` symmetric-match blockers).
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 48);
         assert!(
             sql.contains("CREATE FUNCTION eql_v3.ord_term_ore(a public.eql_v3_integer_ord_ore)")
         );
@@ -981,7 +1004,7 @@ mod tests {
                 .count(),
             19
         );
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 29);
     }
 
     /// The OPE ordered domains mirror the ORE one — same operator surface
@@ -999,7 +1022,8 @@ mod tests {
         let s = spec("integer");
         for dom in ["ord", "ord_ope"] {
             let sql = render_functions_file(s.name, domain(s, dom));
-            assert_eq!(sql.matches("CREATE FUNCTION").count(), 45, "{dom}");
+            // +3 vs the pre-`@@`-match surface (the three `@@` symmetric-match blockers).
+            assert_eq!(sql.matches("CREATE FUNCTION").count(), 48, "{dom}");
             assert!(
                 sql.contains(&format!(
                     "CREATE FUNCTION eql_v3.ord_term(a public.eql_v3_integer_{dom})"
@@ -1021,15 +1045,49 @@ mod tests {
                 19,
                 "{dom}"
             );
-            assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 26, "{dom}");
+            assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 29, "{dom}");
         }
     }
 
     #[test]
-    fn operators_file_has_forty_four() {
+    fn match_domain_renders_matches_wrapper_and_at_at_operator() {
+        let s = spec("text");
+        let fns = render_functions_file(s.name, domain(s, "match"));
+        // The supported `@@` overloads are `eql_v3.matches` wrappers whose body
+        // reduces to bloom array-containment `@>` on the extracted terms (so a
+        // functional GIN index on `eql_v3.match_term(col)` engages).
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_match, b public.eql_v3_text_match)"
+        ));
+        assert!(fns.contains("SELECT eql_v3.match_term(a) @> eql_v3.match_term(b)"));
+        assert!(!fns.contains("eql_v3.contains("));
+        assert!(!fns.contains("eql_v3.contained_by("));
+        // `@>` / `<@` are now blockers on the match domain.
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3_internal.contains(a public.eql_v3_text_match, b public.eql_v3_text_match)"
+        ));
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3_internal.contained_by(a public.eql_v3_text_match, b public.eql_v3_text_match)"
+        ));
+        // The `@@` jsonpath predicate stays a blocker even here (blocker_only).
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3_internal.\"@@\"(a public.eql_v3_text_match, b jsonpath)"
+        ));
+
+        let ops = render_operators_file(s.name, domain(s, "match"));
+        assert!(ops.contains("CREATE OPERATOR @@ ("));
+        assert!(ops.contains("FUNCTION = eql_v3.matches,"));
+        // The jsonpath `@@` operator binds the internal blocker.
+        assert!(ops.contains("FUNCTION = eql_v3_internal.\"@@\","));
+    }
+
+    #[test]
+    fn operators_file_operator_count() {
         let s = spec("integer");
         let sql = render_operators_file(s.name, domain(s, "eq"));
-        assert_eq!(sql.matches("CREATE OPERATOR").count(), 44);
+        // +3 vs the pre-`@@`-match surface: the three `@@` symmetric-match
+        // overloads render as blocked operators on this eq domain.
+        assert_eq!(sql.matches("CREATE OPERATOR").count(), 47);
     }
 
     #[test]
@@ -1069,11 +1127,13 @@ mod tests {
             );
         }
 
-        // Bloom text_match: containment wrappers are supported → public.
+        // Bloom text_match: the `@@` fuzzy-match wrapper is supported → public;
+        // the former containment operators `@>`/`<@` are now blockers (internal).
         let tm = spec("text");
         let tm_sql = render_operators_file(tm.name, domain(tm, "match"));
-        assert!(tm_sql.contains("FUNCTION = eql_v3.contains,"));
-        assert!(tm_sql.contains("FUNCTION = eql_v3.contained_by,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3.matches,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3_internal.contains,"));
+        assert!(tm_sql.contains("FUNCTION = eql_v3_internal.contained_by,"));
     }
 
     #[test]
@@ -1132,6 +1192,46 @@ mod tests {
             norm(render_functions_file(s.name, ord), "ord"),
             norm(render_functions_file(s.name, ore), "ord_ore"),
             "_ord (ope) and _ord_ore (ore) must not render identically"
+        );
+    }
+
+    #[test]
+    fn json_family_generates_only_its_scalar_storage_surface() {
+        // The mixed json family renders exactly the bare scalar storage domain
+        // (`public.eql_v3_json`): a types file + a functions file + an operators
+        // file, all named for the bare family name. No query twin, no aggregates
+        // (storage-only), and NONE of the hand-written SteVec domains
+        // (`search`/`entry`/`query`) may leak a generated file.
+        let s = spec("json");
+        let rendered = render_type(s, std::path::Path::new("out"));
+        let names: Vec<String> = rendered
+            .iter()
+            .map(|(p, _)| p.file_name().unwrap().to_string_lossy().into_owned())
+            .collect();
+        assert_eq!(
+            names,
+            vec!["json_types.sql", "json_functions.sql", "json_operators.sql"],
+            "json must emit exactly the bare scalar storage surface — the exact \
+             file list also proves no SteVec domain (search/entry/query) leaked a \
+             generated file"
+        );
+        let by = |suffix: &str| {
+            &rendered
+                .iter()
+                .find(|(p, _)| p.file_name().unwrap().to_string_lossy().ends_with(suffix))
+                .unwrap()
+                .1
+        };
+        assert!(by("json_types.sql").contains("CREATE DOMAIN public.eql_v3_json AS jsonb"));
+        // Storage-only (no terms) → every operator overload is a blocker, incl.
+        // the three `@@` symmetric-match overloads (+3 vs the pre-match surface).
+        assert_eq!(
+            by("json_functions.sql").matches("CREATE FUNCTION").count(),
+            47
+        );
+        assert_eq!(
+            by("json_operators.sql").matches("CREATE OPERATOR").count(),
+            47
         );
     }
 

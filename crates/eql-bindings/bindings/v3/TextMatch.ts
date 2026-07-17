@@ -7,6 +7,6 @@ import type { SchemaVersion } from "./SchemaVersion";
 /**
  * `public.eql_v3_text_match` — match domain.
  *
- * Operators: `@>` `<@`. Required keys: `v` `i` `c` `bf`.
+ * Operators: `@@`. Required keys: `v` `i` `c` `bf`.
  */
 export type TextMatch = { v: SchemaVersion, i: Identifier, c: Ciphertext, bf: BloomFilter, };

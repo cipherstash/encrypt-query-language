@@ -139,7 +139,7 @@ A `Term` answers every question the generators need, via exhaustive `impl` metho
 | `ctor()` | `hmac_256` | `ore_block_256` | `bloom_filter` | `ope_cllw` |
 | `binding_newtype()` | `Hmac256` | `OreBlock256` | `BloomFilter` | `OpeCllw` |
 | `role()` | `Eq` | `Ord` | `Match` | `Ord` |
-| `operators()` | `= <>` | `= <> < <= > >=` | `@> <@` | `= <> < <= > >=` |
+| `operators()` | `= <>` | `= <> < <= > >=` | `@@` | `= <> < <= > >=` |
 | `provides_ordering()` | `false` | `true` | `false` | `true` |
 
 `Ope` is the CLLW-OPE term: a hex-encoded ciphertext that is natively `bytea`-sortable after
@@ -191,18 +191,22 @@ flowchart LR
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |
 | `boolean` | Bool | storage-only (2-value cardinality leak → no searchable index) |
 
-**`jsonb` sits outside this classification.** It carries three domains — `public.eql_v3_json`
-(document), `public.eql_v3_jsonb_entry` (one `sv` leaf), `eql_v3.query_jsonb` (containment
-needle) — each tagged `Shape::SteVec` rather than `Shape::Scalar`, with an empty flat
+**`jsonb` sits outside this classification.** It carries four domains. Three are
+`Shape::SteVec` — `public.eql_v3_json_search` (document), `public.eql_v3_json_entry`
+(one `sv` leaf), `eql_v3.query_json` (containment needle) — each with an empty flat
 `terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`
-XOR `op`), not as a family-level `Term` set. `Domain.name` (`"json"`/`"entry"`/`"query"`)
-disambiguates which of the three a given domain is — see `Domain::rust_struct_name`.
-`scalar_families()` filters `CATALOG` down to the `Shape::Scalar` rows, so `jsonb` never
-reaches `every_type_uses_a_known_domain_shape`, the ordered-scalar materializer (§3), or
-the scalar SQLx matrix. Its SQL surface is hand-written under `src/v3/jsonb/`
-(`eql-codegen` renders SQL only for `scalar_families()`) and its Rust structs are
-hand-written in `crates/eql-bindings/src/v3/jsonb.rs` — only inventory membership and
-`CATALOG` order are catalog-driven. This is also why the class diagram in §2.1 lists
+XOR `op`), not as a family-level `Term` set. The fourth is a generated `Shape::Scalar`
+storage-only domain, `public.eql_v3_json` (bare `name: ""`, ciphertext-only `{v,i,c}`,
+no index terms). `Domain.name` (`"search"`/`"entry"`/`"query"`, and `""` for the storage
+domain) disambiguates which one a given domain is — see `Domain::rust_struct_name`.
+`scalar_families()` filters `CATALOG` down to families whose domains are *all*
+`Shape::Scalar`, so `jsonb` never reaches `every_type_uses_a_known_domain_shape`, the
+ordered-scalar materializer (§3), or the scalar SQLx matrix. Its three SteVec domains are
+hand-written under `src/v3/json/` and their Rust structs in
+`crates/eql-bindings/src/v3/json.rs`; the generated storage domain's SQL is rendered into
+`src/v3/scalars/json/` and its struct into `crates/eql-bindings/src/v3/json_storage.rs`
+(via `families_with_scalar_domains()`) — for the SteVec domains, only inventory membership
+and `CATALOG` order are catalog-driven. This is also why the class diagram in §2.1 lists
 `Jsonb` as a `ScalarKind` variant even though `jsonb` is not a `Shape::Scalar` family:
 `ScalarKind` and `Shape` are independent axes, and `JSONB_FIXTURES`
 (`crates/eql-domains/src/fixtures/record.rs`) needs a `ScalarKind` purely for the

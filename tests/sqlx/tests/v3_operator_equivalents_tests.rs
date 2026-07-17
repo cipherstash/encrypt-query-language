@@ -25,7 +25,7 @@ use sqlx::PgPool;
 
 /// Every EQL COLUMN-domain name in the `public` schema, from the catalog: the
 /// storage and capability domains of every family. The jsonb needle
-/// (`query_jsonb`) is a query operand and lives in `eql_v3`, so `full_name`s
+/// (`query_json`) is a query operand and lives in `eql_v3`, so `full_name`s
 /// starting with `query_` are excluded here (see [`eql_query_domain_names`]).
 /// The structural scan below identifies "an EQL operator" by these names —
 /// the column domains deliberately live in `public` (dropping EQL-owned
@@ -41,7 +41,7 @@ fn eql_public_domain_names() -> Vec<String> {
 
 /// Every EQL QUERY-OPERAND domain name, from the catalog: the `query_<name>`
 /// twin of every term-bearing scalar domain plus the jsonb containment needle
-/// (`query_jsonb`). These live in the `eql_v3` schema (CIP-3442) — never
+/// (`query_json`). These live in the `eql_v3` schema (CIP-3442) — never
 /// valid column types, so they don't share the column domains' `public` home.
 fn eql_query_domain_names() -> Vec<String> {
     let mut names: Vec<String> = eql_domains::scalar_families()
@@ -52,7 +52,7 @@ fn eql_query_domain_names() -> Vec<String> {
                 .map(move |d| d.query_name(f.name))
         })
         .collect();
-    names.push("query_jsonb".to_string());
+    names.push("query_json".to_string());
     names
 }
 
@@ -156,8 +156,10 @@ async fn core_public_function_equivalents_exist_in_eql_v3(pool: PgPool) -> Resul
         "lte",
         "gt",
         "gte",
-        "contains",
-        "contained_by",
+        // Bloom fuzzy match (`@@`) on the text match/search domains. `contains`
+        // /`contained_by` are NO LONGER public wrappers — they are now internal
+        // blockers on the text match domains (CIP-3517).
+        "matches",
         "jsonb_contains",
         "jsonb_contained_by",
         "jsonb_array",

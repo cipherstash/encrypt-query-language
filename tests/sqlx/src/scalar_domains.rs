@@ -137,7 +137,7 @@ pub trait ScalarType:
 
     /// SQL domain the comparable value is cast to. Default: the generated
     /// scalar domain `public.<pg_type><variant_suffix>`. A non-scalar surface
-    /// (e.g. a SteVec entry, whose single domain `public.eql_v3_jsonb_entry` is
+    /// (e.g. a SteVec entry, whose single domain `public.eql_v3_json_entry` is
     /// variant-independent) overrides this to ignore the suffix.
     fn sql_domain(variant: Variant) -> String {
         format!("public.eql_v3_{}{}", Self::PG_TYPE, variant.suffix())
@@ -147,8 +147,8 @@ pub trait ScalarType:
     /// Default: the bare `payload` column (a whole encrypted-scalar payload).
     /// A SteVec-entry view overrides this with an extraction expression such
     /// as `(payload -> '<selector>')`, which already has type
-    /// `public.eql_v3_jsonb_entry`. The expression is cast to `sql_domain(variant)`
-    /// at every call site, so a redundant `::public.eql_v3_jsonb_entry` cast on an
+    /// `public.eql_v3_json_entry`. The expression is cast to `sql_domain(variant)`
+    /// at every call site, so a redundant `::public.eql_v3_json_entry` cast on an
     /// already-entry expression is a harmless no-op.
     fn column_expr() -> String {
         "payload".to_string()
@@ -295,11 +295,11 @@ pub trait SignedScalar: OrderedScalar {
     fn origin() -> Self;
 }
 
-/// A scalar with a **bloom-filter match** capability (`@>`/`<@` containment) —
-/// currently only `text`, the one kind that declares a `Bloom`-bearing domain
-/// (`_match`/`_search`). Provides three fixture plaintexts with known
-/// containment relationships so the generated match arms can assert true hits
-/// and a deterministic miss. The bound gates the match arms: a non-match scalar
+/// A scalar with a **bloom-filter match** capability (the `@@` fuzzy match /
+/// `eql_v3.matches`, CIP-3517) — currently only `text`, the one kind that
+/// declares a `Bloom`-bearing domain (`_match`/`_search`). Provides three fixture
+/// plaintexts with known n-gram relationships so the generated match arms can
+/// assert true hits and a deterministic miss. The bound gates the match arms: a non-match scalar
 /// never declares `_search`, so the `caps = [eq, ord, search]` matrix arm (the
 /// only one emitting match cases) is never instantiated for it.
 pub trait MatchScalar: ScalarType {
@@ -312,7 +312,7 @@ pub trait MatchScalar: ScalarType {
     fn needle() -> Self;
 
     /// A plaintext n-gram-**disjoint** from [`needle`](Self::needle), so
-    /// `needle @> disjoint` is a deterministic miss (a bloom filter only admits
+    /// `needle @@ disjoint` is a deterministic miss (a bloom filter only admits
     /// false positives, never false negatives). Present verbatim in
     /// `fixture_values()`.
     fn disjoint() -> Self;
@@ -629,7 +629,7 @@ impl MatchScalar for String {
     }
 
     /// `"zzzz"` — 3-gram-disjoint from `"aard"` (`zzz` vs `aar`/`ard`), so
-    /// `aard @> zzzz` is a deterministic miss. Kept disjoint in `TEXT_FIXTURES`
+    /// `aard @@ zzzz` is a deterministic miss. Kept disjoint in `TEXT_FIXTURES`
     /// precisely for this assertion.
     fn disjoint() -> Self {
         "zzzz".to_string()
@@ -1329,7 +1329,7 @@ impl Variant {
     /// domain for `token`, or `None` if unsupported (or `Storage`). Derived via
     /// `Term::extractor_for_operator` — the SAME single source codegen uses, so
     /// the harness routing cannot diverge from the generated SQL. For
-    /// `text_ord` `[Hm, Ore]`, `=` => `eql_v3.eq_term`, `<` => `eql_v3.ord_term`.
+    /// `text_ord` `[Hm, Ope]`, `=` => `eql_v3.eq_term`, `<` => `eql_v3.ord_term`.
     pub fn extractor_for_op(self, token: &str, op: &str) -> Option<String> {
         Term::extractor_for_operator(self.terms_for(token), op).map(|f| format!("eql_v3.{f}"))
     }
@@ -1362,13 +1362,14 @@ pub struct ScalarDomainSpec {
     /// terms. Call via [`ScalarDomainSpec::ord_extractor_expr`], which supplies
     /// `self.variant`.
     pub ord_extractor: fn(Variant, &str) -> String,
-    /// The variant's ordering term (`Term::Ope` for `_ord`, `Term::Ore` for
-    /// `_ord_ore` / `_search`), or `None` when the domain is not ordered.
+    /// The variant's ordering term (`Term::Ope` for `_ord` / `_search`,
+    /// `Term::Ore` for `_ord_ore` / `_search_ore`), or `None` when the domain is
+    /// not ordered.
     ///
     /// Read from `CATALOG` via `T::PG_TYPE`, so it is meaningless for a SteVec
     /// entry view, whose `PG_TYPE` names the wrapped scalar rather than its own
     /// structural term (`JsonbEntryInteger` reports `Some(Term::Ope)` but orders
-    /// by `oc`). Only the property oracles read this field, and they are
+    /// by `op`). Only the property oracles read this field, and they are
     /// instantiated solely with real scalar types — never with an entry view.
     /// Use [`ScalarDomainSpec::ord_extractor_expr`], which honours the
     /// `ord_extractor` override, when you need the extractor itself.

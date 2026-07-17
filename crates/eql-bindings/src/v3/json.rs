@@ -1,9 +1,9 @@
-//! The `jsonb` (SteVec) encrypted-JSONB payload types — HAND-WRITTEN.
+//! The `json` (SteVec) encrypted-JSON payload types — HAND-WRITTEN.
 //!
 //! Unlike the scalar families, the SteVec struct bodies (fields, `#[serde(flatten)]`,
 //! the `Option<bool>` array marker, per-struct serde strictness) are not derivable
 //! from `eql-domains::CATALOG`, so they live here by hand — symmetric with the
-//! hand-written SQL under `src/v3/jsonb/`. The generated `inventory.rs` still lists
+//! hand-written SQL under `src/v3/json/`. The generated `inventory.rs` still lists
 //! these three domains (in CATALOG order) via its `Shape` branch. See the SteVec
 //! caveat in `mod.rs` for why the entry/query structs are necessarily lax.
 
@@ -14,6 +14,14 @@ use ts_rs::TS;
 use crate::v3::terms::{Ciphertext, Hmac256, OpeCllw, Selector};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
+
+/// The bare ciphertext-only storage domain `public.eql_v3_json` — a flat
+/// `{v,i,c}` scalar struct, GENERATED (unlike the SteVec structs in this
+/// module) into `json_storage.rs` by the catalog materializer. Re-exported here
+/// so the generated `inventory.rs` / `payload.rs`, which reference every json
+/// domain's struct through `super::json::<Struct>`, resolve `Json` without a
+/// shape-aware module path in the renderer.
+pub use crate::v3::json_storage::Json;
 
 /// The `k` envelope key — the EQL payload **form discriminator**, always the
 /// literal `"sv"` for an encrypted-JSONB document.
@@ -71,7 +79,7 @@ impl JsonSchema for SteVecForm {
     }
 }
 
-/// `public.eql_v3_json` — a SteVec encrypted-JSONB document (`{v, k, i, sv:[entry]}`,
+/// `public.eql_v3_json_search` — a SteVec encrypted-JSON document (`{v, k, i, sv:[entry]}`,
 /// no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
 /// [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
@@ -84,7 +92,7 @@ pub struct SteVecDocument {
     pub sv: Vec<SteVecEntry>,
 }
 
-/// `public.eql_v3_jsonb_entry` — one sv element (returned by `->`). Carries a selector
+/// `public.eql_v3_json_entry` — one sv element (returned by `->`). Carries a selector
 /// `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
 /// `hm` XOR `op`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
 /// root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
@@ -105,7 +113,7 @@ pub struct SteVecEntry {
     pub term: SteVecTerm,
 }
 
-/// `eql_v3.query_jsonb` — a containment needle (`{sv:[query-entry]}`). Strict.
+/// `eql_v3.query_json` — a containment needle (`{sv:[query-entry]}`). Strict.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -155,6 +163,6 @@ macro_rules! ste_vec_domain_type {
     };
 }
 
-ste_vec_domain_type!(SteVecDocument, "public.eql_v3_json");
-ste_vec_domain_type!(SteVecEntry, "public.eql_v3_jsonb_entry");
-ste_vec_domain_type!(SteVecQuery, "eql_v3.query_jsonb");
+ste_vec_domain_type!(SteVecDocument, "public.eql_v3_json_search");
+ste_vec_domain_type!(SteVecEntry, "public.eql_v3_json_entry");
+ste_vec_domain_type!(SteVecQuery, "eql_v3.query_json");

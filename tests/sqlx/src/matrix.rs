@@ -160,7 +160,7 @@ fn collect_index_scan_nodes(value: &serde_json::Value, found: &mut Vec<(String, 
 /// invocation shape is the same regardless of capability — only the `caps`
 /// marker differs. The emitted test names for an ordered type are byte-identical
 /// to the old `ordered_numeric_matrix!`; the eq-only name set is exactly that
-/// set minus the `_ord` / `order_by` / `routes_through_ordering_term` lines.
+/// set minus the `_ord` / `order_by` lines.
 ///
 /// Pivots — the comparison anchors swept by the correctness / cross-shape
 /// arms — are the `OrderedScalar` anchors: `min_pivot()`, `max_pivot()`, and the
@@ -455,7 +455,7 @@ macro_rules! scalar_matrix {
 /// `JsonbEntryInteger`). Runs only the leaf drivers that are surface-agnostic
 /// once routed through the access-path seam: correctness (d,d only),
 /// supported_null, order_by(+nulls/+using), count, index_engages, and — once
-/// `src/v3/jsonb/aggregates.sql` exists — aggregate(+group_by/+parallel).
+/// `src/v3/json/aggregates.sql` exists — aggregate(+group_by/+parallel).
 /// Containment / blockers / payload_check / path-op / native-absent /
 /// planner-metadata stay in the hand-written `v3_jsonb_tests` suite — they have
 /// no scalar analogue or assert document-specific surface.
@@ -516,10 +516,10 @@ macro_rules! jsonb_entry_matrix {
         // the entry operator. The hand-written `jsonb_entry_integer_index_engages`
         // test in the suite probes index engagement with the domain-cast RHS only.
 
-        // Aggregates: eql_v3.min/max over jsonb_entry (src/v3/jsonb/aggregates.sql).
+        // Aggregates: eql_v3.min/max over json_entry (src/v3/json/aggregates.sql).
         // The aggregate leaf cases compare extrema via the ord-extractor seam
         // (eql_v3.ord_term for entries), so the entry min/max route through the
-        // `oc` (CLLW ORE) term exactly like the comparison operators.
+        // `op` (CLLW-OPE) term exactly like the comparison operators.
         $crate::__scalar_matrix_aggregate_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
@@ -2255,7 +2255,7 @@ macro_rules! __scalar_matrix_match_case {
     ) => {
         $crate::paste::paste! {
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
-            async fn [<matrix_ $suite _ $dom_name _match_contains_self>](
+            async fn [<matrix_ $suite _ $dom_name _match_self>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::MatchScalar;
@@ -2264,14 +2264,14 @@ macro_rules! __scalar_matrix_match_case {
                 let hay = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
                     &pool, <$scalar as MatchScalar>::haystack()).await?;
                 let hit: bool = sqlx::query_scalar(&format!(
-                    "SELECT ($1::jsonb::{d}) @> ($1::jsonb::{d})",
+                    "SELECT ($1::jsonb::{d}) @@ ($1::jsonb::{d})",
                 )).bind(&hay).fetch_one(&pool).await?;
-                anyhow::ensure!(hit, "{d}: a value's bloom filter must contain itself");
+                anyhow::ensure!(hit, "{d}: a value's bloom filter must match itself");
                 Ok(())
             }
 
             #[sqlx::test(fixtures(path = $script_path, scripts($script)))]
-            async fn [<matrix_ $suite _ $dom_name _match_contains_needle>](
+            async fn [<matrix_ $suite _ $dom_name _match_needle>](
                 pool: sqlx::PgPool,
             ) -> anyhow::Result<()> {
                 use $crate::scalar_domains::MatchScalar;
@@ -2282,10 +2282,10 @@ macro_rules! __scalar_matrix_match_case {
                 let needle = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
                     &pool, <$scalar as MatchScalar>::needle()).await?;
                 let hit: bool = sqlx::query_scalar(&format!(
-                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                    "SELECT ($1::jsonb::{d}) @@ ($2::jsonb::{d})",
                 )).bind(&hay).bind(&needle).fetch_one(&pool).await?;
                 anyhow::ensure!(hit,
-                    "{d}: haystack bloom must contain its shared-ngram needle");
+                    "{d}: haystack bloom must match its shared-ngram needle");
                 Ok(())
             }
 
@@ -2301,16 +2301,16 @@ macro_rules! __scalar_matrix_match_case {
                 let disjoint = $crate::scalar_domains::fetch_fixture_payload::<$scalar>(
                     &pool, <$scalar as MatchScalar>::disjoint()).await?;
                 let hit: bool = sqlx::query_scalar(&format!(
-                    "SELECT ($1::jsonb::{d}) @> ($2::jsonb::{d})",
+                    "SELECT ($1::jsonb::{d}) @@ ($2::jsonb::{d})",
                 )).bind(&needle).bind(&disjoint).fetch_one(&pool).await?;
                 anyhow::ensure!(!hit,
-                    "{d}: needle bloom must NOT contain an ngram-disjoint value");
+                    "{d}: needle bloom must NOT match an ngram-disjoint value");
                 Ok(())
             }
 
             // VALIDITY, NOT PREFERENCE: `enable_seqscan = off` on the small
             // fixture forces the planner onto the only usable alternative. A
-            // green assertion proves the bare `@>` operator inlines through
+            // green assertion proves the bare `@@` operator inlines through
             // `match_term` to the native array containment the GIN index
             // supports — NOT that the planner would prefer it at scale. The
             // assertion is node-type-aware (a genuine Bitmap/Index Scan node
@@ -2351,9 +2351,9 @@ macro_rules! __scalar_matrix_match_case {
                 let lit = needle.replace('\'', "''");
                 $crate::matrix::assert_index_scan_uses(
                     &mut *tx,
-                    &format!("SELECT * FROM {table} WHERE value @> '{lit}'::jsonb::{d}"),
+                    &format!("SELECT * FROM {table} WHERE value @@ '{lit}'::jsonb::{d}"),
                     index,
-                    "bare @> must engage the eql_v3.match_term functional GIN index",
+                    "bare @@ must engage the eql_v3.match_term functional GIN index",
                 ).await?;
 
                 tx.commit().await?;

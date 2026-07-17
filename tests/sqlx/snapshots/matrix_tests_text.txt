@@ -254,10 +254,10 @@ scalars::<T>::matrix_<T>_search_lte_pivot_mid_cross_shape
 scalars::<T>::matrix_<T>_search_lte_pivot_min_correctness
 scalars::<T>::matrix_<T>_search_lte_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_search_lte_supported_null
-scalars::<T>::matrix_<T>_search_match_contains_needle
-scalars::<T>::matrix_<T>_search_match_contains_self
 scalars::<T>::matrix_<T>_search_match_disjoint_miss
 scalars::<T>::matrix_<T>_search_match_index_engages_gin
+scalars::<T>::matrix_<T>_search_match_needle
+scalars::<T>::matrix_<T>_search_match_self
 scalars::<T>::matrix_<T>_search_native_absent_ops
 scalars::<T>::matrix_<T>_search_native_jsonb_blockers
 scalars::<T>::matrix_<T>_search_neq_pivot_max_correctness
@@ -333,10 +333,10 @@ scalars::<T>::matrix_<T>_search_ore_lte_pivot_mid_cross_shape
 scalars::<T>::matrix_<T>_search_ore_lte_pivot_min_correctness
 scalars::<T>::matrix_<T>_search_ore_lte_pivot_min_cross_shape
 scalars::<T>::matrix_<T>_search_ore_lte_supported_null
-scalars::<T>::matrix_<T>_search_ore_match_contains_needle
-scalars::<T>::matrix_<T>_search_ore_match_contains_self
 scalars::<T>::matrix_<T>_search_ore_match_disjoint_miss
 scalars::<T>::matrix_<T>_search_ore_match_index_engages_gin
+scalars::<T>::matrix_<T>_search_ore_match_needle
+scalars::<T>::matrix_<T>_search_ore_match_self
 scalars::<T>::matrix_<T>_search_ore_native_absent_ops
 scalars::<T>::matrix_<T>_search_ore_native_jsonb_blockers
 scalars::<T>::matrix_<T>_search_ore_neq_pivot_max_correctness

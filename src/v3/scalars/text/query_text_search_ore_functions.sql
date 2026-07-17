@@ -130,7 +130,7 @@ AS $$ SELECT eql_v3.ord_term_ore(a) >= eql_v3.ord_term_ore(b) $$;
 --! @param a public.eql_v3_text_search_ore
 --! @param b eql_v3.query_text_search_ore
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a public.eql_v3_text_search_ore, b eql_v3.query_text_search_ore)
+CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search_ore, b eql_v3.query_text_search_ore)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 
@@ -138,22 +138,6 @@ AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
 --! @param a eql_v3.query_text_search_ore
 --! @param b public.eql_v3_text_search_ore
 --! @return boolean
-CREATE FUNCTION eql_v3.contains(a eql_v3.query_text_search_ore, b public.eql_v3_text_search_ore)
+CREATE FUNCTION eql_v3.matches(a eql_v3.query_text_search_ore, b public.eql_v3_text_search_ore)
 RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
-
---! @brief Operator wrapper for eql_v3.query_text_search_ore.
---! @param a public.eql_v3_text_search_ore
---! @param b eql_v3.query_text_search_ore
---! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a public.eql_v3_text_search_ore, b eql_v3.query_text_search_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;
-
---! @brief Operator wrapper for eql_v3.query_text_search_ore.
---! @param a eql_v3.query_text_search_ore
---! @param b public.eql_v3_text_search_ore
---! @return boolean
-CREATE FUNCTION eql_v3.contained_by(a eql_v3.query_text_search_ore, b public.eql_v3_text_search_ore)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) <@ eql_v3.match_term(b) $$;

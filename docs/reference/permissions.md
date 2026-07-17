@@ -58,9 +58,9 @@ needs `USAGE` on it anyway. The exact requirement is path-dependent:
 | Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
 | `MIN` / `MAX` aggregates | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
 | jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
-| Cast/write raw JSON → `public.eql_v3_json` | ✅ | ✅ | — |
+| Cast/write raw JSON → `public.eql_v3_json_search` | ✅ | ✅ | — |
 | Cast/write raw JSON → a scalar domain (`public.eql_v3_integer`…) | ✅ | — | — |
-| Cast a query operand → `eql_v3.query_<name>` / `eql_v3.query_jsonb` | ✅ | — | — |
+| Cast a query operand → `eql_v3.query_<name>` / `eql_v3.query_json` | ✅ | — | — |
 
 Why the internal grant is needed even though you only call public objects:
 
@@ -79,9 +79,9 @@ Why the internal grant is needed even though you only call public objects:
   installer places in the `extensions` schema — hence the `USAGE` there. The
   CLLW-OPE variants (`_ord`, `_ord_ope`, `text_search`) compare native `bytea`
   and need no `extensions` grant.
-- **Casting raw jsonb to `public.eql_v3_json` or `eql_v3.query_jsonb`** fires a
+- **Casting raw jsonb to `public.eql_v3_json_search` or `eql_v3.query_json`** fires a
   domain `CHECK` that calls an `eql_v3_internal.is_valid_*` validator. (Scalar
-  domain CHECKs — and, since issue #354, the `public.eql_v3_jsonb_entry` CHECK — are
+  domain CHECKs — and, since issue #354, the `public.eql_v3_json_entry` CHECK — are
   pure structural jsonb tests, so casting to those domains needs no internal
   grant.)
 
@@ -108,7 +108,7 @@ in `eql_v3`**:
 | `=` | `eql_v3.eq(a, b)` |
 | `<>` | `eql_v3.neq(a, b)` |
 | `<` `<=` `>` `>=` | `eql_v3.lt` / `lte` / `gt` / `gte(a, b)` |
-| `@>` `<@` (text match) | `eql_v3.contains` / `contained_by(a, b)` |
+| `@@` (text match) | `eql_v3.matches(a, b)` |
 | `@>` `<@` (jsonb documents) | `eql_v3.jsonb_contains` / `jsonb_contained_by(a, b)`, and the typed `eql_v3.ste_vec_contains` |
 | `MIN` / `MAX` | `eql_v3.min` / `eql_v3.max` aggregates |
 

@@ -1,7 +1,7 @@
 //! Equivalence guards for the inline SteVec domain CHECK expressions
 //! (issue #354).
 //!
-//! `public.eql_v3_jsonb_entry` carries an INLINE CHECK expression rather than
+//! `public.eql_v3_json_entry` carries an INLINE CHECK expression rather than
 //! calling `public.eql_v3_is_valid_ste_vec_entry_payload`: domain
 //! constraints cannot inline SQL functions, so the function-call form paid
 //! the per-call SQL-function executor on every cast — the needle cast in
@@ -12,11 +12,11 @@
 //! divergence is SQL NULL, which both forms accept (the validator via
 //! STRICT, the inline expression via a leading `VALUE IS NULL OR`).
 //!
-//! `eql_v3.query_jsonb`'s CHECK CANNOT be inlined — validating sv elements
+//! `eql_v3.query_json`'s CHECK CANNOT be inlined — validating sv elements
 //! needs a subquery, which CHECK constraints forbid — so its validator is
 //! plpgsql instead (cached plan vs the per-call SQL-function executor; the
-//! issue #353 finding). `query_jsonb_check_behaviour` characterises the
-//! accept/reject matrix, and `query_jsonb_validator_is_plpgsql` guards the
+//! issue #353 finding). `query_json_check_behaviour` characterises the
+//! accept/reject matrix, and `query_json_validator_is_plpgsql` guards the
 //! language so a revert to LANGUAGE sql fails here.
 
 use anyhow::Result;
@@ -94,7 +94,7 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
     ];
     assert_equivalent(
         &pool,
-        "public.eql_v3_jsonb_entry",
+        "public.eql_v3_json_entry",
         "eql_v3_is_valid_ste_vec_entry_payload",
         candidates,
     )
@@ -102,7 +102,7 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
 }
 
 #[sqlx::test]
-async fn query_jsonb_check_behaviour(pool: PgPool) -> Result<()> {
+async fn query_json_check_behaviour(pool: PgPool) -> Result<()> {
     // (payload, expected accept) — hardcoded verdicts: the CHECK calls the
     // validator, so a validator-equivalence assertion would be tautological.
     let candidates: &[(Option<&str>, bool)] = &[
@@ -128,22 +128,88 @@ async fn query_jsonb_check_behaviour(pool: PgPool) -> Result<()> {
         (Some("[]"), false),
     ];
     for (payload, expected) in candidates {
-        let cast = cast_accepts(&pool, "eql_v3.query_jsonb", *payload).await?;
+        let cast = cast_accepts(&pool, "eql_v3.query_json", *payload).await?;
         anyhow::ensure!(
             cast == *expected,
-            "eql_v3.query_jsonb cast verdict changed for {payload:?}: \
+            "eql_v3.query_json cast verdict changed for {payload:?}: \
              accepted = {cast}, expected = {expected}"
         );
     }
     Ok(())
 }
 
-/// The query_jsonb validator must stay plpgsql: its only caller is the domain
+/// Cast `payload` to the bare storage domain and observe whether its CHECK
+/// accepts. Deliberately NOT the shared `cast_accepts` helper: that uses
+/// `IS NOT DISTINCT FROM` (i.e. `=`), and `=` is a BLOCKED operator on the
+/// storage domain (every comparison raises). `IS NOT NULL` needs no operator on
+/// the domain, so it isolates the CHECK verdict. SQL NULL casts to NULL and
+/// evaluates no CHECK, so it is accepted (Ok, no error).
+async fn storage_cast_accepts(pool: &PgPool, payload: Option<&str>) -> Result<bool> {
+    let sql = "SELECT ($1::jsonb)::public.eql_v3_json IS NOT NULL";
+    match sqlx::query_scalar::<_, bool>(sql)
+        .bind(payload)
+        .fetch_one(pool)
+        .await
+    {
+        Ok(_) => Ok(true),
+        Err(e) if e.to_string().contains("check constraint") => Ok(false),
+        Err(e) => Err(e.into()),
+    }
+}
+
+/// The bare storage domain `public.eql_v3_json` (ciphertext-only encrypted
+/// JSON) is the hand-written stand-in for the generated `matrix_*_payload_check`
+/// arm every scalar type gets automatically (json is outside the scalar matrix).
+/// Malformed payloads are produced by MUTATION, not encryption, so this corpus
+/// is synthetic by nature — the same way the generated payload-check driver
+/// mutates a baseline. It pins the rejection boundary: the CHECK accepts only a
+/// well-formed `{v,i,c}` envelope at `v == '3'` and REJECTS everything else,
+/// including a SteVec document payload (`{v,i,sv}` with no root `c`) — the
+/// structural distinction from the searchable `public.eql_v3_json_search`.
+///
+/// Positive `{v,i,c}` acceptance is NOT re-asserted here — it is proven over
+/// REAL crypto by the `v3_json_storage` fixture loading through this CHECK at
+/// INSERT and by `storage_fixture_shape` in `v3_json_storage_tests`.
+#[sqlx::test]
+async fn json_storage_check_rejects_malformed(pool: PgPool) -> Result<()> {
+    let candidates: &[(Option<&str>, bool)] = &[
+        // SQL NULL — a domain accepts NULL (no CHECK is evaluated). The one
+        // non-rejection, kept as the boundary case: NULL is not "malformed".
+        (None, true),
+        // Invalid: a SteVec document (`sv`, no root `c`) — belongs to
+        // public.eql_v3_json_search, not the ciphertext-only storage domain.
+        (
+            Some(r#"{"v":"3","i":{},"sv":[{"s":"sel","hm":"h"}]}"#),
+            false,
+        ),
+        // Invalid: missing c / missing v / missing i / wrong version.
+        (Some(r#"{"v":"3","i":{}}"#), false),
+        (Some(r#"{"i":{},"c":"ct"}"#), false),
+        (Some(r#"{"v":"3","c":"ct"}"#), false),
+        (Some(r#"{"v":"2","i":{},"c":"ct"}"#), false),
+        // Invalid: non-object roots.
+        (Some(r#""scalar""#), false),
+        (Some("5"), false),
+        (Some("null"), false),
+        (Some("[]"), false),
+    ];
+    for (payload, expected) in candidates {
+        let cast = storage_cast_accepts(&pool, *payload).await?;
+        anyhow::ensure!(
+            cast == *expected,
+            "public.eql_v3_json cast verdict for {payload:?}: accepted = {cast}, \
+             expected = {expected}"
+        );
+    }
+    Ok(())
+}
+
+/// The query_json validator must stay plpgsql: its only caller is the domain
 /// CHECK (a context that can never inline a SQL function), so LANGUAGE sql
 /// pays the per-call SQL-function executor on every containment-needle cast
 /// (issues #353/#354). A revert fails here.
 #[sqlx::test]
-async fn query_jsonb_validator_is_plpgsql(pool: PgPool) -> Result<()> {
+async fn query_json_validator_is_plpgsql(pool: PgPool) -> Result<()> {
     let lang: String = sqlx::query_scalar(
         "SELECT l.lanname FROM pg_proc p \
          JOIN pg_language l ON l.oid = p.prolang \

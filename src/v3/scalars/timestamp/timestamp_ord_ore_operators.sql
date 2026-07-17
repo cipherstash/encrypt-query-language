@@ -196,6 +196,21 @@ CREATE OPERATOR @? (
 
 CREATE OPERATOR @@ (
   FUNCTION = eql_v3_internal."@@",
+  LEFTARG = public.eql_v3_timestamp_ord_ore, RIGHTARG = public.eql_v3_timestamp_ord_ore
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3_internal."@@",
+  LEFTARG = public.eql_v3_timestamp_ord_ore, RIGHTARG = jsonb
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3_internal."@@",
+  LEFTARG = jsonb, RIGHTARG = public.eql_v3_timestamp_ord_ore
+);
+
+CREATE OPERATOR @@ (
+  FUNCTION = eql_v3_internal."@@",
   LEFTARG = public.eql_v3_timestamp_ord_ore, RIGHTARG = jsonpath
 );
 

@@ -227,6 +227,7 @@ tests/sqlx/migrations/001_install_eql.sql
 # never commit — stale fixtures hide bugs)
 tests/sqlx/fixtures/eql_v3*
 tests/sqlx/fixtures/v3_ste_vec.sql
+tests/sqlx/fixtures/v3_json_storage.sql
 tests/sqlx/fixtures/v3_doc_integer.sql
 tests/sqlx/fixtures/v3_numeric_collision.sql
 tests/sqlx/fixtures/v3_text_empty.sql

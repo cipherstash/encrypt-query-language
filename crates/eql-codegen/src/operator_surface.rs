@@ -1,9 +1,91 @@
 //! The generated operator surface.
 
+/// The closed set of SQL operator symbols the generator knows about. Modelling
+/// the symbol as an enum (rather than a bare `&'static str`) makes the two
+/// methods that diverge on it — `wrapper_function_name` and `body_operator` —
+/// **exhaustive, compiler-checked matches**: adding a new operator forces a
+/// compile error at those match sites until the author explicitly classifies
+/// it, rather than silently inheriting a `_ =>` default.
+///
+/// `as_str` is the single source of truth for each variant's SQL text.
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+pub enum OpSymbol {
+    /// `=`
+    Eq,
+    /// `<>`
+    Neq,
+    /// `<`
+    Lt,
+    /// `<=`
+    Lte,
+    /// `>`
+    Gt,
+    /// `>=`
+    Gte,
+    /// `@>`
+    Contains,
+    /// `<@`
+    ContainedBy,
+    /// `->`
+    Arrow,
+    /// `->>`
+    ArrowArrow,
+    /// `?`
+    Question,
+    /// `?|`
+    QuestionPipe,
+    /// `?&`
+    QuestionAmp,
+    /// `@?`
+    AtQuestion,
+    /// `@@`
+    Match,
+    /// `#>`
+    HashArrow,
+    /// `#>>`
+    HashArrowArrow,
+    /// `-`
+    Minus,
+    /// `#-`
+    HashMinus,
+    /// `||`
+    Concat,
+}
+
+impl OpSymbol {
+    /// The SQL operator text for this symbol (e.g. `OpSymbol::Eq => "="`). The
+    /// single source of truth for the string form — every raw-string use site
+    /// (SQL rendering, snapshot output, lookups) goes through here.
+    pub const fn as_str(&self) -> &'static str {
+        match self {
+            OpSymbol::Eq => "=",
+            OpSymbol::Neq => "<>",
+            OpSymbol::Lt => "<",
+            OpSymbol::Lte => "<=",
+            OpSymbol::Gt => ">",
+            OpSymbol::Gte => ">=",
+            OpSymbol::Contains => "@>",
+            OpSymbol::ContainedBy => "<@",
+            OpSymbol::Arrow => "->",
+            OpSymbol::ArrowArrow => "->>",
+            OpSymbol::Question => "?",
+            OpSymbol::QuestionPipe => "?|",
+            OpSymbol::QuestionAmp => "?&",
+            OpSymbol::AtQuestion => "@?",
+            OpSymbol::Match => "@@",
+            OpSymbol::HashArrow => "#>",
+            OpSymbol::HashArrowArrow => "#>>",
+            OpSymbol::Minus => "-",
+            OpSymbol::HashMinus => "#-",
+            OpSymbol::Concat => "||",
+        }
+    }
+}
+
 /// One operator in the generated surface.
 #[derive(Clone, Copy)]
 pub struct Operator {
-    pub symbol: &'static str,
+    pub symbol: OpSymbol,
     pub function_name: &'static str,
     pub signatures: &'static [OperatorSignature],
     pub metadata: OperatorMetadata,
@@ -60,7 +142,7 @@ impl OperatorMetadata {
 /// A type position in a PostgreSQL operator overload. `Domain` renders to the
 /// concrete encrypted domain being generated; every other slot renders to a
 /// fixed PostgreSQL type name.
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum TypeSlot {
     Domain,
     Jsonb,
@@ -92,6 +174,14 @@ pub struct OperatorSignature {
     pub left: TypeSlot,
     pub right: TypeSlot,
     pub returns: TypeSlot,
+    /// When true this overload is ALWAYS rendered as a blocker, even on a domain
+    /// whose terms otherwise support the operator's symbol. The only user is the
+    /// `@@` `(domain, jsonpath)` native-jsonb-predicate overload: `@@` is the
+    /// SUPPORTED bloom fuzzy-match operator on match domains for its symmetric
+    /// domain/jsonb overloads, but its jsonpath overload must keep raising (the
+    /// "no silent native jsonb ops" guarantee) on every domain including the
+    /// match domains. Normal operators leave this `false`.
+    pub blocker_only: bool,
 }
 
 /// An `OperatorSignature` with every slot resolved to a concrete SQL type name.
@@ -117,6 +207,17 @@ const fn sig(left: TypeSlot, right: TypeSlot, returns: TypeSlot) -> OperatorSign
         left,
         right,
         returns,
+        blocker_only: false,
+    }
+}
+
+/// Constructor for an always-blocked overload (see `OperatorSignature::blocker_only`).
+const fn sig_blocker(left: TypeSlot, right: TypeSlot, returns: TypeSlot) -> OperatorSignature {
+    OperatorSignature {
+        left,
+        right,
+        returns,
+        blocker_only: true,
     }
 }
 
@@ -153,9 +254,23 @@ const HAS_ANY_KEYS_SIGNATURES: &[OperatorSignature] = &[sig(
     TypeSlot::Boolean,
 )];
 
-/// `@?` / `@@` jsonpath-predicate overloads.
+/// `@?` jsonpath-predicate overload (also the shape `@@` blocks on non-match
+/// domains — see `MATCH_SIGNATURES`).
 const JSONPATH_SIGNATURES: &[OperatorSignature] =
     &[sig(TypeSlot::Domain, TypeSlot::Jsonpath, TypeSlot::Boolean)];
+
+/// `@@` bloom fuzzy-match overloads: the symmetric domain/jsonb match shapes
+/// (SUPPORTED on Bloom-carrying domains, backed by `eql_v3.matches`), plus the
+/// native-jsonb `(domain, jsonpath)` predicate overload marked `blocker_only`
+/// so it keeps raising on every domain (including match domains). On non-Bloom
+/// domains all four render as blockers, exactly as `@>`/`<@` do for a domain
+/// that does not support containment.
+const MATCH_SIGNATURES: &[OperatorSignature] = &[
+    sig(TypeSlot::Domain, TypeSlot::Domain, TypeSlot::Boolean),
+    sig(TypeSlot::Domain, TypeSlot::Jsonb, TypeSlot::Boolean),
+    sig(TypeSlot::Jsonb, TypeSlot::Domain, TypeSlot::Boolean),
+    sig_blocker(TypeSlot::Domain, TypeSlot::Jsonpath, TypeSlot::Boolean),
+];
 
 /// `#>` path-extract overload (returns jsonb).
 const PATH_EXTRACT_JSONB_SIGNATURES: &[OperatorSignature] =
@@ -189,7 +304,7 @@ pub fn operator(symbol: &str) -> Operator {
     OPERATORS
         .iter()
         .copied()
-        .find(|o| o.symbol == symbol)
+        .find(|o| o.symbol.as_str() == symbol)
         .unwrap_or_else(|| panic!("unknown operator symbol: {symbol}"))
 }
 
@@ -209,9 +324,80 @@ impl Operator {
         const COMPARISON: &[&str] = &["=", "<>", "<", "<=", ">", ">="];
         const CONTAINMENT: &[&str] = &["@>", "<@"];
         const PATH_SELECTOR: &[&str] = &["->", "->>"];
-        !COMPARISON.contains(&self.symbol)
-            && !CONTAINMENT.contains(&self.symbol)
-            && !PATH_SELECTOR.contains(&self.symbol)
+        let symbol = self.symbol.as_str();
+        !COMPARISON.contains(&symbol)
+            && !CONTAINMENT.contains(&symbol)
+            && !PATH_SELECTOR.contains(&symbol)
+    }
+
+    /// The name of the SUPPORTED comparison-wrapper function for this operator
+    /// (the `eql_v3.<name>` public wrapper). Equal to `function_name` for every
+    /// operator except `@@`, whose supported form is the bloom fuzzy-match
+    /// `eql_v3.matches` while its blocked `(domain, jsonpath)` overload keeps the
+    /// blocker name `eql_v3_internal."@@"`. The blocker path always uses
+    /// `function_name`; only the wrapper/supported path calls this.
+    pub fn wrapper_function_name(&self) -> &'static str {
+        // Exhaustive on purpose: no `_ =>` fallthrough. A future operator that
+        // needs a divergent wrapper name must be classified here (compile error
+        // until it is), rather than silently inheriting `function_name`.
+        match self.symbol {
+            OpSymbol::Match => "matches",
+            OpSymbol::Eq
+            | OpSymbol::Neq
+            | OpSymbol::Lt
+            | OpSymbol::Lte
+            | OpSymbol::Gt
+            | OpSymbol::Gte
+            | OpSymbol::Contains
+            | OpSymbol::ContainedBy
+            | OpSymbol::Arrow
+            | OpSymbol::ArrowArrow
+            | OpSymbol::Question
+            | OpSymbol::QuestionPipe
+            | OpSymbol::QuestionAmp
+            | OpSymbol::AtQuestion
+            | OpSymbol::HashArrow
+            | OpSymbol::HashArrowArrow
+            | OpSymbol::Minus
+            | OpSymbol::HashMinus
+            | OpSymbol::Concat => self.function_name,
+        }
+    }
+
+    /// The SQL operator used INSIDE the wrapper body
+    /// (`extractor(a) <body_operator> extractor(b)`). Equal to `symbol` for every
+    /// operator except `@@`, whose body performs bloom array-containment `@>` on
+    /// the extracted `eql_v3_internal.bloom_filter` (`smallint[]`) terms. So the
+    /// public `@@` fuzzy-match operator reduces, through inlining, to exactly the
+    /// GIN-indexable `match_term(col) @> match_term(needle)` expression the former
+    /// `contains` wrapper produced — no new operator on the SEM bloom_filter type,
+    /// and the proven single-level inline to the array `@>` GIN opclass is kept.
+    pub fn body_operator(&self) -> &'static str {
+        // Exhaustive on purpose: no `_ =>` fallthrough. A future operator whose
+        // wrapper body must use a different SQL operator than its own symbol
+        // must be classified here (compile error until it is).
+        match self.symbol {
+            OpSymbol::Match => "@>",
+            OpSymbol::Eq
+            | OpSymbol::Neq
+            | OpSymbol::Lt
+            | OpSymbol::Lte
+            | OpSymbol::Gt
+            | OpSymbol::Gte
+            | OpSymbol::Contains
+            | OpSymbol::ContainedBy
+            | OpSymbol::Arrow
+            | OpSymbol::ArrowArrow
+            | OpSymbol::Question
+            | OpSymbol::QuestionPipe
+            | OpSymbol::QuestionAmp
+            | OpSymbol::AtQuestion
+            | OpSymbol::HashArrow
+            | OpSymbol::HashArrowArrow
+            | OpSymbol::Minus
+            | OpSymbol::HashMinus
+            | OpSymbol::Concat => self.symbol.as_str(),
+        }
     }
 }
 
@@ -222,7 +408,7 @@ pub fn native_jsonb_blocker_symbols() -> Vec<&'static str> {
     OPERATORS
         .iter()
         .filter(|o| o.is_native_jsonb_blocker())
-        .map(|o| o.symbol)
+        .map(|o| o.symbol.as_str())
         .collect()
 }
 
@@ -253,125 +439,138 @@ const fn containment_metadata(commutator: &'static str) -> OperatorMetadata {
     }
 }
 
+/// Match-operator metadata (`@@`): the bloom fuzzy-match is array containment
+/// under the hood, so it reuses the containment selectivity estimators, but it
+/// is a single directional operator with no reverse — hence no commutator and
+/// no negator.
+const fn match_metadata() -> OperatorMetadata {
+    OperatorMetadata {
+        restrict: Some("contsel"),
+        join: Some("contjoinsel"),
+        commutator: None,
+        negator: None,
+    }
+}
+
 /// The 20-operator catalog. Order is: comparison operators, then path-selector
 /// operators, then the remaining native jsonb operators.
 pub const OPERATORS: &[Operator] = &[
     Operator {
-        symbol: "=",
+        symbol: OpSymbol::Eq,
         function_name: "eq",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("eqsel", "eqjoinsel", "=", "<>"),
     },
     Operator {
-        symbol: "<>",
+        symbol: OpSymbol::Neq,
         function_name: "neq",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("neqsel", "neqjoinsel", "<>", "="),
     },
     Operator {
-        symbol: "<",
+        symbol: OpSymbol::Lt,
         function_name: "lt",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalarltsel", "scalarltjoinsel", ">", ">="),
     },
     Operator {
-        symbol: "<=",
+        symbol: OpSymbol::Lte,
         function_name: "lte",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalarlesel", "scalarlejoinsel", ">=", ">"),
     },
     Operator {
-        symbol: ">",
+        symbol: OpSymbol::Gt,
         function_name: "gt",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalargtsel", "scalargtjoinsel", "<", "<="),
     },
     Operator {
-        symbol: ">=",
+        symbol: OpSymbol::Gte,
         function_name: "gte",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: cmp_metadata("scalargesel", "scalargejoinsel", "<=", "<"),
     },
     Operator {
-        symbol: "@>",
+        symbol: OpSymbol::Contains,
         function_name: "contains",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: containment_metadata("<@"),
     },
     Operator {
-        symbol: "<@",
+        symbol: OpSymbol::ContainedBy,
         function_name: "contained_by",
         signatures: BOOL_SYMMETRIC_SIGNATURES,
         metadata: containment_metadata("@>"),
     },
     Operator {
-        symbol: "->",
+        symbol: OpSymbol::Arrow,
         function_name: "\"->\"",
         signatures: ARROW_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "->>",
+        symbol: OpSymbol::ArrowArrow,
         function_name: "\"->>\"",
         signatures: ARROW_TEXT_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "?",
+        symbol: OpSymbol::Question,
         function_name: "\"?\"",
         signatures: HAS_KEY_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "?|",
+        symbol: OpSymbol::QuestionPipe,
         function_name: "\"?|\"",
         signatures: HAS_ANY_KEYS_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "?&",
+        symbol: OpSymbol::QuestionAmp,
         function_name: "\"?&\"",
         signatures: HAS_ANY_KEYS_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "@?",
+        symbol: OpSymbol::AtQuestion,
         function_name: "\"@?\"",
         signatures: JSONPATH_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "@@",
+        symbol: OpSymbol::Match,
         function_name: "\"@@\"",
-        signatures: JSONPATH_SIGNATURES,
-        metadata: OperatorMetadata::none(),
+        signatures: MATCH_SIGNATURES,
+        metadata: match_metadata(),
     },
     Operator {
-        symbol: "#>",
+        symbol: OpSymbol::HashArrow,
         function_name: "\"#>\"",
         signatures: PATH_EXTRACT_JSONB_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "#>>",
+        symbol: OpSymbol::HashArrowArrow,
         function_name: "\"#>>\"",
         signatures: PATH_EXTRACT_TEXT_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "-",
+        symbol: OpSymbol::Minus,
         function_name: "\"-\"",
         signatures: DELETE_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "#-",
+        symbol: OpSymbol::HashMinus,
         function_name: "\"#-\"",
         signatures: DELETE_PATH_SIGNATURES,
         metadata: OperatorMetadata::none(),
     },
     Operator {
-        symbol: "||",
+        symbol: OpSymbol::Concat,
         function_name: "\"||\"",
         signatures: CONCAT_SIGNATURES,
         metadata: OperatorMetadata::none(),
@@ -397,6 +596,7 @@ mod tests {
             left: TypeSlot::Domain,
             right: TypeSlot::Text,
             returns: TypeSlot::Boolean,
+            blocker_only: false,
         };
         let rendered = sig.render("public.eql_v3_integer_eq");
         assert_eq!(rendered.left, "public.eql_v3_integer_eq");
@@ -546,7 +746,7 @@ mod tests {
     fn no_like_operators() {
         assert!(OPERATORS
             .iter()
-            .all(|o| o.symbol != "~~" && o.symbol != "~~*"));
+            .all(|o| o.symbol.as_str() != "~~" && o.symbol.as_str() != "~~*"));
     }
 
     #[test]
@@ -623,7 +823,7 @@ mod tests {
 
     #[test]
     fn catalog_symbols_match_expected_order() {
-        let keys: Vec<&str> = OPERATORS.iter().map(|o| o.symbol).collect();
+        let keys: Vec<&str> = OPERATORS.iter().map(|o| o.symbol.as_str()).collect();
         assert_eq!(
             keys,
             vec![
@@ -631,6 +831,45 @@ mod tests {
                 "@@", "#>", "#>>", "-", "#-", "||"
             ]
         );
+    }
+
+    #[test]
+    fn match_operator_carries_symmetric_and_blocker_only_signatures() {
+        // `@@` is the bloom fuzzy-match operator: three symmetric match overloads
+        // plus the always-blocked `(domain, jsonpath)` native-jsonb predicate.
+        let at_at = operator("@@");
+        assert_eq!(at_at.signatures.len(), 4);
+        let symmetric: Vec<_> = at_at
+            .signatures
+            .iter()
+            .filter(|s| !s.blocker_only)
+            .map(|s| (s.left, s.right))
+            .collect();
+        assert_eq!(
+            symmetric,
+            vec![
+                (TypeSlot::Domain, TypeSlot::Domain),
+                (TypeSlot::Domain, TypeSlot::Jsonb),
+                (TypeSlot::Jsonb, TypeSlot::Domain),
+            ]
+        );
+        let blocker_only: Vec<_> = at_at
+            .signatures
+            .iter()
+            .filter(|s| s.blocker_only)
+            .map(|s| (s.left, s.right))
+            .collect();
+        assert_eq!(blocker_only, vec![(TypeSlot::Domain, TypeSlot::Jsonpath)]);
+    }
+
+    #[test]
+    fn wrapper_function_name_overrides_only_for_match() {
+        // The supported wrapper for `@@` is `matches`; its blocker name stays
+        // `"@@"`. Every other operator's wrapper and blocker names coincide.
+        assert_eq!(operator("@@").wrapper_function_name(), "matches");
+        assert_eq!(operator("@@").function_name, "\"@@\"");
+        assert_eq!(operator("=").wrapper_function_name(), "eq");
+        assert_eq!(operator("@>").wrapper_function_name(), "contains");
     }
 
     #[test]

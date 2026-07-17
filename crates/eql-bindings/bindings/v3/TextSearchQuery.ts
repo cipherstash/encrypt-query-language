@@ -8,6 +8,6 @@ import type { SchemaVersion } from "./SchemaVersion";
 /**
  * `eql_v3.query_text_search` — search domain query operand.
  *
- * Operators: `=` `<>` `<` `<=` `>` `>=` `@>` `<@`. Required keys: `v` `i` `hm` `op` `bf`.
+ * Operators: `=` `<>` `<` `<=` `>` `>=` `@@`. Required keys: `v` `i` `hm` `op` `bf`.
  */
 export type TextSearchQuery = { v: SchemaVersion, i: Identifier, hm: Hmac256, op: OpeCllw, bf: BloomFilter, };

@@ -13,22 +13,18 @@ impl Domain {
     /// the `_` join — codegen builds every domain name through this, so the
     /// "domain name starts with the family name" rule is structural.
     ///
-    /// Two documented exceptions, both on the `jsonb` family:
+    /// One documented exception, on the `json` family:
     ///
-    /// - the document domain (`public.eql_v3_json`, `Domain.name == "json"`) predates
-    ///   the catalog and doesn't follow the family+suffix convention
-    ///   (`family_name` is `"jsonb"`, not `"json"`), so its `name` is returned
-    ///   verbatim instead of being joined;
     /// - the containment needle (`Domain.name == "query"`) follows the
-    ///   query-operand PREFIX convention (CIP-3442): `query_jsonb`, matching
+    ///   query-operand PREFIX convention (CIP-3442): `query_json`, matching
     ///   the scalar `query_<name>` twins so every query-operand type sorts
     ///   apart from the column domains in alphabetical type listings.
     ///
-    /// Every other domain — scalar or the SteVec entry — uses the join.
+    /// Every other domain uses the join — including the `json` family's bare
+    /// storage domain (`""` => `json` => `public.eql_v3_json`) and its
+    /// searchable SteVec document (`"search"` => `json_search` =>
+    /// `public.eql_v3_json_search`).
     pub fn full_name(&self, family_name: &str) -> String {
-        if matches!(self.shape, crate::Shape::SteVec) && self.name == "json" {
-            return self.name.to_string();
-        }
         if matches!(self.shape, crate::Shape::SteVec) && self.name == "query" {
             return format!("query_{family_name}");
         }
@@ -43,7 +39,7 @@ impl Domain {
     /// installed. Public-schema column domains carry the
     /// [`crate::PUBLIC_TYPNAME_PREFIX`] version prefix
     /// (`eql_v3_integer_eq`, `eql_v3_json` — CIP-3472); the SteVec containment
-    /// needle (`query_jsonb`) lives in the `eql_v3` schema, which already
+    /// needle (`query_json`) lives in the `eql_v3` schema, which already
     /// versions it, so it stays bare like the scalar `query_<name>` twins.
     /// The **single** site that owns the prefix decision — codegen (SQL +
     /// bindings) and the eql-bindings parity tests both resolve installed
@@ -83,7 +79,7 @@ impl Domain {
     }
 
     /// True when this domain carries the flat scalar payload shape. False for
-    /// the SteVec shapes (the `jsonb` family). The per-domain primitive that
+    /// the SteVec shapes (the `json` family). The per-domain primitive that
     /// [`DomainFamily::is_scalar`] and [`crate::scalar_families`] are built on —
     /// most scalar-only consumers filter through those family-level helpers, not
     /// this predicate directly (the `ts_property_order` guard is the exception).
@@ -95,16 +91,16 @@ impl Domain {
     /// shape-aware, unlike [`Self::struct_ident`]. For [`crate::Shape::Scalar`]
     /// this is exactly `struct_ident` (derived from the domain name). The
     /// SteVec shapes' struct bodies are hand-written (not name-derivable — see
-    /// `crates/eql-bindings/src/v3/jsonb.rs`), but their identifiers ARE
+    /// `crates/eql-bindings/src/v3/json.rs`), but their identifiers ARE
     /// name-derivable (`"SteVec" + capitalize(name)`), with one irregular case:
-    /// the document domain's established name `"json"` maps to `SteVecDocument`,
-    /// not `SteVecJson` (mirroring the exception `full_name` already carries).
+    /// the searchable document domain's name `"search"` maps to `SteVecDocument`,
+    /// not `SteVecSearch` (the struct is named for what it is — the document).
     /// The SINGLE source of truth for that mapping — `eql-codegen`'s inventory
     /// renderer calls this instead of carrying its own copy of the shape match.
     pub fn rust_struct_name(&self, family_name: &str) -> String {
         match self.shape {
             crate::Shape::Scalar => self.struct_ident(family_name),
-            crate::Shape::SteVec if self.name == "json" => "SteVecDocument".to_string(),
+            crate::Shape::SteVec if self.name == "search" => "SteVecDocument".to_string(),
             crate::Shape::SteVec => format!("SteVec{}", capitalize(self.name)),
         }
     }
@@ -137,7 +133,7 @@ impl DomainFamily {
     /// testing `ord` suffices.
     ///
     /// A **flat-scalar** predicate: it describes the storage/`_eq`/`_ord` shape,
-    /// which the non-scalar SteVec `jsonb` family does not have (its ordered `op`
+    /// which the non-scalar SteVec `json` family does not have (its ordered `op`
     /// capability is carried structurally, not as an `ord` domain). So it is
     /// guarded by [`Self::is_scalar`] — a non-scalar family is never "eq-only",
     /// even though it happens to declare no domain literally named `ord`.
@@ -166,7 +162,7 @@ impl DomainFamily {
     }
 
     /// True when every domain in this family is [`crate::Shape::Scalar`] — i.e. it
-    /// is a flat scalar family, not the SteVec `jsonb` family.
+    /// is a flat scalar family, not the SteVec `json` family.
     pub fn is_scalar(&self) -> bool {
         self.domains.iter().all(|d| d.is_scalar())
     }
@@ -222,38 +218,38 @@ mod tests {
 
     #[test]
     fn scalar_families_exclude_non_scalar_families_after_jsonb_flip() {
-        use crate::{scalar_families, CATALOG, JSONB};
+        use crate::{scalar_families, CATALOG, JSON};
         let names: Vec<&str> = scalar_families().map(|f| f.name).collect();
         assert_eq!(names.len(), CATALOG.len() - 1);
-        assert!(!names.contains(&JSONB.name));
+        assert!(!names.contains(&JSON.name));
         for f in scalar_families() {
             assert!(f.is_scalar());
         }
     }
 
     #[test]
-    fn jsonb_domain_names_follow_the_documented_conventions() {
-        // The entry carries the family+suffix naming every scalar family uses.
-        // The document is one documented exception — its established name
-        // `json` doesn't match the family name `jsonb`, so `full_name` returns
-        // it verbatim rather than concatenating. The containment needle is the
-        // other — it follows the query-operand PREFIX convention (CIP-3442),
-        // like the scalar `query_<name>` twins. Real SQL names:
-        // public.eql_v3_json, public.eql_v3_jsonb_entry, eql_v3.query_jsonb —
-        // the public column domains carry the version prefix (CIP-3472); the
-        // needle lives in the already-versioned `eql_v3` schema, so it stays
-        // bare.
-        use crate::JSONB;
-        assert_eq!(JSONB.domain_name(&JSONB.domains[0]), "eql_v3_json");
-        assert_eq!(JSONB.domain_name(&JSONB.domains[1]), "eql_v3_jsonb_entry");
-        assert_eq!(JSONB.domain_name(&JSONB.domains[2]), "query_jsonb");
+    fn json_domain_names_follow_the_documented_conventions() {
+        // Every json column domain uses the family+suffix naming (like every
+        // scalar family): the bare storage domain is `eql_v3_json`, the
+        // searchable document is `eql_v3_json_search`, the entry is
+        // `eql_v3_json_entry`. The containment needle is the one exception — it
+        // follows the query-operand PREFIX convention (CIP-3442), like the
+        // scalar `query_<name>` twins. The public column domains carry the
+        // version prefix (CIP-3472); the needle lives in the already-versioned
+        // `eql_v3` schema, so it stays bare.
+        use crate::JSON;
+        assert_eq!(JSON.domain_name(&JSON.domains[0]), "eql_v3_json_search");
+        assert_eq!(JSON.domain_name(&JSON.domains[1]), "eql_v3_json_entry");
+        assert_eq!(JSON.domain_name(&JSON.domains[2]), "query_json");
+        // The bare storage domain (index 3) is the plain `eql_v3_json`.
+        assert_eq!(JSON.domain_name(&JSON.domains[3]), "eql_v3_json");
     }
 
     #[test]
     fn rust_struct_name_is_shape_aware() {
         // Scalar: derived, same as struct_ident. Non-scalar: the hand-written
         // SteVec struct names — the ONE place these two universes diverge.
-        use crate::JSONB;
+        use crate::JSON;
         let integer_eq = Domain {
             name: "eq",
             terms: &[Term::Hm],
@@ -261,25 +257,26 @@ mod tests {
         };
         assert_eq!(integer_eq.rust_struct_name("integer"), "IntegerEq");
         assert_eq!(
-            JSONB.domains[0].rust_struct_name(JSONB.name),
+            JSON.domains[0].rust_struct_name(JSON.name),
             "SteVecDocument"
         );
-        assert_eq!(JSONB.domains[1].rust_struct_name(JSONB.name), "SteVecEntry");
-        assert_eq!(JSONB.domains[2].rust_struct_name(JSONB.name), "SteVecQuery");
+        assert_eq!(JSON.domains[1].rust_struct_name(JSON.name), "SteVecEntry");
+        assert_eq!(JSON.domains[2].rust_struct_name(JSON.name), "SteVecQuery");
+        // The bare storage domain's struct is the flat scalar `Json`.
+        assert_eq!(JSON.domains[3].rust_struct_name(JSON.name), "Json");
     }
 
     #[test]
-    fn is_eq_only_is_false_for_the_non_scalar_jsonb_family() {
+    fn is_eq_only_is_false_for_the_non_scalar_json_family() {
         // `is_eq_only` describes the flat-scalar shape (storage + `_eq`, no
-        // `_ord`). The non-scalar jsonb family has no flat eq/ord concept — its
-        // ordered `oc` capability is carried structurally, not as an `ord`
-        // domain — so a bare `!any(name == "ord")` would misreport it as
-        // eq-only. It must return false. Guards the latent footgun where jsonb
-        // gets wired into the eq-only-sensitive matrix macros.
-        use crate::JSONB;
+        // `_ord`). The mixed json family has no flat eq/ord concept for its
+        // SteVec domains — their ordered `op` capability is carried
+        // structurally, not as an `ord` domain — so a bare `!any(name == "ord")`
+        // would misreport it. It must return false (the family is non-scalar).
+        use crate::JSON;
         assert!(
-            !JSONB.is_eq_only(),
-            "the non-scalar jsonb family must not be classified eq-only"
+            !JSON.is_eq_only(),
+            "the non-scalar json family must not be classified eq-only"
         );
     }
 }

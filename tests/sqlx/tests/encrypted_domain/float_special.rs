@@ -25,20 +25,49 @@
 
 use anyhow::Result;
 use eql_tests::fixtures::cipherstash::encrypt_store;
+use eql_tests::fixtures::eql_plaintext::EqlPlaintext;
 use eql_tests::fixtures::index_kind::IndexKind;
 use eql_tests::known_failure;
 use eql_tests::known_failure::ISSUE_FLOAT_SIGNED_ZERO_EQ;
 use eql_tests::property::{connect_pool, ensure_eql_installed};
-use eql_tests::scalar_domains::F8;
+use eql_tests::scalar_domains::{ScalarType, Variant, F4, F8};
 use sqlx::PgPool;
 
-/// Encrypt one batch of f64 special values into payload JSON strings, one
+/// The signed-zero pair (`-0.0`, `+0.0`) for a float scalar. `SignedScalar`
+/// already yields `+0.0` via `origin()`, but not `-0.0`, so this local trait
+/// supplies both and lets the ±0.0 tests run over `real` (F4) as well as
+/// `double` (F8) — they share the same crypto path, so both must be pinned.
+trait SignedZeroPair: EqlPlaintext + ScalarType {
+    fn neg_zero() -> Self;
+    fn pos_zero() -> Self;
+}
+
+impl SignedZeroPair for F4 {
+    fn neg_zero() -> Self {
+        F4(-0.0)
+    }
+    fn pos_zero() -> Self {
+        F4(0.0)
+    }
+}
+
+impl SignedZeroPair for F8 {
+    fn neg_zero() -> Self {
+        F8(-0.0)
+    }
+    fn pos_zero() -> Self {
+        F8(0.0)
+    }
+}
+
+/// Encrypt one batch of float special values into payload JSON strings, one
 /// ZeroKMS round trip. Mirrors `e2e_oracle::encrypt_rows` but returns only the
 /// payloads (these tests key on position, not plaintext). `encrypt_store`
 /// encrypts through cipherstash-client directly — it needs no `PgPool` — and
 /// returns v3-envelope payloads (converted via eql_bindings::from_v2), so
-/// the casts below satisfy the `v = '3'` domain CHECKs.
-async fn encrypt_specials(values: &[F8]) -> Result<Vec<String>> {
+/// the casts below satisfy the `v = '3'` domain CHECKs. Generic over the float
+/// scalar so the ±0.0 tests can encrypt `real` (F4) and `double` (F8) alike.
+async fn encrypt_specials<T: EqlPlaintext>(values: &[T]) -> Result<Vec<String>> {
     let payloads = encrypt_store(
         "float_special",
         "payload",
@@ -50,6 +79,20 @@ async fn encrypt_specials(values: &[F8]) -> Result<Vec<String>> {
     )
     .await?;
     Ok(payloads.into_iter().map(|p| p.to_string()).collect())
+}
+
+/// Encrypt the ±0.0 pair for the float scalar `T` in one ZeroKMS round trip,
+/// returning `[payload(-0.0), payload(+0.0)]`. Shared by every ±0.0 test so each
+/// runs identically over `real` and `double`.
+async fn signed_zero_payloads<T: SignedZeroPair>() -> Result<Vec<String>> {
+    encrypt_specials(&[T::neg_zero(), T::pos_zero()]).await
+}
+
+/// `T`'s SQL domain for `variant` (e.g. `public.eql_v3_real_ord` /
+/// `public.eql_v3_double_ord`). Lets the generic ±0.0 helpers name the right
+/// per-type domain in both the cast and the failure message.
+fn domain<T: ScalarType>(variant: Variant) -> String {
+    T::sql_domain(variant)
 }
 
 /// Cast a payload literal to `public.eql_v3_double` and read it back, proving the domain
@@ -68,17 +111,11 @@ async fn cast_passes_check(pool: &PgPool, payload: &str) -> Result<()> {
 }
 
 /// Compare two payloads under an operator on `public.eql_v3_double_ord` — the default
-/// ordering domain, backed by CLLW-OPE (`op`). Used to pin the discovered
-/// NaN/±0/±Inf outcomes.
+/// ordering domain, backed by CLLW-OPE (`op`). Used by the NaN/±Inf pins, which
+/// stay `double`-only (the ±0.0 pins parameterise over `real`/`double` via
+/// `cmp_on` + `domain::<T>` instead).
 async fn ord_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
     cmp_on(pool, "public.eql_v3_double_ord", a, op, b).await
-}
-
-/// The same comparison on `public.eql_v3_double_ord_ore` — the block-ORE ordering
-/// domain. Kept distinct from [`ord_cmp`] because the two SEMs do not agree on
-/// `-0.0` vs `+0.0` (see the module doc).
-async fn ord_ore_cmp(pool: &PgPool, a: &str, op: &str, b: &str) -> Result<bool> {
-    cmp_on(pool, "public.eql_v3_double_ord_ore", a, op, b).await
 }
 
 async fn cmp_on(pool: &PgPool, d: &str, a: &str, op: &str, b: &str) -> Result<bool> {
@@ -135,21 +172,46 @@ async fn two_encryptions_of_same_nan_bits_compare_equal() -> Result<()> {
     Ok(())
 }
 
+/// Generic body of `negative_zero_and_positive_zero_share_ore_order`, run per
+/// float type: block-ORE orders `-0.0` and `+0.0` equal on `T`'s `_ord_ore`.
+async fn share_ore_order<T: SignedZeroPair>(pool: &PgPool) -> Result<()> {
+    let d = domain::<T>(Variant::OrdOre);
+    let p = signed_zero_payloads::<T>().await?;
+    anyhow::ensure!(
+        !cmp_on(pool, &d, &p[0], "<", &p[1]).await?,
+        "-0.0 not < +0.0 under block-ORE ({d})"
+    );
+    anyhow::ensure!(
+        !cmp_on(pool, &d, &p[1], "<", &p[0]).await?,
+        "+0.0 not < -0.0 under block-ORE ({d})"
+    );
+    Ok(())
+}
+
 #[tokio::test]
 async fn negative_zero_and_positive_zero_share_ore_order() -> Result<()> {
     // Block-ORE rides the `orderable-bytes` encoder, which canonicalizes
     // -0.0 -> +0.0 before encoding, so `_ord_ore` orders them equal — matching
     // IEEE (-0.0 == 0.0). Contrast `negative_zero_orders_below_positive_zero_
-    // under_ope`: the OPE term does NOT canonicalize.
+    // under_ope`: the OPE term does NOT canonicalize. `real` and `double` share
+    // the encoder, so both are pinned.
     let pool = setup().await?;
-    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
-    assert!(
-        !ord_ore_cmp(&pool, &p[0], "<", &p[1]).await?,
-        "-0.0 not < +0.0 under block-ORE"
+    share_ore_order::<F4>(&pool).await?;
+    share_ore_order::<F8>(&pool).await
+}
+
+/// Generic body of `negative_zero_orders_below_positive_zero_under_ope`, run per
+/// float type: CLLW-OPE orders `-0.0 < +0.0` on `T`'s `_ord`.
+async fn orders_below_under_ope<T: SignedZeroPair>(pool: &PgPool) -> Result<()> {
+    let d = domain::<T>(Variant::Ord);
+    let p = signed_zero_payloads::<T>().await?;
+    anyhow::ensure!(
+        cmp_on(pool, &d, &p[0], "<", &p[1]).await?,
+        "-0.0 < +0.0 under CLLW-OPE ({d})"
     );
-    assert!(
-        !ord_ore_cmp(&pool, &p[1], "<", &p[0]).await?,
-        "+0.0 not < -0.0 under block-ORE"
+    anyhow::ensure!(
+        !cmp_on(pool, &d, &p[1], "<", &p[0]).await?,
+        "+0.0 not < -0.0 under CLLW-OPE ({d})"
     );
     Ok(())
 }
@@ -161,18 +223,11 @@ async fn negative_zero_orders_below_positive_zero_under_ope() -> Result<()> {
     // So the OPE-backed `_ord` domain DIVERGES from IEEE here, where block-ORE
     // agreed with it. This is a deliberate, pinned consequence of `_ord` moving
     // to CLLW-OPE — a float column that must treat ±0.0 as equal for ORDER BY
-    // should be typed `_ord_ore`.
+    // should be typed `_ord_ore`. `real` and `double` share the SEM, so both are
+    // pinned.
     let pool = setup().await?;
-    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
-    assert!(
-        ord_cmp(&pool, &p[0], "<", &p[1]).await?,
-        "-0.0 < +0.0 under CLLW-OPE"
-    );
-    assert!(
-        !ord_cmp(&pool, &p[1], "<", &p[0]).await?,
-        "+0.0 not < -0.0 under CLLW-OPE"
-    );
-    Ok(())
+    orders_below_under_ope::<F4>(&pool).await?;
+    orders_below_under_ope::<F8>(&pool).await
 }
 
 /// `-0.0` and `+0.0` are IEEE-equal, so encrypted `=` on `_eq` must agree.
@@ -193,24 +248,35 @@ async fn negative_zero_orders_below_positive_zero_under_ope() -> Result<()> {
 /// the test, so the ORE ordering canary below it had never actually executed.
 ///
 /// [#387]: https://github.com/cipherstash/encrypt-query-language/issues/387
-#[tokio::test]
-async fn negative_zero_and_positive_zero_compare_equal_under_eq() -> Result<()> {
-    let pool = setup().await?;
-    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
+///
+/// Generic body of `negative_zero_and_positive_zero_compare_equal_under_eq`, run
+/// per float type against `T`'s `_eq` domain (e.g. `public.eql_v3_real_eq` /
+/// `public.eql_v3_double_eq`). Keeps the `known_failure` inversion intact per
+/// type.
+async fn eq_split<T: SignedZeroPair>(pool: &PgPool) -> Result<()> {
+    let d = domain::<T>(Variant::Eq);
+    let p = signed_zero_payloads::<T>().await?;
 
-    let equal = eq_cmp(&pool, &p[0], &p[1]).await?;
+    let equal = cmp_on(pool, &d, &p[0], "=", &p[1]).await?;
     let assertion = if equal {
         Ok(())
     } else {
         Err(anyhow::anyhow!(
-            "encrypted `=` on public.eql_v3_double_eq returned false for -0.0 vs +0.0"
+            "encrypted `=` on {d} returned false for -0.0 vs +0.0"
         ))
     };
     known_failure(
         ISSUE_FLOAT_SIGNED_ZERO_EQ,
-        "-0.0 == +0.0 under public.eql_v3_double_eq",
+        &format!("-0.0 == +0.0 under {d}"),
         assertion,
     )
+}
+
+#[tokio::test]
+async fn negative_zero_and_positive_zero_compare_equal_under_eq() -> Result<()> {
+    let pool = setup().await?;
+    eq_split::<F4>(&pool).await?;
+    eq_split::<F8>(&pool).await
 }
 
 /// `=` on the OPE-backed `_ord` domain splits `±0.0` too — pinned, and pinned
@@ -231,44 +297,64 @@ async fn negative_zero_and_positive_zero_compare_equal_under_eq() -> Result<()> 
 ///
 /// Contrast [`negative_zero_and_positive_zero_compare_equal_under_ord_ore`]:
 /// block-ORE canonicalizes, so `=` there already agrees with IEEE and needs no
-/// marker. `real` shares this SEM with `double`; one type is pinned, as
-/// everywhere else in this module.
+/// marker. `real` shares this SEM with `double`; both are pinned, as everywhere
+/// else in this module.
 ///
 /// [#387]: https://github.com/cipherstash/encrypt-query-language/issues/387
-#[tokio::test]
-async fn negative_zero_and_positive_zero_compare_equal_under_ord() -> Result<()> {
-    let pool = setup().await?;
-    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
+///
+/// Generic body of `negative_zero_and_positive_zero_compare_equal_under_ord`,
+/// run per float type against `T`'s OPE-backed `_ord` domain. Keeps the
+/// `known_failure` inversion intact per type.
+async fn ord_split<T: SignedZeroPair>(pool: &PgPool) -> Result<()> {
+    let d = domain::<T>(Variant::Ord);
+    let p = signed_zero_payloads::<T>().await?;
 
-    let equal = ord_cmp(&pool, &p[0], "=", &p[1]).await?;
+    let equal = cmp_on(pool, &d, &p[0], "=", &p[1]).await?;
     let assertion = if equal {
         Ok(())
     } else {
         Err(anyhow::anyhow!(
-            "encrypted `=` on public.eql_v3_double_ord returned false for -0.0 vs +0.0"
+            "encrypted `=` on {d} returned false for -0.0 vs +0.0"
         ))
     };
     known_failure(
         ISSUE_FLOAT_SIGNED_ZERO_EQ,
-        "-0.0 == +0.0 under public.eql_v3_double_ord",
+        &format!("-0.0 == +0.0 under {d}"),
         assertion,
     )
+}
+
+#[tokio::test]
+async fn negative_zero_and_positive_zero_compare_equal_under_ord() -> Result<()> {
+    let pool = setup().await?;
+    ord_split::<F4>(&pool).await?;
+    ord_split::<F8>(&pool).await
+}
+
+/// Generic body of `negative_zero_and_positive_zero_compare_equal_under_ord_ore`,
+/// run per float type: `=` on `T`'s block-ORE `_ord_ore` agrees with IEEE.
+async fn ord_ore_equal<T: SignedZeroPair>(pool: &PgPool) -> Result<()> {
+    let d = domain::<T>(Variant::OrdOre);
+    let p = signed_zero_payloads::<T>().await?;
+    anyhow::ensure!(
+        cmp_on(pool, &d, &p[0], "=", &p[1]).await?,
+        "-0.0 = +0.0 under block-ORE `_ord_ore` \
+         (orderable-bytes canonicalizes the sign of zero) ({d})"
+    );
+    Ok(())
 }
 
 /// `=` on the block-ORE `_ord_ore` domain agrees with IEEE: the
 /// `orderable-bytes` encoder canonicalizes `-0.0 -> +0.0` before encoding, so
 /// both zeroes share one `ob` term. Asserted unconditionally — this is the
 /// behaviour `_ord` had before the CLLW-OPE flip, and the reason a float column
-/// needing IEEE `±0.0` semantics should be typed `_ord_ore`.
+/// needing IEEE `±0.0` semantics should be typed `_ord_ore`. `real` and `double`
+/// share the encoder, so both are pinned.
 #[tokio::test]
 async fn negative_zero_and_positive_zero_compare_equal_under_ord_ore() -> Result<()> {
     let pool = setup().await?;
-    let p = encrypt_specials(&[F8(-0.0), F8(0.0)]).await?;
-    assert!(
-        ord_ore_cmp(&pool, &p[0], "=", &p[1]).await?,
-        "-0.0 = +0.0 under block-ORE `_ord_ore` (orderable-bytes canonicalizes the sign of zero)"
-    );
-    Ok(())
+    ord_ore_equal::<F4>(&pool).await?;
+    ord_ore_equal::<F8>(&pool).await
 }
 
 #[tokio::test]

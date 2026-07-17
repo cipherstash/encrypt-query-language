@@ -45,7 +45,7 @@
 //! domain's set fails to deserialize rather than being silently stripped on the
 //! next serialize (a pass-through consumer must not lose data it didn't know
 //! about), and the `v` field is [`crate::SchemaVersion`], which rejects any
-//! version other than `3`. The SteVec `jsonb` family below is structurally
+//! version other than `3`. The SteVec `json` family below is structurally
 //! different: its document/root shape has no root `c`, its entries flatten a
 //! term enum, and only the flatten-free structs can be strict.
 //!
@@ -60,7 +60,7 @@
 //! typed domain is the discriminator. If a producer emitted `k:"ct"` on a scalar
 //! payload, these strict structs would reject it; no test currently parses real
 //! scalar ciphertext into the bindings, so that path is unverified.) The one
-//! place `k` is modelled is the SteVec **document** — see the `jsonb` note below.
+//! place `k` is modelled is the SteVec **document** — see the `json` note below.
 //!
 //! ## Why there is no discriminated enum
 //!
@@ -81,10 +81,10 @@
 //! follows the same Serialize-only rule for QUERY payloads — see its module
 //! doc for why it is hand-written rather than generated.
 //!
-//! The SteVec `jsonb` family is the ONE principled exception: a single encrypted
+//! The SteVec `json` family is the ONE principled exception: a single encrypted
 //! document legitimately mixes `hm` leaves (bool / root) and `op` leaves
 //! (string / number) in one `sv` array, so `SteVecEntry` must hold either term.
-//! There the untagged [`jsonb::SteVecTerm`] (`{hm} | {op}`) is inherent to the
+//! There the untagged [`json::SteVecTerm`] (`{hm} | {op}`) is inherent to the
 //! wire, not a sniffing workaround — the "per-domain typing is possible"
 //! reasoning above simply does not apply to a heterogeneous `sv` array.
 //!
@@ -109,7 +109,7 @@
 //! searchable index (even HMAC equality) would trivially leak the plaintext
 //! distribution. The payload is `{v,i,c}` only and every operator is blocked.
 //!
-//! **`jsonb` (SteVec) is the one place `Option` and lax serde appear.**
+//! **`json` (SteVec) is the one place `Option` and lax serde appear.**
 //! `SteVecEntry.a` is `Option<bool>` — the sv-array-membership marker, absent
 //! for non-array leaves — the sole `Option` in this module. `SteVecEntry` and
 //! `SteVecQueryEntry` both carry a `#[serde(flatten)] SteVecTerm`, and serde
@@ -127,7 +127,7 @@
 //! *requires* `k` (`required: [v,k,i,sv]`, `const "sv"`) and cipherstash-client
 //! emits it on every real SteVec document. Because `SteVecDocument` is strict
 //! (`deny_unknown_fields`), it MUST model `k` or it rejects the real wire — so it
-//! carries a [`jsonb::SteVecForm`] field pinned to `"sv"`, exactly as
+//! carries a [`json::SteVecForm`] field pinned to `"sv"`, exactly as
 //! `SchemaVersion` pins `v`. `SteVecQuery` needs no `k`: it is a locally-built
 //! `{sv:[…]}` containment needle (`eql_v3.to_ste_vec_query`), not a stored
 //! envelope. `eql_v3` itself never reads `k`; it is passthrough form metadata
@@ -140,7 +140,12 @@ pub mod domain_type;
 pub mod double;
 pub mod integer;
 pub mod inventory;
-pub mod jsonb;
+pub mod json;
+/// Generated bindings for the `json` family's bare scalar storage domain
+/// (`public.eql_v3_json`, the `Json` struct). Kept separate from the
+/// hand-written SteVec `json` module; `json` re-exports `Json` from here so
+/// `super::json::Json` resolves for the generated inventory/payload.
+pub mod json_storage;
 pub mod numeric;
 pub mod payload;
 pub mod query_payload;

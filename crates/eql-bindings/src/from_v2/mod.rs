@@ -41,7 +41,7 @@
 //! **SteVec** (v2 `k: "sv"` → [`TargetDomain::Json`]): keeps the root `k`
 //! (the v3 document models the `"sv"` form discriminator — required on the
 //! wire), sets `v: 3`, keeps `i`; per entry keeps `s`, `c`, the optional
-//! array-membership marker `a` (the v3 [`crate::v3::jsonb::SteVecEntry`]
+//! array-membership marker `a` (the v3 [`crate::v3::json::SteVecEntry`]
 //! retains it), and exactly one of `hm` XOR `op`
 //! ([`FromV2Error::AmbiguousTerm`] / [`FromV2Error::MissingTerm`] on
 //! both/neither). Like scalar `op`, the sv-level `op` term predates the
@@ -53,7 +53,7 @@
 //! OPE cannot be determined from the payload alone. Fail closed;
 //! re-encryption is the only conversion. v3 sv entries carry no per-entry
 //! `v`/`i`/`k` — the envelope lives only at the root `{v, k, i, sv}`,
-//! exactly the [`crate::v3::jsonb::SteVecDocument`] shape.
+//! exactly the [`crate::v3::json::SteVecDocument`] shape.
 //!
 //! Every converted payload is validated by a final strict parse through the
 //! target's binding struct (`deny_unknown_fields` + [`crate::SchemaVersion`])
@@ -68,7 +68,7 @@
 //! ## Query payloads
 //!
 //! [`from_v2_query`] covers both query shapes. The jsonb containment needle
-//! (`{sv: [{s, hm|op}]}` → [`crate::v3::jsonb::SteVecQuery`]) normalizes
+//! (`{sv: [{s, hm|op}]}` → [`crate::v3::json::SteVecQuery`]) normalizes
 //! entries down to `s` + one term exactly as the SQL cast
 //! `eql_v3.to_ste_vec_query` does (stray `a` markers and `c` ciphertexts are
 //! stripped). A term-bearing scalar target hoists the target's required terms
@@ -138,7 +138,7 @@ pub fn from_v2_typed(v2: &Value, target: TargetDomain) -> Result<DomainPayload, 
     let out = convert(v2, target)?;
     DomainPayload::parse(target.describe(), &out)
         .unwrap_or_else(|| {
-            // Every conversion target (all scalar domains + "eql_v3_json") has a
+            // Every conversion target (all scalar domains + "eql_v3_json_search") has a
             // generated DomainPayload variant; TargetDomain::parse resolved
             // `target` against the same catalog.
             unreachable!(
@@ -173,7 +173,7 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
 /// Convert an EQL v2.3 QUERY payload into the v3 query operand for `target`.
 ///
 /// [`TargetDomain::Json`]: the v2 containment needle (`{sv: [{s, hm|op}]}`, the
-/// v2.3 `SteVecQueryPayload`) converts to the [`crate::v3::jsonb::SteVecQuery`]
+/// v2.3 `SteVecQueryPayload`) converts to the [`crate::v3::json::SteVecQuery`]
 /// shape — entries normalized to `s` + exactly one term (mirroring
 /// `eql_v3.to_ste_vec_query`; stray `a`/`c` keys are stripped, so a stored
 /// document payload can also be normalized into a needle), `i` dropped.
@@ -217,12 +217,12 @@ pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayl
 }
 
 /// The unqualified query-operand domain a target converts into: the scalar
-/// twin `query_<name>`, or `query_jsonb` for the hand-written SteVec needle —
+/// twin `query_<name>`, or `query_json` for the hand-written SteVec needle —
 /// both on the query-operand PREFIX convention (CIP-3442). (Replaces the old
 /// single `QUERY_DOMAIN` constant now that scalar query shapes exist.)
 fn query_domain_name(target: TargetDomain) -> String {
     match target {
-        TargetDomain::Json => "query_jsonb".to_string(),
+        TargetDomain::Json => "query_json".to_string(),
         // The query twin joins `query_` to the BARE domain name: the stored
         // domain's `eql_v3_` version prefix (CIP-3472) applies to public-schema
         // column types only — query operands live in the already-versioned
@@ -358,7 +358,7 @@ fn validate_as(domain: &str, value: &Value) -> Result<(), FromV2Error> {
         .find(|d| d.domain() == domain)
         .unwrap_or_else(|| {
             // `domain` always came from the same inventory via
-            // `TargetDomain::parse` (or is the literal "eql_v3_json"/"query_jsonb").
+            // `TargetDomain::parse` (or is the literal "eql_v3_json_search"/"query_json").
             unreachable!("domain {domain} resolved by parse must be in the inventory")
         });
     entry.parse_value(value).map_err(FromV2Error::Invalid)
@@ -426,7 +426,7 @@ fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
     let mut out = Map::new();
     out.insert("v".into(), json!(crate::EQL_SCHEMA_VERSION));
     // The root `k: "sv"` form discriminator is carried through: the v3
-    // document models it ([`crate::v3::jsonb::SteVecDocument`]'s `k`,
+    // document models it ([`crate::v3::json::SteVecDocument`]'s `k`,
     // required on the wire). `from_v2` already dispatched on `k == "sv"`, so
     // emitting the literal is exact.
     out.insert("k".into(), json!("sv"));
@@ -466,7 +466,7 @@ fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
         Some(kind) => {
             return Err(FromV2Error::KindMismatch {
                 kind: kind.into(),
-                target: "eql_v3_json".into(),
+                target: "eql_v3_json_search".into(),
             })
         }
     }
@@ -505,8 +505,8 @@ impl EntryShape {
     /// context.
     fn domain(self) -> &'static str {
         match self {
-            Self::Document => "eql_v3_json",
-            Self::Query => "query_jsonb",
+            Self::Document => "eql_v3_json_search",
+            Self::Query => "query_json",
         }
     }
 }
