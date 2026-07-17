@@ -25,6 +25,31 @@ use super::spec::FixtureSpec;
 /// `v3_ste_vec.sql`, SQLx ref `scripts("v3_ste_vec")`.
 const NAME: &str = "v3_ste_vec";
 
+/// The `$.hello` **string** leaf's `op` selector, pinned from the generated
+/// fixture. THE one shared copy — every suite that names this selector imports
+/// it from here (`eql_tests::fixtures::v3_ste_vec::SEL_HELLO_OP`), so a fixture
+/// or keyset regeneration is a single edit. The selector is a deterministic
+/// MAC of (column context, JSONPath), so it changes only on a keyset change,
+/// not per regeneration.
+///
+/// History: an earlier copy of this constant named `$.number` — the fixture's
+/// INTEGER leaf — while claiming `$.hello`, and survived because the suites
+/// that used it were equality-only (the fixture pairs `number = i` with
+/// `hello = "world-i"` 1:1, so both leaves induce identical equality
+/// partitions). Only ORDER separates the leaves, which
+/// `v3_json_entry_cross_type_tests::json_entry_text_ord_cross_type_matches_plaintext_ordering`
+/// now pins — and duplication is exactly how the mis-pin escaped notice, hence
+/// the single shared copy.
+///
+/// To re-derive rather than trust this hex: `ste_vec_query_selector(…, "$.hello")`
+/// asks cipherstash-client directly (see the `proptest-e2e` suite
+/// `v3_json_entry_query_operand_e2e_tests`, which needs no constant at all).
+/// Creds-free, the fixture's term LENGTHS distinguish the two leaves: a string
+/// `op` is `8 * (len + 1) + 1` bits, so `$.hello` is 132 hex chars for
+/// `"world-1"`..`"world-9"` and 148 for `"world-10"`, while `$.number` is a
+/// fixed-width 65-bit number term — 132 on every row.
+pub const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
+
 /// The canonical `payload` column type — the `public.eql_v3_json_search` DOMAIN, so the
 /// domain CHECK runs when the fixture loads.
 const PAYLOAD_TYPE: &str = "public.eql_v3_json_search";

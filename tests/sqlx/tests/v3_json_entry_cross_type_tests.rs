@@ -120,6 +120,36 @@ async fn field_context_ord_operand(tx: &mut sqlx::PgConnection, id: i64) -> Resu
     Ok(operand)
 }
 
+/// The id of the row holding the MEDIAN plaintext — the pivot that gives every
+/// comparison operator a non-degenerate split (rows exist strictly below AND
+/// strictly above). Row 1 must never be used as a range pivot: it holds the
+/// fixture's minimum (`i32::MIN`), so `<` selects nothing and any
+/// oracle-agreement assertion on it is vacuously 0 == 0.
+async fn median_pivot_id(tx: &mut sqlx::PgConnection) -> Result<i64> {
+    let id: i64 = sqlx::query_scalar(
+        "SELECT id FROM entry_x ORDER BY plaintext \
+         LIMIT 1 OFFSET (SELECT count(*) / 2 FROM entry_x)",
+    )
+    .fetch_one(&mut *tx)
+    .await?;
+    // Guard: the median must actually split the fixture (strictly-below and
+    // strictly-above rows both exist), or every range assertion downstream
+    // silently loses its power.
+    let (below, above): (i64, i64) = sqlx::query_as(
+        "SELECT count(*) FILTER (WHERE plaintext < p), count(*) FILTER (WHERE plaintext > p) \
+         FROM entry_x, (SELECT plaintext AS p FROM entry_x WHERE id = $1) pivot",
+    )
+    .bind(id)
+    .fetch_one(&mut *tx)
+    .await?;
+    anyhow::ensure!(
+        below > 0 && above > 0,
+        "median pivot (id {id}) must have rows strictly below and above; \
+         got {below} below / {above} above — fixture too degenerate for range oracles"
+    );
+    Ok(id)
+}
+
 /// Extract every row's `$.field` entry into a temp table (id, plaintext, value)
 /// and return a functional btree name on `ord_term(value)`.
 async fn build_entry_table(tx: &mut sqlx::PgConnection) -> Result<()> {
@@ -187,8 +217,13 @@ async fn json_entry_ord_cross_type_engages_index(pool: PgPool) -> Result<()> {
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_doc_integer")))]
 async fn json_entry_ord_cross_type_operator_equals_function(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
-    let operand = field_context_ord_operand(&mut tx, 1).await?;
     build_entry_table(&mut tx).await?;
+    // Pivot on the MEDIAN row, not row 1: row 1 is the fixture's minimum
+    // (i32::MIN), which makes the `<` comparison vacuous — both sides count an
+    // empty set and 0 == 0 proves nothing. A mid-range pivot gives every
+    // operator a non-degenerate split to agree on.
+    let pivot_id = median_pivot_id(&mut tx).await?;
+    let operand = field_context_ord_operand(&mut tx, pivot_id).await?;
 
     let esc = operand.replace('\'', "''");
     for (op, func) in [
@@ -214,6 +249,13 @@ async fn json_entry_ord_cross_type_operator_equals_function(pool: PgPool) -> Res
             assert_eq!(
                 via_op, via_fn,
                 "operator `value {op} {operand_ty}` must equal function eql_v3.{func}(value, operand)"
+            );
+            // Guard the guard: with a median pivot every operator selects a
+            // non-empty set, so the agreement above is never 0 == 0.
+            assert!(
+                via_op > 0,
+                "`value {op} {operand_ty}` must select at least one row at the \
+                 median pivot — an empty agreement proves nothing"
             );
         }
     }
@@ -280,24 +322,70 @@ async fn json_entry_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Re
     Ok(())
 }
 
-/// The `v3_ste_vec` `$.hello` **string** leaf's `op` selector, pinned from the
-/// generated fixture (same value as `v3_jsonb_tests::SEL_HELLO_OP`).
+/// #4b — CORRECTNESS: every RANGE operator matches plaintext ordering. This is
+/// the feature's headline promise (`col -> '$.age' > $1`) stated directly: for
+/// `<` `<=` `>` `>=`, the operator's match set equals the plaintext oracle's,
+/// per operand type. #2 (index engagement) and #3 (operator ≡ function) cannot
+/// see a wrong result set — an index engages for wrong rows just as happily, and
+/// operator/function agree when both are identically wrong. Only an oracle
+/// comparison pins the ORDER itself.
 ///
-/// This previously named `$.number` — the fixture's INTEGER leaf — so the text
-/// arms below silently exercised numeric ciphertext. Equality could not see it:
-/// the fixture pairs `number = i` with `hello = "world-i"` 1:1, so both leaves
-/// induce identical equality partitions, and an `=`-only suite passes against
-/// either. Only ORDER separates them, which is what
-/// `json_entry_text_ord_cross_type_matches_plaintext_ordering` now pins.
-///
-/// To re-derive rather than trust this hex: `ste_vec_query_selector(…, "$.hello")`
-/// asks cipherstash-client directly (see the `proptest-e2e` suite
-/// `v3_json_entry_query_operand_e2e_tests`, which needs no constant at all).
-/// Creds-free, the fixture's term LENGTHS distinguish the two leaves: a string
-/// `op` is `8 * (len + 1) + 1` bits, so `$.hello` is 132 hex chars for
-/// `"world-1"`..`"world-9"` and 148 for `"world-10"`, while `$.number` is a
-/// fixed-width 65-bit number term — 132 on every row.
-const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
+/// Pivots on the median row so both sides of every comparison are non-empty
+/// proper subsets (see `median_pivot_id` — row 1 is the fixture minimum and
+/// would make `<` vacuous).
+#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_doc_integer")))]
+async fn json_entry_range_cross_type_matches_plaintext_ordering(pool: PgPool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+    build_entry_table(&mut tx).await?;
+    let pivot_id = median_pivot_id(&mut tx).await?;
+    let operand = field_context_ord_operand(&mut tx, pivot_id).await?;
+    let esc = operand.replace('\'', "''");
+
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM entry_x")
+        .fetch_one(&mut *tx)
+        .await?;
+
+    for cmp in ["<", "<=", ">", ">="] {
+        let oracle: Vec<i64> = sqlx::query_scalar(&format!(
+            "SELECT id FROM entry_x \
+             WHERE plaintext {cmp} (SELECT plaintext FROM entry_x WHERE id = $1) \
+             ORDER BY id"
+        ))
+        .bind(pivot_id)
+        .fetch_all(&mut *tx)
+        .await?;
+        // Guard the guard: a proper non-empty subset, or the equality below
+        // could hold for a uniformly-true/false comparison.
+        assert!(
+            !oracle.is_empty() && (oracle.len() as i64) < total,
+            "`plaintext {cmp} pivot` oracle must be a proper non-empty subset \
+             to be load-bearing; got {} of {total}",
+            oracle.len()
+        );
+
+        for operand_ty in ["eql_v3.query_integer_ord", "eql_v3.query_integer_ord_ope"] {
+            let matched: Vec<i64> = sqlx::query_scalar(&format!(
+                "SELECT id FROM entry_x WHERE value {cmp} '{esc}'::{operand_ty} ORDER BY id"
+            ))
+            .fetch_all(&mut *tx)
+            .await?;
+            assert_eq!(
+                matched, oracle,
+                "`value {cmp} {operand_ty}` must match exactly the rows whose plaintext \
+                 sorts {cmp} the pivot's — CLLW-OPE order must agree with integer order"
+            );
+        }
+    }
+    tx.commit().await?;
+    Ok(())
+}
+
+/// The `v3_ste_vec` `$.hello` **string** leaf's `op` selector, imported from
+/// the ONE shared copy (see its doc for the `$.number` mis-pin history and how
+/// to re-derive the hex creds-free). Ordering arms below are exactly what makes
+/// a wrong pin visible — `"world-10"` sorts between `"world-1"` and `"world-2"`
+/// as a string but last as a number.
+use eql_tests::fixtures::v3_ste_vec::SEL_HELLO_OP;
 
 /// #5 — The families whose leaf encoding is LOSSY have NO equality operator, and
 /// must not grow one.
@@ -327,9 +415,11 @@ const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
 /// families, and the codegen emits none
 /// (`ScalarKind::json_leaf_equality_is_exact`).
 ///
-/// `integer`/`smallint`/`real`/`double`/`date`/`timestamp` KEEP `=` and are pinned
-/// here too — the gate must not over-broaden. See #4, which asserts integer `=`
-/// against the plaintext oracle.
+/// `integer`/`smallint`/`real`/`double` KEEP `=` and are pinned here too — the
+/// gate must not over-broaden. See #4, which asserts integer `=` against the
+/// plaintext oracle. (`date`/`timestamp` are not in the kept list: they fail the
+/// upstream PARTICIPATION gate — JSON has no temporal type, so their operands
+/// bind nothing and every operator on them is blocked; see #7.)
 ///
 /// `=` is BLOCKED, not omitted. Omitting it would not make the query an error:
 /// `public.eql_v3_json_entry` and `eql_v3.query_text_ord` are both domains over
@@ -434,13 +524,13 @@ async fn json_entry_lossy_family_equality_is_blocked(pool: PgPool) -> Result<()>
     // `=`, backed by the PUBLIC wrapper. Without this, blocking everything would
     // pass the assertions above — over-broadening is as much a defect as
     // under-blocking, it just fails silently as a missing feature.
+    // (date/timestamp are NOT here: JSON has no temporal type, so they fail the
+    // participation gate and every operator on their operands is blocked — #7.)
     for operand_ty in [
         "eql_v3.query_integer_ord",
         "eql_v3.query_smallint_ord",
         "eql_v3.query_real_ord",
         "eql_v3.query_double_ord",
-        "eql_v3.query_date_ord",
-        "eql_v3.query_timestamp_ord",
     ] {
         let backing: String = sqlx::query_scalar(
             "SELECT n.nspname || '.' || p.proname \
@@ -555,5 +645,113 @@ async fn json_entry_text_ord_cross_type_matches_plaintext_ordering(pool: PgPool)
     );
 
     tx.commit().await?;
+    Ok(())
+}
+
+/// #7 — UNSERVED Ope-carrying operands are BLOCKED, not silently flattened.
+///
+/// Two operand groups carry the `op` term this seam serves yet must not bind it:
+///
+/// - **`query_date_ord` / `query_timestamp_ord` (+ `_ope` twins)** — JSON has no
+///   date/timestamp type (coderdan, PR #410): those values are marshaled into
+///   ISO-8601 STRINGS, so a "date leaf" IS a text leaf and the TEXT surface owns
+///   it (ordering via `query_text_ord`; equality via `@>` containment).
+///   cipherstash-client agrees mechanically — it refuses to build a SteVec query
+///   term from a temporal plaintext (`OrderableTerm::try_from(&Plaintext)` is
+///   `Err` for `NaiveDate`/`Timestamp`), so no real operand could ever reach the
+///   comparison. It is also the collated-equality back door: a date leaf and a
+///   text leaf are byte-identically encoded, so an unblocked `= query_date_ord`
+///   would be exactly the text `=` that #5 blocks, reached by a different cast.
+/// - **`query_text_search`** — SteVec has no match/bloom capability, so `search`
+///   offers nothing over `_ord` while its CHECK demands a `bf` the seam never
+///   reads (coderdan, PR #410).
+///
+/// Neither can be merely OMITTED: both sides are domains over `jsonb`, so an
+/// unclaimed pair resolves to native `jsonb <op> jsonb` — whole-envelope
+/// comparison, zero rows, no error. Every operator on every pair must RAISE, in
+/// both directions. Loads the `eql_v3_text` scalar fixture alongside the SteVec
+/// document one so the `query_text_search` operand can be assembled from REAL
+/// terms (`{v,i,hm,op,bf}` — its CHECK demands all four; the SteVec fixture
+/// carries no `bf`).
+#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec", "eql_v3_text")))]
+async fn json_entry_unserved_operand_operators_raise(pool: PgPool) -> Result<()> {
+    // A temporal operand payload never exists in the wild (the client refuses to
+    // mint one), so what is under test is OPERATOR RESOLUTION — the blocker
+    // raises before reading any term. The ste_vec text-leaf operand `{v,i,hm,op}`
+    // satisfies the `{v,i,op}` CHECK of `query_{date,timestamp}_ord{,_ope}`.
+    let temporal_operand: String = sqlx::query_scalar(&format!(
+        "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
+                'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
+                       WHERE e ? 'hm' LIMIT 1), \
+                'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
+         FROM fixtures.v3_ste_vec WHERE id = 1"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    // The search operand needs `{v,i,hm,op,bf}` — all REAL terms, taken from a
+    // scalar text fixture payload (Unique+Ore+Match+Ope indexes ⇒ hm/op/bf all
+    // present). Inert by construction: the blocker never reads them.
+    let search_operand: String = sqlx::query_scalar(
+        "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
+                'hm', (payload::jsonb -> 'hm'), 'op', (payload::jsonb -> 'op'), \
+                'bf', (payload::jsonb -> 'bf'))::text \
+         FROM fixtures.eql_v3_text LIMIT 1",
+    )
+    .fetch_one(&pool)
+    .await?;
+
+    let pairs: &[(&str, &str)] = &[
+        ("eql_v3.query_date_ord", temporal_operand.as_str()),
+        ("eql_v3.query_date_ord_ope", temporal_operand.as_str()),
+        ("eql_v3.query_timestamp_ord", temporal_operand.as_str()),
+        ("eql_v3.query_timestamp_ord_ope", temporal_operand.as_str()),
+        ("eql_v3.query_text_search", search_operand.as_str()),
+    ];
+
+    for (operand_ty, operand) in pairs {
+        let esc = operand.replace('\'', "''");
+        // Guard the guard: the operand must pass the domain CHECK — a cast
+        // failure would ALSO error and make the raise assertions below vacuous.
+        let accepted: bool = sqlx::query_scalar(&format!(
+            "SELECT ('{esc}'::jsonb::{operand_ty}) IS NOT NULL"
+        ))
+        .fetch_one(&pool)
+        .await?;
+        assert!(
+            accepted,
+            "{operand_ty}: the operand must pass the domain CHECK so the errors \
+             below can only come from the blocker: {operand}"
+        );
+
+        for op in ["=", "<>", "<", "<=", ">", ">="] {
+            for query in [
+                format!(
+                    "SELECT id FROM fixtures.v3_ste_vec \
+                     WHERE (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
+                           {op} '{esc}'::{operand_ty}"
+                ),
+                format!(
+                    "SELECT id FROM fixtures.v3_ste_vec \
+                     WHERE '{esc}'::{operand_ty} {op} \
+                           (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry"
+                ),
+            ] {
+                let err = sqlx::query(&query)
+                    .fetch_all(&pool)
+                    .await
+                    .expect_err(&format!(
+                        "json_entry {op} {operand_ty} must RAISE (blocked pair), not answer. \
+                     Silently returning rows means the operator flattened to native \
+                     jsonb {op} jsonb. Query: {query}"
+                    ));
+                let msg = err.to_string();
+                assert!(
+                    msg.contains("is not supported for"),
+                    "expected the `operator not supported` blocker for \
+                     json_entry {op} {operand_ty}, got: {msg}"
+                );
+            }
+        }
+    }
     Ok(())
 }

@@ -208,6 +208,36 @@ async fn fresh_numeric_operand_matches_plaintext_oracle(pool: PgPool) -> Result<
          sorts after 2"
     );
 
+    // Every OTHER kept-`=` numeric family, plus the explicit `_ope` twin. The
+    // operand domain is a LABEL over the same term bytes — a JSON number leaf is
+    // f64-encoded whatever the family — so the same fresh term must round-trip
+    // through each family's operator surface identically. This is the per-family
+    // e2e proof that the equality gate's kept set (`json_leaf_equality_is_exact`)
+    // is not just structurally bound but actually answers with fresh crypto.
+    // (`date`/`timestamp` are absent by design: they fail the participation gate
+    // — JSON has no temporal type — and every operator on their operands is a
+    // blocker; `v3_json_entry_cross_type_tests` #7 pins the raise.)
+    for operand_ty in [
+        "eql_v3.query_integer_ord_ope",
+        "eql_v3.query_smallint_ord",
+        "eql_v3.query_smallint_ord_ope",
+        "eql_v3.query_real_ord",
+        "eql_v3.query_real_ord_ope",
+        "eql_v3.query_double_ord",
+        "eql_v3.query_double_ord_ope",
+    ] {
+        let eq = matching_ids(&pool, &selector, &operand, "=", operand_ty).await?;
+        assert_eq!(
+            eq, eq_oracle,
+            "`= {operand_ty}` must equate the fresh operand with exactly row 2"
+        );
+        let gt = matching_ids(&pool, &selector, &operand, ">", operand_ty).await?;
+        assert_eq!(
+            gt, gt_oracle,
+            "`> {operand_ty}` must match exactly the rows whose $.number sorts after 2"
+        );
+    }
+
     Ok(())
 }
 
@@ -220,8 +250,9 @@ async fn fresh_numeric_operand_matches_plaintext_oracle(pool: PgPool) -> Result<
 /// alphanumeric / whitespace / ASCII punctuation, so `"café"` and `"cafe"` share
 /// one `op` term and an `=` on it would be a false positive. `ord_term` is
 /// deterministic, which is all ORDERING needs. See
-/// `v3_json_entry_cross_type_tests::json_entry_text_has_no_equality_operator`,
-/// which pins the absence, and `ScalarKind::ope_is_injective`, which owns the rule.
+/// `v3_json_entry_cross_type_tests::json_entry_lossy_family_equality_is_blocked`,
+/// which pins the raise, and `ScalarKind::json_leaf_equality_is_exact`, which owns
+/// the rule.
 ///
 /// The `>` arm is deliberately pivoted on `"world-2"`, where STRING order and
 /// NUMERIC order disagree: `"world-10"` sorts BELOW `"world-2"` as a string,
