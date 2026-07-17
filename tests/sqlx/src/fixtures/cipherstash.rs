@@ -29,7 +29,7 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use cipherstash_client::encryption::ScopedCipher;
+use cipherstash_client::encryption::{QueryOp, ScopedCipher};
 use cipherstash_client::eql::{
     encrypt_eql, EqlCiphertext, EqlEncryptOpts, EqlOperation, EqlOutput, Identifier,
     PreparedPlaintext,
@@ -248,6 +248,104 @@ pub async fn encrypt_store<T: EqlPlaintext>(
     // v2 payload can ever reach a written fixture (CIP-3347).
     super::v3_convert::to_v3_payloads(v2_payloads, T::KIND, indexes)
         .context("converting encrypted payloads to the v3 envelope")
+}
+
+/// Encrypt one value as a **SteVec query operand** — the query-side counterpart
+/// to [`encrypt_store`], returning the raw v2 query payload.
+///
+/// `EqlOperation::Query(&IndexType, QueryOp)` carries the `IndexType`
+/// explicitly, and the query path in `to_encryption_targets` DISCARDS the
+/// `ColumnConfig` entirely — only the identifier, plaintext, index type, and op
+/// reach `build_queryable`. So the config here exists solely to satisfy
+/// `PreparedPlaintext::new`, and the scalar/Json cast mismatch (a SteVec column
+/// casts as Json; an operand is a bare scalar) is not a real one.
+///
+/// Reusing `index_type_for(IndexKind::SteVec)` is what makes the operand
+/// comparable to the `v3_ste_vec` fixture's stored leaves: the OPE key is
+/// `MAC(index_key ++ prefix ++ "OPE")`, and `index_key` comes from the
+/// ScopedCipher (the keyset), NOT from the identifier — so matching the `prefix`
+/// and `SteVecMode::Compat` is necessary AND sufficient for the terms to
+/// correspond. Drifting either would silently produce non-comparable terms.
+async fn encrypt_ste_vec_query<T: EqlPlaintext>(
+    table: &str,
+    column: &str,
+    value: &T,
+    op: QueryOp,
+) -> Result<serde_json::Value> {
+    let config = column_config_for(&[IndexKind::SteVec], T::CAST)
+        .context("building ColumnConfig for a SteVec query operand")?;
+    let index_type = index_type_for(IndexKind::SteVec);
+    let cipher = build_cipher().await?;
+
+    let prepared = vec![PreparedPlaintext::new(
+        Cow::Borrowed(&config),
+        Identifier::new(table, column),
+        value.to_plaintext(),
+        EqlOperation::Query(&index_type, op),
+    )];
+
+    let opts = EqlEncryptOpts::default();
+    let mut outputs = encrypt_eql(cipher, prepared, &opts)
+        .await
+        .with_context(|| format!("encrypting a SteVec query operand for {table}.{column}"))?;
+
+    match outputs.pop() {
+        Some(EqlOutput::Query(payload)) => {
+            serde_json::to_value(&payload).context("serialising EqlQueryPayload to JSON")
+        }
+        Some(EqlOutput::Store(_)) => Err(anyhow!(
+            "encrypt_eql returned a Store output for an EqlOperation::Query input"
+        )),
+        None => Err(anyhow!("encrypt_eql returned no output for one input")),
+    }
+}
+
+/// Pull a required string field out of a v2 SteVec query payload.
+fn query_payload_str(payload: &serde_json::Value, key: &str) -> Result<String> {
+    payload
+        .get(key)
+        .and_then(serde_json::Value::as_str)
+        .map(str::to_owned)
+        .ok_or_else(|| anyhow!("SteVec query payload has no string `{key}` field; got {payload}"))
+}
+
+/// The tokenized **selector** for a JSON path (`"$.hello"`), as the opaque hex
+/// string the `->` extractor takes: `payload -> '<selector>'`.
+///
+/// Derived from the client (`QueryOp::SteVecSelector` → `Selector::parse` →
+/// `generate_selector`, Blake3 over the index key + prefix), so a test never has
+/// to pin a selector constant. Selectors are a deterministic function of the
+/// path under the fixture's keyset — a hard-coded hex silently names a DIFFERENT
+/// field if the keyset or the document shape changes, which is exactly how
+/// `SEL_HELLO_OP` came to point at `$.number`.
+pub async fn ste_vec_query_selector(table: &str, column: &str, path: &str) -> Result<String> {
+    let payload =
+        encrypt_ste_vec_query(table, column, &path.to_owned(), QueryOp::SteVecSelector).await?;
+    query_payload_str(&payload, "s")
+}
+
+/// The CLLW-OPE **term** for a scalar value, as the hex string a v3 query
+/// operand carries under `op`.
+///
+/// The client emits it under the v2.3 `oc` key; v3 names the same bytes `op`
+/// (the same remap `ste_vec_oc_to_op` performs for stored leaves — that shim
+/// only walks `sv` arrays, so a top-level query term is remapped here).
+///
+/// The term encodes the PLAINTEXT and the column, never the field: `op` terms
+/// carry no selector (only `hm` terms do). Field scoping is the caller's `->`
+/// extraction, not a property of this term — so one term is comparable against
+/// whichever leaf the caller extracts.
+///
+/// `QueryOp::SteVecTerm` accepts strings and numbers only; a bool/null/object
+/// plaintext has no orderable term and errors here rather than silently
+/// producing a non-comparable operand.
+pub async fn ste_vec_query_term<T: EqlPlaintext>(
+    table: &str,
+    column: &str,
+    value: &T,
+) -> Result<String> {
+    let payload = encrypt_ste_vec_query(table, column, value, QueryOp::SteVecTerm).await?;
+    query_payload_str(&payload, "oc")
 }
 
 #[cfg(test)]

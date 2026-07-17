@@ -134,6 +134,8 @@ echo "Running float special-value suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e float_special
 echo "Running scalar query-operand conformance suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e --test v3_scalar_query_operand_tests
+echo "Running json_entry query-operand conformance suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e --test v3_json_entry_query_operand_e2e_tests
 """
 
 [tasks."test:known-failures"]
