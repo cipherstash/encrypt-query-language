@@ -2,7 +2,23 @@ services:
   postgres: &postgres
     container_name: postgres
     image: postgres:17
-    command: postgres -c track_functions=all -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all
+    # max_locks_per_transaction: the lock table is sized once at startup as
+    # max_locks_per_transaction * max_connections and shared cluster-wide. A
+    # full-surface teardown — the shipped uninstaller's `DROP SCHEMA eql_v3
+    # CASCADE`, or `DROP OWNED BY <role> CASCADE` in the NOSUPERUSER install
+    # tests — takes ONE lock per dropped object, held until commit. Measured on
+    # the shipped installer: the uninstaller takes 6,433 locks (the eql_v3
+    # functions, plus the ~3k operators that live in public and cascade off
+    # them) against the 6,400 the default (64) affords for the WHOLE cluster.
+    # A lone teardown survives only because Postgres grows the table into spare
+    # shared memory; nextest runs the suite 16-way parallel on CI, so
+    # overlapping teardowns exhaust it ("out of shared memory / You might need
+    # to increase max_locks_per_transaction"). Measured: 4 concurrent real
+    # uninstalls fail 3/4 at the default and 0/4 here. 1024 gives 102.4k slots
+    # — headroom for 16 concurrent teardowns of a surface that grows with every
+    # new domain family — for ~30MB of shared memory. Creation is unaffected:
+    # CREATE takes no per-object lock (3 locks to create 3,000 functions).
+    command: postgres -c track_functions=all -c shared_preload_libraries=pg_stat_statements -c pg_stat_statements.track=all -c max_locks_per_transaction=1024
     ports:
       - 7432:7432
     environment:
