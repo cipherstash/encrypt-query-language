@@ -282,7 +282,22 @@ async fn json_entry_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Re
 
 /// The `v3_ste_vec` `$.hello` **string** leaf's `op` selector, pinned from the
 /// generated fixture (same value as `v3_jsonb_tests::SEL_HELLO_OP`).
-const SEL_HELLO_OP: &str = "3a114ad13d25b030f41175114347de59";
+///
+/// This previously named `$.number` — the fixture's INTEGER leaf — so the text
+/// arms below silently exercised numeric ciphertext. Equality could not see it:
+/// the fixture pairs `number = i` with `hello = "world-i"` 1:1, so both leaves
+/// induce identical equality partitions, and an `=`-only suite passes against
+/// either. Only ORDER separates them, which is what
+/// `json_entry_text_ord_cross_type_matches_plaintext_ordering` now pins.
+///
+/// To re-derive rather than trust this hex: `ste_vec_query_selector(…, "$.hello")`
+/// asks cipherstash-client directly (see the `proptest-e2e` suite
+/// `v3_json_entry_query_operand_e2e_tests`, which needs no constant at all).
+/// Creds-free, the fixture's term LENGTHS distinguish the two leaves: a string
+/// `op` is `8 * (len + 1) + 1` bits, so `$.hello` is 132 hex chars for
+/// `"world-1"`..`"world-9"` and 148 for `"world-10"`, while `$.number` is a
+/// fixed-width 65-bit number term — 132 on every row.
+const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
 
 /// #5 — TEXT equality end-to-end. A `text` family is dual-term (`[Hm, Ope]`), so
 /// the generic extractor rule would route its `=` through `eq_term` (the per-value
@@ -370,6 +385,99 @@ async fn json_entry_text_eq_cross_type_matches_plaintext_equality(pool: PgPool) 
     assert_eq!(
         matched_neq, expected_neq,
         "text `value <> query_text_ord` must match exactly the plaintext-differing rows"
+    );
+
+    tx.commit().await?;
+    Ok(())
+}
+
+/// #6 — TEXT ordering end-to-end: `>` against `eql_v3.query_text_ord` matches
+/// exactly the rows whose `$.hello` plaintext sorts after the operand's, per the
+/// CLLW-OPE order over `orderize_string`.
+///
+/// This arm is what keeps #5 honest, and it exists because #5 alone could not.
+/// `SEL_HELLO_OP` was pinned at `$.number` — the INTEGER leaf — and #5 passed
+/// anyway for two compounding reasons: the fixture pairs `number = i` with
+/// `hello = "world-i"` 1:1, so both leaves induce the SAME equality partition;
+/// and #5 only exercises `=`/`<>`, the one comparison that cannot distinguish
+/// them. Order can: `"world-10"` sorts BETWEEN `"world-1"` and `"world-2"` as a
+/// string, while `10` sorts last as a number. So a text arm reading a numeric
+/// leaf disagrees with the string oracle on exactly row 10, and fails here.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
+async fn json_entry_text_ord_cross_type_matches_plaintext_ordering(pool: PgPool) -> Result<()> {
+    let mut tx = pool.begin().await?;
+
+    // Pivot on row 2 ("world-2"), where string and numeric order disagree. Row 1
+    // ("world-1") would NOT discriminate — it is the minimum under both orders.
+    let operand: String = sqlx::query_scalar(&format!(
+        "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
+                'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
+                       WHERE e ? 'hm' LIMIT 1), \
+                'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
+         FROM fixtures.v3_ste_vec WHERE id = 2"
+    ))
+    .fetch_one(&mut *tx)
+    .await?;
+    assert!(
+        !operand.contains("\"hm\": null") && !operand.contains("\"op\": null"),
+        "operand must carry real hm/op terms from the fixture, got: {operand}"
+    );
+
+    sqlx::query(
+        "CREATE TEMP TABLE entry_t (id bigint, hello text, value public.eql_v3_json_entry) \
+         ON COMMIT DROP",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "INSERT INTO entry_t(id, hello, value) \
+         SELECT id, plaintext ->> 'hello', \
+                (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
+         FROM fixtures.v3_ste_vec"
+    ))
+    .execute(&mut *tx)
+    .await?;
+
+    let expected_gt: Vec<i64> = sqlx::query_scalar(
+        "SELECT id FROM entry_t WHERE hello > (SELECT hello FROM entry_t WHERE id = 2) ORDER BY id",
+    )
+    .fetch_all(&mut *tx)
+    .await?;
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM entry_t")
+        .fetch_one(&mut *tx)
+        .await?;
+    // Guard the guard: a proper non-empty subset, else the comparison could be
+    // uniformly true or false and still "pass".
+    assert!(
+        !expected_gt.is_empty() && (expected_gt.len() as i64) < total,
+        "oracle must be a proper non-empty subset for the ordering to be load-bearing, \
+         got {expected_gt:?} of {total}"
+    );
+    // FIXTURE invariant, not a selector check: this oracle is plain SQL text
+    // comparison over `hello`, so it cannot see which leaf SEL_HELLO_OP names.
+    // What it pins is that the fixture still DISCRIMINATES string order from
+    // numeric order — zero-padding `documents()` to `"world-01"`..`"world-10"`
+    // would align the two orders and silently strip this arm of the power to
+    // catch a numeric leaf, without failing anything.
+    assert!(
+        !expected_gt.contains(&10),
+        "fixture must keep string and numeric order divergent at the row-2 pivot: \
+         \"world-10\" < \"world-2\" as a string while 10 > 2 as a number. Got id 10 in \
+         {expected_gt:?} — the $.hello values no longer discriminate, and the assertion \
+         below would pass against a numeric leaf."
+    );
+
+    let esc = operand.replace('\'', "''");
+    let matched_gt: Vec<i64> = sqlx::query_scalar(&format!(
+        "SELECT id FROM entry_t WHERE value > '{esc}'::eql_v3.query_text_ord ORDER BY id"
+    ))
+    .fetch_all(&mut *tx)
+    .await?;
+    assert_eq!(
+        matched_gt, expected_gt,
+        "text `value > query_text_ord` must follow CLLW-OPE string order and match exactly \
+         the rows whose $.hello sorts after the operand (row 10 excluded). A mismatch on \
+         id 10 means SEL_HELLO_OP is reading a numeric leaf, not $.hello."
     );
 
     tx.commit().await?;

@@ -39,11 +39,22 @@ use sqlx::PgPool;
 /// A selector carrying a constant `hm` leaf across all rows (an object node —
 /// the document root `$` / `$.nested`). Used for equality / containment needles.
 const SEL_ROOT_HM: &str = "87042b77604cf03ab1ec9a05b5f9c2f7";
-/// A selector carrying a distinct-per-row `op` leaf (a scalar value, `$.hello`
-/// / `$.number`). Distinctness is load-bearing for the W1 containment oracle
+/// The `$.hello` **string** leaf's selector — a distinct-per-row `op` leaf.
+/// Distinctness is load-bearing for the W1 containment oracle
 /// (`v3_jsonb_containment_op_only`) — a constant op would hollow it (Risk #0),
 /// guarded by `v3_jsonb_fixture_structural_invariants`.
-const SEL_HELLO_OP: &str = "3a114ad13d25b030f41175114347de59";
+///
+/// This previously named `$.number`, the fixture's INTEGER leaf. Every use here
+/// is type-agnostic (self-needles and forged `op` ladders, which need only *a*
+/// distinct-per-row selector), so the mis-pin was inert in this suite — but the
+/// name was a lie, and the sibling `v3_json_entry_cross_type_tests` consumed the
+/// same wrong value where it was NOT inert.
+///
+/// To re-derive rather than trust this hex, see the note on
+/// `v3_json_entry_cross_type_tests::SEL_HELLO_OP`: the term LENGTHS tell the two
+/// leaves apart creds-free (`$.hello` is 132 hex for `"world-1"`..`"world-9"` and
+/// 148 for `"world-10"`; `$.number` is a fixed 132 on every row).
+const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
 
 /// A forged `hm` term for the SELF-CONTAINED equality / containment tests (D1,
 /// `containment_self_and_subset`) — they build their own entries / docs and
