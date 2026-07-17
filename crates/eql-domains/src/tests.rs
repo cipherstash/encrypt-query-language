@@ -805,7 +805,10 @@ mod catalog_tests {
             (ScalarKind::I16, "|i16| <= 2^15, an exact f64"),
             (ScalarKind::I32, "|i32| <= 2^31 < 2^53, an exact f64"),
             (ScalarKind::F32, "widening f32 -> f64 is exact"),
-            (ScalarKind::F64, "the leaf IS an f64; f64 equality is the semantic"),
+            (
+                ScalarKind::F64,
+                "the leaf IS an f64; f64 equality is the semantic",
+            ),
             // Date/Timestamp are exact BECAUSE their textual form is
             // orderize-invariant, NOT merely because they are strings. Being a
             // string leaf does not imply collision: orderize_string only drops

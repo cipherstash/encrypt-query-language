@@ -29,7 +29,6 @@ const V3_JSON_FUNCTIONS: &str = "src/v3/json/functions.sql";
 /// them. Only the name is spelled here; the SQL type name is DERIVED below.
 const JSON_ENTRY_DOMAIN: &str = "entry";
 
-
 /// The fixed cross type: the extracted SteVec leaf, `public.eql_v3_json_entry`.
 ///
 /// Derived from the catalog (`eql_domains::JSON`) via `Domain::full_name` +
@@ -935,7 +934,6 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         println!("generated {}", rel.display());
     }
     all_written.push(fallback_path);
-
 
     // Orphan sweep across every scalar type dir. `generate_type` already prunes
     // stale files *within* a regenerated dir, but a type dropped from the catalog
@@ -1955,7 +1953,6 @@ mod tests {
         }
     }
 
-
     #[test]
     fn json_entry_bloom_operand_is_excluded_from_the_served_list() {
         // coderdan's review point: SteVec has no match/bloom capability, so
@@ -1968,13 +1965,15 @@ mod tests {
             .map(|d| d.name)
             .collect();
         assert_eq!(text, vec!["ord", "ord_ope"]);
-        let sql = render_json_entry_cross_functions(spec("text"), &json_entry_cross_domains(spec("text")));
+        let sql = render_json_entry_cross_functions(
+            spec("text"),
+            &json_entry_cross_domains(spec("text")),
+        );
         assert!(
             !sql.contains("query_text_search"),
             "search must get no wrapper AND no per-pair blocker — the net owns it"
         );
     }
-
 
     #[test]
     fn json_entry_type_is_derived_from_the_catalog() {
