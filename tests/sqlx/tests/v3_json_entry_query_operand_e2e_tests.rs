@@ -215,13 +215,19 @@ async fn fresh_numeric_operand_matches_plaintext_oracle(pool: PgPool) -> Result<
 /// string leaf, whose term is a variable-width CLLW-OPE encoding of
 /// `orderize_string` rather than a fixed 64-bit number.
 ///
+/// **Ordering only.** A text leaf has no equality operator, because `orderize_string`
+/// is not injective — it NFKC-decomposes then strips every char that is not
+/// alphanumeric / whitespace / ASCII punctuation, so `"café"` and `"cafe"` share
+/// one `op` term and an `=` on it would be a false positive. `ord_term` is
+/// deterministic, which is all ORDERING needs. See
+/// `v3_json_entry_cross_type_tests::json_entry_text_has_no_equality_operator`,
+/// which pins the absence, and `ScalarKind::ope_is_injective`, which owns the rule.
+///
 /// The `>` arm is deliberately pivoted on `"world-2"`, where STRING order and
 /// NUMERIC order disagree: `"world-10"` sorts BELOW `"world-2"` as a string,
 /// while `10` sorts above `2` as a number. So this arm pins that the surface is
 /// really comparing text — an operand or leaf that was secretly numeric would
-/// include row 10 and fail. (`=` cannot make that distinction: the fixture pairs
-/// `number = i` with `hello = "world-i"` 1:1, so both fields induce identical
-/// equality partitions.)
+/// include row 10 and fail.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn fresh_text_operand_matches_plaintext_oracle(pool: PgPool) -> Result<()> {
     let selector = ste_vec_query_selector(FIXTURE_TABLE, PAYLOAD_COLUMN, "$.hello").await?;
@@ -264,29 +270,11 @@ async fn fresh_text_operand_matches_plaintext_oracle(pool: PgPool) -> Result<()>
         "operand must pass the query_text_ord CHECK carrying `op` + `hm`: {operand}"
     );
 
-    // `=` — independence proof for a string leaf.
-    let eq = matching_ids(&pool, &selector, &operand, "=", "eql_v3.query_text_ord").await?;
-    let eq_oracle = oracle_ids(&pool, "plaintext ->> 'hello' = 'world-2'").await?;
-    assert_eq!(
-        eq_oracle,
-        vec![2],
-        "fixture precondition: exactly row 2 has $.hello = 'world-2'"
-    );
-    assert_eq!(
-        eq, eq_oracle,
-        "a FRESHLY encrypted operand for \"world-2\" must equate with the independently \
-         encrypted stored $.hello leaf of row 2, and only that row"
-    );
-
-    // `<>` — the complement.
-    let neq = matching_ids(&pool, &selector, &operand, "<>", "eql_v3.query_text_ord").await?;
-    let neq_oracle = oracle_ids(&pool, "plaintext ->> 'hello' <> 'world-2'").await?;
-    assert_eq!(
-        neq, neq_oracle,
-        "`<>` against the fresh text operand must match exactly the plaintext-differing rows"
-    );
-
-    // `>` — string order, where row 10 discriminates text from numeric.
+    // `>` — string order, where row 10 discriminates text from numeric. This is
+    // ALSO the independence proof for a string leaf: a freshly encrypted operand
+    // for "world-2" must order against the independently encrypted stored $.hello
+    // leaves, which only holds if two independent encryptions of one plaintext
+    // produce corresponding terms.
     let gt = matching_ids(&pool, &selector, &operand, ">", "eql_v3.query_text_ord").await?;
     let gt_oracle = oracle_ids(&pool, "plaintext ->> 'hello' > 'world-2'").await?;
     assert!(

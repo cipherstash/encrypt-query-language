@@ -116,22 +116,33 @@ WHERE encrypted_json -> 'email_selector'::text = $1::public.eql_v3_json_entry;
 
 ### Selector-with-constraint queries (index-accelerated)
 
-An extracted leaf also compares directly against a **per-type query operand** in natural operator form, so a single-field constraint (`col -> '$.age' > 21`, `col -> '$.email' = x`) is expressible without a whole-entry needle — and matches a functional index on `eql_v3.ord_term`:
+An extracted leaf also compares directly against a **per-type query operand** in natural operator form, so a single-field constraint (`col -> '$.age' > 21`) is expressible without a whole-entry needle — and matches a functional index on `eql_v3.ord_term`:
 
 ```sql
 SELECT * FROM examples
 WHERE encrypted_json -> 'age_selector'::text  >  $1::eql_v3.query_integer_ord;   -- range
 SELECT * FROM examples
-WHERE encrypted_json -> 'name_selector'::text =  $1::eql_v3.query_text_ord;       -- equality
+WHERE encrypted_json -> 'age_selector'::text  =  $1::eql_v3.query_integer_ord;   -- equality
+SELECT * FROM examples
+WHERE encrypted_json -> 'name_selector'::text >  $1::eql_v3.query_text_ord;       -- text: ORDERING ONLY
 ```
 
-All six comparisons (`=`, `<>`, `<`, `<=`, `>`, `>=`) are available against **every query operand that carries the CLLW-OPE `op` term** — `eql_v3.query_<T>_ord`, its explicit twin `eql_v3.query_<T>_ord_ope`, and (for `text`) `eql_v3.query_text_search`. Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic `op` term, which serves ordering **and** equality (equal plaintext at the same selector ⇒ equal `op` bytes). A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for all of them, including `=`.
+Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic CLLW-OPE `op` term. A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for every one of them.
 
-Operands whose only index terms an extracted leaf cannot produce are not bound: `eql_v3.query_<T>_eq` (HMAC only), `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` (block-ORE), and `eql_v3.query_text_match` (Bloom). Bloom's `@@` is likewise unavailable on an extracted leaf even via `query_text_search` — a leaf carries no `match_term`.
+Which comparisons you get depends on the leaf's type:
 
-> **Note.** There is no `eql_v3.query_<T>_eq` operator on `public.eql_v3_json_entry` for any type. A JSON scalar leaf carries only the `op` term — never a per-value equality (`hm`) term — so equality is served exclusively by the `op`-based `query_<T>_ord` path above. (For `text`, `eql_v3.query_text_ord` requires an `hm` key to satisfy its domain CHECK because the same operand type also serves scalar `text` columns; when querying a JSON leaf that `hm` is not part of the comparison.)
+| leaf type | operators | why |
+|---|---|---|
+| number (`integer`, `bigint`, `date`, `timestamp`, `numeric`, `real`, `double`) | `=` `<>` `<` `<=` `>` `>=` | `op` encodes the value through `orderable_to_u64`, a bijection — so `op` equality is exact |
+| string (`text`) | `<` `<=` `>` `>=` only | `op` encodes the **collated** value, so equality on it is not exact — see below |
 
-> **⚠️ The operand MUST be encrypted in that selector's field context — finer-grained than the column-level rule for scalar columns.** A leaf's `op` term is derived from `(field context, plaintext)`, where the field context is **per-selector within the document**, not per-column. An operand encrypted out of that specific selector's context — a plain scalar operand, **or even one encrypted for a different selector in the same column** — has different term bytes and never matches. The SQL layer only compares terms; it cannot detect a context mismatch, so a wrong-context operand **silently returns zero rows with no error**. Ensuring the operand is encrypted for the exact selector being queried is the responsibility of the client / CipherStash Proxy, which owns the field context.
+The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql_v3.query_<T>_ord_ope`. Operands whose index terms an extracted leaf cannot produce are not bound at all: `eql_v3.query_<T>_eq` (HMAC only), `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` (block-ORE), `eql_v3.query_text_match` (Bloom), and `eql_v3.query_text_search` — a leaf carries no `match_term`, so SteVec has no match/bloom capability and `search` offers nothing over `_ord` while demanding an inert `bf`.
+
+> **Note.** There is no `eql_v3.query_<T>_eq` operator on `public.eql_v3_json_entry` for any type. A JSON scalar leaf carries only the `op` term — never a per-value equality (`hm`) term. (For `text`, `eql_v3.query_text_ord` still requires an `hm` key to satisfy its domain CHECK, because the same operand type also serves scalar `text` columns; when querying a JSON leaf that `hm` is not part of the comparison.)
+
+> **⚠️ `=` and `<>` are not available on a `text` leaf — they raise `operator is not supported`.** A string leaf's `op` term encodes the value *after collation*: cipherstash-client normalises with NFKC and then strips every character that is not alphanumeric, whitespace, or ASCII punctuation. So `"café"` and `"cafe"`, `"Müller"` and `"Muller"`, `"user@exämple.com"` and `"user@example.com"` all produce the **same** `op` term. An `=` built on it would silently return rows whose plaintext differs, so EQL does not offer one. Ordering is unaffected — a collated order is the intended semantic, and it is the same order scalar `text_ord` columns use. To match a string field exactly, query the document with containment (`@>`), whose `hm` terms are exact.
+
+> **The operand must be encrypted for the same column, and as the same JSON scalar type, as the leaf.** Field scoping comes from the `->` extraction, not from the operand: an `op` term encodes the plaintext and the column, and carries no selector (only `hm` terms do). So one operand is comparable against whichever leaf you extract — which also means an operand encrypted for a *different column*, or for a different JSON scalar type (a number term against a string leaf), has non-corresponding term bytes and **silently returns zero rows with no error**. The SQL layer only compares terms and cannot detect the mismatch; keeping the operand's column and type aligned with the leaf is the client's / CipherStash Proxy's responsibility.
 
 ### Array operations
 

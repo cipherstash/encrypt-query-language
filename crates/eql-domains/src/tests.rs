@@ -784,6 +784,39 @@ mod catalog_tests {
     }
 
     #[test]
+    fn ope_is_injective_on_every_kind_except_text() {
+        use crate::{ScalarKind, FIXTURES};
+
+        // The rule the column-side test above escapes via catalog ORDERING (Hm
+        // before Ope). Stated directly here because seams with no `hm` to fall
+        // back on — the SteVec leaf surface — have to consult it instead.
+        //
+        // `op` is deterministic for every kind, which is what makes it a sound
+        // ORDERING. Equality needs injectivity too, and text's `op` is not
+        // injective: cllw-ore's `orderize_string` NFKC-decomposes then strips every
+        // char that is not alphanumeric / whitespace / ASCII punctuation, so
+        // "café"/"cafe" and "hello😎"/"hello" collapse to one term (pinned upstream
+        // by cllw-ore's own `test_string_non_ascii_stripped`).
+        assert!(
+            !ScalarKind::Text.ope_is_injective(),
+            "text `op` collates via orderize_string — equality on it is a false positive"
+        );
+
+        // Everything else encodes through `orderable_to_u64`, a bijection.
+        for f in FIXTURES {
+            if f.kind.is_text() {
+                continue;
+            }
+            assert!(
+                f.kind.ope_is_injective(),
+                "{} ({:?}) encodes through orderable_to_u64 and must stay injective",
+                f.family.name,
+                f.kind
+            );
+        }
+    }
+
+    #[test]
     fn domain_by_name_finds_declared_names() {
         let text = scalar("text");
         assert_eq!(

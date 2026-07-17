@@ -178,6 +178,37 @@ impl ScalarKind {
         matches!(self, ScalarKind::F32 | ScalarKind::F64)
     }
 
+    /// Is the CLLW-OPE (`op`) term **injective** on this kind's plaintexts — does
+    /// `op(a) == op(b)` imply `a == b`?
+    ///
+    /// **Determinism is not enough for equality.** `Term::Ope` is deterministic
+    /// (equal plaintext ⇒ equal term), which is what makes `op` byte-comparison a
+    /// valid *ordering*. Equality additionally needs injectivity (different
+    /// plaintext ⇒ different term), and the two come apart for `Text`:
+    ///
+    /// - Numeric/temporal kinds encode through `orderable_to_u64`, a bijection on
+    ///   the 64-bit orderable form — injective, so `op` equality is exact.
+    /// - `Text` encodes through cllw-ore's `orderize_string`, which NFKC-
+    ///   decomposes and then **strips** every char that is not alphanumeric,
+    ///   whitespace, or ASCII punctuation. `"café"`/`"cafe"`, `"Müller"`/`"Muller"`
+    ///   and `"hello😎"`/`"hello"` collapse to ONE term, so `op` equality on text
+    ///   is a **false positive**. (cllw-ore 0.4.2 `src/impls/string.rs` pins this:
+    ///   `encrypt_cmp("hello😎", "hello") == Ordering::Equal`.)
+    ///
+    /// Ordering is unaffected — a collated order is the documented semantic, and
+    /// the scalar `text_ord` domain already ships exactly it.
+    ///
+    /// Scalar text COLUMNS dodge the equality hazard by listing `Hm` before `Ope`,
+    /// so [`crate::Term::extractor_for_operator`] routes `=`/`<>` to the exact
+    /// `hm` (see `tests::every_eq_capable_text_domain_resolves_eq_through_hm`). A
+    /// SteVec string **leaf** has no `hm` to fall back on — cipherstash-client's
+    /// `ste_plaintext_term.rs` maps `Value::String` to `Orderable`, never `Mac` —
+    /// so a seam that compares leaves must not offer equality on text at all.
+    /// That is what this predicate gates.
+    pub const fn ope_is_injective(self) -> bool {
+        !self.is_text()
+    }
+
     /// A debug/identifier string for the kind: the canonical Rust plaintext type
     /// name (`"i32"`, `"chrono::NaiveDate"`, `"rust_decimal::Decimal"`). `Jsonb`
     /// maps to `serde_json::Value` — its plaintext is an arbitrary JSON document.

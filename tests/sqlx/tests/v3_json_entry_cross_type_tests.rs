@@ -299,26 +299,41 @@ async fn json_entry_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Re
 /// fixed-width 65-bit number term — 132 on every row.
 const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
 
-/// #5 — TEXT equality end-to-end. A `text` family is dual-term (`[Hm, Ope]`), so
-/// the generic extractor rule would route its `=` through `eq_term` (the per-value
-/// HMAC) — which a SteVec string leaf never carries. The cross surface forces
-/// `ord_term` instead, so a string leaf compares on the same deterministic `op`
-/// term as the numeric families. This pins that text is NOT second-class: `=`
-/// against `eql_v3.query_text_ord` matches exactly the rows whose `$.hello`
-/// plaintext equals the operand's, and `<>` the complement — real string
-/// ciphertext, positive and negative, against the plaintext oracle.
+/// #5 — TEXT has NO equality operator, and must not grow one.
+///
+/// A `text` leaf's `op` term is not injective on plaintext, so `=` built on it
+/// returns rows whose plaintext DIFFERS. cllw-ore's `orderize_string` NFKC-
+/// decomposes and then strips every char that is not alphanumeric, whitespace, or
+/// ASCII punctuation, so these distinct plaintexts share one `op` term:
+///
+/// ```text
+///   "cafe" == "café"                          "Muller" == "Müller"
+///   "hello" == "hello😎"                       "user@example.com" == "user@exämple.com"
+/// ```
+///
+/// (Pinned upstream by cllw-ore 0.4.2's own `test_string_non_ascii_stripped`, and
+/// verified against cipherstash-client 0.38.1's SteVec term path.)
+///
+/// Determinism is what `op` gives — equal plaintext ⇒ equal term — and that is
+/// enough for ORDERING (#6 pins it) but not for equality, which also needs
+/// injectivity. A scalar text COLUMN escapes this by listing `Hm` before `Ope`, so
+/// `extractor_for_operator` routes `=` to the exact `hm`
+/// (`every_eq_capable_text_domain_resolves_eq_through_hm`). A SteVec string LEAF
+/// has no `hm` to route to — cipherstash-client maps `Value::String` to
+/// `Orderable`, never `Mac` — so there is no sound text equality to offer, and the
+/// codegen emits none (`ScalarKind::ope_is_injective`).
+///
+/// `=` is BLOCKED, not omitted. Omitting it would not make the query an error:
+/// `public.eql_v3_json_entry` and `eql_v3.query_text_ord` are both domains over
+/// `jsonb`, and operators resolve against the ultimate base type — so an unbound
+/// `=` falls back to native `jsonb = jsonb`, comparing whole payload objects
+/// (`{s,c,op}` vs `{v,i,hm,op}`), never matching, and returning ZERO ROWS with no
+/// error. That swaps a false positive for a silent false negative. The blocker
+/// claims the signature so the caller gets a loud "operator not supported".
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn json_entry_text_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Result<()> {
+async fn json_entry_text_equality_is_blocked(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
 
-    // `query_text_ord`'s CHECK requires both `hm` and `op` keys (it also serves
-    // scalar text columns, whose equality uses `hm`). `ord_term` reads only `op`,
-    // so for a JSON leaf the `hm` is a shape requirement, never part of the
-    // comparison. Every byte of the operand is still REAL ciphertext from the
-    // fixture (per CLAUDE.md: tests run against real encrypted data, never
-    // synthetic blobs): the `op` is the row's own `$.hello` term, and the inert
-    // `hm` is lifted from a real `hm`-carrying entry of the same document rather
-    // than fabricated.
     let operand: String = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
                 'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
@@ -328,63 +343,73 @@ async fn json_entry_text_eq_cross_type_matches_plaintext_equality(pool: PgPool) 
     ))
     .fetch_one(&mut *tx)
     .await?;
-    // Guard the guard: the operand must carry real terms, not NULLs — a NULL `hm`
-    // would fail the domain CHECK and a NULL `op` would make every comparison NULL,
-    // turning the assertions below into vacuous passes.
-    assert!(
-        !operand.contains("\"hm\": null") && !operand.contains("\"op\": null"),
-        "operand must carry real hm/op terms from the fixture, got: {operand}"
-    );
+    let esc = operand.replace('\'', "''");
 
     sqlx::query(
-        "CREATE TEMP TABLE entry_t (id bigint, hello text, value public.eql_v3_json_entry) \
-         ON COMMIT DROP",
+        "CREATE TEMP TABLE entry_t (id bigint, value public.eql_v3_json_entry) ON COMMIT DROP",
     )
     .execute(&mut *tx)
     .await?;
     sqlx::query(&format!(
-        "INSERT INTO entry_t(id, hello, value) \
-         SELECT id, plaintext ->> 'hello', \
-                (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
+        "INSERT INTO entry_t(id, value) \
+         SELECT id, (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
          FROM fixtures.v3_ste_vec"
     ))
     .execute(&mut *tx)
     .await?;
 
-    let expected_eq: Vec<i64> = sqlx::query_scalar(
-        "SELECT id FROM entry_t WHERE hello = (SELECT hello FROM entry_t WHERE id = 1) ORDER BY id",
-    )
-    .fetch_all(&mut *tx)
-    .await?;
-    let expected_neq: Vec<i64> = sqlx::query_scalar(
-        "SELECT id FROM entry_t WHERE hello <> (SELECT hello FROM entry_t WHERE id = 1) ORDER BY id",
-    )
+    // `=` and `<>` must RAISE for both text operands, in both directions — never
+    // return rows, and never silently return none.
+    for op in ["=", "<>"] {
+        for operand_ty in ["eql_v3.query_text_ord", "eql_v3.query_text_ord_ope"] {
+            for query in [
+                format!("SELECT id FROM entry_t WHERE value {op} '{esc}'::{operand_ty}"),
+                format!("SELECT id FROM entry_t WHERE '{esc}'::{operand_ty} {op} value"),
+            ] {
+                let err = sqlx::query(&query)
+                    .fetch_all(&mut *tx)
+                    .await
+                    .expect_err(&format!(
+                        "text `op` is not injective, so `{op}` on a json_entry leaf must \
+                         RAISE rather than answer. Query: {query}"
+                    ));
+                let msg = err.to_string();
+                assert!(
+                    msg.contains("is not supported for"),
+                    "expected the `operator not supported` blocker for `{op}`, got: {msg}"
+                );
+                // The failed statement poisons the transaction; restart it.
+                tx.rollback().await?;
+                tx = pool.begin().await?;
+                sqlx::query(
+                    "CREATE TEMP TABLE entry_t (id bigint, value public.eql_v3_json_entry) \
+                     ON COMMIT DROP",
+                )
+                .execute(&mut *tx)
+                .await?;
+                sqlx::query(&format!(
+                    "INSERT INTO entry_t(id, value) \
+                     SELECT id, (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
+                     FROM fixtures.v3_ste_vec"
+                ))
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+    }
+
+    // Guard the guard: ORDERING on the very same operand DOES resolve, so the
+    // assertions above prove equality is absent — not that the operand, the cast,
+    // or the temp table is broken.
+    let ordered: Vec<i64> = sqlx::query_scalar(&format!(
+        "SELECT id FROM entry_t WHERE value > '{esc}'::eql_v3.query_text_ord ORDER BY id"
+    ))
     .fetch_all(&mut *tx)
     .await?;
     assert!(
-        expected_eq.contains(&1) && !expected_neq.is_empty(),
-        "fixture must have row 1 plus at least one differing $.hello"
-    );
-
-    let esc = operand.replace('\'', "''");
-    let matched_eq: Vec<i64> = sqlx::query_scalar(&format!(
-        "SELECT id FROM entry_t WHERE value = '{esc}'::eql_v3.query_text_ord ORDER BY id"
-    ))
-    .fetch_all(&mut *tx)
-    .await?;
-    assert_eq!(
-        matched_eq, expected_eq,
-        "text `value = query_text_ord` must match exactly the plaintext-equal rows"
-    );
-
-    let matched_neq: Vec<i64> = sqlx::query_scalar(&format!(
-        "SELECT id FROM entry_t WHERE value <> '{esc}'::eql_v3.query_text_ord ORDER BY id"
-    ))
-    .fetch_all(&mut *tx)
-    .await?;
-    assert_eq!(
-        matched_neq, expected_neq,
-        "text `value <> query_text_ord` must match exactly the plaintext-differing rows"
+        !ordered.is_empty(),
+        "text ordering must still resolve and match rows — otherwise this test \
+         proves nothing about equality specifically"
     );
 
     tx.commit().await?;

@@ -158,6 +158,20 @@ pub const FIXTURES: &[TypeFixtures] = &[
     JSON_FIXTURES,
 ];
 
+/// The native scalar [`ScalarKind`] of a catalog family, by `family.name`
+/// (`"text"` → [`ScalarKind::Text`]). `None` for a name no family declares.
+///
+/// The catalog's structural rows (`DomainFamily`) carry only `{name, domains}` —
+/// the kind is a fixture-layer field, joined back by name (see the module docs on
+/// the `lib.rs` layout split). This is that join, in one place, so consumers
+/// needing a family's kind do not each re-inline a `FIXTURES.iter().find(…)`.
+pub fn kind_for(family_name: &str) -> Option<ScalarKind> {
+    FIXTURES
+        .iter()
+        .find(|f| f.family.name == family_name)
+        .map(|f| f.kind)
+}
+
 /// Compile-time `&str` equality, usable in `const` context. `str::eq` /
 /// `PartialEq` are not `const fn` on stable, so the parity block below needs its
 /// own byte-wise comparison.
