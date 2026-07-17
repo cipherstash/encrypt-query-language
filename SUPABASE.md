@@ -182,13 +182,13 @@ operator resolves on which variant.
 
 ## Encrypted JSON documents
 
-`public.eql_v3_json` is the structured-encryption (ste_vec) document domain. It
+`public.eql_v3_json_search` is the structured-encryption (ste_vec) document domain. It
 supports document containment (`@>` / `<@`), field access (`->` / `->>`), and
 the `eql_v3.jsonb_path_*` helper functions, all without operator classes:
 
 ```sql
 -- Document containment (GIN-indexable on Supabase)
-SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_jsonb;
+SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_json;
 
 -- Field access (selector is the deterministic selector hash, typed as text)
 SELECT data_encrypted -> '<selector>'::text FROM orders;
@@ -222,7 +222,7 @@ the parameter yourself.
 - [Database Indexes for Encrypted Columns](./docs/reference/database-indexes.md) — functional-index and GIN recipes, plus large-table build guidance.
 - [SQL support matrix](./docs/reference/sql-support.md) — which operators work against which domain variant.
 - [EQL Functions Reference](./docs/reference/eql-functions.md) — complete function and operator API.
-- [EQL with JSON and JSONB](./docs/reference/json-support.md) — `public.eql_v3_json` worked examples.
+- [EQL with JSON and JSONB](./docs/reference/json-support.md) — `public.eql_v3_json_search` worked examples.
 - [CipherStash Proxy configuration tutorial](./docs/tutorials/proxy-configuration.md) — setting up encrypted columns end to end.
 
 ---
