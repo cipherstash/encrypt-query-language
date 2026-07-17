@@ -129,20 +129,22 @@ WHERE encrypted_json -> 'name_selector'::text >  $1::eql_v3.query_text_ord;     
 
 Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic CLLW-OPE `op` term. A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for every one of them.
 
-**Ordering is available on every family.** Equality is available only where the leaf's encoding preserves the values the field can legitimately hold — a leaf is encoded as an f64 (numbers) or a collated string (text), and neither is lossless for every type:
+**Ordering is available on every participating family.** Equality is available only where the leaf's encoding preserves the values the field can legitimately hold — a leaf is encoded as an f64 (numbers) or a collated string (text), and neither is lossless for every type:
 
 | family | operators | why |
 |---|---|---|
 | `integer`, `smallint` | `=` `<>` `<` `<=` `>` `>=` | every value in range is an exact f64 (`\|i32\| < 2^53`) |
 | `real`, `double` | `=` `<>` `<` `<=` `>` `>=` | the leaf **is** an f64, so f64 equality is the semantic |
-| `date`, `timestamp` | `=` `<>` `<` `<=` `>` `>=` | ISO-8601 / RFC3339 passes through collation unchanged |
 | `bigint` | `<` `<=` `>` `>=` only | values above 2^53 round: `9007199254740993` and `9007199254740992` share one term |
 | `numeric` | `<` `<=` `>` `>=` only | carries more precision than an f64 |
 | `text` | `<` `<=` `>` `>=` only | the value is **collated** before encoding — see below |
+| `date`, `timestamp` | *none* — use the `text` surface | JSON has no date type; a date-in-JSON **is** a string leaf — see below |
 
-`=` and `<>` on `bigint`, `numeric`, and `text` raise `operator is not supported` rather than answering. They are absent because an equality built on those encodings returns rows whose plaintext **differs** — a wrong answer, not a missing feature.
+`=` and `<>` on `bigint`, `numeric`, and `text` raise `operator is not supported` rather than answering. They are **blocked, not merely missing**: an equality built on those encodings returns rows whose plaintext **differs** — a wrong answer, not a missing feature — and leaving the operator unbound would be worse still (both sides are domains over `jsonb`, so an unclaimed `=` silently falls back to native whole-envelope `jsonb = jsonb` and returns zero rows with no error).
 
-The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql_v3.query_<T>_ord_ope`. Operands whose index terms an extracted leaf cannot produce are not bound at all: `eql_v3.query_<T>_eq` (HMAC only), `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` (block-ORE), `eql_v3.query_text_match` (Bloom), and `eql_v3.query_text_search` — a leaf carries no `match_term`, so SteVec has no match/bloom capability and `search` offers nothing over `_ord` while demanding an inert `bf`.
+> **Dates and timestamps in JSON are strings.** JSON (RFC 8259) has no date or timestamp type — applications marshal temporal values into ISO-8601 / RFC 3339 strings, so a "date leaf" is a **text leaf** and the text surface serves it: **ordering** via `eql_v3.query_text_ord` (ISO-8601 string order *is* chronological order), **exact match** via document containment (`@>`), whose `hm` terms are exact. The temporal operands (`eql_v3.query_date_ord`, `eql_v3.query_timestamp_ord`, and their `_ope` twins) are not part of this surface — every operator on them raises `operator is not supported`. No client can produce a temporal SteVec query term anyway (cipherstash-client rejects temporal plaintexts for `QueryOp::SteVecTerm`), so nothing is lost — the blockers just make the dead end loud instead of silent.
+
+The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql_v3.query_<T>_ord_ope`, for the six families in the table that serve at least ordering. Every other query operand is either **blocked** (each operator raises: the temporal operands above, and `eql_v3.query_text_search` — a leaf carries no `match_term`, so SteVec has no match/bloom capability and `search` offers nothing over `_ord` while demanding an inert `bf`) or **not bound at all** where the operand's terms are ones a leaf can never produce (`eql_v3.query_<T>_eq` — HMAC only; `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` — block-ORE; `eql_v3.query_text_match` — Bloom).
 
 > **Note.** There is no `eql_v3.query_<T>_eq` operator on `public.eql_v3_json_entry` for any type. A JSON scalar leaf carries only the `op` term — never a per-value equality (`hm`) term. (For `text`, `eql_v3.query_text_ord` still requires an `hm` key to satisfy its domain CHECK, because the same operand type also serves scalar `text` columns; when querying a JSON leaf that `hm` is not part of the comparison.)
 
@@ -151,6 +153,8 @@ The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql
 > **⚠️ `=` on a `bigint` or `numeric` leaf would be a false positive, so it does not exist.** A JSON number is encoded as an f64, which cannot represent every `bigint` (above 2^53) or every `numeric` (arbitrary precision). `9007199254740993` and `9007199254740992` produce one term. `integer`/`smallint`/`real`/`double` are unaffected — every value they can hold is an exact f64.
 
 > **The operand must be encrypted for the same column, and as the same JSON scalar type, as the leaf.** Field scoping comes from the `->` extraction, not from the operand: an `op` term encodes the plaintext and the column, and carries no selector (only `hm` terms do). So one operand is comparable against whichever leaf you extract — which also means an operand encrypted for a *different column*, or for a different JSON scalar type (a number term against a string leaf), has non-corresponding term bytes and **silently returns zero rows with no error**. The SQL layer only compares terms and cannot detect the mismatch; keeping the operand's column and type aligned with the leaf is the client's / CipherStash Proxy's responsibility.
+>
+> **"Same JSON scalar type" is stricter than it sounds: encrypt numbers as *floats* and strings as *text*, whatever the operand domain is named.** The operand domain (`query_integer_ord`, `query_double_ord`, …) is a label the caller casts into; the term *bytes* are chosen by the plaintext variant the client encrypts. A stored JSON number leaf is always f64-encoded, and cipherstash-client encodes a **`Float`** plaintext identically — but an **`Int`** plaintext takes a different path (a raw cast, never orderable-encoded), so querying an integer JSON field with an integer-encrypted operand produces non-corresponding bytes and **silently returns zero rows**, even though both sides are "numbers". The rule for client authors: for a JSON *number* leaf, encrypt the operand as a float (`2` → `2.0`); for a JSON *string* leaf, as text. The `proptest-e2e` suite (`v3_json_entry_query_operand_e2e_tests`) pins both.
 
 ### Array operations
 

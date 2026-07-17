@@ -178,6 +178,59 @@ impl ScalarKind {
         matches!(self, ScalarKind::F32 | ScalarKind::F64)
     }
 
+    /// Does a JSON document hold this kind's values **as themselves** — is
+    /// there a native JSON scalar type for the kind (RFC 8259: string, number,
+    /// boolean)?
+    ///
+    /// This is the PARTICIPATION gate for the `json_entry` cross-type seam
+    /// (CIP-3526): a family whose values have no native JSON representation has
+    /// no JSON leaf to compare against, so its query operands must not bind
+    /// `public.eql_v3_json_entry` at all — for ANY operator, not just `=`.
+    ///
+    /// `Date`/`Timestamp` are the load-bearing `false` rows. JSON has no
+    /// date/timestamp type; in practice those values are **marshaled into
+    /// strings** (ISO-8601/RFC 3339), so a "date leaf" IS a text leaf and is
+    /// served by the TEXT surface (`query_text_ord` — ISO-8601 string order is
+    /// chronological order; equality via `@>` containment, since text `=` is
+    /// blocked as collated). cipherstash-client agrees mechanically: a SteVec
+    /// query term cannot even be built from a temporal plaintext —
+    /// `OrderableTerm::try_from(&Plaintext)` returns `Err(invalid_type)` for
+    /// `NaiveDate`/`Timestamp` (`json_indexer/ste_vec/priv_state/`
+    /// `ste_plaintext_term.rs`, verified against 0.38.1) — so a
+    /// `(json_entry, query_date_ord)` operator could never see a real operand;
+    /// it would be dead surface reachable only by hand-crafted payloads.
+    ///
+    /// `Bool` is honestly `true` (JSON has native booleans) but never reaches
+    /// the seam: the seam additionally requires a `Term::Ope`-carrying operand,
+    /// and `boolean` is storage-only — a bool leaf maps to a structural `Mac`
+    /// term, never an orderable `op`. `Jsonb` is `false`: its plaintext is a
+    /// whole document, not a scalar leaf; containment (`@>`) serves it.
+    ///
+    /// The layering with [`Self::json_leaf_equality_is_exact`]: this predicate
+    /// decides WHETHER a family's operands may bind `json_entry`; that one
+    /// decides whether a bound family's `=`/`<>` are sound. Neither subsumes
+    /// the other.
+    pub const fn has_native_json_leaf(self) -> bool {
+        match self {
+            // JSON numbers.
+            ScalarKind::I16
+            | ScalarKind::I32
+            | ScalarKind::I64
+            | ScalarKind::F32
+            | ScalarKind::F64
+            | ScalarKind::Numeric => true,
+            // JSON strings.
+            ScalarKind::Text => true,
+            // JSON booleans (never reaches the Ope seam; see doc).
+            ScalarKind::Bool => true,
+            // No native JSON type — marshaled into strings; the text surface
+            // owns those leaves.
+            ScalarKind::Date | ScalarKind::Timestamp => false,
+            // A document, not a scalar leaf.
+            ScalarKind::Jsonb => false,
+        }
+    }
+
     /// Is `=` on a **SteVec JSON leaf** of this kind exact — does `op(a) == op(b)`
     /// imply `a == b`?
     ///
@@ -205,15 +258,20 @@ impl ScalarKind {
     /// | `F32`, `F64` | number | yes | widening/identity into f64 — the leaf IS an f64, so f64 equality is the semantic |
     /// | `I64` | number | **no** | a bigint legitimately exceeds 2^53; `2^53` and `2^53+1` round to one f64 |
     /// | `Numeric` | number | **no** | a numeric legitimately carries more precision than f64 |
-    /// | `Date`, `Timestamp` | string | yes | ISO-8601/RFC3339 is alphanumeric + ASCII punctuation, which `orderize_string` passes through UNCHANGED (cllw-ore's own `prop_orderize_safe_string_unchanged`) |
+    /// | `Date`, `Timestamp` | string | yes* | ISO-8601/RFC3339 is alphanumeric + ASCII punctuation, which `orderize_string` passes through UNCHANGED (cllw-ore's own `prop_orderize_safe_string_unchanged`) |
     /// | `Text` | string | **no** | arbitrary text collates: `"café"` == `"cafe"`, `"hello😎"` == `"hello"` |
     ///
     /// (`Bool`/`Jsonb` carry no `Ope` domain and never reach this seam.)
     ///
-    /// Note `Date`/`Timestamp` are exact BECAUSE their string form is
-    /// orderize-invariant — not merely "because they are dates". Being a string
-    /// leaf does not imply collision; `orderize_string` only drops characters
-    /// outside its safe set, and a timestamp has none.
+    /// *`Date`/`Timestamp` never reach this predicate from the codegen: they
+    /// fail the upstream PARTICIPATION gate ([`Self::has_native_json_leaf`] —
+    /// JSON has no date type; a date-in-JSON is a text leaf, and no client can
+    /// build a temporal SteVec query term). The `yes` here documents the leaf
+    /// encoding fact — their string FORM is orderize-invariant, not merely
+    /// "because they are dates" — should a string leaf ever be compared through
+    /// a temporal lens. Being a string leaf does not imply collision;
+    /// `orderize_string` only drops characters outside its safe set, and a
+    /// timestamp has none.
     ///
     /// **The bar is "wrong when used as intended".** Every `no` row is a FALSE
     /// POSITIVE reachable by correct use: a `bigint` field holding `2^53+1` is
