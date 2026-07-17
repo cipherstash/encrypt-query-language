@@ -178,35 +178,75 @@ impl ScalarKind {
         matches!(self, ScalarKind::F32 | ScalarKind::F64)
     }
 
-    /// Is the CLLW-OPE (`op`) term **injective** on this kind's plaintexts — does
-    /// `op(a) == op(b)` imply `a == b`?
+    /// Is `=` on a **SteVec JSON leaf** of this kind exact — does `op(a) == op(b)`
+    /// imply `a == b`?
     ///
     /// **Determinism is not enough for equality.** `Term::Ope` is deterministic
     /// (equal plaintext ⇒ equal term), which is what makes `op` byte-comparison a
-    /// valid *ordering*. Equality additionally needs injectivity (different
-    /// plaintext ⇒ different term), and the two come apart for `Text`:
+    /// valid *ordering* for every kind. Equality additionally needs **injectivity**
+    /// (different plaintext ⇒ different term), and that is a property of the WHOLE
+    /// leaf conversion — not of `orderable_to_u64`, which is a bijection but runs
+    /// LAST. cipherstash-client applies a lossy step first
+    /// (`json_indexer/ste_vec/priv_state/ste_plaintext_term.rs`,
+    /// `impl From<&Value> for StePlaintextTerm`):
     ///
-    /// - Numeric/temporal kinds encode through `orderable_to_u64`, a bijection on
-    ///   the 64-bit orderable form — injective, so `op` equality is exact.
-    /// - `Text` encodes through cllw-ore's `orderize_string`, which NFKC-
-    ///   decomposes and then **strips** every char that is not alphanumeric,
-    ///   whitespace, or ASCII punctuation. `"café"`/`"cafe"`, `"Müller"`/`"Muller"`
-    ///   and `"hello😎"`/`"hello"` collapse to ONE term, so `op` equality on text
-    ///   is a **false positive**. (cllw-ore 0.4.2 `src/impls/string.rs` pins this:
-    ///   `encrypt_cmp("hello😎", "hello") == Ordering::Equal`.)
+    /// ```text
+    /// Value::Number(x) => Number(orderable_to_u64(x.as_f64()…))   // rounds to f64
+    /// Value::String(x) => String(x) -> orderize_string(x)         // decompose + strip
+    /// ```
     ///
-    /// Ordering is unaffected — a collated order is the documented semantic, and
-    /// the scalar `text_ord` domain already ships exactly it.
+    /// So a leaf's `op` is exact only where the kind's whole value domain survives
+    /// that step — which is a question about the VALUES, not about which branch
+    /// they take:
     ///
-    /// Scalar text COLUMNS dodge the equality hazard by listing `Hm` before `Ope`,
-    /// so [`crate::Term::extractor_for_operator`] routes `=`/`<>` to the exact
-    /// `hm` (see `tests::every_eq_capable_text_domain_resolves_eq_through_hm`). A
-    /// SteVec string **leaf** has no `hm` to fall back on — cipherstash-client's
-    /// `ste_plaintext_term.rs` maps `Value::String` to `Orderable`, never `Mac` —
-    /// so a seam that compares leaves must not offer equality on text at all.
-    /// That is what this predicate gates.
-    pub const fn ope_is_injective(self) -> bool {
-        !self.is_text()
+    /// | kind | leaf | exact? | why |
+    /// |---|---|---|---|
+    /// | `I16`, `I32` | number | yes | `|i32| ≤ 2^31 < 2^53`, so every value is an exact f64 |
+    /// | `F32`, `F64` | number | yes | widening/identity into f64 — the leaf IS an f64, so f64 equality is the semantic |
+    /// | `I64` | number | **no** | a bigint legitimately exceeds 2^53; `2^53` and `2^53+1` round to one f64 |
+    /// | `Numeric` | number | **no** | a numeric legitimately carries more precision than f64 |
+    /// | `Date`, `Timestamp` | string | yes | ISO-8601/RFC3339 is alphanumeric + ASCII punctuation, which `orderize_string` passes through UNCHANGED (cllw-ore's own `prop_orderize_safe_string_unchanged`) |
+    /// | `Text` | string | **no** | arbitrary text collates: `"café"` == `"cafe"`, `"hello😎"` == `"hello"` |
+    ///
+    /// (`Bool`/`Jsonb` carry no `Ope` domain and never reach this seam.)
+    ///
+    /// Note `Date`/`Timestamp` are exact BECAUSE their string form is
+    /// orderize-invariant — not merely "because they are dates". Being a string
+    /// leaf does not imply collision; `orderize_string` only drops characters
+    /// outside its safe set, and a timestamp has none.
+    ///
+    /// **The bar is "wrong when used as intended".** Every `no` row is a FALSE
+    /// POSITIVE reachable by correct use: a `bigint` field holding `2^53+1` is
+    /// ordinary, and so is a `text` field holding `"café"`. Neither is a client
+    /// error, and no client can avoid it — the loss is in cipherstash-client's
+    /// encoding, which EQL cannot fix. The only correct response is to not offer
+    /// the operator. By contrast an operand encrypted for the wrong column, wrong
+    /// selector, or a mismatched plaintext type yields ZERO ROWS — the ordinary
+    /// EQL client contract that applies to every operator in the product, and not
+    /// something this predicate speaks to.
+    ///
+    /// Ordering is unaffected throughout: a rounded/collated order is the intended
+    /// semantic, and the scalar `_ord` domains already ship exactly it.
+    ///
+    /// Scalar COLUMNS dodge the equality hazard entirely by listing `Hm` before
+    /// `Ope`, so [`crate::Term::extractor_for_operator`] routes `=`/`<>` to the
+    /// exact `hm` (see `tests::every_eq_capable_text_domain_resolves_eq_through_hm`).
+    /// A SteVec leaf has no `hm` to fall back on — `Value::Number`/`Value::String`
+    /// map to `Orderable`, never `Mac` — so a seam comparing leaves must simply not
+    /// offer equality where this returns false. That is what this predicate gates.
+    pub const fn json_leaf_equality_is_exact(self) -> bool {
+        match self {
+            // Number leaves whose value domain injects into f64.
+            ScalarKind::I16 | ScalarKind::I32 | ScalarKind::F32 | ScalarKind::F64 => true,
+            // String leaves whose textual form is orderize-invariant.
+            ScalarKind::Date | ScalarKind::Timestamp => true,
+            // Number leaves whose values legitimately exceed f64's precision.
+            ScalarKind::I64 | ScalarKind::Numeric => false,
+            // Arbitrary text — collated.
+            ScalarKind::Text => false,
+            // No Ope domain; never reaches the leaf seam.
+            ScalarKind::Bool | ScalarKind::Jsonb => false,
+        }
     }
 
     /// A debug/identifier string for the kind: the canonical Rust plaintext type

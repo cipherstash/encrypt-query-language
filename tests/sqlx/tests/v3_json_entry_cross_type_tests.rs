@@ -299,29 +299,37 @@ async fn json_entry_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Re
 /// fixed-width 65-bit number term — 132 on every row.
 const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
 
-/// #5 — TEXT has NO equality operator, and must not grow one.
+/// #5 — The families whose leaf encoding is LOSSY have NO equality operator, and
+/// must not grow one.
 ///
-/// A `text` leaf's `op` term is not injective on plaintext, so `=` built on it
-/// returns rows whose plaintext DIFFERS. cllw-ore's `orderize_string` NFKC-
-/// decomposes and then strips every char that is not alphanumeric, whitespace, or
-/// ASCII punctuation, so these distinct plaintexts share one `op` term:
+/// A JSON leaf is encoded as an f64 (numbers) or a collated string (text), and
+/// neither preserves every type's values. Where it does not, `=` returns rows whose
+/// plaintext DIFFERS — reachable by ordinary use, not by client error:
 ///
 /// ```text
-///   "cafe" == "café"                          "Muller" == "Müller"
-///   "hello" == "hello😎"                       "user@example.com" == "user@exämple.com"
+///   text     "cafe" == "café"     "hello" == "hello😎"     (orderize_string collates)
+///   bigint   9007199254740992 == 9007199254740993          (as_f64 rounds above 2^53)
+///   numeric  more precision than an f64 carries
 /// ```
 ///
-/// (Pinned upstream by cllw-ore 0.4.2's own `test_string_non_ascii_stripped`, and
-/// verified against cipherstash-client 0.38.1's SteVec term path.)
+/// (Pinned upstream by cllw-ore 0.4.2's `test_string_non_ascii_stripped`; the
+/// bigint collision is verified e2e against cipherstash-client 0.38.1, whose
+/// `impl From<&Value> for StePlaintextTerm` routes every numeric leaf through
+/// `as_f64()` BEFORE `orderable_to_u64`.)
 ///
 /// Determinism is what `op` gives — equal plaintext ⇒ equal term — and that is
 /// enough for ORDERING (#6 pins it) but not for equality, which also needs
-/// injectivity. A scalar text COLUMN escapes this by listing `Hm` before `Ope`, so
+/// injectivity. A scalar COLUMN escapes this by listing `Hm` before `Ope`, so
 /// `extractor_for_operator` routes `=` to the exact `hm`
-/// (`every_eq_capable_text_domain_resolves_eq_through_hm`). A SteVec string LEAF
-/// has no `hm` to route to — cipherstash-client maps `Value::String` to
-/// `Orderable`, never `Mac` — so there is no sound text equality to offer, and the
-/// codegen emits none (`ScalarKind::ope_is_injective`).
+/// (`every_eq_capable_text_domain_resolves_eq_through_hm`). A SteVec LEAF has no
+/// `hm` to route to — cipherstash-client maps `Value::Number`/`Value::String` to
+/// `Orderable`, never `Mac` — so there is no sound equality to offer for these
+/// families, and the codegen emits none
+/// (`ScalarKind::json_leaf_equality_is_exact`).
+///
+/// `integer`/`smallint`/`real`/`double`/`date`/`timestamp` KEEP `=` and are pinned
+/// here too — the gate must not over-broaden. See #4, which asserts integer `=`
+/// against the plaintext oracle.
 ///
 /// `=` is BLOCKED, not omitted. Omitting it would not make the query an error:
 /// `public.eql_v3_json_entry` and `eql_v3.query_text_ord` are both domains over
@@ -331,7 +339,7 @@ const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
 /// error. That swaps a false positive for a silent false negative. The blocker
 /// claims the signature so the caller gets a loud "operator not supported".
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn json_entry_text_equality_is_blocked(pool: PgPool) -> Result<()> {
+async fn json_entry_lossy_family_equality_is_blocked(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
 
     let operand: String = sqlx::query_scalar(&format!(
@@ -358,10 +366,20 @@ async fn json_entry_text_equality_is_blocked(pool: PgPool) -> Result<()> {
     .execute(&mut *tx)
     .await?;
 
-    // `=` and `<>` must RAISE for both text operands, in both directions — never
-    // return rows, and never silently return none.
+    // `=` and `<>` must RAISE for every lossy family's operands, in both
+    // directions — never return rows, and never silently return none. The operand
+    // payload is a text one; the CHECKs of the numeric operands accept `{v,i,op}`,
+    // and what is under test is OPERATOR RESOLUTION, not the term bytes: a blocker
+    // raises before it ever reads them.
     for op in ["=", "<>"] {
-        for operand_ty in ["eql_v3.query_text_ord", "eql_v3.query_text_ord_ope"] {
+        for operand_ty in [
+            "eql_v3.query_text_ord",
+            "eql_v3.query_text_ord_ope",
+            "eql_v3.query_bigint_ord",
+            "eql_v3.query_bigint_ord_ope",
+            "eql_v3.query_numeric_ord",
+            "eql_v3.query_numeric_ord_ope",
+        ] {
             for query in [
                 format!("SELECT id FROM entry_t WHERE value {op} '{esc}'::{operand_ty}"),
                 format!("SELECT id FROM entry_t WHERE '{esc}'::{operand_ty} {op} value"),
@@ -370,8 +388,8 @@ async fn json_entry_text_equality_is_blocked(pool: PgPool) -> Result<()> {
                     .fetch_all(&mut *tx)
                     .await
                     .expect_err(&format!(
-                        "text `op` is not injective, so `{op}` on a json_entry leaf must \
-                         RAISE rather than answer. Query: {query}"
+                        "{operand_ty}'s leaf encoding is lossy, so `{op}` on a json_entry \
+                         leaf must RAISE rather than answer. Query: {query}"
                     ));
                 let msg = err.to_string();
                 assert!(
@@ -411,6 +429,37 @@ async fn json_entry_text_equality_is_blocked(pool: PgPool) -> Result<()> {
         "text ordering must still resolve and match rows — otherwise this test \
          proves nothing about equality specifically"
     );
+
+    // The other half of the gate: the families whose leaf encoding IS lossless keep
+    // `=`, backed by the PUBLIC wrapper. Without this, blocking everything would
+    // pass the assertions above — over-broadening is as much a defect as
+    // under-blocking, it just fails silently as a missing feature.
+    for operand_ty in [
+        "eql_v3.query_integer_ord",
+        "eql_v3.query_smallint_ord",
+        "eql_v3.query_real_ord",
+        "eql_v3.query_double_ord",
+        "eql_v3.query_date_ord",
+        "eql_v3.query_timestamp_ord",
+    ] {
+        let backing: String = sqlx::query_scalar(
+            "SELECT n.nspname || '.' || p.proname \
+             FROM pg_operator o \
+             JOIN pg_proc p ON p.oid = o.oprcode \
+             JOIN pg_namespace n ON n.oid = p.pronamespace \
+             WHERE o.oprname = '=' \
+               AND o.oprleft = 'public.eql_v3_json_entry'::regtype \
+               AND o.oprright = $1::regtype",
+        )
+        .bind(operand_ty)
+        .fetch_one(&mut *tx)
+        .await?;
+        assert_eq!(
+            backing, "eql_v3.eq",
+            "{operand_ty}'s leaf encoding is lossless, so `=` must stay bound to the \
+             public wrapper — not blocked"
+        );
+    }
 
     tx.commit().await?;
     Ok(())

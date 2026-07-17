@@ -29,6 +29,7 @@ const V3_JSON_FUNCTIONS: &str = "src/v3/json/functions.sql";
 /// them. Only the name is spelled here; the SQL type name is DERIVED below.
 const JSON_ENTRY_DOMAIN: &str = "entry";
 
+
 /// The fixed cross type: the extracted SteVec leaf, `public.eql_v3_json_entry`.
 ///
 /// Derived from the catalog (`eql_domains::JSON`) via `Domain::full_name` +
@@ -403,6 +404,20 @@ const JSON_ENTRY_TERM: Term = Term::Ope;
 /// demands a `bf` the seam never reads and the caller would have to manufacture.
 /// Binding it is the mirror of the `_eq` mistake: `_eq` matches nothing, `search`
 /// matches but taxes the caller for an inert term.
+///
+/// **Caveat — an excluded operand is not unreachable.** `json_entry` and every
+/// `query_<T>_<d>` are domains over `jsonb`, and PostgreSQL's operator resolution
+/// flattens a domain to its base type, so `json_entry <op> query_text_search`
+/// resolves to native `jsonb <op> jsonb` and answers silently (`=` compares whole
+/// envelopes; `<` orders JSON objects). Only an EXACT `(json_entry, query_<T>_<d>)`
+/// operator beats that flattening — a `(json_entry, jsonb)` catch-all does not,
+/// because `jsonb <op> jsonb` is itself an exact match once both sides flatten.
+///
+/// This is a project-wide property of the domain-over-jsonb design, not specific
+/// to this seam: `eql_v3_integer_eq = eql_v3_text_ord` answers `false` today, and
+/// the surface has never blocked domain-x-domain pairs (its blockers all target
+/// `(domain, native-type)` signatures). Tracked separately; see the json_entry
+/// surface tests.
 fn json_entry_cross_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
     spec.domains
         .iter()
@@ -425,44 +440,47 @@ fn json_entry_cross_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
 ///
 /// **The equality subtraction is a correctness gate, not a preference.** `op` is
 /// deterministic, which makes it a sound ordering for every kind. Equality also
-/// needs injectivity, and text's `op` is not injective: cllw-ore's
-/// `orderize_string` NFKC-decomposes and then strips every char that is not
-/// alphanumeric / whitespace / ASCII punctuation, so `"café"` and `"cafe"`,
-/// `"user@exämple.com"` and `"user@example.com"` yield ONE term. An `=` built on
-/// it returns rows whose plaintext differs — a false positive, verified against
-/// cipherstash-client 0.38.1. A scalar text COLUMN escapes this by listing `Hm`
-/// first (`extractor_for_operator` routes `=` to the exact `hm`); a SteVec string
-/// LEAF has no `hm` to route to, so the only sound surface is ordering-only.
-/// [`eql_domains::ScalarKind::ope_is_injective`] owns the rule; the equality operator set is
-/// asked of `Term::Hm` — the equality term — rather than spelled out.
+/// needs INJECTIVITY, and that is a property of the whole SteVec leaf conversion,
+/// not of `orderable_to_u64` (a bijection, but it runs LAST). cipherstash-client
+/// applies a lossy step first — `as_f64()` on a numeric leaf, `orderize_string` on
+/// a string leaf — so `2^53`/`2^53+1` collide for `bigint`, and `"café"`/`"cafe"`
+/// collide for `text`. An `=` built on either returns rows whose plaintext differs.
+/// Both are verified end-to-end against cipherstash-client 0.38.1.
+///
+/// A scalar COLUMN escapes this by listing `Hm` first (`extractor_for_operator`
+/// routes `=` to the exact `hm`); a SteVec leaf has no `hm` to route to, so the
+/// only sound surface for a lossy kind is ordering-only.
+/// [`eql_domains::ScalarKind::json_leaf_equality_is_exact`] owns the rule — keyed
+/// on the LEAF conversion, not on the operand's declared kind; the equality
+/// operator set is asked of `Term::Hm` — the equality term — rather than spelled out.
 fn json_entry_cross_operators(spec: &DomainFamily) -> Vec<&'static str> {
     // `expect`, not a permissive default: an unknown kind must fail the build
-    // LOUDLY rather than silently re-enable equality on a kind whose `op` may not
-    // be injective. Every catalog family has a kind (the `FIXTURES` parity block
+    // LOUDLY rather than silently re-enable equality on a kind whose leaf encoding
+    // may be lossy. Every catalog family has a kind (the `FIXTURES` parity block
     // binds them at build time), so this is unreachable in practice.
     let kind = eql_domains::kind_for(spec.name)
         .unwrap_or_else(|| panic!("catalog family `{}` declares no ScalarKind", spec.name));
     let mut ops = Term::operators_for_terms(&[JSON_ENTRY_TERM]);
-    if !kind.ope_is_injective() {
+    if !kind.json_leaf_equality_is_exact() {
         ops.retain(|op| !Term::Hm.operators().contains(op));
     }
     ops
 }
 
-/// The operators [`JSON_ENTRY_TERM`] provides that this family must NOT serve —
-/// the complement of [`json_entry_cross_operators`]. **Blocked, never merely
-/// omitted.**
+/// The operators [`JSON_ENTRY_TERM`] provides that a family's SERVED operands must
+/// not answer — the complement of [`json_entry_cross_operators`]. **Blocked, never
+/// merely omitted.**
 ///
-/// Both `public.eql_v3_json_entry` and `eql_v3.query_<T>_<d>` are domains over
-/// `jsonb`, and an operator resolves against the ultimate base type. So leaving
-/// `=` unbound does not make `json_entry = query_text_ord` a planner error — it
-/// silently falls back to native `jsonb = jsonb`, which compares whole payload
-/// objects (`{s,c,op}` vs `{v,i,hm,op}`), never matches, and returns ZERO ROWS
-/// with no error. That trades a false positive for a silent false negative.
+/// `public.eql_v3_json_entry` and `eql_v3.query_<T>_<d>` are both domains over
+/// `jsonb`, and an operator resolves against the ultimate base type. So leaving `=`
+/// unbound does not make `json_entry = query_text_ord` a planner error — it falls
+/// back to native `jsonb = jsonb`, compares whole payload objects, never matches,
+/// and returns ZERO ROWS with no error. A blocker claims the exact signature so the
+/// operator resolves to a `RAISE` instead.
 ///
-/// A blocker claims the exact signature so the operator resolves to a `RAISE`
-/// instead of the base-type fallback — the same reason the scalar surface blocks
-/// native `json` operators reachable through domain fallback.
+/// This covers a SERVED operand's unsound operators (text's `=`), where the exact
+/// signature beats the base-type flattening. Operands the seam does not serve at
+/// all are NOT covered — see the caveat on [`json_entry_cross_domains`].
 fn json_entry_cross_blocked_operators(spec: &DomainFamily) -> Vec<&'static str> {
     let supported = json_entry_cross_operators(spec);
     Term::operators_for_terms(&[JSON_ENTRY_TERM])
@@ -917,6 +935,7 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         println!("generated {}", rel.display());
     }
     all_written.push(fallback_path);
+
 
     // Orphan sweep across every scalar type dir. `generate_type` already prunes
     // stale files *within* a regenerated dir, but a type dropped from the catalog
@@ -1890,44 +1909,72 @@ mod tests {
     }
 
     #[test]
-    fn json_entry_text_emits_ordering_only_because_ope_is_not_injective_on_text() {
-        // The correctness gate. `op` is deterministic, so it orders every kind
-        // soundly — but equality also needs INJECTIVITY, and text's does not have
-        // it: cllw-ore's `orderize_string` NFKC-decomposes then strips every char
-        // that is not alphanumeric / whitespace / ASCII punctuation, so "café" and
-        // "cafe" collapse to one `op`. An `=` on that returns rows whose plaintext
-        // differs. A scalar text COLUMN escapes it by listing Hm first, so
-        // `extractor_for_operator` routes `=` to the exact `hm`; a SteVec string
-        // LEAF has no `hm` to route to (cipherstash-client maps Value::String to
-        // Orderable, never Mac), so ordering-only is the only sound surface.
-        let text = json_entry_cross_operators(spec("text"));
-        for eq_op in Term::Hm.operators() {
-            assert!(
-                !text.contains(eq_op),
-                "text `op` is not injective (orderize_string collates), so `{eq_op}` \
-                 on a json_entry leaf would be a FALSE POSITIVE — it must not be emitted"
+    fn json_entry_blocks_equality_wherever_the_leaf_encoding_is_lossy() {
+        // The gate asks one question: is `=` WRONG when the operator is used as
+        // intended? cipherstash-client rounds every JSON numeric leaf through
+        // `as_f64()` before `orderable_to_u64`, so a family whose values
+        // legitimately exceed f64's precision loses equality even though it is not
+        // text:
+        //   bigint  — 2^53 and 2^53+1 produce byte-identical `op` (verified e2e)
+        //   numeric — more precision than f64 carries
+        // and arbitrary text loses it to orderize_string's collation. Note
+        // date/timestamp are NOT here: their string form is orderize-invariant, so
+        // their equality is exact (see ScalarKind::json_leaf_equality_is_exact).
+        for family in ["bigint", "numeric", "text"] {
+            let ops = json_entry_cross_operators(spec(family));
+            for eq_op in Term::Hm.operators() {
+                assert!(
+                    !ops.contains(eq_op),
+                    "{family}'s JSON leaf encoding is lossy, so `{eq_op}` would be a \
+                     FALSE POSITIVE and must not be emitted"
+                );
+            }
+            assert_eq!(
+                ops,
+                vec!["<", "<=", ">", ">="],
+                "{family} keeps ordering — a rounded/collated order is the intended semantic"
             );
         }
-        assert_eq!(
-            text,
-            vec!["<", "<=", ">", ">="],
-            "text keeps exactly the ordering operators — a collated order is the \
-             documented semantic and the scalar text_ord domain already ships it"
-        );
 
-        // Every other Ope-carrying family IS injective (orderable_to_u64 is a
-        // bijection), so equality stays. Pinning one non-integer kind guards
-        // against `ope_is_injective` being over-broadened to "not a number".
-        for family in ["integer", "date", "timestamp", "numeric", "real", "double"] {
+        // The families whose values survive their leaf encoding keep equality:
+        // integer/smallint inject into f64, real/double ARE f64, and date/timestamp
+        // are orderize-invariant strings. Pinning date/timestamp guards against the
+        // gate being re-broadened to "any string leaf collates", which is false —
+        // orderize_string only drops chars outside its safe set, and ISO-8601 has
+        // none.
+        for family in ["integer", "smallint", "real", "double", "date", "timestamp"] {
             let ops = json_entry_cross_operators(spec(family));
             for eq_op in Term::Hm.operators() {
                 assert!(
                     ops.contains(eq_op),
-                    "{family}'s `op` is injective, so `{eq_op}` must be emitted"
+                    "{family}'s values survive their leaf encoding, so `{eq_op}` is \
+                     exact and must be emitted"
                 );
             }
+            assert_eq!(ops, vec!["=", "<>", "<", "<=", ">", ">="]);
         }
     }
+
+
+    #[test]
+    fn json_entry_bloom_operand_is_excluded_from_the_served_list() {
+        // coderdan's review point: SteVec has no match/bloom capability, so
+        // `search` is not served. NOTE this leaves `json_entry <op> query_text_search`
+        // resolving to native `jsonb <op> jsonb` (silently wrong) — the same
+        // pre-existing domain-over-jsonb hole as `integer_eq = text_ord`, tracked
+        // separately. See the caveat on `json_entry_cross_domains`.
+        let text: Vec<&str> = json_entry_cross_domains(spec("text"))
+            .iter()
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(text, vec!["ord", "ord_ope"]);
+        let sql = render_json_entry_cross_functions(spec("text"), &json_entry_cross_domains(spec("text")));
+        assert!(
+            !sql.contains("query_text_search"),
+            "search must get no wrapper AND no per-pair blocker — the net owns it"
+        );
+    }
+
 
     #[test]
     fn json_entry_type_is_derived_from_the_catalog() {
@@ -2023,7 +2070,7 @@ mod tests {
         // text emits ORDERING ONLY. `op` is deterministic, so `ord_term(a) < …` is
         // a sound collated order — the same one the scalar `text_ord` domain
         // already ships. But `=` needs INJECTIVITY on top of determinism, and
-        // cllw-ore's `orderize_string` destroys it (NFKC-decompose, then strip
+        // cllw-ore's `orderize_string` destroys it (canonical decompose, then strip
         // every non-alphanumeric/whitespace/ASCII-punctuation char), so
         // `"café" = "cafe"` and `"user@exämple.com" = "user@example.com"` under
         // `op`. Emitting `=` here would return rows whose plaintext differs.

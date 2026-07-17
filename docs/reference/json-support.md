@@ -129,18 +129,26 @@ WHERE encrypted_json -> 'name_selector'::text >  $1::eql_v3.query_text_ord;     
 
 Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic CLLW-OPE `op` term. A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for every one of them.
 
-Which comparisons you get depends on the leaf's type:
+**Ordering is available on every family.** Equality is available only where the leaf's encoding preserves the values the field can legitimately hold — a leaf is encoded as an f64 (numbers) or a collated string (text), and neither is lossless for every type:
 
-| leaf type | operators | why |
+| family | operators | why |
 |---|---|---|
-| number (`integer`, `bigint`, `date`, `timestamp`, `numeric`, `real`, `double`) | `=` `<>` `<` `<=` `>` `>=` | `op` encodes the value through `orderable_to_u64`, a bijection — so `op` equality is exact |
-| string (`text`) | `<` `<=` `>` `>=` only | `op` encodes the **collated** value, so equality on it is not exact — see below |
+| `integer`, `smallint` | `=` `<>` `<` `<=` `>` `>=` | every value in range is an exact f64 (`\|i32\| < 2^53`) |
+| `real`, `double` | `=` `<>` `<` `<=` `>` `>=` | the leaf **is** an f64, so f64 equality is the semantic |
+| `date`, `timestamp` | `=` `<>` `<` `<=` `>` `>=` | ISO-8601 / RFC3339 passes through collation unchanged |
+| `bigint` | `<` `<=` `>` `>=` only | values above 2^53 round: `9007199254740993` and `9007199254740992` share one term |
+| `numeric` | `<` `<=` `>` `>=` only | carries more precision than an f64 |
+| `text` | `<` `<=` `>` `>=` only | the value is **collated** before encoding — see below |
+
+`=` and `<>` on `bigint`, `numeric`, and `text` raise `operator is not supported` rather than answering. They are absent because an equality built on those encodings returns rows whose plaintext **differs** — a wrong answer, not a missing feature.
 
 The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql_v3.query_<T>_ord_ope`. Operands whose index terms an extracted leaf cannot produce are not bound at all: `eql_v3.query_<T>_eq` (HMAC only), `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` (block-ORE), `eql_v3.query_text_match` (Bloom), and `eql_v3.query_text_search` — a leaf carries no `match_term`, so SteVec has no match/bloom capability and `search` offers nothing over `_ord` while demanding an inert `bf`.
 
 > **Note.** There is no `eql_v3.query_<T>_eq` operator on `public.eql_v3_json_entry` for any type. A JSON scalar leaf carries only the `op` term — never a per-value equality (`hm`) term. (For `text`, `eql_v3.query_text_ord` still requires an `hm` key to satisfy its domain CHECK, because the same operand type also serves scalar `text` columns; when querying a JSON leaf that `hm` is not part of the comparison.)
 
-> **⚠️ `=` and `<>` are not available on a `text` leaf — they raise `operator is not supported`.** A string leaf's `op` term encodes the value *after collation*: cipherstash-client normalises with NFKC and then strips every character that is not alphanumeric, whitespace, or ASCII punctuation. So `"café"` and `"cafe"`, `"Müller"` and `"Muller"`, `"user@exämple.com"` and `"user@example.com"` all produce the **same** `op` term. An `=` built on it would silently return rows whose plaintext differs, so EQL does not offer one. Ordering is unaffected — a collated order is the intended semantic, and it is the same order scalar `text_ord` columns use. To match a string field exactly, query the document with containment (`@>`), whose `hm` terms are exact.
+> **⚠️ `=` on a `text` leaf would be a false positive, so it does not exist.** A string leaf's `op` term encodes the value *after collation*: cipherstash-client canonically decomposes it and then strips every character that is not alphanumeric, whitespace, or ASCII punctuation. So `"café"` and `"cafe"`, `"Müller"` and `"Muller"`, `"user@exämple.com"` and `"user@example.com"` all produce the **same** `op` term. Ordering is unaffected — a collated order is the intended semantic, and it is the same order scalar `text_ord` columns use. **To match a string field exactly, query the document with containment (`@>`)**, whose `hm` terms are exact. (Scalar `text` *columns* are unaffected: their `=` routes through the exact `hm` term. A SteVec string leaf carries no `hm` to route to.)
+
+> **⚠️ `=` on a `bigint` or `numeric` leaf would be a false positive, so it does not exist.** A JSON number is encoded as an f64, which cannot represent every `bigint` (above 2^53) or every `numeric` (arbitrary precision). `9007199254740993` and `9007199254740992` produce one term. `integer`/`smallint`/`real`/`double` are unaffected — every value they can hold is an exact f64.
 
 > **The operand must be encrypted for the same column, and as the same JSON scalar type, as the leaf.** Field scoping comes from the `->` extraction, not from the operand: an `op` term encodes the plaintext and the column, and carries no selector (only `hm` terms do). So one operand is comparable against whichever leaf you extract — which also means an operand encrypted for a *different column*, or for a different JSON scalar type (a number term against a string leaf), has non-corresponding term bytes and **silently returns zero rows with no error**. The SQL layer only compares terms and cannot detect the mismatch; keeping the operand's column and type aligned with the leaf is the client's / CipherStash Proxy's responsibility.
 
