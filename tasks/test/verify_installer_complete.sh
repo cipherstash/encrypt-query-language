@@ -37,7 +37,27 @@ done
 
 # `grep -c ''` counts a final line that lacks a trailing newline; `wc -l` does not.
 # The trailing-newline gate below makes the two agree, but count the honest way.
-count_lines() { grep -c '' "$1" || true; }
+#
+# grep exits 1 on an empty file (zero lines — legitimate) and >= 2 on a real fault
+# (missing, unreadable). Same rc <= 1 idiom as strip_require_lines in
+# tasks/build/ordering.sh. A blanket `|| true` would print nothing on a fault, and
+# the caller's `$(( expected + total - reqs ))` reads that empty string as 0 — the
+# file silently contributes nothing to the identity. Gate 1 makes that unreachable
+# today, but this script's whole job is to fail loudly.
+#
+# Every caller is `var=$(count_lines f)`, so this `exit 2` leaves only the
+# command-substitution subshell; the parent aborts because `set -e` sees the
+# failed assignment. Keep the callers as bare assignments — `local n=$(...)` or a
+# `|| true` would mask the status and restore the silent-zero this replaces.
+count_lines() {
+  local n rc=0
+  n=$(grep -c '' "$1") || rc=$?
+  if (( rc > 1 )); then
+    echo "ERROR: cannot count lines in $1 (grep exit $rc)" >&2
+    exit 2
+  fi
+  echo "${n:-0}"
+}
 
 fail=0
 

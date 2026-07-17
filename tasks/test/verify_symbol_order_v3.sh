@@ -14,6 +14,17 @@
 # plpgsql forward reference — mutual recursion, say — needs an entry in
 # tasks/test/symbol_order_allowlist.txt.
 #
+# Scope: this checks CROSS-FILE order only. A reference is compared against the
+# index of the file that defines it (`defined[tok] > i`), so a symbol referenced
+# in the same file that defines it always passes, regardless of line order within
+# that file. That is deliberate: the conditional SEM opclass files define an
+# operator class and then name it in a RAISE NOTICE in the same file, and several
+# generated files reference a domain they just created. Enforcing intra-file order
+# would flag all of them and push real definitions onto the allowlist, which is
+# the opposite of what the allowlist is for. Postgres resolves within a single
+# file's statements in statement order anyway, and that order comes from the
+# renderers, not from the install order this gate exists to check.
+#
 # Note this runs inside `mise run build`, so it gates the release build, not just
 # CI. A false positive blocks a release until allowlisted. Both the rejection and
 # the allowlist escape hatch are pinned by tasks/test/symbol_order_selftest.sh.

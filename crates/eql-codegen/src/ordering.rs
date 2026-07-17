@@ -199,13 +199,13 @@ pub(crate) fn topo_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>,
     while let Some(Reverse(n)) = ready.pop() {
         order.push(n.to_string());
         if let Some(deps) = dependents.get(n) {
-            let mut ds = deps.clone();
-            ds.sort_unstable();
-            for d in ds {
-                let e = indeg.get_mut(d).unwrap();
+            // Push order does not matter: `ready` is a min-heap keyed by path, so
+            // it — not the insertion sequence — decides what comes out next.
+            for d in deps {
+                let e = indeg.get_mut(*d).unwrap();
                 *e -= 1;
                 if *e == 0 {
-                    ready.push(Reverse(d));
+                    ready.push(Reverse(*d));
                 }
             }
         }
