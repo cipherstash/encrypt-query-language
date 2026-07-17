@@ -56,6 +56,16 @@ pub enum OrderError {
     /// (say) `src/v2/foo.sql` would pull non-v3 SQL into the artefact. Subsumes
     /// the old `verify_v3_self_contained` shell gate.
     OutsideSurface(Vec<(String, String)>),
+    /// Files that `-- REQUIRE:` themselves. Always a typo — and a damaging one,
+    /// because the line almost certainly meant to name a *different* file, so the
+    /// real edge is missing and the order can be silently wrong.
+    ///
+    /// The old shell build emitted a self-edge for every file on purpose (`echo
+    /// "$sql_file $sql_file"`), because `tsort` only prints tokens that appear in
+    /// some edge; tolerating them was load-bearing then. The walk enumerates every
+    /// node directly, so nothing emits self-edges now and the tolerance protects
+    /// nothing but the typo.
+    SelfEdge(Vec<String>),
     /// The edges do not linearize.
     Cycle(CycleError),
 }
@@ -83,6 +93,20 @@ impl std::fmt::Display for OrderError {
                     "the eql_v3 surface must be self-contained — no edge may leave {SURFACE_ROOT}"
                 )
             }
+            Self::SelfEdge(v) => {
+                // NOT reported as a cycle. It is one in graph terms, but "dependency
+                // cycle" sends the reader hunting a loop between files that does not
+                // exist, when the fix is one line in one file.
+                writeln!(f, "-- REQUIRE: file requires itself:")?;
+                for file in v {
+                    writeln!(f, "  {file} requires {file}")?;
+                }
+                write!(
+                    f,
+                    "a file cannot depend on itself — this line likely meant to name another file, \
+                     in which case the real dependency is missing"
+                )
+            }
             Self::Cycle(e) => write!(f, "{e}"),
         }
     }
@@ -92,20 +116,23 @@ impl std::error::Error for OrderError {}
 /// Linearize the whole surface. `files` is `(repo-relative path, its REQUIRE
 /// targets)` for EVERY `.sql` file in the surface.
 ///
-/// Unlike [`topo_order`], which tolerates edges to non-nodes, this validates
-/// first: every target must be a node, and must live under [`SURFACE_ROOT`].
-/// Both gates ran in shell before; keeping them here means the invariant travels
-/// with the sort rather than with whoever remembers to call the checker.
+/// Unlike [`topo_order`], which tolerates edges to non-nodes and self-edges, this
+/// validates first: every target must be a node, must live under [`SURFACE_ROOT`],
+/// and must not be the requiring file itself. The first two gates ran in shell
+/// before; keeping them here means the invariant travels with the sort rather than
+/// with whoever remembers to call the checker.
 pub fn surface_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>, OrderError> {
     let nodes: BTreeSet<&str> = files.iter().map(|(p, _)| p.as_str()).collect();
     let prefix = format!("{SURFACE_ROOT}/");
-    let (mut outside, mut unknown) = (Vec::new(), Vec::new());
+    let (mut outside, mut unknown, mut self_edges) = (Vec::new(), Vec::new(), Vec::new());
     for (file, deps) in files {
         for dep in deps {
             if !dep.starts_with(&prefix) {
                 outside.push((file.clone(), dep.clone()));
             } else if !nodes.contains(dep.as_str()) {
                 unknown.push((file.clone(), dep.clone()));
+            } else if dep == file {
+                self_edges.push(file.clone());
             }
         }
     }
@@ -116,6 +143,10 @@ pub fn surface_order(files: &[(String, Vec<String>)]) -> Result<Vec<String>, Ord
     }
     if !unknown.is_empty() {
         return Err(OrderError::UnknownTargets(unknown));
+    }
+    if !self_edges.is_empty() {
+        self_edges.dedup();
+        return Err(OrderError::SelfEdge(self_edges));
     }
     topo_order(files).map_err(OrderError::Cycle)
 }
@@ -367,16 +398,45 @@ mod tests {
         );
     }
 
-    // A file that requires ITSELF is tolerated, not a cycle. `topo_order`'s
-    // `dep != p` guard skips the self-edge, so this is reachable in production —
-    // the old shell build even emitted a self-edge per file, because `tsort` only
-    // prints tokens that appear in some edge. Pinned so a future rewrite of the
-    // guard turns a harmless typo into a build failure loudly, in this test,
-    // rather than quietly at release time.
+    // A file that requires ITSELF is rejected, and NOT as a cycle.
+    //
+    // This tolerance used to be deliberate: the old shell build emitted a self-edge
+    // for every file (`echo "$sql_file $sql_file"`) because `tsort` only prints
+    // tokens appearing in some edge. That rationale died with the shell build — the
+    // walk enumerates nodes directly, so nothing emits self-edges now and the only
+    // way one appears is a hand-typo. A typo'd edge is not harmless: the line meant
+    // to name another file, so the real dependency is missing and the order can be
+    // silently wrong.
+    //
+    // Reported as SelfEdge, not Cycle: "dependency cycle" would send the reader
+    // hunting a loop between files when the fix is one line in one file.
     #[test]
-    fn surface_order_tolerates_a_self_edge() {
+    fn surface_order_rejects_a_self_edge() {
         let files = vec![f("src/v3/a.sql", &["src/v3/a.sql"])];
-        assert_eq!(surface_order(&files).unwrap(), vec!["src/v3/a.sql"]);
+        let err = surface_order(&files).unwrap_err();
+        let OrderError::SelfEdge(v) = &err else {
+            panic!("expected SelfEdge, got {err:?}");
+        };
+        assert_eq!(v.as_slice(), &["src/v3/a.sql".to_string()]);
+        let msg = err.to_string();
+        assert!(
+            msg.contains("requires itself") && !msg.contains("cycle"),
+            "a self-require must not be reported as a cycle: {msg}"
+        );
+    }
+
+    // A self-edge is rejected even when the file has other, legitimate edges — the
+    // typo hides among real REQUIRE lines, which is exactly how it would ship.
+    #[test]
+    fn surface_order_rejects_a_self_edge_among_valid_edges() {
+        let files = vec![
+            f("src/v3/schema.sql", &[]),
+            f("src/v3/a.sql", &["src/v3/schema.sql", "src/v3/a.sql"]),
+        ];
+        assert!(matches!(
+            surface_order(&files).unwrap_err(),
+            OrderError::SelfEdge(_)
+        ));
     }
 
     // A cycle surfaces as a cycle, not as a silently truncated order.

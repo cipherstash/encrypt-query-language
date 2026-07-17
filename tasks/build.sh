@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs", "tasks/build/ordering.sh", "tasks/test/verify_symbol_order_v3.sh", "tasks/test/verify_installer_complete.sh", "tasks/test/symbol_order_allowlist.txt"]
+#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs", "Cargo.toml", "Cargo.lock", "crates/eql-codegen/Cargo.toml", "crates/eql-domains/Cargo.toml", "tasks/build/ordering.sh", "tasks/test/verify_symbol_order_v3.sh", "tasks/test/verify_installer_complete.sh", "tasks/test/symbol_order_allowlist.txt"]
 #MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","src/deps-ordered-v3.txt"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
@@ -13,6 +13,11 @@ set -euo pipefail
 # scripts below gate it. All four are in #MISE sources: a cache hit skips this
 # script entirely, gates included, so an edit to any of them must invalidate the
 # build rather than re-serve an installer built by the old logic.
+#
+# The Cargo manifests and Cargo.lock are sources for the same reason: the two
+# `cargo run` steps below render this artefact, and eql-codegen's own deps decide
+# what they render — minijinja templates the SQL, prettyplease (=0.2.37) formats
+# the bindings. A dep bump changes the output with no .rs file touched.
 source tasks/build/ordering.sh
 
 # A failed `eql-codegen order` leaves its temp behind; don't strand it.

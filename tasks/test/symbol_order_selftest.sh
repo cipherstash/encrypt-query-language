@@ -135,4 +135,50 @@ SYMBOL_ORDER_ALLOWLIST="$tmp/allow.txt" \
   bash tasks/test/verify_symbol_order_v3.sh "$tmp/plpgsql_order.txt" \
   || { echo "FAIL: allowlist did not release the plpgsql forward reference"; exit 1; }
 echo "ok: allowlist releases a plpgsql forward reference"
+
+# ---------------------------------------------------------------------------
+# Overload resolution: the gate cannot tell overloads apart (a reference carries
+# no argument types), so it must SAY so rather than report a bare OK. On the real
+# surface eql_v3.eq has 186 definitions spanning files #55..#242 — keying on
+# schema+name and keeping the MIN index means every eq reference after #55 passes
+# for free. These three cases pin the boundary of what is still decidable.
+# ---------------------------------------------------------------------------
+
+# (a) Overloaded, and a later overload is still ahead of the reference: NOT
+# decidable. Must pass (it is a structural limit, not rot) but must report the
+# name as unresolvable instead of claiming a clean check.
+printf 'CREATE FUNCTION eql_v3.eq(a public.integer_eq, b public.integer_eq) RETURNS boolean ...\n' > "$tmp/eq_int.sql"
+printf 'CREATE OPERATOR = ( FUNCTION = eql_v3.eq, LEFTARG = public.text_eq, RIGHTARG = public.text_eq );\n' > "$tmp/eq_use.sql"
+printf 'CREATE FUNCTION eql_v3.eq(a public.text_eq, b public.text_eq) RETURNS boolean ...\n' > "$tmp/eq_text.sql"
+printf '%s\n%s\n%s\n' "$tmp/eq_int.sql" "$tmp/eq_use.sql" "$tmp/eq_text.sql" > "$tmp/overload_order.txt"
+out="$(bash tasks/test/verify_symbol_order_v3.sh "$tmp/overload_order.txt")" \
+  || { echo "FAIL: ambiguous overload treated as an error"; exit 1; }
+case "$out" in
+  *"unresolvable"*) echo "ok: ambiguous overload reported as unresolvable, not a bare OK" ;;
+  *) echo "FAIL: overload blindness went unreported: [$out]"; exit 1 ;;
+esac
+
+# (b) The reference precedes EVERY definition of the name. Decidable without
+# knowing which overload was meant — it is wrong either way. Pins that the
+# ambiguity bail-out did not swallow this existing catch.
+printf '%s\n%s\n%s\n' "$tmp/eq_use.sql" "$tmp/eq_int.sql" "$tmp/eq_text.sql" > "$tmp/overload_bad.txt"
+if bash tasks/test/verify_symbol_order_v3.sh "$tmp/overload_bad.txt" 2>/dev/null; then
+  echo "FAIL: reference before ALL overloads accepted — the preserved catch is gone"; exit 1
+fi
+echo "ok: reference before every overload still rejected"
+
+# (c) Overloaded but every definition sits in ONE file ordered before the use, so
+# the answer is sound whichever overload was meant — must stay fully checked, not
+# written off as unresolvable. Mirrors the real eql_v3.ste_vec_contains and the
+# CREATE OPERATOR FAMILY + CLASS pair sharing eql_v3_internal.ore_cllw_ops.
+printf 'CREATE FUNCTION eql_v3.selector(a public.jsonb_entry) RETURNS text ...\nCREATE FUNCTION eql_v3.selector(a public.jsonb_query) RETURNS text ...\n' > "$tmp/sel_defs.sql"
+printf 'SELECT eql_v3.selector(x);\n' > "$tmp/sel_use.sql"
+printf '%s\n%s\n' "$tmp/sel_defs.sql" "$tmp/sel_use.sql" > "$tmp/samefile_order.txt"
+out="$(bash tasks/test/verify_symbol_order_v3.sh "$tmp/samefile_order.txt")" \
+  || { echo "FAIL: same-file overloads rejected"; exit 1; }
+case "$out" in
+  *"unresolvable"*) echo "FAIL: same-file overloads written off as unresolvable: [$out]"; exit 1 ;;
+  *) echo "ok: overloads all defined before use stay soundly checked" ;;
+esac
+
 echo "symbol-order self-test passed"

@@ -133,7 +133,7 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |
 | **rust-crates** | `test:crates` + `types:check` | `cargo fmt --check`, clippy + `cargo test` for `eql-domains` / `eql-codegen` / `eql-tests-macros` / `eql-bindings`; verify TS bindings + JSON schemas are fresh | no | no |
 | **codegen** | `codegen:parity` | Regenerate encrypted-domain SQL in place + `git diff` drift gate (committed `src/v3/scalars/` matches the generator) | no | no |
-| **self-contained-v3** | `test:self_contained_v3`, `test:installer_complete`, `test:symbol_order_v3`, `test:build_ordering_helpers` | `eql_v3` surface has no `eql_v2` dependency; installer contains every ordered file; symbols defined before use | no | no |
+| **self-contained-v3** | `test:self_contained_v3`, `test:installer_complete`, `test:symbol_order_v3`, `test:build_ordering_helpers` | `eql_v3` surface has no `eql_v2` dependency; installer contains every ordered file; singleton symbols defined before use (overloads are resolved exactly by the `clean-install` job's `test:clean_install_v3`) | no | no |
 | **matrix-coverage** | `test:matrix:inventory` (+`:jsonb_entry`, `:v3-jsonb`) + `test:matrix:catalog-coverage` | Scalar-matrix test-name snapshots are not silently dropped; catalog surface is covered | no | no |
 | **splinter** | `test:splinter` | Supabase/Splinter lints over the installed EQL | yes (PG17) | no |
 | **ci-required** | — | aggregator: every needed job is `success`/`skipped` | no | no |

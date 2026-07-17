@@ -14,6 +14,30 @@
 # plpgsql forward reference — mutual recursion, say — needs an entry in
 # tasks/test/symbol_order_allowlist.txt.
 #
+# Scope: OVERLOADS ARE NOT RESOLVED HERE. Definitions and references are both
+# keyed by schema+name with no argument list, because a reference carries no types
+# to key on: a call site is a bare `eql_v3.eq(a, b)`, and CREATE OPERATOR supplies
+# LEFTARG/RIGHTARG on other lines. Resolving that needs a type checker, not a
+# line-oriented scan. eql_v3.eq has 186 definitions across files #55..#242, so for
+# the hot names this gate decides almost nothing — it reports the count of such
+# names rather than implying it checked them.
+#
+# That is not a hole in coverage, because Postgres already resolves overloads
+# exactly, at CREATE time, when the concatenated monolith is installed:
+#
+#     mise run test:clean_install_v3
+#
+# which runs in CI on every relevant PR across PG 14-17, needs no CipherStash
+# credentials, and is not skipped on forks. Verified: swapping text_eq_operators
+# ahead of text_eq_functions passes THIS gate and fails that one with
+# `function eql_v3.eq(text_eq, text_eq) does not exist`.
+#
+# So this gate is the DB-free pre-flight; the clean install is the authority. What
+# this gate uniquely adds is (1) singleton symbols — hmac_256, the eql_v3.query_*
+# domains, the opclasses, version() — where name identifies the object and the
+# check is sound, and (2) the plpgsql strictness described above, which the clean
+# install cannot catch because Postgres defers those bodies to execution time.
+#
 # Scope: this checks CROSS-FILE order only. A reference is compared against the
 # index of the file that defines it (`defined[tok] > i`), so a symbol referenced
 # in the same file that defines it always passes, regardless of line order within
@@ -82,7 +106,7 @@ awk -v allowfile="$ALLOW" '
         s = substr(line, RSTART, RLENGTH); sub(/.*(eql_v3_internal|eql_v3)\./, "", s)
         schema = (index(substr(line,RSTART,RLENGTH), "eql_v3_internal.") ? "eql_v3_internal." : "eql_v3.")
         key = schema s
-        if (!(key in defined)) defined[key] = idx
+        record_def(key, idx)
       }
       # CREATE DOMAIN (eql_v3_internal|eql_v3|public).<name>. All three schemas: the
       # SEM index-term types split across DDL forms — hmac_256/ope_cllw/bloom_filter
@@ -101,12 +125,12 @@ awk -v allowfile="$ALLOW" '
         if (seg ~ /eql_v3_internal\./) { sub(/.*eql_v3_internal\./, "", seg); key = "eql_v3_internal." seg }
         else if (seg ~ /eql_v3\./)     { sub(/.*eql_v3\./, "", seg);          key = "eql_v3." seg }
         else                          { sub(/.*public\./, "", seg);          key = "public." seg; isdomain[seg] = 1 }
-        if (!(key in defined)) defined[key] = idx
+        record_def(key, idx)
       }
       # CREATE TYPE eql_v3_internal.<name> (the composite SEM types: ore_block_256, ore_cllw)
       if (match(line, /CREATE[ \t]+TYPE[ \t]+eql_v3_internal\.[a-z0-9_]+/)) {
         s = substr(line, RSTART, RLENGTH); sub(/.*eql_v3_internal\./, "", s)
-        key = "eql_v3_internal." s; if (!(key in defined)) defined[key] = idx
+        key = "eql_v3_internal." s; record_def(key, idx)
       }
       # CREATE OPERATOR CLASS|FAMILY (eql_v3_internal|eql_v3).<name>. The conditional
       # SEM ordered-index opclasses (ore_block_256_operator_class/_family,
@@ -119,7 +143,7 @@ awk -v allowfile="$ALLOW" '
         s = substr(line, RSTART, RLENGTH)
         schema = (index(s, "eql_v3_internal.") ? "eql_v3_internal." : "eql_v3.")
         sub(/.*(eql_v3_internal|eql_v3)\./, "", s)
-        key = schema s; if (!(key in defined)) defined[key] = idx
+        key = schema s; record_def(key, idx)
       }
     }
     close(file)
@@ -149,7 +173,26 @@ awk -v allowfile="$ALLOW" '
       close(file)
     }
     if (bad) { print "symbol-order cross-check FAILED" > "/dev/stderr"; exit 1 }
-    print "symbol-order cross-check OK (" idx " files)"
+    # Report the unresolvable set rather than folding it into a bare "OK". A pass
+    # that says "OK (244 files)" while ~27 overloaded names went unchecked is the
+    # same lie as the "OK (0 files)" vacuous pass refused above: indistinguishable
+    # from having actually checked them.
+    n_unchecked = 0
+    for (t in unchecked) n_unchecked++
+    if (n_unchecked > 0) {
+      printf("symbol-order cross-check OK (%d files; %d overloaded name(s) unresolvable here — \
+overload define-before-use is proven exactly by: mise run test:clean_install_v3)\n", idx, n_unchecked)
+    } else {
+      print "symbol-order cross-check OK (" idx " files)"
+    }
+  }
+  # Record a definition of `key` at file index `i`. Tracks the min index (the
+  # ordering check), the max, and the count — the latter two are what let check()
+  # tell "resolvable" from "overloaded, and I cannot know which one".
+  function record_def(key, i) {
+    if (!(key in defined) || i < defined[key]) defined[key] = i
+    if (!(key in defmax)  || i > defmax[key])  defmax[key]  = i
+    defcount[key]++
   }
   function check(tok, i, file) {
     if (tok in allow) return
@@ -158,9 +201,26 @@ awk -v allowfile="$ALLOW" '
       printf("ERROR: %s references %s which is defined nowhere in the installer\n", file, tok) > "/dev/stderr"
       bad = 1; return
     }
+    # Reference precedes even the EARLIEST definition of this name. Wrong whichever
+    # overload was meant, so it is decidable without knowing which one. Checked
+    # before the ambiguity bail-out below — dropping this would lose a real catch.
     if (defined[tok] > i) {
       printf("ERROR: %s references %s defined later (at #%d, used at #%d)\n", file, tok, defined[tok], i) > "/dev/stderr"
       bad = 1
+      return
+    }
+    # Overloaded, and at least one overload is still ahead of this reference: the
+    # right one may or may not be defined yet, and a line-oriented scan cannot say
+    # which. Bare call sites (`eql_v3.eq(a, b)`) carry no types, and CREATE OPERATOR
+    # supplies them via LEFTARG/RIGHTARG on other lines. Record, do not guess.
+    #
+    # When defmax <= i every overload already precedes the reference, so the answer
+    # is sound regardless of which one was meant — that keeps the same-file overload
+    # pairs (eql_v3.ste_vec_contains, eql_v3_internal.compare_ore_block_256_terms)
+    # fully checked instead of written off.
+    if (defcount[tok] > 1 && defmax[tok] > i) {
+      unchecked[tok] = 1
+      return
     }
   }
 ' "$ORDERED"
