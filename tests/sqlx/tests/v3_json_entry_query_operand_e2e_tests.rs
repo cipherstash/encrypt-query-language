@@ -167,7 +167,10 @@ async fn fresh_numeric_operand_matches_plaintext_oracle(pool: PgPool) -> Result<
     .bind(&operand)
     .fetch_one(&pool)
     .await?;
-    assert!(accepted, "operand must pass the query_integer_ord CHECK and carry `op`: {operand}");
+    assert!(
+        accepted,
+        "operand must pass the query_integer_ord CHECK and carry `op`: {operand}"
+    );
 
     // `=` — the independence proof. The fresh term must byte-equal the stored
     // leaf's term for row 2 and no other.
@@ -233,8 +236,13 @@ async fn fresh_text_operand_matches_plaintext_oracle(pool: PgPool) -> Result<()>
     // real crypto, never synthetic blobs). Encrypt the same plaintext as a scalar
     // text value to obtain a genuine `hm` — freshly derived like everything else
     // here, and inert by construction.
-    let inert = encrypt_store("qtest", PAYLOAD_COLUMN, &[needle.clone()], &[IndexKind::Unique])
-        .await?;
+    let inert = encrypt_store(
+        "qtest",
+        PAYLOAD_COLUMN,
+        &[needle.clone()],
+        &[IndexKind::Unique],
+    )
+    .await?;
     let hm = inert
         .first()
         .and_then(|p| p.get("hm"))
@@ -251,7 +259,10 @@ async fn fresh_text_operand_matches_plaintext_oracle(pool: PgPool) -> Result<()>
     .bind(&operand)
     .fetch_one(&pool)
     .await?;
-    assert!(accepted, "operand must pass the query_text_ord CHECK carrying `op` + `hm`: {operand}");
+    assert!(
+        accepted,
+        "operand must pass the query_text_ord CHECK carrying `op` + `hm`: {operand}"
+    );
 
     // `=` — independence proof for a string leaf.
     let eq = matching_ids(&pool, &selector, &operand, "=", "eql_v3.query_text_ord").await?;
