@@ -415,8 +415,9 @@ fn stevec_document_round_trips_and_enforces_envelope() {
         "v": 3,
         "k": "sv",
         "i": { "t": "users", "c": "profile" },
+        "h": "mp_base85_key_header",
         "sv": [
-            { "s": "sel_root", "c": "ct_root", "hm": "deadbeef" },
+            { "s": "sel_root", "c": "ct_root" },
             { "s": "sel_age", "c": "ct_age", "a": true, "op": "cllw_ope" }
         ]
     });
@@ -427,8 +428,9 @@ fn stevec_document_round_trips_and_enforces_envelope() {
         "public.eql_v3_json_search"
     );
 
-    // Envelope negatives (parity with the scalar integer tests) — now including `k`.
-    for missing in ["v", "k", "i", "sv"] {
+    // Envelope negatives (parity with the scalar integer tests) — including
+    // `k` and the envelope key header `h`.
+    for missing in ["v", "k", "i", "h", "sv"] {
         let mut w = wire.clone();
         w.as_object_mut().unwrap().remove(missing);
         assert!(
@@ -458,57 +460,38 @@ fn stevec_document_round_trips_and_enforces_envelope() {
 }
 
 #[test]
-fn stevec_entry_untagged_term_and_neither_term_rejected() {
+fn stevec_entry_term_is_optional_and_op_only() {
     use eql_bindings::v3::json::{SteVecEntry, SteVecTerm};
-    // hm arm.
-    let hm: SteVecEntry =
-        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
-    assert!(matches!(hm.term, SteVecTerm::Hmac { .. }));
-    // op arm.
+    // Term-less entries — value entries and non-orderable path entries — are
+    // the common case: exact matching is selector presence, not a term.
+    let termless: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct" })).unwrap();
+    assert!(termless.term.is_none(), "term-less entries take the None arm");
+    // op arm (ordered number/string path entries).
     let op: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "op": "cllw" })).unwrap();
     assert!(matches!(op.term, SteVecTerm::OpeCllw { .. }));
-    // Lax: tolerates root i/v merged in by `->`.
+    // Lax: tolerates root i/v/h merged in by `->`.
     let merged: SteVecEntry = serde_json::from_value(
-        json!({ "s": "sel", "c": "ct", "hm": "x", "i": {"t":"a","c":"b"}, "v": 3 }),
+        json!({ "s": "sel", "c": "ct", "op": "cllw", "i": {"t":"a","c":"b"}, "v": 3, "h": "kh" }),
     )
     .unwrap();
-    assert!(matches!(merged.term, SteVecTerm::Hmac { .. }));
-    // MARQUEE NEGATIVE: neither hm nor op must fail (untagged enum has no matching arm).
-    assert!(
-        serde_json::from_value::<SteVecEntry>(json!({ "s": "sel", "c": "ct" })).is_err(),
-        "an entry with neither hm nor op must be rejected"
-    );
-}
-
-#[test]
-fn stevec_entry_both_terms_present_resolves_to_first_untagged_arm() {
-    // The inverse of the "neither" negative above. On the wire an entry carries
-    // exactly one of `hm` XOR `oc` (enforced by the SQL CHECK, NOT client-side —
-    // `#[serde(untagged)]` cannot express XOR). If a malformed payload somehow
-    // carries BOTH, serde's untagged enum resolves to the FIRST matching arm in
-    // declaration order — `SteVecTerm::Hmac` (the `hm` arm is declared first) —
-    // rather than erroring. This pins that resolution so a reorder of the
-    // `SteVecTerm` variants (which would silently flip the winner to `oc`) is a
-    // test failure, and documents that client-side parsing does not enforce XOR.
-    use eql_bindings::v3::json::{SteVecEntry, SteVecTerm};
-    let both: SteVecEntry =
-        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef", "oc": "cllw" }))
-            .expect(
-                "an entry with both hm and oc parses (XOR is a SQL-CHECK invariant, not serde)",
-            );
-    assert!(
-        matches!(both.term, SteVecTerm::Hmac { .. }),
-        "with both hm and oc present, the untagged enum must resolve to the first \
-         arm (Hmac); a flip means the SteVecTerm variant order changed"
-    );
+    assert!(matches!(merged.term, SteVecTerm::OpeCllw { .. }));
+    // A retired `hm` key never becomes a term: the lax entry parses, the
+    // stray key is ignored client-side, and the SQL CHECK is what rejects it
+    // on the real wire (`NOT (val ? 'hm')`).
+    let stray_hm: SteVecEntry =
+        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
+    assert!(stray_hm.term.is_none(), "hm is retired and must not parse as a term");
 }
 
 #[test]
 fn stevec_query_round_trips() {
     use eql_bindings::v3::json::SteVecQuery;
     use eql_bindings::v3::DomainType;
-    let wire = json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] });
+    // A needle mixes selector-only elements (value selectors / structural
+    // nodes — matched on presence) with op-bearing ordered path elements.
+    let wire = json!({ "sv": [ { "s": "sel" }, { "s": "sel_ord", "op": "cllw" } ] });
     let parsed: SteVecQuery = serde_json::from_value(wire.clone()).unwrap();
     assert_eq!(serde_json::to_value(&parsed).unwrap(), wire);
     assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_json");
@@ -532,6 +515,7 @@ fn stevec_document_and_query_schemas_are_strict() {
             t: "x".into(),
             c: "y".into(),
         },
+        h: "kh".to_string().into(),
         sv: vec![],
     };
     let sdoc = serde_json::to_value(doc.schema()).unwrap();
@@ -585,16 +569,19 @@ fn stevec_ts_exports_have_expected_shape() {
             .to_string()
     };
 
-    // SteVecTerm: the untagged `{ hm } | { op }` union — both arms present, joined.
+    // SteVecTerm: the untagged `{ op } | {}` union — the op arm and the
+    // term-less arm (ts-rs renders the empty struct variant as
+    // `Record<string, never>`). No `hm` arm may reappear.
     let term = export_line("SteVecTerm.ts", "SteVecTerm");
     assert!(
-        term.contains("{ hm: Hmac256, }")
-            && term.contains("{ op: OpeCllw, }")
-            && term.contains('|'),
-        "SteVecTerm.ts must be the `{{ hm }} | {{ op }}` union, got: {term}"
+        term.contains("{ op: OpeCllw, }")
+            && term.contains("Record<string, never>")
+            && term.contains('|')
+            && !term.contains("hm"),
+        "SteVecTerm.ts must be the `{{ op }} | {{}}` union, got: {term}"
     );
 
-    // SteVecEntry: direct fields s/c, the flattened hm|op term union, and the
+    // SteVecEntry: direct fields s/c, the flattened op|termless union, and the
     // OPTIONAL nullable array marker `a`. `a?: boolean | null` (not `a: boolean |
     // null`) pins ts-rs optionality so the TS binding agrees with the JSON Schema,
     // which excludes `a` from `required` — the drift a bare `Option<bool>` without
@@ -602,31 +589,36 @@ fn stevec_ts_exports_have_expected_shape() {
     let entry = export_line("SteVecEntry.ts", "SteVecEntry");
     for needle in [
         "s: Selector",
-        "c: Ciphertext",
+        "c: EntryCiphertext",
         "a?: boolean | null",
-        "{ hm: Hmac256, }",
         "{ op: OpeCllw, }",
+        "Record<string, never>",
     ] {
         assert!(
             entry.contains(needle),
             "SteVecEntry.ts body must contain `{needle}`, got: {entry}"
         );
     }
+    assert!(
+        !entry.contains("term:"),
+        "the term union must stay FLATTENED (a literal `term` property means \
+         ts-rs stopped flattening the enum), got: {entry}"
+    );
 
     // Property ORDER pin. The generic `ts_property_order.rs` guard structurally
     // skips non-scalar (jsonb) domains, so the SteVec property order has no other
     // regression guard. Assert the exact ordered field prefix so a field reorder
-    // in `jsonb.rs` (which changes the wire/consumer contract) fails here rather
+    // in `json.rs` (which changes the wire/consumer contract) fails here rather
     // than escaping to a manual diff.
     assert!(
-        entry.contains("{ s: Selector, c: Ciphertext, a?: boolean | null, }"),
+        entry.contains("{ s: Selector, c: EntryCiphertext, a?: boolean | null, }"),
         "SteVecEntry.ts field order must be s, c, a (then the flattened term union), got: {entry}"
     );
     let document = export_line("SteVecDocument.ts", "SteVecDocument");
     assert!(
         document.contains(
-            "{ v: SchemaVersion, k: SteVecForm, i: Identifier, sv: Array<SteVecEntry>, }"
+            "{ v: SchemaVersion, k: SteVecForm, i: Identifier, h: KeyHeader, sv: Array<SteVecEntry>, }"
         ),
-        "SteVecDocument.ts field order must be v, k, i, sv, got: {document}"
+        "SteVecDocument.ts field order must be v, k, i, h, sv, got: {document}"
     );
 }

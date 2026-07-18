@@ -159,7 +159,7 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     let kind = obj.get("k").and_then(Value::as_str);
     match (kind, target) {
         (Some("ct"), TargetDomain::Scalar(t)) => convert_scalar(obj, t),
-        (Some("sv"), TargetDomain::Json) => convert_ste_vec(obj),
+        (Some("sv"), TargetDomain::Json) => Err(FromV2Error::UnconvertibleSteVecDocument),
         (Some(kind @ ("ct" | "sv")), _) => Err(FromV2Error::KindMismatch {
             kind: kind.into(),
             target: target.describe().into(),
@@ -419,34 +419,6 @@ fn convert_bloom(bf: &Value) -> Result<Value, FromV2Error> {
     Ok(Value::Array(out))
 }
 
-/// v2 `k: "sv"` → SteVec document `{v: 3, k: "sv", i, sv: [{s, c, a?, hm|op}]}`.
-/// Entry order is preserved verbatim — `sv[0]` is the decryption root (see
-/// the module docs).
-fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
-    let mut out = Map::new();
-    out.insert("v".into(), json!(crate::EQL_SCHEMA_VERSION));
-    // The root `k: "sv"` form discriminator is carried through: the v3
-    // document models it ([`crate::v3::json::SteVecDocument`]'s `k`,
-    // required on the wire). `from_v2` already dispatched on `k == "sv"`, so
-    // emitting the literal is exact.
-    out.insert("k".into(), json!("sv"));
-    if let Some(i) = obj.get("i") {
-        out.insert("i".into(), i.clone());
-        // Absent `i` fails the entry point's final strict parse.
-    }
-    let sv = obj
-        .get("sv")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("`sv` must be an array of entries"))?;
-    let entries = sv
-        .iter()
-        .enumerate()
-        .map(|(idx, entry)| convert_entry(idx, entry, EntryShape::Document))
-        .collect::<Result<Vec<_>, _>>()?;
-    out.insert("sv".into(), Value::Array(entries));
-    Ok(Value::Object(out))
-}
-
 /// v2 query needle `{sv: [{s, hm|op, …}]}` → v3 `SteVecQuery` shape. Like the
 /// stored-payload converters, does NOT run the final strict parse — that is
 /// the entry points' job, exactly once.
@@ -477,45 +449,24 @@ fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
     let entries = sv
         .iter()
         .enumerate()
-        .map(|(idx, entry)| convert_entry(idx, entry, EntryShape::Query))
+        .map(|(idx, entry)| convert_query_entry(idx, entry))
         .collect::<Result<Vec<_>, _>>()?;
     Ok(json!({ "sv": entries }))
 }
 
-/// Which keys an sv entry keeps after conversion.
-#[derive(Clone, Copy)]
-enum EntryShape {
-    /// Document entry: `s`, `c`, optional `a`, one term.
-    Document,
-    /// Query entry: `s` + one term only (the `eql_v3.to_ste_vec_query`
-    /// normalization — `a`/`c` are stripped).
-    Query,
-}
-
-impl EntryShape {
-    /// The keys the converted entry keeps beyond its term.
-    fn kept_keys(self) -> &'static [&'static str] {
-        match self {
-            Self::Document => &["s", "c", "a"],
-            Self::Query => &["s"],
-        }
-    }
-
-    /// The (unqualified) SQL domain this entry shape belongs to, for error
-    /// context.
-    fn domain(self) -> &'static str {
-        match self {
-            Self::Document => "eql_v3_json_search",
-            Self::Query => "query_json",
-        }
-    }
-}
-
-/// Convert one v2 sv element: copy the shape's keys and exactly one of
-/// `hm` XOR `op`. A CLLW-ORE `oc` term is unconvertible (see
-/// [`FromV2Error::UnconvertibleOreTerm`]) — fail loudly rather than emit a
-/// term v3 would misorder.
-fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, FromV2Error> {
+/// Convert one v2 sv query element — mirroring the SQL cast
+/// `eql_v3.to_ste_vec_query`, which normalizes every element to `s` + an
+/// optional `op`: keep `s`; keep `op` on ordered entries; a **term-less**
+/// element converts to a selector-only needle element (matching on selector
+/// presence — the selector-presence exact-match semantics, and what the term-less
+/// entries of a hybrid-client document mean). A CLLW-ORE `oc` term is
+/// unconvertible (see [`FromV2Error::UnconvertibleOreTerm`]), and so is a
+/// per-entry `hm` equality term
+/// ([`FromV2Error::UnconvertibleEqualityTerm`]): v3 exact matching is
+/// value-inclusive selector presence, and a value selector cannot be derived
+/// from an HMAC term. Fail loudly rather than emit a needle with silently
+/// weakened (path-exists) semantics.
+fn convert_query_entry(idx: usize, entry: &Value) -> Result<Value, FromV2Error> {
     let obj = entry
         .as_object()
         .ok_or_else(|| invalid("`sv` entries must be JSON objects"))?;
@@ -523,27 +474,17 @@ fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, 
         return Err(FromV2Error::UnconvertibleOreTerm { entry: idx });
     }
     let mut out = Map::new();
-    for &key in shape.kept_keys() {
-        if let Some(v) = obj.get(key) {
-            out.insert(key.into(), v.clone());
-        }
-        // A missing `s`/`c` fails the final document/query validation.
+    if let Some(s) = obj.get("s") {
+        out.insert("s".into(), s.clone());
+        // A missing `s` fails the final query validation.
     }
     match (obj.get("hm"), obj.get("op")) {
-        (Some(_), Some(_)) => return Err(FromV2Error::AmbiguousTerm { entry: idx }),
-        (Some(hm), None) => {
-            out.insert("hm".into(), hm.clone());
-        }
+        (Some(_), _) => return Err(FromV2Error::UnconvertibleEqualityTerm { entry: idx }),
         (None, Some(op)) => {
             out.insert("op".into(), op.clone());
         }
-        (None, None) => {
-            return Err(FromV2Error::MissingTerm {
-                domain: shape.domain().into(),
-                key: "hm|op".into(),
-                entry: Some(idx),
-            })
-        }
+        // Term-less: selector-only element, nothing to add.
+        (None, None) => {}
     }
     Ok(Value::Object(out))
 }

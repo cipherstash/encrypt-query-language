@@ -14,7 +14,11 @@ serde_json = "1"
 anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
-cipherstash-client = { version = "0.38.1", features = ["tokio"] }
+# CIP-3551 integration: the value-inclusive-selector client from the
+# cipherstash-suite PR branch (dan/cip-3551-stevec-value-inclusive-selectors,
+# worktree checkout). Emits the {s, c, op?} + value-entry SteVec wire natively
+# via encrypt_eql_v3. Repoint to the released crate once the suite PR ships.
+cipherstash-client = { path = "../../../_cip-3551-value-selectors-wt/packages/cipherstash-client", features = ["tokio"] }
 # chrono is already in the tree transitively (cipherstash-client / ore-rs); pin
 # it as a direct dependency so the harness can name `chrono::NaiveDate` for the
 # `date` scalar (Encode/Decode/Type come from the sqlx `chrono` feature above).

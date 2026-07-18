@@ -148,16 +148,20 @@ fn typed_scalar_multi_term_yields_text_search_ore() {
 }
 
 #[test]
-fn typed_ste_vec_document_yields_ste_vec_document() {
-    let typed = assert_serialization_pin(&v2_sv(), TargetDomain::Json);
-    assert_eq!(typed.domain(), "eql_v3_json_search");
-    assert_eq!(typed.sql_domain(), "public.eql_v3_json_search");
-    match &typed {
-        DomainPayload::SteVecDocument(doc) => {
-            assert_eq!(doc.sv.len(), 2, "entry order/count preserved");
-        }
-        other => panic!("expected SteVecDocument, got {other:?}"),
-    }
+fn typed_ste_vec_document_is_unconvertible() {
+    // The v3 envelope wire format (per-document key header `h` +
+    // selector-derived entry nonces) cannot be derived from a v2 payload by
+    // JSON transformation — both entry points fail closed. The
+    // SteVecDocument DomainPayload variant is reachable only via
+    // DomainPayload::parse over a real v3 wire payload.
+    assert!(matches!(
+        from_v2(&v2_sv(), TargetDomain::Json).unwrap_err(),
+        FromV2Error::UnconvertibleSteVecDocument
+    ));
+    assert!(matches!(
+        from_v2_typed(&v2_sv(), TargetDomain::Json).unwrap_err(),
+        FromV2Error::UnconvertibleSteVecDocument
+    ));
 }
 
 #[test]
@@ -230,7 +234,19 @@ fn parse_constructs_every_stored_payload_domain() {
             let name = family.domain_name(domain);
             let stored = domain.is_scalar() || name == "eql_v3_json_search";
             let value = if name == "eql_v3_json_search" {
-                from_v2(&v2_sv(), TargetDomain::Json).unwrap()
+                // A v3 document cannot come from from_v2 (the envelope wire
+                // format is unconvertible) — construct the wire shape
+                // directly.
+                json!({
+                    "v": 3,
+                    "k": "sv",
+                    "i": ident(),
+                    "h": "mp_base85_key_header",
+                    "sv": [
+                        { "s": SELECTOR, "c": CIPHERTEXT },
+                        { "s": SELECTOR, "c": CIPHERTEXT, "a": true, "op": HEX_LONG }
+                    ]
+                })
             } else if stored {
                 from_v2(&v2_ct_full(), target(&name)).unwrap()
             } else {

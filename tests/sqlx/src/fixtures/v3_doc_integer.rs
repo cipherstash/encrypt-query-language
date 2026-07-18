@@ -48,7 +48,7 @@ const FIELD: &str = "field";
 /// derived from the workspace keyset + the fixed STE_VEC_PREFIX + the `field`
 /// path, so it is stable for a given CipherStash workspace; if it drifts,
 /// regenerate the fixture and re-pin from the emitted `"s"`.
-pub const SELECTOR: &str = "fce8be759db230351b10a058b7ba50a7";
+pub const SELECTOR: &str = "dbb03d42501c96d05848c5877dc1934a";
 
 /// Build the plaintext documents: `{"field": <value>}` per integer fixture value,
 /// paired with the bare integer oracle value.
@@ -79,7 +79,8 @@ pub async fn generate() -> Result<()> {
 
     // `encrypt_store` builds the SteVec ColumnConfig from the spec's index
     // set + the document CAST, and returns payloads already converted to the
-    // v3 envelope (root `{v: 3, k: "sv", i, sv}`) via eql_bindings::from_v2.
+    // v3 envelope (root `{v: 3, k: "sv", i, sv}`), emitted natively by the
+    // client's v3 assembler.
     let payloads =
         cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, &docs, spec.indexes())
             .await?;

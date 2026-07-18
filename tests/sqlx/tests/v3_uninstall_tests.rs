@@ -200,8 +200,9 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
     );
 
     let scalar_payload = r#"{"v":3,"i":{},"c":"scalar-42","hm":"hm-42"}"#;
-    let json_payload = r#"{"i":{},"v":3,"sv":[{"s":"age","c":"cipher-age","hm":"hm-age"}]}"#;
-    let entry_payload = r#"{"s":"age","c":"cipher-age","hm":"hm-age"}"#;
+    // SteVec entries carry no `hm`: an op path entry / term-less entry.
+    let json_payload = r#"{"i":{},"v":3,"h":"kh","sv":[{"s":"age","c":"cipher-age","op":"ab"}]}"#;
+    let entry_payload = r#"{"s":"age","c":"cipher-age","op":"ab"}"#;
 
     sqlx::query(
         r#"

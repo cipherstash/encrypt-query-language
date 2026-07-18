@@ -147,6 +147,10 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         .collect();
 
     // Exact supported operand signatures (verified against operators.sql).
+    // The single-entry `@>`(json_search, json_entry) and its `<@` reverse are
+    // deliberately ABSENT: an extracted path leaf carries no value
+    // selector, so single-entry containment could only match structurally. Field
+    // equality is document containment on a value-selector needle (query_json).
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
         (
@@ -156,21 +160,11 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         ),
         ("@>", "public.eql_v3_json_search", "eql_v3.query_json"),
         (
-            "@>",
-            "public.eql_v3_json_search",
-            "public.eql_v3_json_entry",
-        ),
-        (
             "<@",
             "public.eql_v3_json_search",
             "public.eql_v3_json_search",
         ),
         ("<@", "eql_v3.query_json", "public.eql_v3_json_search"),
-        (
-            "<@",
-            "public.eql_v3_json_entry",
-            "public.eql_v3_json_search",
-        ),
         // path access
         ("->", "public.eql_v3_json_search", "text"),
         ("->", "public.eql_v3_json_search", "integer"),
@@ -193,6 +187,30 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
     assert!(
         missing.is_empty(),
         "expected supported operand signature(s) are absent: {missing:#?}"
+    );
+
+    // Negative lock: the dropped single-entry containment operators
+    // must NOT exist. Their return had value-blind/op-lossy semantics; field
+    // equality routes through document containment on a value-selector needle.
+    let dropped: &[(&str, &str, &str)] = &[
+        (
+            "@>",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_entry",
+        ),
+        (
+            "<@",
+            "public.eql_v3_json_entry",
+            "public.eql_v3_json_search",
+        ),
+    ];
+    let resurrected: Vec<&(&str, &str, &str)> = dropped
+        .iter()
+        .filter(|(op, l, r)| have.contains(&(op.to_string(), l.to_string(), r.to_string())))
+        .collect();
+    assert!(
+        resurrected.is_empty(),
+        "single-entry containment operator(s) must stay dropped, found: {resurrected:#?}"
     );
     Ok(())
 }
@@ -309,10 +327,14 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
 
 #[sqlx::test]
 async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> anyhow::Result<()> {
-    // (op, left, right) — a representative slice across ord / ord_ope. The `_eq`
-    // operand is deliberately NOT bound to json_entry (CIP-3526): a JSON scalar
-    // leaf carries no per-value `hm`, so equality is served by `= query_<T>_ord`
-    // (op byte-equality) — the `=` row below asserts exactly that.
+    // (op, left, right) — a representative slice across ord / ord_ope. Every
+    // operator the term provides claims the exact signature (so a bare
+    // `json_entry <op> query_<T>_ord` never flattens to native `jsonb <op> jsonb`);
+    // the RANGE rows resolve to public wrappers, while `=`/`<>` resolve to
+    // eql_v3_internal blockers (field equality is document containment
+    // on a value-selector needle, not an extract op). This test asserts PRESENCE;
+    // the public-vs-blocker split is pinned in v3_json_entry_cross_type_tests #1.
+    // The `_eq` operand is never bound to json_entry.
     let expected: &[(&str, &str, &str)] = &[
         ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
@@ -577,7 +599,7 @@ async fn assert_composed_blocked(pool: &PgPool, sql: &str) -> anyhow::Result<()>
 #[sqlx::test]
 async fn v3_jsonb_blocked_composed_expression_raises(pool: PgPool) -> anyhow::Result<()> {
     // A valid public.eql_v3_json_search document literal (empty sv array satisfies the CHECK).
-    let j = r#"'{"i":{},"v":3,"sv":[]}'::public.eql_v3_json_search"#;
+    let j = r#"'{"i":{},"v":3,"h":"kh","sv":[]}'::public.eql_v3_json_search"#;
 
     // Each case wraps a blocked operator (whose return type was boolean before
     // the fix) in a surrounding operator that only resolves against the NATIVE

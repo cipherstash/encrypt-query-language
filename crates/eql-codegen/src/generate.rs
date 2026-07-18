@@ -374,11 +374,10 @@ pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String
 /// `Orderable` → `op`; only `Bool`/`Null`/`Object`/`Array` → a value-independent
 /// structural `hm`).
 ///
-/// `op` is deterministic, so byte-comparison on it is always a valid ORDERING.
-/// It is not always a valid EQUALITY: that additionally needs injectivity, which
-/// holds for the numeric kinds and fails for text. See
-/// [`eql_domains::ScalarKind::json_leaf_equality_is_exact`] and
-/// [`json_entry_cross_operators`].
+/// `op` is deterministic, so byte-comparison on it is always a valid ORDERING —
+/// which is all this seam uses it for. Equality does not live on the extract
+/// surface at all: exact field equality is document containment on the
+/// value selector (`col @> query_json`). See [`json_entry_cross_operators`].
 const JSON_ENTRY_TERM: Term = Term::Ope;
 
 /// The query operands a family binds to `public.eql_v3_json_entry`: every domain
@@ -475,9 +474,9 @@ fn json_entry_cross_blocked_domains(spec: &DomainFamily) -> Vec<&'static Domain>
         .collect()
 }
 
-/// The operators this surface emits for a family's bound operands: those
-/// [`JSON_ENTRY_TERM`] provides, MINUS equality when the family's `op` term is
-/// not injective on its plaintexts.
+/// The operators this surface emits for a family's bound operands: the ORDERING
+/// operators [`JSON_ENTRY_TERM`] provides (`<` `<=` `>` `>=`). Equality (`=` `<>`)
+/// is deliberately excluded for EVERY family.
 ///
 /// Derived from the term rather than from the operand's full term list, because
 /// `json_entry` can only ever serve that one term. `Term::operators_for_terms`
@@ -487,32 +486,29 @@ fn json_entry_cross_blocked_domains(spec: &DomainFamily) -> Vec<&'static Domain>
 /// `ord_term(a) @@ ord_term(b)`. Asking the term what it provides keeps the
 /// emitted set honest for every operand shape, present and future.
 ///
-/// **The equality subtraction is a correctness gate, not a preference.** `op` is
-/// deterministic, which makes it a sound ordering for every kind. Equality also
-/// needs INJECTIVITY, and that is a property of the whole SteVec leaf conversion,
-/// not of `orderable_to_u64` (a bijection, but it runs LAST). cipherstash-client
-/// applies a lossy step first — `as_f64()` on a numeric leaf, `orderize_string` on
-/// a string leaf — so `2^53`/`2^53+1` collide for `bigint`, and `"café"`/`"cafe"`
-/// collide for `text`. An `=` built on either returns rows whose plaintext differs.
-/// Both are verified end-to-end against cipherstash-client 0.38.1.
-///
-/// A scalar COLUMN escapes this by listing `Hm` first (`extractor_for_operator`
-/// routes `=` to the exact `hm`); a SteVec leaf has no `hm` to route to, so the
-/// only sound surface for a lossy kind is ordering-only.
-/// [`eql_domains::ScalarKind::json_leaf_equality_is_exact`] owns the rule — keyed
-/// on the LEAF conversion, not on the operand's declared kind; the equality
-/// operator set is asked of `Term::Hm` — the equality term — rather than spelled out.
+/// **Why equality never lives on the extract surface.** An extracted
+/// `json_entry` is a PATH entry (`{s, c, op?}`); it carries no value selector, so
+/// the only equality it could compute is `op` byte-comparison. `op` is
+/// deterministic (a sound ordering for every kind) but not injective on every one
+/// (`2^53`/`2^53+1` collide for `bigint`, `"café"`/`"cafe"` for `text`), and even
+/// where injective it is the WRONG mechanism: exact field equality is document
+/// containment on the value selector (`col @> $1::eql_v3.query_json`, where the
+/// value-selector's *presence* in the stored document is the exact match). That
+/// surface is the whole document, not an extracted leaf, so equality simply is not
+/// an operation this seam can express. `=`/`<>` are therefore subtracted from
+/// every family's served set and BLOCKED by [`json_entry_cross_blocked_operators`]
+/// — a bare `json_entry = query_<T>_ord` must raise, not fall through to native
+/// `jsonb = jsonb` (which compares whole envelopes and silently returns zero rows).
 fn json_entry_cross_operators(spec: &DomainFamily) -> Vec<&'static str> {
-    // `expect`, not a permissive default: an unknown kind must fail the build
-    // LOUDLY rather than silently re-enable equality on a kind whose leaf encoding
-    // may be lossy. Every catalog family has a kind (the `FIXTURES` parity block
-    // binds them at build time), so this is unreachable in practice.
-    let kind = eql_domains::kind_for(spec.name)
+    // Assert the family declares a kind — fail the build LOUDLY on an unknown one,
+    // matching `json_entry_cross_domains`. The emitted set no longer BRANCHES on
+    // the kind (equality left the extract surface in the new design), but keeping the
+    // loud-fail contract at the seam that decides the operators is cheap insurance.
+    eql_domains::kind_for(spec.name)
         .unwrap_or_else(|| panic!("catalog family `{}` declares no ScalarKind", spec.name));
+    // Ranges only — subtract the equality operators for every family (see above).
     let mut ops = Term::operators_for_terms(&[JSON_ENTRY_TERM]);
-    if !kind.json_leaf_equality_is_exact() {
-        ops.retain(|op| !Term::Hm.operators().contains(op));
-    }
+    ops.retain(|op| !Term::Hm.operators().contains(op));
     ops
 }
 
@@ -2044,64 +2040,51 @@ mod tests {
 
     #[test]
     fn json_entry_cross_operator_set_is_exactly_what_the_term_provides() {
-        // The emitted set comes from Term::Ope, not from the operand's own term
-        // list — otherwise text's `search` [Hm, Ope, Bloom] would drag in `@@`,
-        // which json_entry has no match_term for and which would render as a
-        // nonsensical `ord_term(a) @@ ord_term(b)`.
+        // The emitted set is Term::Ope's operators MINUS equality, not the operand's
+        // own term list — otherwise text's `search` [Hm, Ope, Bloom] would drag in
+        // `@@`, which json_entry has no match_term for and which would render as a
+        // nonsensical `ord_term(a) @@ ord_term(b)`. Equality is excluded for EVERY
+        // family: it lives on the document-containment surface
+        // (`col @> query_json`, value-selector presence), never on an extracted leaf.
         let ops = json_entry_cross_operators(spec("integer"));
-        for expected in ["=", "<>", "<", "<=", ">", ">="] {
-            assert!(ops.contains(&expected), "Term::Ope must provide {expected}");
+        assert_eq!(ops, vec!["<", "<=", ">", ">="]);
+        for excluded in ["=", "<>", "@@", "@>"] {
+            assert!(
+                !ops.contains(&excluded),
+                "{excluded} must never reach the extract surface"
+            );
         }
-        assert!(
-            !ops.contains(&"@@"),
-            "Bloom's @@ must never reach this surface"
-        );
-        assert!(!ops.contains(&"@>"));
         // And the extractor is the term's own, not a spelled-out literal.
         assert_eq!(json_entry_extractor(), Term::Ope.extractor());
     }
 
     #[test]
-    fn json_entry_blocks_equality_wherever_the_leaf_encoding_is_lossy() {
-        // The gate asks one question: is `=` WRONG when the operator is used as
-        // intended? cipherstash-client rounds every JSON numeric leaf through
-        // `as_f64()` before `orderable_to_u64`, so a family whose values
-        // legitimately exceed f64's precision loses equality even though it is not
-        // text:
-        //   bigint  — 2^53 and 2^53+1 produce byte-identical `op` (verified e2e)
-        //   numeric — more precision than f64 carries
-        // and arbitrary text loses it to orderize_string's collation. Note
-        // date/timestamp are not here because they never reach this question:
-        // they fail the upstream PARTICIPATION gate (no native JSON leaf — see
-        // json_entry_cross_domains_selects_every_ope_carrying_operand).
-        for family in ["bigint", "numeric", "text"] {
+    fn json_entry_never_serves_equality_on_the_extract_surface() {
+        // equality is not an extract operation for ANY family. An
+        // extracted json_entry is a PATH entry ({s,c,op?}) carrying no value
+        // selector, so the only equality it could offer is `op` byte-comparison —
+        // lossy for text/bigint/numeric (café==cafe, 2^53==2^53+1) and, even where
+        // injective (integer/smallint inject into f64, real/double ARE f64), the
+        // WRONG mechanism. Exact field equality is document containment
+        // (`col @> query_json`, value-selector presence). So every participating
+        // family serves ordering only; `=`/`<>` are subtracted here and BLOCKED by
+        // the renderer (see json_entry_cross_functions_* and _operators_*).
+        for family in [
+            "integer", "smallint", "real", "double", "bigint", "numeric", "text",
+        ] {
             let ops = json_entry_cross_operators(spec(family));
-            for eq_op in Term::Hm.operators() {
-                assert!(
-                    !ops.contains(eq_op),
-                    "{family}'s JSON leaf encoding is lossy, so `{eq_op}` would be a \
-                     FALSE POSITIVE and must not be emitted"
-                );
-            }
             assert_eq!(
                 ops,
                 vec!["<", "<=", ">", ">="],
-                "{family} keeps ordering — a rounded/collated order is the intended semantic"
+                "{family} must serve ordering only on the extract surface"
             );
-        }
-
-        // The families whose values survive their leaf encoding keep equality:
-        // integer/smallint inject into f64, real/double ARE f64.
-        for family in ["integer", "smallint", "real", "double"] {
-            let ops = json_entry_cross_operators(spec(family));
             for eq_op in Term::Hm.operators() {
                 assert!(
-                    ops.contains(eq_op),
-                    "{family}'s values survive their leaf encoding, so `{eq_op}` is \
-                     exact and must be emitted"
+                    !ops.contains(eq_op),
+                    "{family} must not serve `{eq_op}` on an extracted leaf — equality \
+                     is document containment (query_json), never an extract op"
                 );
             }
-            assert_eq!(ops, vec!["=", "<>", "<", "<=", ">", ">="]);
         }
     }
 
@@ -2179,40 +2162,50 @@ mod tests {
         let sql =
             render_json_entry_cross_functions(s, &domains, &json_entry_cross_blocked_domains(s));
 
-        // integer's ord/ord_ope are [Ope]-only, so ALL six operators route through
-        // ord_term (op byte-comparison, covering equality too), both directions:
-        // ord 6×2 = 12, ord_ope 6×2 = 12 → 24.
+        // integer's ord/ord_ope are [Ope]-only. The extract surface serves ORDERING
+        // through ord_term — 4 ops × 2 operands × 2 dirs = 16 wrappers — plus
+        // equality BLOCKERS — =,<> × 2 operands × 2 dirs = 8 — for 24 functions.
+        // Equality is never an extract op; it is document containment.
         assert_eq!(sql.matches("CREATE FUNCTION").count(), 24);
-        // `=` on query_integer_ord routes through ord_term (op equality), NOT the
-        // dropped eq_term/hmac_256 path.
-        assert!(sql.contains(
-            "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
-        ));
-        assert!(sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"));
+        // Ordering IS a public wrapper through ord_term, both operands, both dirs.
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
         ));
-        // ord_ope twin direction.
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
         assert!(sql.contains(
             "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)"
         ));
-        assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
-        // commutators exist (query on the left).
+        // ordering commutator (query on the left).
         assert!(sql.contains(
-            "CREATE FUNCTION eql_v3.eq(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)"
+            "CREATE FUNCTION eql_v3.gte(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)"
         ));
+        // Equality is a BLOCKER, never a public wrapper — and never op-equality.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
+        ));
+        assert!(
+            !sql.contains(
+                "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
+            ),
+            "equality must not be a public wrapper on the extract surface"
+        );
+        assert!(
+            !sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"),
+            "op-equality is gone — equality is document containment, not an extract op"
+        );
         // The dropped `_eq` operand never appears, and the entry `eq_term`/hmac_256
         // route is never used.
         assert!(!sql.contains("query_integer_eq"));
         assert!(!sql.contains("eql_v3.eq_term"));
-        // Footguns: inlinable, unpinned search_path, LANGUAGE sql (no blockers here).
+        // Footguns: ordering wrappers are inlinable LANGUAGE sql, unpinned; the eq
+        // blockers are LANGUAGE plpgsql (never inlinable, so the RAISE survives).
         assert!(!sql.contains("SET search_path"));
         assert_eq!(
             sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
                 .count(),
-            24
+            16
         );
-        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 0);
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 8);
         // REQUIRE edges pull in both sides (no cycle: the cross file's json deps —
         // json/types.sql + json/functions.sql — are themselves scalar-free; see D3).
         assert!(sql.contains("-- REQUIRE: src/v3/json/types.sql"));
@@ -2233,38 +2226,43 @@ mod tests {
         let sql =
             render_json_entry_cross_operators(s, &domains, &json_entry_cross_blocked_domains(s));
         assert_eq!(sql.matches("CREATE OPERATOR").count(), 24);
-        // Supported operators carry commutator/negator/selectivity metadata.
-        assert!(sql.contains("COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel"));
+        // Ordering operators are PUBLIC wrappers carrying commutator/negator/
+        // selectivity metadata (operator-free platforms call the wrapper directly).
+        assert!(sql.contains("FUNCTION = eql_v3.lt,"));
+        assert!(sql.contains(
+            "COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel"
+        ));
         assert!(
             sql.contains("LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord")
         );
         assert!(sql.contains(
             "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope"
         ));
-        assert!(sql.contains("FUNCTION = eql_v3.lt,"));
+        // Equality operators are BLOCKERS: backed by eql_v3_internal, metadata-free
+        // (equality is document containment, not an extract op).
+        assert!(sql.contains("FUNCTION = eql_v3_internal.eq,"));
+        assert!(sql.contains("FUNCTION = eql_v3_internal.neq,"));
+        assert!(
+            !sql.contains("RESTRICT = eqsel"),
+            "no eqsel-carrying operator — equality is blocked on the extract surface"
+        );
         // The dropped `_eq` operand never appears.
         assert!(!sql.contains("query_integer_eq"));
-        // Backing functions are the PUBLIC wrappers (operator-free platforms).
-        assert!(!sql.contains("eql_v3_internal."));
         assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/json_entry_integer_functions.sql"));
     }
 
     #[test]
     fn json_entry_cross_functions_text_emits_ordering_only_never_equality() {
-        // The dual-term [Hm, Ope] case, and the one families of [Ope] cannot catch.
-        //
-        // text emits ORDERING ONLY. `op` is deterministic, so `ord_term(a) < …` is
-        // a sound collated order — the same one the scalar `text_ord` domain
-        // already ships. But `=` needs INJECTIVITY on top of determinism, and
-        // cllw-ore's `orderize_string` destroys it (canonical decompose, then strip
-        // every non-alphanumeric/whitespace/ASCII-punctuation char), so
-        // `"café" = "cafe"` and `"user@exämple.com" = "user@example.com"` under
-        // `op`. Emitting `=` here would return rows whose plaintext differs.
-        //
-        // There is no fix by rerouting: a scalar text COLUMN sends `=` to the exact
-        // `hm`, but a SteVec string LEAF has no `hm` (cipherstash-client maps
-        // Value::String to Orderable, never Mac). Ordering-only is the sound
-        // surface. See ScalarKind::json_leaf_equality_is_exact.
+        // text is the dual-term [Hm, Ope] operand shape. Like every family, it emits
+        // ORDERING ONLY on the extract surface. `op` is deterministic, so
+        // `ord_term(a) < …` is a sound collated order — the same one the scalar
+        // `text_ord` domain already ships. Equality is not an extract op at all: it
+        // is document containment (`col @> query_json`, value-selector presence).
+        // Emitting a public `=` wrapper here would compare `op` — which additionally
+        // needs INJECTIVITY that text lacks (cllw-ore's `orderize_string` collates
+        // `"café"` and `"cafe"` to the same bytes) — so `=` is BLOCKED instead. This
+        // test pins the blocker path for the dual-term operand; the equivalent for a
+        // [Ope]-only operand is json_entry_cross_functions_bind_json_entry_to_query_operands.
         let s = spec("text");
         let domains = json_entry_cross_domains(s);
         assert_eq!(

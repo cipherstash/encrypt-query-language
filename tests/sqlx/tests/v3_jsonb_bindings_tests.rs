@@ -36,23 +36,28 @@ async fn real_ste_vec_row_parses_into_document_and_entries(pool: PgPool) -> anyh
     .await?;
     assert!(!elems.is_empty());
 
-    // Assert BOTH index-term variants actually occur in real data — not merely
-    // that entries parse. The fixture mixes object leaves (`hm`, hash-equality)
-    // and scalar leaves (`op`, CLLW-OPE), so a real SteVec document must exercise
-    // both `SteVecTerm` arms; a fixture or binding regression that collapsed one
-    // arm would slip past a bare "parses without error" check.
-    let (mut saw_hm, mut saw_op) = (false, false);
+    // Assert BOTH entry kinds actually occur in real data — not merely that
+    // entries parse. A real document mixes term-less entries (value entries,
+    // non-orderable path entries — exact matching is selector presence) and
+    // ordered path entries (`op`, CLLW-OPE); a fixture or binding regression
+    // that collapsed one kind would slip past a bare "parses" check. `hm` is
+    // retired and must never appear.
+    let (mut saw_termless, mut saw_op) = (false, false);
     for e in elems {
+        assert!(
+            e.get("hm").is_none(),
+            "hm is retired and must not appear on any real entry"
+        );
         // Fails if the real wire shape drifts from the bindings.
         let entry: SteVecEntry = serde_json::from_value(e)?;
         match entry.term {
-            SteVecTerm::Hmac { .. } => saw_hm = true,
+            SteVecTerm::None {} => saw_termless = true,
             SteVecTerm::OpeCllw { .. } => saw_op = true,
         }
     }
     assert!(
-        saw_hm,
-        "real SteVec entries must include an hm (hash-equality) term"
+        saw_termless,
+        "real SteVec entries must include term-less (value / structural) entries"
     );
     assert!(
         saw_op,
@@ -81,11 +86,11 @@ async fn real_ste_vec_query_parses_into_bindings(pool: PgPool) -> anyhow::Result
         !query.sv.is_empty(),
         "a real SteVec query must have sv entries"
     );
-    // Each query element carries a real term (SteVecQueryEntry parsed as part of
-    // SteVecQuery above); confirm the term variants are well-formed.
+    // Each query element parsed as part of SteVecQuery above; confirm the term
+    // arms are well-formed (selector-only elements take the None arm).
     for entry in &query.sv {
         match &entry.term {
-            SteVecTerm::Hmac { .. } | SteVecTerm::OpeCllw { .. } => {}
+            SteVecTerm::None {} | SteVecTerm::OpeCllw { .. } => {}
         }
     }
     Ok(())

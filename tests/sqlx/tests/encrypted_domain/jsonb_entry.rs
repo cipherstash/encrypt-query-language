@@ -219,7 +219,7 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
 // ord_term(state)` would be NULL whenever the running extremum is op-less —
 // pinning a wrong result when the FIRST aggregated row (the STRICT seed) is
 // op-less. The min/max sfuncs explicitly skip op-less entries. This feeds a
-// forged hm-only (op-less) entry in the SEED position alongside real op-carrying
+// forged term-less (op-less) entry in the SEED position alongside real op-carrying
 // entries and asserts the extremum is the correct ORDERABLE entry, never the
 // op-less seed. The whole-suite matrix never exercises this (every v3_doc_integer
 // entry carries op).
@@ -230,8 +230,9 @@ async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
 ) -> anyhow::Result<()> {
     let sel = SELECTOR;
     // A valid public.eql_v3_json_entry that is NOT orderable: string s, string c,
-    // exactly one of hm/op — here `hm`, so `eql_v3.ord_term(entry)` is NULL.
-    let op_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
+    // no `op` term (a term-less value/structural entry — the shape a bool/null/
+    // object/array leaf or a value entry takes), so `eql_v3.ord_term(entry)` is NULL.
+    let op_less = r#"{"s":"forged","c":"x"}"#;
 
     let mut sorted: Vec<i32> = <JsonbEntryInteger as ScalarType>::fixture_values()
         .iter()
