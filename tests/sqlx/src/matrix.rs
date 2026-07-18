@@ -2007,7 +2007,7 @@ macro_rules! __scalar_matrix_fixture_shape {
 
                 // Every eql_v3 domain CHECK pins v = '3' (the #340 envelope
                 // bump); the generator converts the pinned client's v2
-                // output through eql_bindings::from_v2, which also drops the
+                // output through the client's v3 assembler, which drops the
                 // v2 `k` form discriminator — a payload carrying `k` (or the
                 // old version) means raw client output bypassed the seam.
                 let mismatched_version: i64 = sqlx::query_scalar(&format!(

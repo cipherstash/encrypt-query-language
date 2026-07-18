@@ -125,26 +125,26 @@ Selectors locate a path; value terms let EQL compare the value at that path.
 
 ### Index terms by JSON node type
 
-The search capabilities available on a value extracted via `->` or `eql_v3.jsonb_path_query` are determined by the terms emitted for that node type.
+Each JSON node emits a **path entry** and a **value entry**. Exact equality is the value entry's job — a value selector `SEL(type-tag ‖ path ‖ canonical(value))` whose *presence* in the document is an injective match (no per-node term). Ordering is the path entry's `op` term, present only on String / Number nodes. The `Equality` column below is document-containment equality (`@>` on the value selector), which is exact for **every** node type; ordering is the extract-surface capability of `->`.
 
-| JSON node type           | Value terms (alongside `s`)                       | Equality (`=`, `<>`, `GROUP BY`) | Ordering (`<` … `>=`, `ORDER BY`, `MIN`/`MAX`) |
-| ------------------------ | ------------------------------------------------- | :------------------------------: | :--------------------------------------------: |
-| Object `{ … }`           | `hm`                                              | ✅                               | ❌                                             |
-| Array `[ … ]`            | `hm` on the container; each element also appears as its own `sv` entry with its own leaf terms | ✅ | ❌                          |
-| String `"…"`             | `hm`, `op` (variable-width CLLW OPE)              | ✅                               | ✅                                             |
-| Number (integer/numeric) | `hm`, `op` (CLLW OPE)                             | ✅                               | ✅                                             |
-| Boolean / JSON null      | `hm`                                              | ✅                               | ❌                                             |
+| JSON node type           | Path-entry term (alongside `s`)  | Equality (containment `@>`)      | Ordering (`<` … `>=`, `ORDER BY`, `MIN`/`MAX`) |
+| ------------------------ | -------------------------------- | :------------------------------: | :--------------------------------------------: |
+| Object `{ … }`           | — (tag-only value entry)         | ✅ (structural)                  | ❌                                             |
+| Array `[ … ]`            | — on the container; each element also appears as its own `sv` entry with its own leaf terms | ✅ (structural) | ❌            |
+| String `"…"`             | `op` (variable-width CLLW OPE)   | ✅                               | ✅                                             |
+| Number (integer/numeric) | `op` (CLLW OPE)                  | ✅                               | ✅                                             |
+| Boolean / JSON null      | — (tag-only value entry)         | ✅                               | ❌                                             |
 
-`hm` supports equality only; `op` is a CLLW OPE term that preserves order *and* collapses to equality on matching keys. JSON `null` here refers to a `null` literal *inside* the document — a SQL `NULL` column is not encrypted at all.
+Exact equality is always value-selector presence (`@>`), injective for every type — the per-value `hm` term was retired in 3.0.0 (CIP-3551). `op` is a CLLW OPE term that preserves order on the extract surface (`->`); it is *not* used for equality (it is lossy for `text` / `bigint` / `numeric`). JSON `null` here refers to a `null` literal *inside* the document — a SQL `NULL` column is not encrypted at all.
 
 ### Operators and functions on `public.eql_v3_json_search`
 
 | SQL form                         | Resolves to                                        | Returns / notes |
 | -------------------------------- | -------------------------------------------------- | --------------- |
-| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment; GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.query_json`, another `public.eql_v3_json_search`, or an `public.eql_v3_json_entry`). |
+| `doc @> needle` / `needle <@ doc` | `eql_v3."@>"` / `eql_v3."<@"`                      | document containment (also the exact field-equality mechanism via value-selector needles); GIN-indexable via `eql_v3.to_ste_vec_query(doc)::jsonb` — see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment). `needle` must be typed (`$1::eql_v3.query_json` or another `public.eql_v3_json_search`). |
 | `doc -> 'sel'::text` / `doc -> N` | `eql_v3."->"`                                     | field / 0-based array-element access; returns `public.eql_v3_json_entry`. |
 | `doc ->> 'sel'::text`            | `eql_v3."->>"`                                     | the matching entry serialized as `text` (ciphertext JSON, **not** decrypted plaintext). |
-| extracted-leaf `=` `<>`          | `eql_v3.eq_term(public.eql_v3_json_entry)`             | equality on a value extracted via `->` (e.g. `doc -> 'sel'::text = $1`). |
+| entry-to-entry `=` `<>`          | `eql_v3.eq_term(public.eql_v3_json_entry)`             | equality between two extracted leaves via the `op` term (lossy for `text`/`bigint`/`numeric`); for **exact** field equality use `@>` containment. `-> 'sel' = $1::query_<T>_ord` is **blocked**. |
 | extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_term(public.eql_v3_json_entry)`       | ordered comparison on an extracted String / Number leaf. |
 | `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.eql_v3_json_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |

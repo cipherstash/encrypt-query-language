@@ -165,38 +165,15 @@ CREATE OPERATOR @>(
   RIGHTARG=eql_v3.query_json
 );
 
---! @brief @> contains operator with a single jsonb_entry needle.
---!
---! Wraps the entry into a single-element sv array (stripping `c`) and reduces
---! to the same `to_ste_vec_query(a)::jsonb @> needle::jsonb` form.
---!
---! @param a public.eql_v3_json_search Container.
---! @param b public.eql_v3_json_entry Single entry.
---! @return boolean True if a contains an sv entry matching b.
-CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_entry)
-RETURNS boolean
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb
-       @> jsonb_build_object(
-            'sv',
-            jsonb_build_array(
-              jsonb_strip_nulls(
-                jsonb_build_object(
-                  's',  b -> 's',
-                  'hm', b -> 'hm',
-                  'op', b -> 'op'
-                )
-              )
-            )
-          )
-$$;
-
-CREATE OPERATOR @>(
-  FUNCTION=eql_v3."@>",
-  LEFTARG=public.eql_v3_json_search,
-  RIGHTARG=public.eql_v3_json_entry
-);
+-- NOTE (CIP-3551): there is deliberately NO `@>`(json_search, json_entry)
+-- single-entry containment operator. An extracted `json_entry` is a PATH entry
+-- ({s,c,op?}) and carries no value selector, so it can only ever match
+-- structurally ("the document has a node at this path") — value-blind for
+-- bool/null/object/array and op-lossy for number/string. Exact field equality is
+-- document containment on the value selector: `col @> $1::eql_v3.query_json`,
+-- where a value-selector's presence in the stored document IS the exact match.
+-- Routing all value equality through that one exact mechanism is why the
+-- structural single-entry operator (and its `<@` reverse) were dropped.
 
 ------------------------------------------------------------------------------
 -- <@ contained-by (reverse of @>)
@@ -236,31 +213,22 @@ CREATE OPERATOR <@(
   RIGHTARG=public.eql_v3_json_search
 );
 
---! @brief <@ contained-by operator with a jsonb_entry LHS.
---! @param a public.eql_v3_json_entry Single entry.
---! @param b public.eql_v3_json_search Container.
---! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_entry, b public.eql_v3_json_search)
-RETURNS boolean
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3."@>"(b, a)
-$$;
-
-CREATE OPERATOR <@(
-  FUNCTION=eql_v3."<@",
-  LEFTARG=public.eql_v3_json_entry,
-  RIGHTARG=public.eql_v3_json_search
-);
+-- NOTE (CIP-3551): no `<@`(json_entry, json_search) either — it was the reverse
+-- of the dropped single-entry `@>`(json_search, json_entry). See the note above.
 
 ------------------------------------------------------------------------------
 -- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on jsonb_entry via eq_term (hm-or-op byte equality).
+--! @brief Equality on jsonb_entry via eq_term (`op` byte equality).
+--! @note Compares the deterministic `op` term, so it is exact for leaves whose
+--!       `op` encoding is injective and lossy for `bigint`/`numeric`/`text`
+--!       (same caveat as the scalar `_ord` surface). Term-less entries
+--!       (bool/null/value entries) have no `op`, so `=` is NULL there — exact,
+--!       loss-free field equality is selector presence (containment).
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
---! @return boolean True if the entries are equal
+--! @return boolean True if the entries' `op` terms are equal
 CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b public.eql_v3_json_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -278,10 +246,10 @@ CREATE OPERATOR = (
   JOIN     = eqjoinsel
 );
 
---! @brief Inequality on jsonb_entry via eq_term.
+--! @brief Inequality on jsonb_entry via eq_term (`op` byte inequality).
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
---! @return boolean True if the entries are not equal
+--! @return boolean True if the entries' `op` terms differ
 CREATE FUNCTION eql_v3.neq(a public.eql_v3_json_entry, b public.eql_v3_json_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE

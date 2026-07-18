@@ -154,12 +154,13 @@ fn parse_value_validates_through_the_inventory() {
         "v": 3,
         "k": "sv",
         "i": { "t": "users", "c": "profile" },
-        "sv": [ { "s": "sel", "c": "ct", "hm": "deadbeef" } ]
+        "h": "mp_base85_key_header",
+        "sv": [ { "s": "sel", "c": "ct" }, { "s": "sel_ord", "c": "ct", "op": "cllw" } ]
     });
     assert!(entry("eql_v3_json_search").parse_value(&doc).is_ok());
     assert!(entry("query_json").parse_value(&doc).is_err());
     assert!(entry("query_json")
-        .parse_value(&json!({ "sv": [ { "s": "sel", "hm": "deadbeef" } ] }))
+        .parse_value(&json!({ "sv": [ { "s": "sel" }, { "s": "sel_ord", "op": "cllw" } ] }))
         .is_ok());
 }
 
@@ -289,19 +290,20 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
     };
     let set = |keys: &[&str]| -> BTreeSet<String> { keys.iter().map(|s| s.to_string()).collect() };
 
-    // Document: {v, k, i, sv}. No root `c` (a document is not itself a
-    // ciphertext); `k` is the "sv" form discriminator (SteVecForm-pinned).
+    // Document: {v, k, i, h, sv}. No root `c` (a document is not itself a
+    // ciphertext); `k` is the "sv" form discriminator (SteVecForm-pinned);
+    // `h` is the envelope key header, stored once per document.
     let doc = schema_of("eql_v3_json_search");
     assert_eq!(
         required(&doc, "/required", "eql_v3_json_search"),
-        set(&["v", "k", "i", "sv"]),
+        set(&["v", "k", "i", "h", "sv"]),
         "public.eql_v3_json_search required keys must match the SteVec document wire contract"
     );
 
-    // Entry: {s, c} + hm XOR op. The XOR is expressed as an untagged `anyOf`
-    // over {hm} | {op} (serde/schemars cannot express exclusivity; the SQL CHECK
-    // owns the XOR). Assert both the base required set and that BOTH term
-    // alternatives are reachable.
+    // Entry: {s, c} + an OPTIONAL op ordering term. The flattened
+    // `Option<SteVecTerm>` renders as an anyOf over {op} | {} — the empty arm
+    // is the term-less shape (value entries, non-orderable path entries).
+    // `hm` is retired and must not appear anywhere.
     let entry = schema_of("eql_v3_json_entry");
     assert_eq!(
         required(&entry, "/required", "eql_v3_json_entry"),
@@ -312,22 +314,32 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         .pointer("/anyOf")
         .and_then(|v| v.as_array())
         .expect("jsonb_entry schema must carry an anyOf term union");
-    // Assert each arm *independently* — a flat union of required keys would let a
-    // mixed/invalid arm (e.g. one requiring both `hm` and `op`) slip through.
+    // Assert each arm *independently*: exactly the op-only arm and the empty
+    // (term-less) arm — no `hm` arm may reappear.
     let entry_alt_required: Vec<BTreeSet<String>> = entry_alts
         .iter()
-        .map(|alt| required(alt, "/required", "jsonb_entry anyOf"))
+        .map(|alt| {
+            alt.pointer("/required")
+                .and_then(|v| v.as_array())
+                .map(|reqs| {
+                    reqs.iter()
+                        .map(|v| v.as_str().expect("required entry is a string").to_string())
+                        .collect()
+                })
+                .unwrap_or_default()
+        })
         .collect();
     assert!(
         entry_alt_required.len() == 2
-            && entry_alt_required.contains(&set(&["hm"]))
-            && entry_alt_required.contains(&set(&["op"])),
-        "public.eql_v3_json_entry anyOf must offer exactly the hm-only and op-only term \
-         alternatives (each arm a singleton), got {entry_alt_required:?}"
+            && entry_alt_required.contains(&set(&["op"]))
+            && entry_alt_required.contains(&BTreeSet::new()),
+        "public.eql_v3_json_entry anyOf must offer exactly the op-only and term-less \
+         alternatives, got {entry_alt_required:?}"
     );
 
-    // Query: {sv}. The element (SteVecQueryEntry) requires `s` + hm XOR op and
-    // carries NO ciphertext `c` — the "queries never carry ciphertext" rule.
+    // Query: {sv}. The element (SteVecQueryEntry) requires `s` plus an
+    // OPTIONAL op ordering term, and carries NO ciphertext `c` — the
+    // "queries never carry ciphertext" rule.
     let query = schema_of("query_json");
     assert_eq!(
         required(&query, "/required", "query_json"),
@@ -356,13 +368,22 @@ fn jsonb_schema_required_keys_match_the_sql_check_contract() {
         .expect("query_json element schema must carry an anyOf term union");
     let query_alt_required: Vec<BTreeSet<String>> = query_alts
         .iter()
-        .map(|alt| required(alt, "/required", "query_json element anyOf"))
+        .map(|alt| {
+            alt.pointer("/required")
+                .and_then(|v| v.as_array())
+                .map(|reqs| {
+                    reqs.iter()
+                        .map(|v| v.as_str().expect("required entry is a string").to_string())
+                        .collect()
+                })
+                .unwrap_or_default()
+        })
         .collect();
     assert!(
         query_alt_required.len() == 2
-            && query_alt_required.contains(&set(&["hm"]))
-            && query_alt_required.contains(&set(&["op"])),
-        "eql_v3.query_json element anyOf must offer exactly the hm-only and \
-         op-only term alternatives (each arm a singleton), got {query_alt_required:?}"
+            && query_alt_required.contains(&set(&["op"]))
+            && query_alt_required.contains(&BTreeSet::new()),
+        "eql_v3.query_json element anyOf must offer exactly the op-only and \
+         selector-only (term-less) alternatives, got {query_alt_required:?}"
     );
 }

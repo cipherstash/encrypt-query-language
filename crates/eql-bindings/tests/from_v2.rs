@@ -7,7 +7,9 @@
 //! contract; schema-file validation lives in
 //! `tests/sqlx/tests/payload_schema_tests.rs`).
 
-use eql_bindings::from_v2::{from_v2, from_v2_query, is_v3_payload, FromV2Error, TargetDomain};
+use eql_bindings::from_v2::{
+    from_v2, from_v2_query, from_v2_typed, is_v3_payload, FromV2Error, TargetDomain,
+};
 use serde_json::{json, Value};
 
 const CIPHERTEXT: &str = "mBbL@V^%dN?0W$;g)1-JP*cmqX%JhW0ZKZ^G?lNn$CfXJH";
@@ -348,74 +350,16 @@ fn v2_query_payload_without_ciphertext_is_rejected_by_from_v2() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ste_vec_document_converts_and_preserves_entry_order() {
-    // Entry order is the decryption contract: sv[0] is the root entry whose
-    // `c` is the record ciphertext (upstream `SteVec::into_root_ciphertext`),
-    // so conversion must copy entries in order, `a` marker included. The root
-    // `k: "sv"` form discriminator is carried through — the v3 document
-    // models it (`SteVecDocument.k`, required on the wire).
-    let out = from_v2(&v2_sv(), TargetDomain::Json).unwrap();
-    assert_eq!(
-        out,
-        json!({
-            "v": 3,
-            "k": "sv",
-            "i": ident(),
-            "sv": [
-                { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
-                { "s": SELECTOR, "c": CIPHERTEXT, "a": true, "op": HEX_LONG }
-            ]
-        })
-    );
-    assert!(is_v3_payload(&out));
-}
-
-#[test]
-fn ste_vec_entry_with_both_terms_is_ambiguous() {
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "op": HEX_LONG });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(err, FromV2Error::AmbiguousTerm { entry: 1 }));
-}
-
-#[test]
-fn ste_vec_entry_with_ore_term_is_unconvertible() {
-    // A CLLW-ORE `oc` entry term has no v3 representation: v3 orders SteVec
-    // entries by the CLLW-OPE `op` term (native byte order), and ORE
-    // ciphertext bytes would silently misorder — the converter must fail
-    // closed and demand re-encryption, never pass `oc` bytes through as `op`.
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "oc": HEX_LONG });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(
-        err,
-        FromV2Error::UnconvertibleOreTerm { entry: 1 }
-    ));
-    // Even alongside a valid term: `oc` presence alone is disqualifying.
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(
-        err,
-        FromV2Error::UnconvertibleOreTerm { entry: 1 }
-    ));
-}
-
-#[test]
-fn ste_vec_entry_with_neither_term_is_missing() {
-    // Term-less entry at index 1: the error must locate it (mirroring
-    // AmbiguousTerm) and name the document domain.
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    match err {
-        FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "eql_v3_json_search");
-            assert_eq!(key, "hm|op");
-            assert_eq!(entry, Some(1));
-        }
-        other => panic!("expected MissingTerm, got {other:?}"),
-    }
+fn ste_vec_document_is_unconvertible() {
+    // The v3 envelope wire format stores one key header (`h`) per document
+    // and encrypts every entry under a selector-derived nonce — neither can
+    // be derived from a v2 payload by JSON transformation (that is
+    // re-encryption). The converter fails closed regardless of how
+    // well-formed the v2 document is.
+    let err = from_v2(&v2_sv(), TargetDomain::Json).unwrap_err();
+    assert!(matches!(err, FromV2Error::UnconvertibleSteVecDocument));
+    let typed = from_v2_typed(&v2_sv(), TargetDomain::Json).unwrap_err();
+    assert!(matches!(typed, FromV2Error::UnconvertibleSteVecDocument));
 }
 
 // ---------------------------------------------------------------------------
@@ -423,11 +367,12 @@ fn ste_vec_entry_with_neither_term_is_missing() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ste_vec_query_converts_to_v3_needle() {
-    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope.
+fn ste_vec_query_converts_op_entries_to_v3_needle() {
+    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope. Only
+    // `op` (ordered) entries survive conversion; the needle shape is
+    // unchanged for them.
     let v2 = json!({
         "sv": [
-            { "s": SELECTOR, "hm": HEX },
             { "s": SELECTOR, "op": HEX_LONG }
         ]
     });
@@ -444,30 +389,36 @@ fn ste_vec_query_normalizes_c_and_a_away() {
         "v": 2,
         "k": "sv",
         "i": ident(),
-        "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "hm": HEX } ]
+        "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG } ]
     });
     let out = from_v2_query(&v2, TargetDomain::Json).unwrap();
-    assert_eq!(out, json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] }));
+    assert_eq!(out, json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] }));
 }
 
 #[test]
-fn ste_vec_query_entry_term_errors_match_document_rules() {
+fn ste_vec_query_entry_term_errors() {
+    // A per-entry `hm` equality term has no v3 representation: v3 exact
+    // matching is value-inclusive selector presence, not derivable from an
+    // HMAC term. `hm` presence is disqualifying even alongside `op`.
+    let hm = json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] });
+    assert!(matches!(
+        from_v2_query(&hm, TargetDomain::Json).unwrap_err(),
+        FromV2Error::UnconvertibleEqualityTerm { entry: 0 }
+    ));
     let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] });
     assert!(matches!(
         from_v2_query(&both, TargetDomain::Json).unwrap_err(),
-        FromV2Error::AmbiguousTerm { entry: 0 }
+        FromV2Error::UnconvertibleEqualityTerm { entry: 0 }
     ));
-    // The query path names ITS shape (query_json, not json) and locates the
-    // entry.
-    let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
-    match from_v2_query(&neither, TargetDomain::Json).unwrap_err() {
-        FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "query_json");
-            assert_eq!(key, "hm|op");
-            assert_eq!(entry, Some(1));
-        }
-        other => panic!("expected MissingTerm, got {other:?}"),
-    }
+    // A term-less element is VALID: it converts to a selector-only needle
+    // element (selector-presence matching — the CIP-3551 exact-match
+    // semantics, mirroring eql_v3.to_ste_vec_query).
+    let termless = json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG }, { "s": SELECTOR } ] });
+    let out = from_v2_query(&termless, TargetDomain::Json).unwrap();
+    assert_eq!(
+        out,
+        json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG }, { "s": SELECTOR } ] })
+    );
 }
 
 #[test]

@@ -22,6 +22,29 @@ use ts_rs::TS;
 #[ts(export, export_to = "v3/")]
 pub struct Ciphertext(pub String);
 
+/// The document key header — the `h` envelope key of a SteVec document.
+///
+/// mp_base85-encoded key-retrieval material (IV, key tag, descriptor, keyset
+/// id), stored **once** per document: every sv entry encrypts under the
+/// document's single data key, and entry nonces are derived from the
+/// entries' selectors, so nothing per-entry is repeated. Opaque to SQL — it
+/// is carried and grafted (`->` merges it onto extracted entries via
+/// `eql_v3.meta_data`), never parsed database-side.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct KeyHeader(pub String);
+
+/// A SteVec entry's ciphertext — the sv-element `c` key: base85 of the raw
+/// AEAD output only.
+///
+/// NOT a self-describing record (contrast [`Ciphertext`]): the key material
+/// lives once in the document's `h` ([`KeyHeader`]) and the AEAD nonce is
+/// derived from the entry's selector (`hex_decode(s)[..12]`), so the
+/// decryption unit is the entry — `h` + `s` + `c`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
+#[ts(export, export_to = "v3/")]
+pub struct EntryCiphertext(pub String);
+
 /// HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains
 /// (`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
@@ -36,13 +59,14 @@ pub struct Selector(pub String);
 
 /// CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the
 /// default ordering domain), `_ord_ope`, and `text_search` domains, their
-/// `query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered entries
-/// of a SteVec document (exactly one of `hm` (equality) XOR `op` (ordering)
-/// per entry — enforced by the SQL domain CHECK): a hex-encoded CLLW OPE
-/// ciphertext, sortable via native bytea comparison after hex-decode —
-/// unlike `ob` (block-ORE) it needs no custom comparator. Extracted by
-/// `eql_v3.ord_term` (scalar domains and the `public.jsonb_entry` overload
-/// alike); SQL-side constructor: `eql_v3_internal.ope_cllw`.
+/// `query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered
+/// (number/string) path entries of a SteVec document (the only per-entry
+/// term — `hm` is retired; exact matching is the value-inclusive selector):
+/// a hex-encoded CLLW OPE ciphertext, sortable via native bytea comparison
+/// after hex-decode — unlike `ob` (block-ORE) it needs no custom comparator.
+/// Extracted by `eql_v3.ord_term` (scalar domains and the
+/// `public.eql_v3_json_entry` overload alike); SQL-side constructor:
+/// `eql_v3_internal.ope_cllw`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct OpeCllw(pub String);
@@ -101,6 +125,18 @@ impl schemars::JsonSchema for BloomFilter {
 }
 
 impl From<String> for Ciphertext {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for KeyHeader {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
+impl From<String> for EntryCiphertext {
     fn from(value: String) -> Self {
         Self(value)
     }

@@ -48,7 +48,7 @@ const NAME: &str = "v3_ste_vec";
 /// `op` is `8 * (len + 1) + 1` bits, so `$.hello` is 132 hex chars for
 /// `"world-1"`..`"world-9"` and 148 for `"world-10"`, while `$.number` is a
 /// fixed-width 65-bit number term — 132 on every row.
-pub const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
+pub const SEL_HELLO_OP: &str = "5ccfff7b5cab4c884c822bb13093aa35";
 
 /// The canonical `payload` column type — the `public.eql_v3_json_search` DOMAIN, so the
 /// domain CHECK runs when the fixture loads.

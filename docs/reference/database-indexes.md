@@ -176,7 +176,7 @@ Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payl
 
 ### Field-level equality index (ste_vec elements)
 
-For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `public.eql_v3_json_search` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `public.eql_v3_json_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
+For `GROUP BY` / `DISTINCT` on a value extracted from an `public.eql_v3_json_search` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `public.eql_v3_json_entry`, and entry-to-entry `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
 
 ```sql
 CREATE INDEX users_data_email_eq
@@ -189,6 +189,8 @@ SELECT count(*) FROM users
 SELECT * FROM users
   WHERE data_encrypted -> '<selector-for-email>'::text = $1::public.eql_v3_json_entry;
 ```
+
+`eql_v3.eq_term` extracts the deterministic `op` term, so this entry-to-entry `=` is exact only where `op` is injective — it is right for `GROUP BY` / `DISTINCT` bucketing, but for **exact** field `WHERE` equality (especially on `text` / `bigint` / `numeric`, whose `op` collates/rounds) use document containment `col @> $1::eql_v3.query_json`, which is exact for every type (see [JSON support](./json-support.md)).
 
 For ordered field-level access, index `eql_v3.ord_term(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ord_term(doc -> '<selector>'::text)` — the same sort-key rule as above. The extracted CLLW-OPE term is a bytea domain that orders under the DEFAULT btree operator class, so this index needs no superuser-installed operator class (it works on Supabase / managed Postgres). The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
 
@@ -207,7 +209,7 @@ SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_json;
 -- Bitmap Index Scan on orders_data_gin
 ```
 
-The needle must be typed — `$1::eql_v3.query_json`, another `public.eql_v3_json_search`, or an `public.eql_v3_json_entry`. A bare untyped literal falls through to native `jsonb @>`.
+The needle must be typed — `$1::eql_v3.query_json` or another `public.eql_v3_json_search`. A bare untyped literal falls through to native `jsonb @>`.
 
 ### GIN vs B-tree / hash
 

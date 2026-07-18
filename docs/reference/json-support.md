@@ -1,6 +1,6 @@
 # EQL with JSON and JSONB
 
-EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json_search`** document domain. A `public.eql_v3_json_search` column stores an encrypted document whose every path is searchable — without decryption — via containment, field/array access, and entry-level equality / range on extracted leaves.
+EQL encrypts, decrypts, and searches JSON / JSONB documents using structured encryption (ste_vec), exposed as the **`public.eql_v3_json_search`** document domain. A `public.eql_v3_json_search` column stores an encrypted document whose every path is searchable — without decryption — via containment (which provides **exact field equality for every value type**), field/array access, and range comparisons on extracted leaves.
 
 ## On this page
 
@@ -32,7 +32,7 @@ Insert and read through CipherStash Proxy or CipherStash Stack, which encrypt th
 SELECT encrypted_json FROM users;   -- decrypted by the client on the way out
 ```
 
-The stored value is the encrypted ste_vec document — an envelope (`v`, `i`, `c`) plus the `sv` array of encrypted, per-path terms.
+The stored value is the encrypted ste_vec document — an envelope (`v`, `i`, and the key header `h`) plus the `sv` array of encrypted, per-path entries. The document has **no root `c`**: the root document ciphertext lives on the root `sv` entry. Every entry encrypts under the document's single data key, so the key-retrieval material is stored **once** in `h` rather than repeated inside every entry; each entry's `c` is the raw AEAD output, and its nonce is derived from its own selector. Decrypting any entry therefore needs `h` + the entry's `s` + `c` — the client reassembles these (the `->` extractor grafts `h` onto every entry it returns, so an extracted `public.eql_v3_json_entry` stays self-contained decryptable).
 
 ## Typed operands (important)
 
@@ -56,7 +56,7 @@ This is **intrinsic to the domain type-kind**, not a bug: the only way to remove
 
 ### Containment queries (`@>`, `<@`)
 
-`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.eql_v3_json_search`, an `eql_v3.query_json`, or an `public.eql_v3_json_entry`:
+`@>` tests whether the encrypted document contains a structure; `<@` is the reverse. The needle must be **typed** — another `public.eql_v3_json_search` or an `eql_v3.query_json`:
 
 ```sql
 SELECT * FROM examples
@@ -64,6 +64,13 @@ WHERE encrypted_json @> $1::eql_v3.query_json;
 ```
 
 This is the encrypted equivalent of the plaintext `jsonb_column @> '{"top":{"nested":["a"]}}'`.
+
+**Containment is also the exact field-equality mechanism.** Each leaf's *value* is tokenized into its own selector (a value-inclusive selector `SEL(type-tag ‖ path ‖ canonical(value))`), so a value-selector's *presence* in the stored document is an exact, injective match. To match a field exactly, the client emits a `query_json` needle carrying that value selector, and the same `@>` engages — exactly for **every** value type, including `text`, `bigint`, and `numeric` (`"café"` ≠ `"cafe"`; `9007199254740993` ≠ `9007199254740992`):
+
+```sql
+-- account.email exactly equals a value — exact for every type, via containment
+SELECT * FROM examples WHERE encrypted_json @> $1::eql_v3.query_json;
+```
 
 For large tables, back containment with a GIN index. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
 
@@ -107,54 +114,42 @@ SELECT encrypted_json ->> 'selector_hash'::text FROM examples;
 SELECT encrypted_json -> 0 FROM examples;
 ```
 
-The extracted `public.eql_v3_json_entry` is itself comparable: `=` / `<>` resolve via `eql_v3.eq_term`, and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (on String / Number leaves):
+An extracted `public.eql_v3_json_entry` is comparable to **another extracted entry**: `=` / `<>` resolve via `eql_v3.eq_term` (the deterministic `op` term) and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (String / Number leaves):
 
 ```sql
 SELECT * FROM examples
-WHERE encrypted_json -> 'email_selector'::text = $1::public.eql_v3_json_entry;
+WHERE encrypted_json -> 'a_selector'::text < encrypted_json -> 'b_selector'::text;
 ```
 
-### Selector-with-constraint queries (index-accelerated)
+Entry-to-entry `=` compares the `op` term, so it is exact only where `op` is injective (and `NULL` for a term-less leaf). For **exact** field equality, use document containment (above) — exact for every type.
 
-An extracted leaf also compares directly against a **per-type query operand** in natural operator form, so a single-field constraint (`col -> '$.age' > 21`) is expressible without a whole-entry needle — and matches a functional index on `eql_v3.ord_term`:
+### Selector-with-constraint range queries (index-accelerated)
+
+An extracted leaf compares directly against a **per-type ordering operand** in natural operator form, so a single-field RANGE constraint (`col -> '$.age' > 21`) is expressible without a whole-entry needle — and matches a functional index on `eql_v3.ord_term`:
 
 ```sql
 SELECT * FROM examples
 WHERE encrypted_json -> 'age_selector'::text  >  $1::eql_v3.query_integer_ord;   -- range
 SELECT * FROM examples
-WHERE encrypted_json -> 'age_selector'::text  =  $1::eql_v3.query_integer_ord;   -- equality
-SELECT * FROM examples
-WHERE encrypted_json -> 'name_selector'::text >  $1::eql_v3.query_text_ord;       -- text: ORDERING ONLY
+WHERE encrypted_json -> 'name_selector'::text >  $1::eql_v3.query_text_ord;       -- text range
 ```
 
 Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic CLLW-OPE `op` term. A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for every one of them.
 
-**Ordering is available on every participating family.** Equality is available only where the leaf's encoding preserves the values the field can legitimately hold — a leaf is encoded as an f64 (numbers) or a collated string (text), and neither is lossless for every type:
+**Equality is not an extract operation.** `=` / `<>` binding an extracted leaf to a query operand (`-> 'sel' = $1::query_<T>_ord`) **raise `operator is not supported`** for every family. An extracted leaf is a *path* entry carrying no value selector, so it cannot express exact equality — and the only equality it could offer, `op` byte-comparison, is lossy for `text` / `bigint` / `numeric` (`"café"` == `"cafe"`; `9007199254740993` == `9007199254740992`). The operators are *blocked, not merely missing*: leaving them unbound would let a bare `=` fall back to native whole-envelope `jsonb = jsonb` and silently return zero rows. Route field equality through document containment instead (`@> $1::eql_v3.query_json`), which is **exact for every type** (a value-selector's presence in the document is an injective match).
 
-| family | operators | why |
+| leaf family | extract-surface operators | exact equality |
 |---|---|---|
-| `integer`, `smallint` | `=` `<>` `<` `<=` `>` `>=` | every value in range is an exact f64 (`\|i32\| < 2^53`) |
-| `real`, `double` | `=` `<>` `<` `<=` `>` `>=` | the leaf **is** an f64, so f64 equality is the semantic |
-| `bigint` | `<` `<=` `>` `>=` only | values above 2^53 round: `9007199254740993` and `9007199254740992` share one term |
-| `numeric` | `<` `<=` `>` `>=` only | carries more precision than an f64 |
-| `text` | `<` `<=` `>` `>=` only | the value is **collated** before encoding — see below |
-| `date`, `timestamp` | *none* — use the `text` surface | JSON has no date type; a date-in-JSON **is** a string leaf — see below |
+| `integer`, `smallint`, `bigint`, `numeric`, `real`, `double`, `text` | `<` `<=` `>` `>=` (ranges) | via document containment (`@>`) |
+| `date`, `timestamp` | *none* — a date-in-JSON is a text leaf | via containment on the text leaf |
 
-`=` and `<>` on `bigint`, `numeric`, and `text` raise `operator is not supported` rather than answering. They are **blocked, not merely missing**: an equality built on those encodings returns rows whose plaintext **differs** — a wrong answer, not a missing feature — and leaving the operator unbound would be worse still (both sides are domains over `jsonb`, so an unclaimed `=` silently falls back to native whole-envelope `jsonb = jsonb` and returns zero rows with no error).
+> **Dates and timestamps in JSON are strings.** JSON (RFC 8259) has no date or timestamp type — applications marshal temporal values into ISO-8601 / RFC 3339 strings, so a "date leaf" is a **text leaf**: order it via `eql_v3.query_text_ord` (ISO-8601 string order *is* chronological order) and match it exactly via document containment (`@>`). The temporal operands (`eql_v3.query_date_ord`, `eql_v3.query_timestamp_ord`, and their `_ope` twins) are not part of this surface — every operator on them raises `operator is not supported`. No client can produce a temporal SteVec ordering term anyway, so nothing is lost.
 
-> **Dates and timestamps in JSON are strings.** JSON (RFC 8259) has no date or timestamp type — applications marshal temporal values into ISO-8601 / RFC 3339 strings, so a "date leaf" is a **text leaf** and the text surface serves it: **ordering** via `eql_v3.query_text_ord` (ISO-8601 string order *is* chronological order), **exact match** via document containment (`@>`), whose `hm` terms are exact. The temporal operands (`eql_v3.query_date_ord`, `eql_v3.query_timestamp_ord`, and their `_ope` twins) are not part of this surface — every operator on them raises `operator is not supported`. No client can produce a temporal SteVec query term anyway (cipherstash-client rejects temporal plaintexts for `QueryOp::SteVecTerm`), so nothing is lost — the blockers just make the dead end loud instead of silent.
+The ordering operands are `eql_v3.query_<T>_ord` and its explicit twin `eql_v3.query_<T>_ord_ope`, for the families that serve ordering. `eql_v3.query_text_search` is also blocked on this surface (SteVec has no match/bloom capability — a leaf carries no `match_term`). The scalar `eql_v3.query_<T>_eq` operand is **not** bound to `public.eql_v3_json_entry`: extract-surface equality does not exist; field equality is document containment.
 
-The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql_v3.query_<T>_ord_ope`, for the six families in the table that serve at least ordering. Every other query operand is either **blocked** (each operator raises: the temporal operands above, and `eql_v3.query_text_search` — a leaf carries no `match_term`, so SteVec has no match/bloom capability and `search` offers nothing over `_ord` while demanding an inert `bf`) or **not bound at all** where the operand's terms are ones a leaf can never produce (`eql_v3.query_<T>_eq` — HMAC only; `eql_v3.query_<T>_ord_ore` / `query_text_search_ore` — block-ORE; `eql_v3.query_text_match` — Bloom).
-
-> **Note.** There is no `eql_v3.query_<T>_eq` operator on `public.eql_v3_json_entry` for any type. A JSON scalar leaf carries only the `op` term — never a per-value equality (`hm`) term. (For `text`, `eql_v3.query_text_ord` still requires an `hm` key to satisfy its domain CHECK, because the same operand type also serves scalar `text` columns; when querying a JSON leaf that `hm` is not part of the comparison.)
-
-> **⚠️ `=` on a `text` leaf would be a false positive, so it does not exist.** A string leaf's `op` term encodes the value *after collation*: cipherstash-client canonically decomposes it and then strips every character that is not alphanumeric, whitespace, or ASCII punctuation. So `"café"` and `"cafe"`, `"Müller"` and `"Muller"`, `"user@exämple.com"` and `"user@example.com"` all produce the **same** `op` term. Ordering is unaffected — a collated order is the intended semantic, and it is the same order scalar `text_ord` columns use. **To match a string field exactly, query the document with containment (`@>`)**, whose `hm` terms are exact. (Scalar `text` *columns* are unaffected: their `=` routes through the exact `hm` term. A SteVec string leaf carries no `hm` to route to.)
-
-> **⚠️ `=` on a `bigint` or `numeric` leaf would be a false positive, so it does not exist.** A JSON number is encoded as an f64, which cannot represent every `bigint` (above 2^53) or every `numeric` (arbitrary precision). `9007199254740993` and `9007199254740992` produce one term. `integer`/`smallint`/`real`/`double` are unaffected — every value they can hold is an exact f64.
-
-> **The operand must be encrypted for the same column, and as the same JSON scalar type, as the leaf.** Field scoping comes from the `->` extraction, not from the operand: an `op` term encodes the plaintext and the column, and carries no selector (only `hm` terms do). So one operand is comparable against whichever leaf you extract — which also means an operand encrypted for a *different column*, or for a different JSON scalar type (a number term against a string leaf), has non-corresponding term bytes and **silently returns zero rows with no error**. The SQL layer only compares terms and cannot detect the mismatch; keeping the operand's column and type aligned with the leaf is the client's / CipherStash Proxy's responsibility.
+> **The range operand must be encrypted for the same column, and as the same JSON scalar type, as the leaf.** Field scoping comes from the `->` extraction, not the operand: an `op` term encodes the plaintext and the column, carrying no selector, so one operand is comparable against whichever leaf you extract — which also means an operand encrypted for a *different column*, or a different JSON scalar type (a number term against a string leaf), has non-corresponding bytes and **silently returns zero rows**. The SQL layer only compares terms and cannot detect the mismatch; aligning the operand's column and type with the leaf is the client's / CipherStash Proxy's responsibility.
 >
-> **"Same JSON scalar type" is stricter than it sounds: encrypt numbers as *floats* and strings as *text*, whatever the operand domain is named.** The operand domain (`query_integer_ord`, `query_double_ord`, …) is a label the caller casts into; the term *bytes* are chosen by the plaintext variant the client encrypts. A stored JSON number leaf is always f64-encoded, and cipherstash-client encodes a **`Float`** plaintext identically — but an **`Int`** plaintext takes a different path (a raw cast, never orderable-encoded), so querying an integer JSON field with an integer-encrypted operand produces non-corresponding bytes and **silently returns zero rows**, even though both sides are "numbers". The rule for client authors: for a JSON *number* leaf, encrypt the operand as a float (`2` → `2.0`); for a JSON *string* leaf, as text. The `proptest-e2e` suite (`v3_json_entry_query_operand_e2e_tests`) pins both.
+> **"Same JSON scalar type" is stricter than it sounds: encrypt numbers as *floats*.** A stored JSON number leaf is always f64-encoded; cipherstash-client encodes a **`Float`** plaintext identically, but an **`Int`** plaintext takes a different (raw-cast) path, so an integer-encrypted range operand against an integer JSON field produces non-corresponding bytes and silently matches zero rows. For a JSON *number* leaf, encrypt the range operand as a float (`2` → `2.0`); for a JSON *string* leaf, as text.
 
 ### Array operations
 
@@ -162,12 +157,17 @@ The operands carrying `op` are `eql_v3.query_<T>_ord` and its explicit twin `eql
 -- Length of an encrypted array node
 SELECT eql_v3.jsonb_array_length(encrypted_array_field) FROM examples;
 
--- Elements as encrypted entries
+-- Elements as encrypted entries (each carries s, c, and the grafted key
+-- header h — the complete decryption unit)
 SELECT eql_v3.jsonb_array_elements(encrypted_array_field) FROM examples;
-
--- Elements as ciphertext text
-SELECT eql_v3.jsonb_array_elements_text(encrypted_array_field) FROM examples;
 ```
+
+> **Note (3.0.0):** `eql_v3.jsonb_array_elements_text` (a `SETOF text` stream of
+> bare per-element ciphertexts) was **removed** with the envelope wire format.
+> An entry's `c` is raw AEAD output whose nonce derives from the entry's `s`
+> and whose key material lives in the document's `h`, so a bare ciphertext
+> stream is not decryptable. Use `eql_v3.jsonb_array_elements`, whose entry rows
+> carry `s`, `c`, and the grafted `h`.
 
 ### Grouping data
 
@@ -186,9 +186,9 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 ### Core functions
 
 - **`eql_v3.ste_vec(val jsonb) RETURNS jsonb[]`** — extracts the ste_vec index array from an encrypted payload.
-- **`eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search) RETURNS boolean`** — true if all ste_vec terms in `b` exist in `a`; backs the `@>` operator.
+- **`eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search) RETURNS boolean`** — true if every selector in `b` is present in `a` (selector-subset containment); backs the `@>` operator.
 - **`eql_v3.to_ste_vec_query(val public.eql_v3_json_search) RETURNS eql_v3.query_json`** — the GIN-indexable query shape `@>` inlines to.
-- **`eql_v3.meta_data(val jsonb)`**, **`eql_v3.ciphertext(val jsonb)`**, **`eql_v3.selector(val jsonb)` / `(entry public.eql_v3_json_entry)`** — envelope / ciphertext / selector accessors.
+- **`eql_v3.meta_data(val jsonb)`** — envelope accessor: returns `{i, v, h}` (the key header `h` included so an extracted entry can be decrypted). **`eql_v3.ciphertext(val jsonb)`** — returns the `c` field; on the ste_vec surface `c` is raw AEAD output, decryptable only together with the entry's `s` and the document `h`. **`eql_v3.selector(val jsonb)` / `(entry public.eql_v3_json_entry)`** — selector accessor.
 
 ### Path query functions
 
@@ -199,12 +199,11 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 ### Array functions
 
 - **`eql_v3.jsonb_array_length(val jsonb) RETURNS integer`**
-- **`eql_v3.jsonb_array_elements(val jsonb)`**
-- **`eql_v3.jsonb_array_elements_text(val jsonb) RETURNS SETOF text`**
+- **`eql_v3.jsonb_array_elements(val jsonb)`** — one `public.eql_v3_json_entry` row per element (the key header `h` grafted on so each is self-contained decryptable).
 
 ### Entry comparison / aggregate
 
-- **`eql_v3.eq_term(entry public.eql_v3_json_entry)`** — equality term (backs `=` / `<>` / `GROUP BY`).
+- **`eql_v3.eq_term(entry public.eql_v3_json_entry)`** — the deterministic `op` term (backs entry-to-entry `=` / `<>` and `GROUP BY`); `NULL` for a term-less leaf. Op-based, so lossy for `text` / `bigint` / `numeric` — for exact field equality use document containment (`@>`).
 - **`eql_v3.ord_term(entry public.eql_v3_json_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
 - **`eql_v3.min(public.eql_v3_json_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
@@ -219,8 +218,8 @@ The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`
 Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
 1. **Flattening the structure** — each unique path to a leaf gets a deterministic selector hash.
-2. **Encrypting terms** — each path and value is encrypted into per-path terms (`hm` for equality; `op` CLLW OPE for ordered String / Number leaves).
-3. **Storing the `sv` array** — all encrypted terms live in the document's `sv` vector.
+2. **Tokenizing paths and values into selectors** — each path emits a *path* entry (`{s, c}`, plus an `op` CLLW-OPE ordering term for String / Number leaves), and each value emits a *value* entry whose selector `SEL(type-tag ‖ path ‖ canonical(value))` bakes in the value — so the selector's presence is an exact, injective equality match. (The per-value `hm` equality term was retired in 3.0.0 / CIP-3551; exact equality is now value-selector presence, not a MAC comparison.) A value entry's `c` encrypts a fixed sentinel, not the value — the value is already committed by the selector; the sentinel keeps a value entry distinguishable from a genuine empty-string leaf.
+3. **Storing the `sv` array** — all encrypted entries live in the document's `sv` vector, alongside the once-per-document key header `h`. Every entry encrypts under the document's single data key with a nonce derived from its own selector, so equal values at different paths — and the sentinel across value entries — never produce identical ciphertexts.
 
 **Example document:**
 
@@ -235,7 +234,7 @@ Structured Encryption (ste_vec) makes a JSONB document searchable by:
 
 **Creates selectors for** `$` (root), `$.account`, `$.account.email` (and its value), `$.account.roles` (and each role value).
 
-**Querying:** containment (`@>`) checks that all required encrypted terms exist in the target's `sv` array:
+**Querying:** containment (`@>`) checks that all required selectors exist in the target's `sv` array (a value selector's presence is the exact-equality match):
 
 ```sql
 -- Find records where account.email = "alice@example.com"

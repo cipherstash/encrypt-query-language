@@ -15,15 +15,27 @@
 -- Envelope helpers (eql_v3 owns these; jsonb-only)
 ------------------------------------------------------------------------------
 
---! @brief Extract metadata (i, v) from a raw jsonb encrypted value.
+--! @brief Extract envelope metadata (i, v, h) from a raw jsonb encrypted value.
+--!
+--! `h` is the document's key header — hoisted once to the envelope because
+--! every sv entry encrypts under the document's single data key. Grafting it
+--! here (the same `meta_data(val) || entry` concat that already grafts `i`/`v`)
+--! is what keeps an extracted `public.eql_v3_json_entry` self-contained
+--! decryptable: decryption needs the header plus the entry's own `s` (the
+--! nonce source) and `c` (the raw AEAD output). `jsonb_strip_nulls` drops the
+--! keys entirely on payloads that lack them (e.g. a raw scalar envelope has
+--! no `h`), rather than grafting JSON nulls.
+--!
 --! @param val jsonb encrypted EQL payload
---! @return jsonb Metadata object with `i` and `v` fields.
+--! @return jsonb Metadata object with `i`, `v`, and (for documents) `h`.
 CREATE FUNCTION eql_v3.meta_data(val jsonb)
   RETURNS jsonb
   IMMUTABLE STRICT PARALLEL SAFE
   LANGUAGE SQL
 AS $$
-  SELECT jsonb_build_object('i', val->'i', 'v', val->'v');
+  SELECT jsonb_strip_nulls(
+    jsonb_build_object('i', val->'i', 'v', val->'v', 'h', val->'h')
+  );
 $$;
 
 COMMENT ON FUNCTION eql_v3.meta_data(jsonb) IS
@@ -31,8 +43,13 @@ COMMENT ON FUNCTION eql_v3.meta_data(jsonb) IS
 
 --! @brief Extract ciphertext (c) from a raw jsonb encrypted value.
 --! @param val jsonb encrypted EQL payload
---! @return text Base64-encoded ciphertext.
+--! @return text The `c` field verbatim (base85 text).
 --! @throws Exception if `c` is absent.
+--! @note On the SteVec surface an entry's `c` is raw AEAD output and is NOT
+--!       decryptable on its own: the decryption unit is the entry — its `s`
+--!       (nonce source), `c`, and the document key header `h` (grafted onto
+--!       extracted entries by `->`; see eql_v3.meta_data). Scalar payloads'
+--!       `c` remains a self-describing encrypted record.
 CREATE FUNCTION eql_v3.ciphertext(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
@@ -79,23 +96,30 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Equality-term extractor (XOR-aware: coalesce(hm, op))
+-- Equality-term extractor (the deterministic `op` term)
 ------------------------------------------------------------------------------
 
---! @brief XOR-aware equality term extractor for public.eql_v3_json_entry.
+--! @brief Equality-term extractor for public.eql_v3_json_entry.
 --!
---! Returns the bytea of whichever deterministic term the sv entry carries —
---! `hm` (HMAC-256) or `op` (CLLW OPE). The two byte distributions are disjoint
---! by construction, so byte equality on the coalesce is unambiguous. Canonical
---! equality extractor used by `=` / `<>` on jsonb_entry.
+--! Returns the bytea of the entry's deterministic `op` (CLLW OPE) term, or NULL
+--! for a term-less entry (a value entry, or a bool/null/structural path entry —
+--! which carry no term because exact matching there is selector presence, not a
+--! per-entry term). Backs the entry-to-entry `=` / `<>` operators.
+--!
+--! `op` is deterministic (equal plaintext at a fixed selector ⇒ equal bytes),
+--! so byte equality on it is a sound equality for number/string leaves — with
+--! the same encoding caveat as the scalar `_ord` surface (f64 rounding, string
+--! collation make it lossy for `bigint`/`numeric`/`text`). Exact, loss-free
+--! equality on a JSON field is selector presence (containment / the value
+--! selector), not this term. `hm` is retired — entries no longer carry it.
 --!
 --! @param entry public.eql_v3_json_entry
---! @return bytea Decoded `hm` or `op` bytes (NULL if entry is NULL).
+--! @return bytea Decoded `op` bytes (NULL if the entry has no `op`, or is NULL).
 CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT decode(coalesce(entry ->> 'hm', entry ->> 'op'), 'hex')
+  SELECT decode(entry ->> 'op', 'hex')
 $$;
 
 ------------------------------------------------------------------------------
@@ -179,10 +203,12 @@ $$ LANGUAGE plpgsql;
 -- Deterministic-fields array for GIN containment
 ------------------------------------------------------------------------------
 
---! @brief Extract deterministic search fields (s, hm, op) per sv element.
+--! @brief Extract deterministic search fields (s, op) per sv element.
 --!
 --! Excludes non-deterministic ciphertext so PostgreSQL's native jsonb `@>` can
 --! compare for containment. Use for GIN indexes and containment queries.
+--! (`hm` is retired — exact matching is the value-inclusive selector — so the
+--! deterministic key set is exactly `s` and `op`.)
 --!
 --! @param val jsonb encrypted EQL payload
 --! @return jsonb[] Array of objects with only deterministic fields.
@@ -197,7 +223,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'hm', 'op')
+    WHERE kv.key IN ('s', 'op')
     GROUP BY elem
   );
 $$;
@@ -252,24 +278,20 @@ COMMENT ON FUNCTION eql_v3.jsonb_contained_by(jsonb, jsonb) IS
 
 --! @brief Check if an sv array contains a specific sv element.
 --!
---! Match = selector equal AND eq_term equal (byte-equality over coalesce(hm,
---! op)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
---! are deterministic and byte-disjoint, so either one is a valid equality
---! discriminator and a single byte comparison is correct.
---!
---! ASSUMPTION (locked by a negative test in v3_jsonb_tests.rs): hm and op byte
---! distributions never collide at a given selector. The crypto layer configures
---! a selector for eq XOR ordered, so both sides of a real comparison carry the
---! same term type — an hm needle never meets an op leaf at the same selector.
---! This collapse would wrongly match an hm needle against an op leaf if their
---! hex bytes were ever identical — which the contract prevents (an hm is a
---! fixed 32-byte HMAC; an op is a CLLW OPE ciphertext whose length is a
---! function of the plaintext bit width, never 32 bytes for the supported
---! domains). The negative-containment test guards against regression.
+--! Match = **selector equal**. Containment reduces to selector-set subset
+--! testing: a leaf's value is tokenized into its **value selector**
+--! (`SEL(tag ‖ path ‖ value)`), so the presence of a needle's value selector
+--! in the stored `sv` IS the exact value match — a keyed-MAC comparison,
+--! injective per (path, value), immune to the ordering encoding's losses
+--! (f64 rounding, string collation). Structural containment rides the same
+--! test: a needle's path selector (`SEL(path)`, value-independent) matches any
+--! stored node at that path, and the needle's value selectors constrain the
+--! values. No per-entry term comparison is involved — the value is in the
+--! selector, not in a term.
 --!
 --! @param a jsonb[] sv array to search within.
 --! @param b jsonb sv element to search for.
---! @return boolean True if b is found in any element of a.
+--! @return boolean True if b's selector is present in any element of a.
 CREATE FUNCTION eql_v3.ste_vec_contains(a jsonb[], b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -283,10 +305,7 @@ AS $$
 
     FOR idx IN 1..array_length(a, 1) LOOP
       _a := a[idx];
-      result := result OR (
-        eql_v3.selector(_a) = eql_v3.selector(b)
-        AND eql_v3.eq_term(_a::public.eql_v3_json_entry) = eql_v3.eq_term(b::public.eql_v3_json_entry)
-      );
+      result := result OR (eql_v3.selector(_a) = eql_v3.selector(b));
       EXIT WHEN result;
     END LOOP;
 
@@ -296,8 +315,8 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Does encrypted value `a` contain all sv elements of `b`?
 --!
---! Empty b is always contained. Each element of b must match selector + eq_term
---! in some element of a.
+--! Empty b is always contained. Each element of b must have its selector
+--! present in some element of a (selector-subset containment).
 --!
 --! @param a public.eql_v3_json_search Container.
 --! @param b public.eql_v3_json_search Elements to find.
@@ -452,28 +471,9 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
---! @brief Extract elements of an encrypted JSONB array as ciphertext text.
---! @param val jsonb encrypted EQL payload (must have `a` flag true).
---! @return SETOF text One ciphertext per element.
---! @throws Exception 'cannot extract elements from non-array' if not an array.
-CREATE FUNCTION eql_v3.jsonb_array_elements_text(val jsonb)
-  RETURNS SETOF text
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
-AS $$
-  DECLARE
-    sv jsonb[];
-  BEGIN
-    IF NOT eql_v3_internal.is_ste_vec_array(val) THEN
-      RAISE 'cannot extract elements from non-array';
-    END IF;
-
-    sv := eql_v3.ste_vec(val);
-
-    FOR idx IN 1..array_length(sv, 1) LOOP
-      RETURN NEXT eql_v3.ciphertext(sv[idx]);
-    END LOOP;
-
-    RETURN;
-  END;
-$$ LANGUAGE plpgsql;
+-- NOTE: `eql_v3.jsonb_array_elements_text` (SETOF bare per-element ciphertext
+-- text) was removed with the envelope wire format: an sv entry's `c` is raw
+-- AEAD output whose nonce derives from the entry's `s`, so a bare ciphertext
+-- stream is not decryptable and the function had no remaining correct use.
+-- Use `eql_v3.jsonb_array_elements` — its entry rows carry `s`, `c`, and the
+-- grafted document key header `h`, the complete decryption unit.

@@ -11,7 +11,7 @@ use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::v3::terms::{Ciphertext, Hmac256, OpeCllw, Selector};
+use crate::v3::terms::{EntryCiphertext, KeyHeader, OpeCllw, Selector};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 
@@ -79,9 +79,13 @@ impl JsonSchema for SteVecForm {
     }
 }
 
-/// `public.eql_v3_json_search` — a SteVec encrypted-JSON document (`{v, k, i, sv:[entry]}`,
-/// no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
-/// [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
+/// `public.eql_v3_json_search` — a SteVec encrypted-JSON document
+/// (`{v, k, i, h, sv:[entry]}`, no root ciphertext — the root document
+/// ciphertext lives on the root sv entry). Strict. `k` is the `"sv"` form
+/// discriminator (see [`SteVecForm`]); `h` is the document [`KeyHeader`],
+/// stored once for the whole document (every entry encrypts under the
+/// document's single data key, with per-entry nonces derived from the
+/// entries' selectors).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -89,18 +93,25 @@ pub struct SteVecDocument {
     pub v: SchemaVersion,
     pub k: SteVecForm,
     pub i: Identifier,
+    pub h: KeyHeader,
     pub sv: Vec<SteVecEntry>,
 }
 
-/// `public.eql_v3_json_entry` — one sv element (returned by `->`). Carries a selector
-/// `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
-/// `hm` XOR `op`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
-/// root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
+/// `public.eql_v3_json_entry` — one sv element (returned by `->`). Carries a
+/// selector `s`, raw AEAD ciphertext `c` (see [`EntryCiphertext`] — the
+/// decryption unit is `h` + `s` + `c`, with the document `h` grafted onto
+/// extracted entries by `->`), an optional array-membership marker `a`
+/// (emitted only when true), and — for ordered (number/string) path entries
+/// only — the `op` ordering term. Value entries (value-inclusive selectors)
+/// and non-orderable path entries are term-less: exact matching is selector
+/// presence, so no per-entry equality term exists (`hm` is retired). LAX
+/// (flatten precludes `deny_unknown_fields`): tolerates the root `i`/`v`/`h`
+/// merged in by `->`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct SteVecEntry {
     pub s: Selector,
-    pub c: Ciphertext,
+    pub c: EntryCiphertext,
     // `#[ts(optional = nullable)]` emits `a?: boolean | null` — ts-rs does NOT
     // infer optionality from serde `default`/`skip_serializing_if` (10.1: only an
     // explicit `#[ts(optional)]`/`optional = nullable` does), so without this the
@@ -109,6 +120,10 @@ pub struct SteVecEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional = nullable)]
     pub a: Option<bool>,
+    // Flattened, NOT `Option<SteVecTerm>`: ts-rs does not flatten `Option`
+    // (it would emit a literal `term` property and drift from the wire), so
+    // term-lessness is the enum's own `None {}` arm — serde flattens it to
+    // no keys at all, and both generators render the union faithfully.
     #[serde(flatten)]
     pub term: SteVecTerm,
 }
@@ -121,25 +136,47 @@ pub struct SteVecQuery {
     pub sv: Vec<SteVecQueryEntry>,
 }
 
-/// One element of a SteVec containment needle: a selector plus one term, and
-/// (per the SQL CHECK) no ciphertext. LAX for the same flatten reason as
+/// One element of a SteVec containment needle: a selector plus — for ordered
+/// path entries only — the `op` ordering term; value-selector and structural
+/// entries are selector-only (matched on presence), and (per the SQL CHECK)
+/// no element carries a ciphertext. LAX for the same flatten reason as
 /// `SteVecEntry`; the "no `c`" contract is enforced by `is_valid_ste_vec_query_payload`.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 pub struct SteVecQueryEntry {
     pub s: Selector,
+    // Same flattened-enum modeling as `SteVecEntry.term` (see there for why
+    // this is not an `Option`).
     #[serde(flatten)]
     pub term: SteVecTerm,
 }
 
-/// The per-entry deterministic term: exactly one of `hm` (HMAC equality) or `op`
-/// (CLLW-OPE ordering). Untagged — a document mixes both across its `sv` array.
+/// The per-entry ordering term: `op` (CLLW-OPE) on ordered (number/string)
+/// path entries, or nothing at all — value entries (value-inclusive
+/// selectors) and non-orderable path entries are term-less, because exact
+/// matching is selector presence, not a per-entry term (`hm` is retired).
+///
+/// Untagged, with term-lessness as the explicit `None` arm rather than an
+/// `Option` on the field: serde serializes `None {}` to no keys (flattened:
+/// nothing), and — unlike a flattened `Option`, which ts-rs renders as a
+/// literal `term` property — both ts-rs and schemars render this union
+/// faithfully (`{ op } | {}`). Arm ORDER is load-bearing: `None {}` matches
+/// any object, so it must be declared last.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(untagged)]
 pub enum SteVecTerm {
-    Hmac { hm: Hmac256 },
+    /// Ordered (number/string) path entry: the CLLW-OPE `op` term.
     OpeCllw { op: OpeCllw },
+    /// Term-less: a value entry or a non-orderable path entry.
+    None {},
+}
+
+impl SteVecTerm {
+    /// True for the term-less arm.
+    pub fn is_none(&self) -> bool {
+        matches!(self, Self::None {})
+    }
 }
 
 macro_rules! ste_vec_domain_type {

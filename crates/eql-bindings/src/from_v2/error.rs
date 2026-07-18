@@ -59,6 +59,21 @@ pub enum FromV2Error {
         /// Zero-based index of the offending `sv` entry.
         entry: usize,
     },
+    /// A v2 SteVec **document** has no v3 representation: the v3 envelope
+    /// wire format stores one key header (`h`) per document with per-entry
+    /// ciphertexts encrypted under selector-derived nonces, none of which can
+    /// be derived from a v2 payload by JSON transformation — that is
+    /// re-encryption. Encrypt the document through a v3-emitting client
+    /// (`encrypt_eql_v3`).
+    UnconvertibleSteVecDocument,
+    /// A v2 SteVec query entry carries a per-entry `hm` equality term, which
+    /// v3 cannot represent: v3 exact matching is value-inclusive **selector
+    /// presence**, and the value selector cannot be derived from an HMAC
+    /// term. Produce the needle through a v3-emitting client.
+    UnconvertibleEqualityTerm {
+        /// Zero-based index of the offending `sv` entry.
+        entry: usize,
+    },
     /// The input's kind contradicts the target: an `sv` payload for a scalar
     /// target, or a `ct` payload for [`TargetDomain::Json`](super::TargetDomain::Json).
     KindMismatch {
@@ -147,6 +162,22 @@ impl fmt::Display for FromV2Error {
                     "sv entry {entry} carries a CLLW-ORE ordering term `oc`; v3 orders SteVec \
                      entries by the CLLW-OPE `op` term, and ORE ciphertext bytes cannot be \
                      converted — re-encrypt through a client that emits OPE SteVec terms"
+                )
+            }
+            Self::UnconvertibleSteVecDocument => {
+                write!(
+                    f,
+                    "a v2 SteVec document cannot be converted to the v3 envelope wire format \
+                     (per-document key header + selector-derived entry nonces) — that is \
+                     re-encryption, not a JSON transformation; encrypt through encrypt_eql_v3"
+                )
+            }
+            Self::UnconvertibleEqualityTerm { entry } => {
+                write!(
+                    f,
+                    "sv query entry {entry} carries a per-entry `hm` equality term; v3 exact \
+                     matching is value-inclusive selector presence, which cannot be derived \
+                     from an HMAC term — produce the needle through a v3-emitting client"
                 )
             }
             Self::KindMismatch { kind, target } => {
