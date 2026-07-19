@@ -14,11 +14,10 @@ serde_json = "1"
 anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
-# CIP-3551 integration: the value-inclusive-selector client from the
-# cipherstash-suite PR branch (dan/cip-3551-stevec-value-inclusive-selectors,
-# worktree checkout). Emits the {s, c, op?} + value-entry SteVec wire natively
-# via encrypt_eql_v3. Repoint to the released crate once the suite PR ships.
-cipherstash-client = { path = "../../../_cip-3551-value-selectors-wt/packages/cipherstash-client", features = ["tokio"] }
+# The published client is the encryption oracle for fixtures and fresh e2e
+# queries. Pin it exactly so its SteVec envelope cannot drift independently of
+# the strict bindings and SQL contract tested in this repository.
+cipherstash-client = { version = "=0.42.0", features = ["tokio"] }
 # chrono is already in the tree transitively (cipherstash-client / ore-rs); pin
 # it as a direct dependency so the harness can name `chrono::NaiveDate` for the
 # `date` scalar (Encode/Decode/Type come from the sqlx `chrono` feature above).
@@ -30,10 +29,10 @@ chrono = { version = "0.4", default-features = false }
 rust_decimal = "1"
 paste = "1"
 eql-domains = { path = "../../crates/eql-domains" }
-# The fixture generator routes every cipherstash-client payload (v2 wire)
-# through `eql_bindings::from_v2` before staging (fixtures/v3_convert.rs), so
-# the bindings are a lib dependency now, not just a dev one (they remain a
-# dev-dependency consumer via tests/v3_jsonb_bindings_tests.rs too).
+# The fixture generator validates cipherstash-client's native v3 payloads
+# against these bindings before staging, so the bindings are a lib dependency
+# now, not just a dev one (they remain a dev-dependency consumer via
+# tests/v3_jsonb_bindings_tests.rs too).
 eql-bindings = { path = "../../crates/eql-bindings" }
 eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 # proptest is a regular dependency (not dev-only): `ScalarType::arbitrary_value`

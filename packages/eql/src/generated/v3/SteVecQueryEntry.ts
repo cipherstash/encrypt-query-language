@@ -9,4 +9,4 @@ import type { Selector } from "./Selector";
  * no element carries a ciphertext. LAX for the same flatten reason as
  * `SteVecEntry`; the "no `c`" contract is enforced by `is_valid_ste_vec_query_payload`.
  */
-export type SteVecQueryEntry = { s: Selector, } & ({ op: OpeCllw, } | Record<string, never>);
+export type SteVecQueryEntry = { s: Selector, } & ({ op: OpeCllw } | { op?: never });

@@ -107,7 +107,8 @@ async fn fresh_numeric_value_selector_equality(pool: PgPool) -> Result<()> {
     // Negative: a value NOT in the fixture matches nothing — so the positive above
     // is a real, injective match, not a vacuous always-contain.
     let vsel_absent =
-        ste_vec_query_value_selector(FIXTURE_TABLE, PAYLOAD_COLUMN, "$.number", &json!(999)).await?;
+        ste_vec_query_value_selector(FIXTURE_TABLE, PAYLOAD_COLUMN, "$.number", &json!(999))
+            .await?;
     let absent = contains_ids(&pool, &vsel_absent).await?;
     assert!(
         absent.is_empty(),

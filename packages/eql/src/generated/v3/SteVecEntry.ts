@@ -15,4 +15,4 @@ import type { Selector } from "./Selector";
  * (flatten precludes `deny_unknown_fields`): tolerates the root `i`/`v`/`h`
  * merged in by `->`.
  */
-export type SteVecEntry = { s: Selector, c: EntryCiphertext, a?: boolean | null, } & ({ op: OpeCllw, } | Record<string, never>);
+export type SteVecEntry = { s: Selector, c: EntryCiphertext, a?: boolean | null, } & ({ op: OpeCllw } | { op?: never });

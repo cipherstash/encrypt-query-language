@@ -9,7 +9,7 @@
 
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
-use ts_rs::TS;
+use ts_rs::{TypeVisitor, TS};
 
 use crate::v3::terms::{EntryCiphertext, KeyHeader, OpeCllw, Selector};
 use crate::v3::DomainType;
@@ -159,17 +159,58 @@ pub struct SteVecQueryEntry {
 /// Untagged, with term-lessness as the explicit `None` arm rather than an
 /// `Option` on the field: serde serializes `None {}` to no keys (flattened:
 /// nothing), and — unlike a flattened `Option`, which ts-rs renders as a
-/// literal `term` property — both ts-rs and schemars render this union
-/// faithfully (`{ op } | {}`). Arm ORDER is load-bearing: `None {}` matches
-/// any object, so it must be declared last.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
+/// literal `term` property — schemars renders this union faithfully as
+/// `{ op } | {}`. The TypeScript override represents the empty arm as
+/// `{ op?: never }`: ts-rs's default `Record<string, never>` cannot be
+/// intersected with an entry's required `s`/`c` fields. Arm ORDER remains
+/// load-bearing for serde: `None {}` matches any object, so it must be last.
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
 #[serde(untagged)]
 pub enum SteVecTerm {
     /// Ordered (number/string) path entry: the CLLW-OPE `op` term.
     OpeCllw { op: OpeCllw },
     /// Term-less: a value entry or a non-orderable path entry.
     None {},
+}
+
+impl TS for SteVecTerm {
+    type WithoutGenerics = Self;
+
+    const DOCS: Option<&'static str> = Some(
+        "/**\n * The per-entry ordering term: `op` on ordered path entries, or a term-less\n \
+         * arm for value selectors and non-orderable path entries.\n */\n",
+    );
+
+    fn decl() -> String {
+        "type SteVecTerm = { op: OpeCllw } | { op?: never };".to_string()
+    }
+
+    fn decl_concrete() -> String {
+        Self::decl()
+    }
+
+    fn name() -> String {
+        "SteVecTerm".to_string()
+    }
+
+    fn inline() -> String {
+        "{ op: OpeCllw } | { op?: never }".to_string()
+    }
+
+    fn inline_flattened() -> String {
+        format!("({})", Self::inline())
+    }
+
+    fn visit_dependencies(visitor: &mut impl TypeVisitor)
+    where
+        Self: 'static,
+    {
+        visitor.visit::<OpeCllw>();
+    }
+
+    fn output_path() -> Option<&'static std::path::Path> {
+        Some(std::path::Path::new("v3/SteVecTerm.ts"))
+    }
 }
 
 impl SteVecTerm {

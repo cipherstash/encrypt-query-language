@@ -98,10 +98,7 @@ fn value_entry(sel: &str) -> String {
 /// element is `{"s":"<sel>"}`, no term, no ciphertext). Containment on such a
 /// needle is pure selector-subset presence — the exact value match.
 fn value_needle(sels: &[&str]) -> String {
-    let parts: Vec<String> = sels
-        .iter()
-        .map(|s| format!(r#"{{"s":"{s}"}}"#))
-        .collect();
+    let parts: Vec<String> = sels.iter().map(|s| format!(r#"{{"s":"{s}"}}"#)).collect();
     format!(r#"{{"sv":[{}]}}"#, parts.join(","))
 }
 
@@ -458,9 +455,7 @@ async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
     .await?;
     let sel = constant_selector(&pool).await?;
     // A value-selector element (`{s}`) + an op element (`{s, op}`).
-    let n = format!(
-        r#"{{"sv":[{{"s":"{sel}"}},{{"s":"{SEL_HELLO_OP}","op":"{op}"}}]}}"#
-    );
+    let n = format!(r#"{{"sv":[{{"s":"{sel}"}},{{"s":"{SEL_HELLO_OP}","op":"{op}"}}]}}"#);
 
     let row1: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_json"
@@ -1126,10 +1121,10 @@ v3_jsonb_payload_reject!(
     v3_jsonb_json_payload_check,
     "public.eql_v3_json_search",
     [
-        "[]",                                                                 // non-object
-        "{\"v\":3,\"h\":\"kh\",\"sv\":[]}",                                // missing i
-        "{\"i\":{},\"h\":\"kh\",\"sv\":[]}",                               // missing v
-        "{\"i\":{},\"v\":3,\"sv\":[]}",                                      // missing h (key header)
+        "[]",                                                                               // non-object
+        "{\"v\":3,\"h\":\"kh\",\"sv\":[]}",            // missing i
+        "{\"i\":{},\"h\":\"kh\",\"sv\":[]}",           // missing v
+        "{\"i\":{},\"v\":3,\"sv\":[]}",                // missing h (key header)
         "{\"i\":{},\"v\":2,\"h\":\"kh\",\"sv\":[]}",   // v != 3 (the legacy 2)
         "{\"i\":{},\"v\":3.0,\"h\":\"kh\",\"sv\":[]}", // v renders to text '3.0', not '3'
         "{\"i\":{},\"v\":3,\"h\":\"kh\"}",             // missing sv
@@ -1146,14 +1141,14 @@ v3_jsonb_payload_reject!(
     v3_jsonb_ste_vec_entry_payload_check,
     "public.eql_v3_json_entry",
     [
-        "[]",                                                   // non-object
-        "{\"s\":\"x\"}",                                        // missing c
-        "{\"c\":\"y\"}",                                        // missing s
-        "{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\"}",              // hm is retired — rejected
+        "[]",                                                    // non-object
+        "{\"s\":\"x\"}",                                         // missing c
+        "{\"c\":\"y\"}",                                         // missing s
+        "{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\"}",               // hm is retired — rejected
         "{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\",\"op\":\"01\"}", // hm present (even with op)
-        "{\"s\":null,\"c\":\"y\"}",                             // s must be a string
-        "{\"s\":\"x\",\"c\":1}",                                // c must be a string
-        "{\"s\":\"x\",\"c\":\"y\",\"op\":1}",                   // op must be a string
+        "{\"s\":null,\"c\":\"y\"}",                              // s must be a string
+        "{\"s\":\"x\",\"c\":1}",                                 // c must be a string
+        "{\"s\":\"x\",\"c\":\"y\",\"op\":1}",                    // op must be a string
     ]
 );
 
@@ -1198,11 +1193,10 @@ async fn v3_jsonb_payload_check_accepts_valid(pool: PgPool) -> anyhow::Result<()
     assert!(ok_entry_op);
     // A selector-only `{s}` needle element and an op-bearing `{s, op}` element
     // are both valid query payloads.
-    let ok_query: bool = sqlx::query_scalar(
-        "SELECT '{\"sv\":[{\"s\":\"x\"}]}'::eql_v3.query_json IS NOT NULL",
-    )
-    .fetch_one(&pool)
-    .await?;
+    let ok_query: bool =
+        sqlx::query_scalar("SELECT '{\"sv\":[{\"s\":\"x\"}]}'::eql_v3.query_json IS NOT NULL")
+            .fetch_one(&pool)
+            .await?;
     assert!(ok_query);
     let ok_query_op: bool = sqlx::query_scalar(
         "SELECT '{\"sv\":[{\"s\":\"x\",\"op\":\"00\"}]}'::eql_v3.query_json IS NOT NULL",

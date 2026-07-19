@@ -418,13 +418,14 @@ async fn json_entry_extract_equality_is_blocked_for_every_family(pool: PgPool) -
                     format!("SELECT id FROM entry_t WHERE value {op} '{esc}'::{operand_ty}"),
                     format!("SELECT id FROM entry_t WHERE '{esc}'::{operand_ty} {op} value"),
                 ] {
-                    let err = sqlx::query(&query).fetch_all(&mut *tx).await.expect_err(
-                        &format!(
+                    let err = sqlx::query(&query)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .expect_err(&format!(
                             "extract-surface `{op}` on a json_entry leaf must RAISE for every \
                              family (equality is document containment, not an extract op). \
                              Query: {query}"
-                        ),
-                    );
+                        ));
                     let msg = err.to_string();
                     assert!(
                         msg.contains("is not supported for"),

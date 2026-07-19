@@ -1,6 +1,12 @@
 import { describe, expect, test } from 'vitest'
 import { schemaId, schemaIds, schemaNames } from './schema'
-import type { IntegerEq, TextSearch, TextSearchOre } from './index'
+import type {
+  IntegerEq,
+  SteVecDocument,
+  SteVecQuery,
+  TextSearch,
+  TextSearchOre,
+} from './index'
 
 describe('@cipherstash/eql generated surface', () => {
   test('exports schema metadata for generated domains', () => {
@@ -42,8 +48,25 @@ describe('@cipherstash/eql generated surface', () => {
       bf: [1, 2, 3],
     }
 
+    // The term-less arm must remain composable with each entry's required
+    // fields. `Record<string, never>` here would turn `s`/`c` into `never`.
+    const steVec: SteVecDocument = {
+      v: 3,
+      k: 'sv',
+      i: { t: 'users', c: 'profile' },
+      h: 'mp_base85_key_header',
+      sv: [{ s: 'selector', c: 'entry_ciphertext' }],
+    }
+    const exactValue: SteVecQuery = { sv: [{ s: 'value_selector' }] }
+    const ordered: SteVecQuery = {
+      sv: [{ s: 'path_selector', op: 'ope_term' }],
+    }
+
     expect(integer.v).toBe(3)
     expect(text.bf).toEqual([1, 2, 3])
     expect(textOre.ob).toEqual(['ore'])
+    expect(steVec.sv[0].s).toBe('selector')
+    expect(exactValue.sv[0].s).toBe('value_selector')
+    expect(ordered.sv[0].op).toBe('ope_term')
   })
 })
