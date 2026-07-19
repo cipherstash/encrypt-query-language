@@ -274,8 +274,8 @@ async fn user_column_domains_absent_from_eql_owned_schemas(pool: PgPool) -> Resu
 /// #2 — Placement invariant (mirror): every query-operand domain lives in
 /// `eql_v3` as a jsonb-backed domain, and none leaks into `public`. A query
 /// operand is never a column type, so it is versioned and uninstalled with
-/// the EQL surface instead of sharing the column domains' `public` home
-///.
+/// the EQL surface instead of sharing the column domains' `public` home.
+/// The expected type set is derived from the encrypted-domain catalog.
 #[sqlx::test]
 async fn query_operand_domains_are_eql_v3_jsonb_domains(pool: PgPool) -> Result<()> {
     let installed: Vec<(String, String, String)> = sqlx::query_as(

@@ -404,10 +404,9 @@ const JSON_ENTRY_TERM: Term = Term::Ope;
 /// Ope-carrying operands are BLOCKED, not merely omitted — see
 /// [`json_entry_cross_blocked_domains`].
 ///
-/// `_eq` is excluded for free (it carries only `Term::Hm`): its equality term is
-/// the per-value `hmac_256` `hm`, which a SteVec scalar leaf never carries, so a
-/// `(json_entry, query_<T>_eq)` operator could never match real data —
-/// `eq_term(json_entry)` would read a missing `hm` → NULL → silently zero rows.
+/// `_eq` is excluded for free (it carries only `Term::Hm`): a SteVec path entry
+/// carries neither that per-value `hm` nor its exact value selector, so a
+/// `(json_entry, query_<T>_eq)` operator has no compatible equality term.
 ///
 /// A `Term::Bloom`-bearing operand (text's `_search`) is excluded even though it
 /// carries `Ope`: **SteVec has no match/bloom capability** — a leaf carries no
@@ -1967,7 +1966,7 @@ mod tests {
         assert!(hand.exists(), "hand-written depth-1 functions.sql survives");
     }
 
-    // --- : json_entry <-> query_<T> cross-type operator surface ---
+    // --- json_entry <-> query_<T> cross-type operator surface ---
 
     #[test]
     fn json_entry_cross_domains_selects_every_ope_carrying_operand() {

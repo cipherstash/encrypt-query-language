@@ -147,10 +147,8 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         .collect();
 
     // Exact supported operand signatures (verified against operators.sql).
-    // The single-entry `@>`(json_search, json_entry) and its `<@` reverse are
-    // deliberately ABSENT: an extracted path leaf carries no value
-    // selector, so single-entry containment could only match structurally. Field
-    // equality is document containment on a value-selector needle (query_json).
+    // Computable signatures only. Entry equality and single-entry containment
+    // are claimed separately by fail-loud blockers below.
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
         (
@@ -169,9 +167,7 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         ("->", "public.eql_v3_json_search", "text"),
         ("->", "public.eql_v3_json_search", "integer"),
         ("->>", "public.eql_v3_json_search", "text"),
-        // entry comparisons
-        ("=", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
-        ("<>", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
+        // entry ordering comparisons
         ("<", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
         ("<=", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
         (">", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
@@ -189,10 +185,11 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         "expected supported operand signature(s) are absent: {missing:#?}"
     );
 
-    // Negative lock: the dropped single-entry containment operators
-    // must NOT exist. Their return had value-blind/op-lossy semantics; field
-    // equality routes through document containment on a value-selector needle.
-    let dropped: &[(&str, &str, &str)] = &[
+    // Blocker lock: these exact signatures must exist so PostgreSQL cannot
+    // flatten the domains to native jsonb operators. Their functions raise.
+    let blocked: &[(&str, &str, &str)] = &[
+        ("=", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
+        ("<>", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
         (
             "@>",
             "public.eql_v3_json_search",
@@ -204,13 +201,13 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
             "public.eql_v3_json_search",
         ),
     ];
-    let resurrected: Vec<&(&str, &str, &str)> = dropped
+    let missing_blockers: Vec<&(&str, &str, &str)> = blocked
         .iter()
-        .filter(|(op, l, r)| have.contains(&(op.to_string(), l.to_string(), r.to_string())))
+        .filter(|(op, l, r)| !have.contains(&(op.to_string(), l.to_string(), r.to_string())))
         .collect();
     assert!(
-        resurrected.is_empty(),
-        "single-entry containment operator(s) must stay dropped, found: {resurrected:#?}"
+        missing_blockers.is_empty(),
+        "fail-loud entry blocker signature(s) are absent: {missing_blockers:#?}"
     );
     Ok(())
 }
@@ -297,7 +294,8 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
          (json_entry, eql_v3.query_<T>_*) only; found illegal mixed shape(s): {mixed:#?}"
     );
 
-    // Sanity: all six entry symbols ARE present in the symmetric shape.
+    // Sanity: all six entry symbols are claimed in the symmetric shape; the
+    // four range operators compute and equality/inequality are blockers.
     let present: BTreeSet<String> = sqlx::query_scalar::<_, String>(
         r#"
         SELECT o.oprname
@@ -364,9 +362,9 @@ async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> an
         assert!(found, "missing cross-type operator {op}({l}, {r})");
     }
 
-    // Negative lock: NO `query_<T>_eq` operand is ever bound to json_entry. Such an
-    // operator would be dead surface — a JSON scalar leaf has no per-value `hm`, so
-    // `eq_term(json_entry) = eq_term(query_<T>_eq)` can never match.
+    // Negative lock: NO `query_<T>_eq` operand is ever bound to json_entry. Such
+    // an operator would be dead surface: a path entry carries neither the query
+    // operand's per-value `hm` nor its exact value selector.
     let eq_bound: i64 = sqlx::query_scalar(
         r#"
         SELECT count(*)

@@ -87,10 +87,6 @@ impl ScalarType for JsonbEntryInteger {
         r#"{"s":"placeholder","c":"sample","op":"00"}"#
     }
 
-    fn eq_extractor_expr(value_expr: &str) -> String {
-        format!("eql_v3.eq_term({value_expr})")
-    }
-
     /// A SteVec entry orders by its structural CLLW-OPE term (`op`), whatever
     /// the variant. Deliberately ignores the catalog default rather than relying
     /// on it: `PG_TYPE` is `"integer"`, so the derived extractor answers for
@@ -149,10 +145,6 @@ mod tests {
         assert_eq!(
             <JsonbEntryInteger as ScalarType>::ord_extractor_expr(Variant::Ord, "value"),
             "eql_v3.ord_term(value)",
-        );
-        assert_eq!(
-            <JsonbEntryInteger as ScalarType>::eq_extractor_expr("value"),
-            "eql_v3.eq_term(value)",
         );
     }
 

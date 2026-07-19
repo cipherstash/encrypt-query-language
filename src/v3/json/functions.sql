@@ -99,19 +99,22 @@ $$;
 -- Equality-term extractor (the deterministic `op` term)
 ------------------------------------------------------------------------------
 
---! @brief Equality-term extractor for public.eql_v3_json_entry.
+--! @brief Low-level deterministic `op` byte extractor for a json entry.
 --!
 --! Returns the bytea of the entry's deterministic `op` (CLLW OPE) term, or NULL
 --! for a term-less entry (a value entry, or a bool/null/structural path entry —
 --! which carry no term because exact matching there is selector presence, not a
---! per-entry term). Backs the entry-to-entry `=` / `<>` operators.
+--! per-entry term). Entry-to-entry `=` / `<>` are blocked: these bytes are an
+--! ordering encoding, not an exact equality representation.
 --!
 --! `op` is deterministic (equal plaintext at a fixed selector ⇒ equal bytes),
 --! so byte equality on it is a sound equality for number/string leaves — with
 --! the same encoding caveat as the scalar `_ord` surface (f64 rounding, string
 --! collation make it lossy for `bigint`/`numeric`/`text`). Exact, loss-free
 --! equality on a JSON field is selector presence (containment / the value
---! selector), not this term. `hm` is retired — entries no longer carry it.
+--! selector), not this term. This extractor remains available only for callers
+--! that deliberately need encoded OPE-equivalence buckets. `hm` is retired —
+--! entries no longer carry it.
 --!
 --! @param entry public.eql_v3_json_entry
 --! @return bytea Decoded `op` bytes (NULL if the entry has no `op`, or is NULL).

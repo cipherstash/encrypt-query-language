@@ -1,6 +1,6 @@
 //! Behaviour matrix for SteVec jsonb-entry comparisons, reusing the scalar
 //! matrix generators via `jsonb_entry_matrix!`. Covers the positive behaviours
-//! (correctness / ordering / NULL / ORDER BY / COUNT / index engagement, plus
+//! (range correctness / ordering / NULL / ORDER BY / COUNT / index engagement, plus
 //! entry-specific fixture-shape and CLLW-OPE injectivity tests) that the
 //! hand-written `v3_jsonb_tests` suite does not. Document-specific behaviours
 //! (containment / path query / array ops / the operator-surface guard) remain

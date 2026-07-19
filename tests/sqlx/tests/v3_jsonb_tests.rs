@@ -171,48 +171,48 @@ async fn row_value_selector(pool: &PgPool, id: i64) -> anyhow::Result<String> {
 }
 
 // ============================================================================
-// D1 — Equality correctness on an op-bearing path entry: entry = entry iff
-//      ordering terms are equal; <> is the negation.
+// D1 — Equality is not an extract operation. Entry-to-entry = / <> are
+//      explicit non-STRICT blockers, just like entry-to-query equality.
 // ============================================================================
 
-macro_rules! v3_jsonb_eq_correctness {
-    ( $( ($name:ident, $field:literal, $sel:expr, $a:expr, $b:expr) ),+ $(,)? ) => {
-        $( paste::paste! {
-            #[sqlx::test]
-            async fn [<v3_jsonb_ $name _eq_correctness>](pool: PgPool) -> anyhow::Result<()> {
-                let same_a = entry($sel, $field, $a);
-                let same_b = entry($sel, $field, $a); // different `c`-irrelevant copy, same term
-                let diff_b = entry($sel, $field, $b);
-
-                // = is true iff terms equal.
-                let eq_same: bool = sqlx::query_scalar(&format!(
-                    "SELECT '{same_a}'::public.eql_v3_json_entry = '{same_b}'::public.eql_v3_json_entry"
-                )).fetch_one(&pool).await?;
-                assert!(eq_same, "{} entries with equal terms must be =", $field);
-
-                let eq_diff: bool = sqlx::query_scalar(&format!(
-                    "SELECT '{same_a}'::public.eql_v3_json_entry = '{diff_b}'::public.eql_v3_json_entry"
-                )).fetch_one(&pool).await?;
-                assert!(!eq_diff, "{} entries with differing terms must NOT be =", $field);
-
-                // <> is the exact negation of =.
-                let neq_same: bool = sqlx::query_scalar(&format!(
-                    "SELECT '{same_a}'::public.eql_v3_json_entry <> '{same_b}'::public.eql_v3_json_entry"
-                )).fetch_one(&pool).await?;
-                assert!(!neq_same, "<> must be false when terms equal");
-
-                let neq_diff: bool = sqlx::query_scalar(&format!(
-                    "SELECT '{same_a}'::public.eql_v3_json_entry <> '{diff_b}'::public.eql_v3_json_entry"
-                )).fetch_one(&pool).await?;
-                assert!(neq_diff, "<> must be true when terms differ");
-
-                Ok(())
-            }
-        } )+
-    };
+#[sqlx::test]
+async fn v3_jsonb_entry_equality_is_blocked(pool: PgPool) -> anyhow::Result<()> {
+    let a = op_entry(OP_LADDER[0]);
+    let b = op_entry(OP_LADDER[0]);
+    for (op, function) in [("=", "eq"), ("<>", "neq")] {
+        eql_tests::assert_raises(
+            &pool,
+            &format!(
+                "SELECT '{a}'::public.eql_v3_json_entry {op} \
+                 '{b}'::public.eql_v3_json_entry"
+            ),
+            &[],
+            "is not supported",
+        )
+        .await?;
+        eql_tests::assert_raises(
+            &pool,
+            &format!(
+                "SELECT NULL::public.eql_v3_json_entry {op} \
+                 '{b}'::public.eql_v3_json_entry"
+            ),
+            &[],
+            "is not supported",
+        )
+        .await?;
+        eql_tests::assert_raises(
+            &pool,
+            &format!(
+                "SELECT eql_v3.{function}('{a}'::public.eql_v3_json_entry, \
+                 '{b}'::public.eql_v3_json_entry)"
+            ),
+            &[],
+            "is not supported",
+        )
+        .await?;
+    }
+    Ok(())
 }
-
-v3_jsonb_eq_correctness!((op, "op", SEL_HELLO_OP, OP_LADDER[0], OP_LADDER[1]),);
 
 // ============================================================================
 // D2 — Ordered correctness on an `op` leaf: < <= > >= follow the CLLW-OPE
@@ -295,7 +295,7 @@ async fn v3_jsonb_op_ladder_is_total_order(pool: PgPool) -> anyhow::Result<()> {
 }
 
 // ============================================================================
-// D3 — Entry comparison shape guard: the supported `(entry, entry)` form
+// D3 — Entry ordering shape guard: the supported `(entry, entry)` form
 //      resolves and behaves. (The mixed-shape ABSENCE — `(entry, jsonb)` /
 //      `(jsonb, entry)` — is a structural catalog guard and lives in
 //      v3_jsonb_operator_surface_tests.rs, because at runtime such a pair
@@ -306,8 +306,8 @@ async fn v3_jsonb_op_ladder_is_total_order(pool: PgPool) -> anyhow::Result<()> {
 async fn v3_jsonb_entry_entry_shape_resolves(pool: PgPool) -> anyhow::Result<()> {
     let a = entry(SEL_HELLO_OP, "op", OP_LADDER[0]);
     let b = entry(SEL_HELLO_OP, "op", OP_LADDER[1]);
-    // Each of the six entry operators resolves on (entry, entry) and returns bool.
-    for op in ["=", "<>", "<", "<=", ">", ">="] {
+    // Each entry ordering operator resolves on (entry, entry) and returns bool.
+    for op in ["<", "<=", ">", ">="] {
         let _v: bool = sqlx::query_scalar(&format!(
             "SELECT '{a}'::public.eql_v3_json_entry {op} '{b}'::public.eql_v3_json_entry"
         ))
@@ -491,6 +491,33 @@ async fn v3_jsonb_containment_self_and_subset(pool: PgPool) -> anyhow::Result<()
     .fetch_one(&pool)
     .await?;
     assert!(!backwards, "subset must not contain superset");
+    Ok(())
+}
+
+#[sqlx::test]
+async fn v3_jsonb_single_entry_containment_is_blocked(pool: PgPool) -> anyhow::Result<()> {
+    let document = doc(&[op_entry(OP_LADDER[0])]);
+    let entry = op_entry(OP_LADDER[0]);
+    for sql in [
+        format!(
+            "SELECT '{document}'::public.eql_v3_json_search \
+             @> '{entry}'::public.eql_v3_json_entry"
+        ),
+        format!(
+            "SELECT '{entry}'::public.eql_v3_json_entry \
+             <@ '{document}'::public.eql_v3_json_search"
+        ),
+        format!(
+            "SELECT '{document}'::public.eql_v3_json_search \
+             @> NULL::public.eql_v3_json_entry"
+        ),
+        format!(
+            "SELECT NULL::public.eql_v3_json_entry \
+             <@ '{document}'::public.eql_v3_json_search"
+        ),
+    ] {
+        eql_tests::assert_raises(&pool, &sql, &[], "is not supported").await?;
+    }
     Ok(())
 }
 
@@ -781,10 +808,7 @@ macro_rules! v3_jsonb_supported_null {
 const NN_DOC: &str = r#"{"i":{},"v":3,"h":"kh","sv":[]}"#;
 
 v3_jsonb_supported_null!(
-    // entry comparisons (= <> < <= > >=), NULL on each side
-    (entry_eq_lhs, "SELECT NULL::public.eql_v3_json_entry = '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_json_entry"),
-    (entry_eq_rhs, "SELECT '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_json_entry = NULL::public.eql_v3_json_entry"),
-    (entry_neq_lhs, "SELECT NULL::public.eql_v3_json_entry <> '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_json_entry"),
+    // entry ordering comparisons (< <= > >=)
     (entry_lt_lhs, "SELECT NULL::public.eql_v3_json_entry < '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_json_entry"),
     (entry_lte_lhs, "SELECT NULL::public.eql_v3_json_entry <= '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_json_entry"),
     (entry_gt_lhs, "SELECT NULL::public.eql_v3_json_entry > '{\"s\":\"r\",\"c\":\"x\",\"op\":\"00\"}'::public.eql_v3_json_entry"),
@@ -792,13 +816,11 @@ v3_jsonb_supported_null!(
     // document containment: json @> json
     (doc_contains_doc_lhs, "SELECT NULL::public.eql_v3_json_search @> '{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[]}'::public.eql_v3_json_search"),
     (doc_contains_doc_rhs, "SELECT '{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[]}'::public.eql_v3_json_search @> NULL::public.eql_v3_json_search"),
-    // json @> query_json / json @> jsonb_entry
+    // json @> query_json
     (doc_contains_query_lhs, "SELECT NULL::public.eql_v3_json_search @> '{\"sv\":[]}'::eql_v3.query_json"),
     (doc_contains_query_rhs, "SELECT '{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[]}'::public.eql_v3_json_search @> NULL::eql_v3.query_json"),
-    (doc_contains_entry_rhs, "SELECT '{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[]}'::public.eql_v3_json_search @> NULL::public.eql_v3_json_entry"),
-    // <@ reverses
+    // <@ reverse
     (query_contained_lhs, "SELECT NULL::eql_v3.query_json <@ '{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[]}'::public.eql_v3_json_search"),
-    (entry_contained_lhs, "SELECT NULL::public.eql_v3_json_entry <@ '{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[]}'::public.eql_v3_json_search"),
 );
 
 // The `-> text` / `-> int` / `->> text` accessors return non-boolean types, so
@@ -1645,8 +1667,8 @@ async fn v3_jsonb_arrow_integer_index_on_array(pool: PgPool) -> anyhow::Result<(
 }
 
 // ============================================================================
-// D14 — Planner metadata: supported entry operators declare COMMUTATOR/NEGATOR
-//       so commuted/negated predicates are recognised. Asserted via pg_operator.
+// D14 — Planner metadata: supported entry ordering operators declare
+//       COMMUTATOR/NEGATOR. Equality blockers deliberately declare none.
 // ============================================================================
 
 #[sqlx::test]
@@ -1662,6 +1684,7 @@ async fn v3_jsonb_entry_operators_declare_commutator_negator(pool: PgPool) -> an
         LEFT JOIN pg_operator neg ON neg.oid = o.oprnegate
         WHERE o.oprleft = 'public.eql_v3_json_entry'::regtype
           AND o.oprright = 'public.eql_v3_json_entry'::regtype
+          AND o.oprname IN ('<', '<=', '>', '>=')
         ORDER BY o.oprname
         "#,
     )
@@ -1672,12 +1695,10 @@ async fn v3_jsonb_entry_operators_declare_commutator_negator(pool: PgPool) -> an
     let expected: &[(&str, &str, &str)] = &[
         ("<", ">", ">="),
         ("<=", ">=", ">"),
-        ("<>", "<>", "="),
-        ("=", "=", "<>"),
         (">", "<", "<="),
         (">=", "<=", "<"),
     ];
-    assert_eq!(rows.len(), expected.len(), "six entry comparison operators");
+    assert_eq!(rows.len(), expected.len(), "four entry ordering operators");
 
     for (op, com, neg) in expected {
         let found = rows
@@ -1699,22 +1720,35 @@ async fn v3_jsonb_entry_operators_declare_commutator_negator(pool: PgPool) -> an
 }
 
 #[sqlx::test]
-async fn v3_jsonb_entry_eq_does_not_declare_hashes_or_merges(pool: PgPool) -> anyhow::Result<()> {
-    let flags: (bool, bool) = sqlx::query_as(
+async fn v3_jsonb_entry_equality_blockers_are_non_strict_plpgsql(
+    pool: PgPool,
+) -> anyhow::Result<()> {
+    let rows: Vec<(String, bool, String, bool, bool, bool, bool)> = sqlx::query_as(
         r#"
-        SELECT oprcanhash, oprcanmerge
-        FROM pg_operator
-        WHERE oprname = '='
+        SELECT o.oprname,
+               p.proisstrict,
+               l.lanname,
+               o.oprcanhash,
+               o.oprcanmerge,
+               o.oprcom <> 0,
+               o.oprnegate <> 0
+        FROM pg_operator o
+        JOIN pg_proc p ON p.oid = o.oprcode
+        JOIN pg_language l ON l.oid = p.prolang
+        WHERE o.oprname IN ('=', '<>')
           AND oprleft = 'public.eql_v3_json_entry'::regtype
           AND oprright = 'public.eql_v3_json_entry'::regtype
+        ORDER BY o.oprname
         "#,
     )
-    .fetch_one(&pool)
+    .fetch_all(&pool)
     .await?;
-    assert_eq!(
-        flags,
-        (false, false),
-        "jsonb_entry = has no hash/btree opfamily"
-    );
+    assert_eq!(rows.len(), 2, "both entry equality blockers must exist");
+    for (op, strict, language, can_hash, can_merge, has_commutator, has_negator) in rows {
+        assert!(!strict, "entry {op} blocker must execute for NULL operands");
+        assert_eq!(language, "plpgsql", "entry {op} must be a blocker body");
+        assert!(!can_hash && !can_merge);
+        assert!(!has_commutator && !has_negator);
+    }
     Ok(())
 }

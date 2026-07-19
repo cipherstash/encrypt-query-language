@@ -58,8 +58,8 @@ impl Domain {
     /// naming convention — codegen (SQL + bindings) builds every query-domain
     /// name through this. A prefix (not the earlier `_query` suffix) so query
     /// operands sort together, apart from the column domains they twin, in
-    /// alphabetical type listings such as Supabase Studio's type picker
-    ///.
+    /// alphabetical type listings such as Supabase Studio's type picker.
+    /// The encrypted-domain catalog is the source of truth for this mapping.
     pub fn query_name(&self, family_name: &str) -> String {
         format!("query_{}", self.full_name(family_name))
     }

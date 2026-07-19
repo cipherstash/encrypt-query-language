@@ -114,14 +114,19 @@ SELECT encrypted_json ->> 'selector_hash'::text FROM examples;
 SELECT encrypted_json -> 0 FROM examples;
 ```
 
-An extracted `public.eql_v3_json_entry` is comparable to **another extracted entry**: `=` / `<>` resolve via `eql_v3.eq_term` (the deterministic `op` term) and `<` / `<=` / `>` / `>=` via `eql_v3.ord_term` (String / Number leaves):
+An extracted `public.eql_v3_json_entry` supports ordered comparison with
+**another extracted entry** through `<` / `<=` / `>` / `>=` and
+`eql_v3.ord_term` (String / Number leaves):
 
 ```sql
 SELECT * FROM examples
 WHERE encrypted_json -> 'a_selector'::text < encrypted_json -> 'b_selector'::text;
 ```
 
-Entry-to-entry `=` compares the `op` term, so it is exact only where `op` is injective (and `NULL` for a term-less leaf). For **exact** field equality, use document containment (above) — exact for every type.
+Entry-to-entry `=` / `<>` are fail-loud blockers. A path entry carries no value
+selector, and comparing its `op` ordering bytes would be lossy for
+`text` / `bigint` / `numeric`. For exact field equality, use document
+containment (above), which is exact for every type.
 
 ### Selector-with-constraint range queries (index-accelerated)
 
@@ -136,7 +141,16 @@ WHERE encrypted_json -> 'name_selector'::text >  $1::eql_v3.query_text_ord;     
 
 Both sides resolve through `eql_v3.ord_term` — byte-comparison on the deterministic CLLW-OPE `op` term. A functional index `USING btree (eql_v3.ord_term(encrypted_json -> 'selector'::text))` engages for every one of them.
 
-**Equality is not an extract operation.** `=` / `<>` binding an extracted leaf to a query operand (`-> 'sel' = $1::query_<T>_ord`) **raise `operator is not supported`** for every family. An extracted leaf is a *path* entry carrying no value selector, so it cannot express exact equality — and the only equality it could offer, `op` byte-comparison, is lossy for `text` / `bigint` / `numeric` (`"café"` == `"cafe"`; `9007199254740993` == `9007199254740992`). The operators are *blocked, not merely missing*: leaving them unbound would let a bare `=` fall back to native whole-envelope `jsonb = jsonb` and silently return zero rows. Route field equality through document containment instead (`@> $1::eql_v3.query_json`), which is **exact for every type** (a value-selector's presence in the document is an injective match).
+**Equality is not an extract operation.** `=` / `<>` between two extracted
+entries, or between an extracted entry and a query operand
+(`-> 'sel' = $1::query_<T>_ord`), **raise `operator is not supported`**. An
+extracted leaf is a *path* entry carrying no value selector, so it cannot
+express exact equality—and `op` byte-comparison is lossy for
+`text` / `bigint` / `numeric` (`"café"` == `"cafe"`;
+`9007199254740993` == `9007199254740992`). The operators are blocked rather
+than omitted because an unbound `=` could fall back to native whole-envelope
+`jsonb = jsonb`. Route field equality through document containment instead
+(`@> $1::eql_v3.query_json`), which is exact for every type.
 
 | leaf family | extract-surface operators | exact equality |
 |---|---|---|
@@ -171,13 +185,10 @@ SELECT eql_v3.jsonb_array_elements(encrypted_array_field) FROM examples;
 
 ### Grouping data
 
-Group on the extracted entry's equality term, `eql_v3.eq_term`. A functional hash index on the same expression engages the lookup (see [Field-level equality index](./database-indexes.md#field-level-equality-index-ste_vec-elements)):
-
-```sql
-SELECT eql_v3.eq_term(encrypted_json -> 'color_selector'::text) AS color, COUNT(*)
-FROM examples
-GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
-```
+Exact `GROUP BY` / `DISTINCT` on an extracted encrypted-JSON field is not
+available: the extracted path entry has no value selector, and its `op` term is
+not an exact equality key. Decrypt before grouping, or model the value as a
+separate equality-indexed scalar column when server-side grouping is required.
 
 `MIN` / `MAX` over an extracted ordered leaf use the `eql_v3.min(public.eql_v3_json_entry)` / `max` aggregates.
 
@@ -203,7 +214,7 @@ GROUP BY eql_v3.eq_term(encrypted_json -> 'color_selector'::text);
 
 ### Entry comparison / aggregate
 
-- **`eql_v3.eq_term(entry public.eql_v3_json_entry)`** — the deterministic `op` term (backs entry-to-entry `=` / `<>` and `GROUP BY`); `NULL` for a term-less leaf. Op-based, so lossy for `text` / `bigint` / `numeric` — for exact field equality use document containment (`@>`).
+- **`eql_v3.eq_term(entry public.eql_v3_json_entry)`** — low-level access to the deterministic `op` bytes; `NULL` for a term-less leaf. It does not back an equality operator and is lossy for `text` / `bigint` / `numeric`; use only for deliberate OPE-equivalence bucketing, never exact equality.
 - **`eql_v3.ord_term(entry public.eql_v3_json_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
 - **`eql_v3.min(public.eql_v3_json_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
@@ -211,7 +222,7 @@ For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./d
 
 ### Blocked operators
 
-The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, and root-document `=` `<>` `<` `<=` `>` `>=` are **blocked** on `public.eql_v3_json_search` — they `RAISE` rather than running plaintext-jsonb semantics on the encrypted payload. Use containment, field access, or the `eql_v3.jsonb_path_*` functions instead.
+The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, root-document `=` `<>` `<` `<=` `>` `>=`, single-entry containment, and entry-to-entry `=` / `<>` are **blocked** — they `RAISE` rather than running plaintext-jsonb or lossy ordering-term equality semantics. Use document containment for exact equality and extracted-entry ordering only for ranges.
 
 ## How ste_vec indexing works
 

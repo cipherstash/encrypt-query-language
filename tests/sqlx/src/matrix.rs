@@ -453,20 +453,19 @@ macro_rules! scalar_matrix {
 
 /// Reduced behaviour matrix for a SteVec **entry** view type (e.g.
 /// `JsonbEntryInteger`). Runs only the leaf drivers that are surface-agnostic
-/// once routed through the access-path seam: correctness (d,d only),
-/// supported_null, order_by(+nulls/+using), count, index_engages, and — once
+/// once routed through the access-path seam: range correctness (d,d only),
+/// ordering NULL propagation, order_by(+nulls/+using), count, index_engages, and — once
 /// `src/v3/json/aggregates.sql` exists — aggregate(+group_by/+parallel).
 /// Containment / blockers / payload_check / path-op / native-absent /
 /// planner-metadata stay in the hand-written `v3_jsonb_tests` suite — they have
 /// no scalar analogue or assert document-specific surface.
-/// `ord_routes_through_ordering_term` and scalar `ore_injectivity` are also excluded: they
-/// are scalar-term invariants and are not semantically correct for
-/// `jsonb_entry` (entry equality routes through `eq_term`, not ORE).
+/// `ord_routes_through_ordering_term` and scalar `ore_injectivity` are also
+/// excluded: they are scalar-term invariants. Entry `=` / `<>` are fail-loud
+/// blockers because an extracted path entry carries no exact value selector.
 ///
 /// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
-/// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
-/// count-distinct, and aggregates reduce through `eql_v3.ord_term` via the
-/// `JsonbEntryInteger` extractor overrides.
+/// has one domain. Ordering, count-distinct, and aggregates reduce through
+/// `eql_v3.ord_term` via the `JsonbEntryInteger` extractor override.
 #[macro_export]
 macro_rules! jsonb_entry_matrix {
     (
@@ -478,7 +477,7 @@ macro_rules! jsonb_entry_matrix {
             case = __scalar_matrix_correctness_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
-            ops_list = [(eq, "="), (neq, "<>"), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            ops_list = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             pivots_list = [
                 (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
                 (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
@@ -489,7 +488,7 @@ macro_rules! jsonb_entry_matrix {
             case = __scalar_matrix_supported_null_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
-            ops_list = [(eq, "="), (neq, "<>"), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            ops_list = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
         }
         $crate::__scalar_matrix_order_by_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",

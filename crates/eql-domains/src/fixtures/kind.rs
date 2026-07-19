@@ -182,8 +182,8 @@ impl ScalarKind {
     /// there a native JSON scalar type for the kind (RFC 8259: string, number,
     /// boolean)?
     ///
-    /// This is the PARTICIPATION gate for the `json_entry` cross-type seam
-    ///: a family whose values have no native JSON representation has
+    /// This is the PARTICIPATION gate for the `json_entry` cross-type seam.
+    /// A family whose values have no native JSON representation has
     /// no JSON leaf to compare against, so its query operands must not bind
     /// `public.eql_v3_json_entry` at all — for ANY operator, not just `=`.
     ///

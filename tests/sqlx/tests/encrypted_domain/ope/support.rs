@@ -127,8 +127,8 @@ macro_rules! ope_ord_smoke {
     };
 }
 
-/// Stamp the real-ciphertext `_ord_ope` fixture tests for one scalar
-///. The generated `fixtures.eql_v3_<T>` table carries
+/// Stamp the real-ciphertext `_ord_ope` fixture tests for one scalar.
+/// The generated `fixtures.eql_v3_<T>` table carries
 /// client-encrypted payloads whose `op` term came out of cipherstash-client's
 /// `ope` index (0.38.1+), so these assertions exercise the actual CLLW-OPE
 /// cryptography against the in-table `plaintext` oracle — the coverage the

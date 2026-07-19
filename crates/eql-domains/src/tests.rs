@@ -1367,7 +1367,7 @@ mod invariant_tests {
                 }
                 // Pin the bare join rule on `full_name` (the installed
                 // `domain_name` additionally carries the `eql_v3_` version
-                // prefix —  — pinned separately below).
+                // prefix, which is pinned separately below).
                 let name = d.full_name(s.name);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),
