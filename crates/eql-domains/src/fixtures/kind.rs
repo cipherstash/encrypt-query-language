@@ -231,7 +231,6 @@ impl ScalarKind {
         }
     }
 
-
     /// A debug/identifier string for the kind: the canonical Rust plaintext type
     /// name (`"i32"`, `"chrono::NaiveDate"`, `"rust_decimal::Decimal"`). `Jsonb`
     /// maps to `serde_json::Value` — its plaintext is an arbitrary JSON document.

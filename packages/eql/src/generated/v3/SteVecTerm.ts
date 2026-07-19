@@ -2,16 +2,7 @@
 import type { OpeCllw } from "./OpeCllw";
 
 /**
- * The per-entry ordering term: `op` (CLLW-OPE) on ordered (number/string)
- * path entries, or nothing at all — value entries (value-inclusive
- * selectors) and non-orderable path entries are term-less, because exact
- * matching is selector presence, not a per-entry term (`hm` is retired).
- *
- * Untagged, with term-lessness as the explicit `None` arm rather than an
- * `Option` on the field: serde serializes `None {}` to no keys (flattened:
- * nothing), and — unlike a flattened `Option`, which ts-rs renders as a
- * literal `term` property — both ts-rs and schemars render this union
- * faithfully (`{ op } | {}`). Arm ORDER is load-bearing: `None {}` matches
- * any object, so it must be declared last.
+ * The per-entry ordering term: `op` on ordered path entries, or a term-less
+ * arm for value selectors and non-orderable path entries.
  */
-export type SteVecTerm = { op: OpeCllw, } | Record<string, never>;
+export type SteVecTerm = { op: OpeCllw } | { op?: never };

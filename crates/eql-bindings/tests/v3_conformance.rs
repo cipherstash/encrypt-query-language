@@ -464,9 +464,11 @@ fn stevec_entry_term_is_optional_and_op_only() {
     use eql_bindings::v3::json::{SteVecEntry, SteVecTerm};
     // Term-less entries — value entries and non-orderable path entries — are
     // the common case: exact matching is selector presence, not a term.
-    let termless: SteVecEntry =
-        serde_json::from_value(json!({ "s": "sel", "c": "ct" })).unwrap();
-    assert!(termless.term.is_none(), "term-less entries take the None arm");
+    let termless: SteVecEntry = serde_json::from_value(json!({ "s": "sel", "c": "ct" })).unwrap();
+    assert!(
+        termless.term.is_none(),
+        "term-less entries take the None arm"
+    );
     // op arm (ordered number/string path entries).
     let op: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "op": "cllw" })).unwrap();
@@ -482,7 +484,10 @@ fn stevec_entry_term_is_optional_and_op_only() {
     // on the real wire (`NOT (val ? 'hm')`).
     let stray_hm: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
-    assert!(stray_hm.term.is_none(), "hm is retired and must not parse as a term");
+    assert!(
+        stray_hm.term.is_none(),
+        "hm is retired and must not parse as a term"
+    );
 }
 
 #[test]
@@ -570,12 +575,12 @@ fn stevec_ts_exports_have_expected_shape() {
     };
 
     // SteVecTerm: the untagged `{ op } | {}` union — the op arm and the
-    // term-less arm (ts-rs renders the empty struct variant as
-    // `Record<string, never>`). No `hm` arm may reappear.
+    // term-less arm. `{ op?: never }` remains composable when flattened into
+    // an entry with required `s`/`c` fields. No `hm` arm may reappear.
     let term = export_line("SteVecTerm.ts", "SteVecTerm");
     assert!(
-        term.contains("{ op: OpeCllw, }")
-            && term.contains("Record<string, never>")
+        term.contains("{ op: OpeCllw }")
+            && term.contains("{ op?: never }")
             && term.contains('|')
             && !term.contains("hm"),
         "SteVecTerm.ts must be the `{{ op }} | {{}}` union, got: {term}"
@@ -591,8 +596,8 @@ fn stevec_ts_exports_have_expected_shape() {
         "s: Selector",
         "c: EntryCiphertext",
         "a?: boolean | null",
-        "{ op: OpeCllw, }",
-        "Record<string, never>",
+        "{ op: OpeCllw }",
+        "{ op?: never }",
     ] {
         assert!(
             entry.contains(needle),
