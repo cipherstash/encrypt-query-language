@@ -489,7 +489,7 @@ mod live_tests {
     const INT_INDEXES: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore];
 
     /// The full ordered-integer index set including `Ope`, which drives the
-    /// scalar CLLW-OPE `op` term (cipherstash-client 0.38.1+, CIP-3348).
+    /// scalar CLLW-OPE `op` term (cipherstash-client 0.38.1+).
     const INT_INDEXES_WITH_OPE: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope];
 
     /// Assert the well-formed v3 Store shape: the payload is a JSON object
@@ -499,7 +499,7 @@ mod live_tests {
     /// (emitted from the `scalar_types!` list in `scalar_types.rs`).
     ///
     /// The `op` (CLLW-OPE) key is pinned in BOTH directions against the
-    /// index set that produced the payload (CIP-3348): an `ope`-indexed
+    /// index set that produced the payload: an `ope`-indexed
     /// column MUST carry a hex-string `op` term, and a column without the
     /// `ope` index MUST NOT — a stray `op` on a non-ope column means the
     /// client started emitting the term unconditionally and the fixture
@@ -528,7 +528,7 @@ mod live_tests {
             let op = obj.get("op").and_then(Value::as_str).unwrap_or_else(|| {
                 panic!(
                     "an ope-indexed payload must carry a string `op` (CLLW-OPE) \
-                     term (CIP-3348); got {payload}"
+                     term; got {payload}"
                 )
             });
             assert!(
@@ -542,7 +542,7 @@ mod live_tests {
                 !obj.contains_key("op"),
                 "a payload without the ope index must NOT carry an `op` term — \
                  the client emits CLLW-OPE only for ope-indexed columns \
-                 (CIP-3348); got {payload}"
+                ; got {payload}"
             );
         }
     }
@@ -580,7 +580,7 @@ mod live_tests {
     #[tokio::test]
     #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
     async fn encrypt_store_ope_term_is_deterministic_for_equal_plaintexts() {
-        // CLLW-OPE determinism is load-bearing (CIP-3348): the integer
+        // CLLW-OPE determinism is load-bearing: the integer
         // families route `=`/`<>` through `op`, so two independent
         // encryptions of one plaintext MUST yield byte-identical `op` hex
         // strings — a randomized term would make op-routed equality

@@ -5,7 +5,7 @@
 //! JSON analogue of a scalar storage payload) rather than a SteVec document.
 //!
 //! The generated `payload` column is the storage-only `public.eql_v3_json`
-//! DOMAIN (CIP-3512), so its CHECK runs when the fixture loads. This gives the
+//! DOMAIN, so its CHECK runs when the fixture loads. This gives the
 //! storage-only json domain — and its native-jsonb operator firewall (generated
 //! under `src/v3/scalars/json/`) — a real-ciphertext home, exactly as the `bool`
 //! scalar storage fixture does for the scalar storage domains.

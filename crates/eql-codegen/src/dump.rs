@@ -39,7 +39,7 @@ pub struct DomainEntry {
     /// underscore from its stored domain names.
     pub suffix: String,
     /// The installed pg_type typname: the version-prefixed unqualified SQL
-    /// name (`eql_v3_integer_eq` — CIP-3472), resolved under `public`.
+    /// name (`eql_v3_integer_eq`), resolved under `public`.
     pub typname: String,
     /// SQL operators the domain's terms support, in catalog order. Empty for
     /// the storage domain (no terms).
@@ -70,7 +70,7 @@ pub struct SteVecEntry {
     pub full_name: String,
     /// The installed pg_type typname: the version-prefixed name for the
     /// public-schema column domains (`eql_v3_json_search` / `eql_v3_json_entry` —
-    /// CIP-3472); the containment needle stays `query_json` (it lives in the
+    /// ); the containment needle stays `query_json` (it lives in the
     /// already-versioned `eql_v3` schema).
     pub typname: String,
     /// The catalog domain name: `json` / `entry` / `query`.

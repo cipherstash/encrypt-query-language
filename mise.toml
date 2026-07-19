@@ -646,7 +646,7 @@ run = """
 # This pins the FULL name list instead — every individual ope test — so a
 # deleted/renamed/cfg-hidden ope test shows up as a removed line (the same
 # silent-shrinkage gap the scalar snapshot closes; deferred minor from #340,
-# picked up with CIP-3348). No database needed.
+# picked up with ). No database needed.
 set -euo pipefail
 test -f snapshots/ope_tests.txt || { echo "snapshots/ope_tests.txt missing — regenerate (see snapshots/README.md)." >&2; exit 1; }
 # Stub the generated fixtures on a bare / no-creds worktree (see

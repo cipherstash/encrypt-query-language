@@ -1,4 +1,4 @@
-//! fixture-suite (CIP-3141) cross-ciphertext equality test.
+//! fixture-suite cross-ciphertext equality test.
 //!
 //! Proves "two independent encryptions of one value compare equal" using the
 //! generated `fixtures.eql_v3_<T>_doubles` tables — each plaintext encrypted
@@ -18,7 +18,7 @@
 //!     through `_ord` and `_ord_ore` — the ORE (`ob`) equality path, which routes
 //!     `=` through `compare_ore_block_256_terms(...) = 0` (GUARANTEED equal for
 //!     two independent encryptions of one value; see the ORE finding in the plan);
-//!  4. CLLW-OPE determinism (CIP-3348): every equal-plaintext pair carries
+//!  4. CLLW-OPE determinism: every equal-plaintext pair carries
 //!     byte-identical `op` hex terms across its two independent encryptions —
 //!     the property that makes op-routed `=`/`<>` on the integer families'
 //!     `_ord_ope` domains sound — and distinct plaintexts carry distinct `op`
@@ -96,14 +96,14 @@ fn op_term<T: ScalarType>(row: &Row<T>) -> Result<String> {
         .ok_or_else(|| {
             anyhow::anyhow!(
                 "doubles payload for {} carries no string `op` term — regenerate \
-                 fixtures on cipherstash-client 0.38.1+ (CIP-3348): {}",
+                 fixtures on cipherstash-client 0.38.1+: {}",
                 T::PG_TYPE,
                 row.payload_json
             )
         })
 }
 
-/// CLLW-OPE determinism (CIP-3348): two independent encryptions of one
+/// CLLW-OPE determinism: two independent encryptions of one
 /// plaintext must carry byte-identical `op` hex terms — the property that
 /// makes op-routed `=`/`<>` on the `_ord_ope` domains sound (a randomized
 /// term would silently return false negatives). Distinct plaintexts must
@@ -177,7 +177,7 @@ async fn assert_cross_ciphertext<T: ScalarType>(pool: &PgPool) -> Result<()> {
     assert_pair_eq_on::<T>(pool, Variant::Ord, a, b).await?;
     assert_pair_eq_on::<T>(pool, Variant::OrdOre, a, b).await?;
 
-    // (4) CLLW-OPE determinism (CIP-3348) on the real `op` terms, plus the
+    // (4) CLLW-OPE determinism on the real `op` terms, plus the
     //     op-path equality through `_ord_ope` on the distinct-ciphertext pair.
     assert_ope_determinism::<T>(&rows)?;
     assert_pair_eq_on_ord_ope::<T>(pool, a, b).await?;

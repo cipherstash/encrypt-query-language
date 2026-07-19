@@ -61,7 +61,7 @@ bench = ["scale"]
 # (`mise run test`); activated transitively by `bench` (above), so the
 # `bench-eql` workflow runs them. Not enabled directly anywhere else.
 scale = []
-# Opt-in to the e2e property suite (CIP-3141). It generates fresh random
+# Opt-in to the e2e property suite. It generates fresh random
 # plaintexts each run and encrypts them end-to-end through ZeroKMS via
 # cipherstash-client, so it needs the same CS_* creds as fixture generation.
 # `mise run test:sqlx` enables this (CI has the secrets). A bare `cargo test`

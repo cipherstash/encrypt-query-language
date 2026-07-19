@@ -30,7 +30,9 @@ AS $$
      AND jsonb_typeof(val -> 's') = 'string'
      AND jsonb_typeof(val -> 'c') = 'string'
      AND NOT (val ? 'hm')
-     AND (NOT (val ? 'op') OR jsonb_typeof(val -> 'op') = 'string'),
+     AND (NOT (val ? 'a') OR jsonb_typeof(val -> 'a') = 'boolean')
+     AND (NOT (val ? 'op') OR jsonb_typeof(val -> 'op') = 'string')
+     AND val - ARRAY['s', 'c', 'a', 'op']::text[] = '{}'::jsonb,
     false
   )
 $$;
@@ -57,6 +59,7 @@ BEGIN
   RETURN COALESCE(
     jsonb_typeof(val) = 'object'
      AND jsonb_typeof(val -> 'sv') = 'array'
+     AND val - 'sv' = '{}'::jsonb
      AND NOT EXISTS (
        SELECT 1
        FROM jsonb_array_elements(
@@ -68,6 +71,7 @@ BEGIN
          AND NOT (elem ? 'c')
          AND NOT (elem ? 'hm')
          AND (NOT (elem ? 'op') OR jsonb_typeof(elem -> 'op') = 'string')
+         AND elem - ARRAY['s', 'op']::text[] = '{}'::jsonb
        ), false)
      ),
     false
@@ -147,8 +151,8 @@ $$;
 --! `{s, c}`: exact matching is selector presence, so there is no per-value
 --! equality term (`hm` is retired and rejected). This is the type returned by
 --! `->` and accepted by the per-entry extractors `eql_v3.eq_term` /
---! `eql_v3.ord_term`. Extra fields (`a`, root `i`/`v` merged in by `->`) are
---! allowed.
+--! `eql_v3.ord_term`. The optional array marker `a` and root `i`/`v`/`h`
+--! metadata merged in by `->` are the only additional fields accepted.
 --!
 --! @see src/v3/json/operators.sql
 --!
@@ -179,7 +183,9 @@ BEGIN
            AND jsonb_typeof(VALUE -> 's') = 'string'
            AND jsonb_typeof(VALUE -> 'c') = 'string'
            AND NOT (VALUE ? 'hm')
-           AND (NOT (VALUE ? 'op') OR jsonb_typeof(VALUE -> 'op') = 'string'),
+           AND (NOT (VALUE ? 'a') OR jsonb_typeof(VALUE -> 'a') = 'boolean')
+           AND (NOT (VALUE ? 'op') OR jsonb_typeof(VALUE -> 'op') = 'string')
+           AND VALUE - ARRAY['s', 'c', 'a', 'op', 'i', 'v', 'h']::text[] = '{}'::jsonb,
           false
         )
       );
@@ -230,10 +236,12 @@ $$;
 
 --! @brief Convert a public.eql_v3_json_search to a query_json needle.
 --!
---! Normalises each sv element down to the matching-relevant fields: `s` plus
---! an optional `op` (ordered path entries). Other fields (`c`, `a`, `i`/`v`,
---! anything else) are stripped. This is the canonical needle shape for `@>`
---! containment. Designed for use as a functional GIN index expression:
+--! Normalises each sv element down to its selector `s`. Exact and structural
+--! containment are both selector-set containment; an `op` carried by a legacy
+--! or document-derived needle is accepted at the boundary for compatibility
+--! but is not part of the containment predicate. Other fields are stripped.
+--! This is the canonical needle shape for `@>` containment and the functional
+--! GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
 --! @param e public.eql_v3_json_search Source encrypted payload
@@ -249,8 +257,7 @@ AS $$
       (SELECT jsonb_agg(
                 jsonb_strip_nulls(
                   jsonb_build_object(
-                    's',  elem -> 's',
-                    'op', elem -> 'op'
+                    's', elem -> 's'
                   )
                 )
               )
@@ -260,6 +267,26 @@ AS $$
   )::eql_v3.query_json
 $$;
 
+--! @brief Normalise an already query-shaped needle to selector-only form.
+--!
+--! Some producers derive a query from a complete encrypted document and may
+--! therefore carry the path entry's `op`. Containment is selector-set
+--! containment, so this overload strips `op` before comparison and keeps every
+--! public containment entry point semantically identical.
+CREATE FUNCTION eql_v3.to_ste_vec_query(e eql_v3.query_json)
+  RETURNS eql_v3.query_json
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT jsonb_build_object(
+    'sv',
+    coalesce(
+      (SELECT jsonb_agg(jsonb_build_object('s', elem -> 's'))
+       FROM jsonb_array_elements(e::jsonb -> 'sv') AS elem),
+      '[]'::jsonb
+    )
+  )::eql_v3.query_json
+$$;
+
 CREATE CAST (public.eql_v3_json_search AS eql_v3.query_json)
-  WITH FUNCTION eql_v3.to_ste_vec_query
+  WITH FUNCTION eql_v3.to_ste_vec_query(public.eql_v3_json_search)
   AS ASSIGNMENT;

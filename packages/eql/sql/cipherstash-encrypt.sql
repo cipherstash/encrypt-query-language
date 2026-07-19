@@ -258,7 +258,7 @@ CREATE DOMAIN eql_v3_internal.hmac_256 AS text;
 --!
 --! @note The public operator is `@@` (fuzzy bloom-token matching), NOT the
 --!   containment operators `@>`/`<@`: the match is a probabilistic, one-sided
---!   n-gram token match, not containment (CIP-3517). `@>`/`<@` on the text match
+--!   n-gram token match, not containment. `@>`/`<@` on the text match
 --!   domains now raise. Internally the `@@` wrapper still reduces to the base
 --!   type's `@>` for GIN indexability.
 --! @note Self-contained: references no eql_v2 symbol.
@@ -34084,7 +34084,13 @@ CREATE OPERATOR || (
 --! @internal
 --! @param val jsonb Candidate entry payload.
 --! @return boolean True when `val` is an sv entry with string `s`, string `c`,
---!         and exactly one string deterministic term (`hm` XOR `op`).
+--!         and — for an ordered (number/string) path entry only — a string
+--!         `op` ordering term. Value entries (value-inclusive selectors) and
+--!         non-orderable path entries (bool/null/object/array) are term-less
+--!         `{s, c}`: exact matching is selector presence, so an entry carries
+--!         no per-value equality term. `hm` is retired and must be absent —
+--!         a stale `hm`-bearing payload fails loudly rather than degrading to
+--!         a value-less entry.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -34093,11 +34099,10 @@ AS $$
     jsonb_typeof(val) = 'object'
      AND jsonb_typeof(val -> 's') = 'string'
      AND jsonb_typeof(val -> 'c') = 'string'
-     AND (
-       (jsonb_typeof(val -> 'hm') = 'string' AND NOT (val ? 'op'))
-       OR
-       (jsonb_typeof(val -> 'op') = 'string' AND NOT (val ? 'hm'))
-     ),
+     AND NOT (val ? 'hm')
+     AND (NOT (val ? 'a') OR jsonb_typeof(val -> 'a') = 'boolean')
+     AND (NOT (val ? 'op') OR jsonb_typeof(val -> 'op') = 'string')
+     AND val - ARRAY['s', 'c', 'a', 'op']::text[] = '{}'::jsonb,
     false
   )
 $$;
@@ -34106,8 +34111,10 @@ $$;
 --! @internal
 --! @param val jsonb Candidate query payload.
 --! @return boolean True when `val` is `{"sv":[...]}` and every element carries
---!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
---!         `op`).
+--!         a string `s`, no ciphertext, an optional string `op` (present only
+--!         on ordered path entries), and no `hm`. A containment needle is a
+--!         set of selectors — a value-selector's presence in the stored
+--!         document IS the exact value match.
 --! @note plpgsql, not LANGUAGE sql (issues #353/#354): the only caller is the
 --!   eql_v3.query_json domain CHECK, where a SQL function can never be
 --!   inlined (and the CHECK itself cannot absorb this body — it needs a
@@ -34122,6 +34129,7 @@ BEGIN
   RETURN COALESCE(
     jsonb_typeof(val) = 'object'
      AND jsonb_typeof(val -> 'sv') = 'array'
+     AND val - 'sv' = '{}'::jsonb
      AND NOT EXISTS (
        SELECT 1
        FROM jsonb_array_elements(
@@ -34131,11 +34139,9 @@ BEGIN
          jsonb_typeof(elem) = 'object'
          AND jsonb_typeof(elem -> 's') = 'string'
          AND NOT (elem ? 'c')
-         AND (
-           (jsonb_typeof(elem -> 'hm') = 'string' AND NOT (elem ? 'op'))
-           OR
-           (jsonb_typeof(elem -> 'op') = 'string' AND NOT (elem ? 'hm'))
-         )
+         AND NOT (elem ? 'hm')
+         AND (NOT (elem ? 'op') OR jsonb_typeof(elem -> 'op') = 'string')
+         AND elem - ARRAY['s', 'op']::text[] = '{}'::jsonb
        ), false)
      ),
     false
@@ -34147,7 +34153,12 @@ $$;
 --! @internal
 --! @param val jsonb Candidate document payload.
 --! @return boolean True when `val` is an encrypted document envelope with
---!         `v = 3`, `i`, an `sv` array, and valid sv entry elements.
+--!         `v = 3`, `i`, a string key header `h`, an `sv` array, and valid
+--!         sv entry elements. `h` carries the document's key-retrieval
+--!         material once (every entry encrypts under the document's single
+--!         data key; entry `c` values are raw AEAD output whose nonces are
+--!         derived from the entries' selectors) — it is opaque to SQL and
+--!         only ever carried/grafted, never parsed.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -34157,6 +34168,7 @@ AS $$
      AND val ? 'v'
      AND val ->> 'v' = '3'
      AND val ? 'i'
+     AND jsonb_typeof(val -> 'h') = 'string'
      AND jsonb_typeof(val -> 'sv') = 'array'
      AND NOT EXISTS (
        SELECT 1
@@ -34171,17 +34183,19 @@ $$;
 
 --! @brief Storage/root domain for an encrypted JSONB column.
 --!
---! CHECK: a JSON object carrying the EQL envelope (`v = 3` version and `i` index
---! metadata). Root `c` is intentionally NOT required — an sv-array root payload
---! is `{i, v, sv}` with no root ciphertext. The CHECK now also requires an `sv`
---! array, so the domain accepts only SteVec **document** payloads and rejects
---! encrypted *scalar* payloads (which carry `c`/`hm`/`ob` but no `sv`) — this is
---! what keeps `public.eql_v3_json_search` a typed document domain rather than a generic
---! encrypted envelope. The firewall in blockers.sql attaches to this domain to
---! stop native jsonb operators from reaching a column value.
+--! CHECK: a JSON object carrying the EQL envelope (`v = 3` version, `i` index
+--! metadata, and the key header `h`). Root `c` is intentionally NOT required —
+--! an sv-array root payload is `{i, v, h, sv}` with no root ciphertext (the
+--! root document ciphertext lives on the root sv entry). The CHECK also
+--! requires an `sv` array, so the domain accepts only SteVec **document**
+--! payloads and rejects encrypted *scalar* payloads (which carry `c`/`hm`/`ob`
+--! but no `sv`) — this is what keeps `public.eql_v3_json_search` a typed
+--! document domain rather than a generic encrypted envelope. The firewall in
+--! blockers.sql attaches to this domain to stop native jsonb operators from
+--! reaching a column value.
 --!
 --! @note Constructing from inline JSON uses the standard DOMAIN cast:
---!       `'{"i":{},"v":3,"sv":[...]}'::public.eql_v3_json_search`.
+--!       `'{"i":{},"v":3,"h":"...","sv":[...]}'::public.eql_v3_json_search`.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -34201,11 +34215,14 @@ $$;
 --! @brief Domain type for an individual sv element.
 --!
 --! A single element inside an `sv` array: a JSON object that carries a selector
---! (`s`), a ciphertext (`c`), and **exactly one** of `hm` (HMAC-256, for
---! hash-equality) or `op` (CLLW OPE, for ordered queries) — they are mutually
---! exclusive. This is the type returned by `->` and accepted by the per-entry
---! extractors `eql_v3.eq_term` / `eql_v3.ord_term`. Extra fields (`a`, root
---! `i`/`v` merged in by `->`) are allowed.
+--! (`s`) and a ciphertext (`c`), plus — for an ordered (number/string) path
+--! entry only — a string `op` (CLLW OPE, for ordered queries). Value entries
+--! (value-inclusive selectors) and non-orderable path entries are term-less
+--! `{s, c}`: exact matching is selector presence, so there is no per-value
+--! equality term (`hm` is retired and rejected). This is the type returned by
+--! `->` and accepted by the per-entry extractors `eql_v3.eq_term` /
+--! `eql_v3.ord_term`. The optional array marker `a` and root `i`/`v`/`h`
+--! metadata merged in by `->` are the only additional fields accepted.
 --!
 --! @see src/v3/json/operators.sql
 --!
@@ -34235,11 +34252,10 @@ BEGIN
           jsonb_typeof(VALUE) = 'object'
            AND jsonb_typeof(VALUE -> 's') = 'string'
            AND jsonb_typeof(VALUE -> 'c') = 'string'
-           AND (
-             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'op'))
-             OR
-             (jsonb_typeof(VALUE -> 'op') = 'string' AND NOT (VALUE ? 'hm'))
-           ),
+           AND NOT (VALUE ? 'hm')
+           AND (NOT (VALUE ? 'a') OR jsonb_typeof(VALUE -> 'a') = 'boolean')
+           AND (NOT (VALUE ? 'op') OR jsonb_typeof(VALUE -> 'op') = 'string')
+           AND VALUE - ARRAY['s', 'c', 'a', 'op', 'i', 'v', 'h']::text[] = '{}'::jsonb,
           false
         )
       );
@@ -34252,13 +34268,14 @@ $$;
 --! @brief Domain type for an STE-vec containment needle.
 --!
 --! A query-shaped payload `{"sv":[...]}` whose elements carry selector + index
---! term but **never** a ciphertext (`c`). Each element must carry `s` and
---! exactly one deterministic term (`hm` XOR `op`). Typing the needle this way
---! stops selector-only needles from casting and matching every row via bare
---! `jsonb @>`.
+--! term but **never** a ciphertext (`c`). Each element carries `s`, an optional
+--! `op` (ordered path entries only), and no `hm` — a containment needle is a
+--! set of selectors, and a value-selector's presence in the stored document is
+--! the exact value match. Typing the needle this way stops raw jsonb from
+--! casting and matching every row via bare `jsonb @>`.
 --!
 --! @note Construct from inline JSON via the DOMAIN cast:
---!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v3.query_json`.
+--!       `'{"sv":[{"s":"<sel>"}]}'::eql_v3.query_json`.
 --! @see eql_v3.to_ste_vec_query
 --!
 --! @internal
@@ -34289,10 +34306,12 @@ $$;
 
 --! @brief Convert a public.eql_v3_json_search to a query_json needle.
 --!
---! Normalises each sv element down to the matching-relevant fields: `s` plus
---! exactly one of `hm` / `op`. Other fields (`c`, `a`, `i`/`v`, anything else)
---! are stripped. This is the canonical needle shape for `@>` containment.
---! Designed for use as a functional GIN index expression:
+--! Normalises each sv element down to its selector `s`. Exact and structural
+--! containment are both selector-set containment; an `op` carried by a legacy
+--! or document-derived needle is accepted at the boundary for compatibility
+--! but is not part of the containment predicate. Other fields are stripped.
+--! This is the canonical needle shape for `@>` containment and the functional
+--! GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
 --! @param e public.eql_v3_json_search Source encrypted payload
@@ -34308,9 +34327,7 @@ AS $$
       (SELECT jsonb_agg(
                 jsonb_strip_nulls(
                   jsonb_build_object(
-                    's',  elem -> 's',
-                    'hm', elem -> 'hm',
-                    'op', elem -> 'op'
+                    's', elem -> 's'
                   )
                 )
               )
@@ -34320,8 +34337,28 @@ AS $$
   )::eql_v3.query_json
 $$;
 
+--! @brief Normalise an already query-shaped needle to selector-only form.
+--!
+--! Some producers derive a query from a complete encrypted document and may
+--! therefore carry the path entry's `op`. Containment is selector-set
+--! containment, so this overload strips `op` before comparison and keeps every
+--! public containment entry point semantically identical.
+CREATE FUNCTION eql_v3.to_ste_vec_query(e eql_v3.query_json)
+  RETURNS eql_v3.query_json
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT jsonb_build_object(
+    'sv',
+    coalesce(
+      (SELECT jsonb_agg(jsonb_build_object('s', elem -> 's'))
+       FROM jsonb_array_elements(e::jsonb -> 'sv') AS elem),
+      '[]'::jsonb
+    )
+  )::eql_v3.query_json
+$$;
+
 CREATE CAST (public.eql_v3_json_search AS eql_v3.query_json)
-  WITH FUNCTION eql_v3.to_ste_vec_query
+  WITH FUNCTION eql_v3.to_ste_vec_query(public.eql_v3_json_search)
   AS ASSIGNMENT;
 
 --! @file v3/json/functions.sql
@@ -34336,15 +34373,27 @@ CREATE CAST (public.eql_v3_json_search AS eql_v3.query_json)
 -- Envelope helpers (eql_v3 owns these; jsonb-only)
 ------------------------------------------------------------------------------
 
---! @brief Extract metadata (i, v) from a raw jsonb encrypted value.
+--! @brief Extract envelope metadata (i, v, h) from a raw jsonb encrypted value.
+--!
+--! `h` is the document's key header — hoisted once to the envelope because
+--! every sv entry encrypts under the document's single data key. Grafting it
+--! here (the same `meta_data(val) || entry` concat that already grafts `i`/`v`)
+--! is what keeps an extracted `public.eql_v3_json_entry` self-contained
+--! decryptable: decryption needs the header plus the entry's own `s` (the
+--! nonce source) and `c` (the raw AEAD output). `jsonb_strip_nulls` drops the
+--! keys entirely on payloads that lack them (e.g. a raw scalar envelope has
+--! no `h`), rather than grafting JSON nulls.
+--!
 --! @param val jsonb encrypted EQL payload
---! @return jsonb Metadata object with `i` and `v` fields.
+--! @return jsonb Metadata object with `i`, `v`, and (for documents) `h`.
 CREATE FUNCTION eql_v3.meta_data(val jsonb)
   RETURNS jsonb
   IMMUTABLE STRICT PARALLEL SAFE
   LANGUAGE SQL
 AS $$
-  SELECT jsonb_build_object('i', val->'i', 'v', val->'v');
+  SELECT jsonb_strip_nulls(
+    jsonb_build_object('i', val->'i', 'v', val->'v', 'h', val->'h')
+  );
 $$;
 
 COMMENT ON FUNCTION eql_v3.meta_data(jsonb) IS
@@ -34352,8 +34401,13 @@ COMMENT ON FUNCTION eql_v3.meta_data(jsonb) IS
 
 --! @brief Extract ciphertext (c) from a raw jsonb encrypted value.
 --! @param val jsonb encrypted EQL payload
---! @return text Base64-encoded ciphertext.
+--! @return text The `c` field verbatim (base85 text).
 --! @throws Exception if `c` is absent.
+--! @note On the SteVec surface an entry's `c` is raw AEAD output and is NOT
+--!       decryptable on its own: the decryption unit is the entry — its `s`
+--!       (nonce source), `c`, and the document key header `h` (grafted onto
+--!       extracted entries by `->`; see eql_v3.meta_data). Scalar payloads'
+--!       `c` remains a self-describing encrypted record.
 CREATE FUNCTION eql_v3.ciphertext(val jsonb)
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
@@ -34400,23 +34454,30 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Equality-term extractor (XOR-aware: coalesce(hm, op))
+-- Equality-term extractor (the deterministic `op` term)
 ------------------------------------------------------------------------------
 
---! @brief XOR-aware equality term extractor for public.eql_v3_json_entry.
+--! @brief Equality-term extractor for public.eql_v3_json_entry.
 --!
---! Returns the bytea of whichever deterministic term the sv entry carries —
---! `hm` (HMAC-256) or `op` (CLLW OPE). The two byte distributions are disjoint
---! by construction, so byte equality on the coalesce is unambiguous. Canonical
---! equality extractor used by `=` / `<>` on jsonb_entry.
+--! Returns the bytea of the entry's deterministic `op` (CLLW OPE) term, or NULL
+--! for a term-less entry (a value entry, or a bool/null/structural path entry —
+--! which carry no term because exact matching there is selector presence, not a
+--! per-entry term). Backs the entry-to-entry `=` / `<>` operators.
+--!
+--! `op` is deterministic (equal plaintext at a fixed selector ⇒ equal bytes),
+--! so byte equality on it is a sound equality for number/string leaves — with
+--! the same encoding caveat as the scalar `_ord` surface (f64 rounding, string
+--! collation make it lossy for `bigint`/`numeric`/`text`). Exact, loss-free
+--! equality on a JSON field is selector presence (containment / the value
+--! selector), not this term. `hm` is retired — entries no longer carry it.
 --!
 --! @param entry public.eql_v3_json_entry
---! @return bytea Decoded `hm` or `op` bytes (NULL if entry is NULL).
+--! @return bytea Decoded `op` bytes (NULL if the entry has no `op`, or is NULL).
 CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT decode(coalesce(entry ->> 'hm', entry ->> 'op'), 'hex')
+  SELECT decode(entry ->> 'op', 'hex')
 $$;
 
 ------------------------------------------------------------------------------
@@ -34500,10 +34561,12 @@ $$ LANGUAGE plpgsql;
 -- Deterministic-fields array for GIN containment
 ------------------------------------------------------------------------------
 
---! @brief Extract deterministic search fields (s, hm, op) per sv element.
+--! @brief Extract deterministic containment fields (s) per sv element.
 --!
 --! Excludes non-deterministic ciphertext so PostgreSQL's native jsonb `@>` can
 --! compare for containment. Use for GIN indexes and containment queries.
+--! Exact and structural containment are selector-set containment, so ordering
+--! terms are deliberately excluded.
 --!
 --! @param val jsonb encrypted EQL payload
 --! @return jsonb[] Array of objects with only deterministic fields.
@@ -34518,7 +34581,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'hm', 'op')
+    WHERE kv.key = 's'
     GROUP BY elem
   );
 $$;
@@ -34573,24 +34636,20 @@ COMMENT ON FUNCTION eql_v3.jsonb_contained_by(jsonb, jsonb) IS
 
 --! @brief Check if an sv array contains a specific sv element.
 --!
---! Match = selector equal AND eq_term equal (byte-equality over coalesce(hm,
---! op)). This collapses the v2 hm/oc CASE: under the XOR contract both terms
---! are deterministic and byte-disjoint, so either one is a valid equality
---! discriminator and a single byte comparison is correct.
---!
---! ASSUMPTION (locked by a negative test in v3_jsonb_tests.rs): hm and op byte
---! distributions never collide at a given selector. The crypto layer configures
---! a selector for eq XOR ordered, so both sides of a real comparison carry the
---! same term type — an hm needle never meets an op leaf at the same selector.
---! This collapse would wrongly match an hm needle against an op leaf if their
---! hex bytes were ever identical — which the contract prevents (an hm is a
---! fixed 32-byte HMAC; an op is a CLLW OPE ciphertext whose length is a
---! function of the plaintext bit width, never 32 bytes for the supported
---! domains). The negative-containment test guards against regression.
+--! Match = **selector equal**. Containment reduces to selector-set subset
+--! testing: a leaf's value is tokenized into its **value selector**
+--! (`SEL(tag ‖ path ‖ value)`), so the presence of a needle's value selector
+--! in the stored `sv` IS the exact value match — a keyed-MAC comparison,
+--! injective per (path, value), immune to the ordering encoding's losses
+--! (f64 rounding, string collation). Structural containment rides the same
+--! test: a needle's path selector (`SEL(path)`, value-independent) matches any
+--! stored node at that path, and the needle's value selectors constrain the
+--! values. No per-entry term comparison is involved — the value is in the
+--! selector, not in a term.
 --!
 --! @param a jsonb[] sv array to search within.
 --! @param b jsonb sv element to search for.
---! @return boolean True if b is found in any element of a.
+--! @return boolean True if b's selector is present in any element of a.
 CREATE FUNCTION eql_v3.ste_vec_contains(a jsonb[], b jsonb)
   RETURNS boolean
   IMMUTABLE STRICT PARALLEL SAFE
@@ -34604,10 +34663,7 @@ AS $$
 
     FOR idx IN 1..array_length(a, 1) LOOP
       _a := a[idx];
-      result := result OR (
-        eql_v3.selector(_a) = eql_v3.selector(b)
-        AND eql_v3.eq_term(_a::public.eql_v3_json_entry) = eql_v3.eq_term(b::public.eql_v3_json_entry)
-      );
+      result := result OR (eql_v3.selector(_a) = eql_v3.selector(b));
       EXIT WHEN result;
     END LOOP;
 
@@ -34617,8 +34673,8 @@ $$ LANGUAGE plpgsql;
 
 --! @brief Does encrypted value `a` contain all sv elements of `b`?
 --!
---! Empty b is always contained. Each element of b must match selector + eq_term
---! in some element of a.
+--! Empty b is always contained. Each element of b must have its selector
+--! present in some element of a (selector-subset containment).
 --!
 --! @param a public.eql_v3_json_search Container.
 --! @param b public.eql_v3_json_search Elements to find.
@@ -34626,36 +34682,11 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v3.ste_vec_contains(jsonb[], jsonb)
 CREATE FUNCTION eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  DECLARE
-    result boolean;
-    sv_a jsonb[];
-    sv_b jsonb[];
-    _b jsonb;
-  BEGIN
-    sv_a := eql_v3.ste_vec(a);
-    sv_b := eql_v3.ste_vec(b);
-
-    IF array_length(sv_b, 1) IS NULL THEN
-      RETURN true;
-    END IF;
-
-    IF array_length(sv_a, 1) IS NULL THEN
-      RETURN false;
-    END IF;
-
-    result := true;
-
-    FOR idx IN 1..array_length(sv_b, 1) LOOP
-      _b := sv_b[idx];
-      result := result AND eql_v3.ste_vec_contains(sv_a, _b);
-    END LOOP;
-
-    RETURN result;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
+$$;
 
 ------------------------------------------------------------------------------
 -- Path queries (text selector only)
@@ -34773,31 +34804,12 @@ AS $$
   END;
 $$ LANGUAGE plpgsql;
 
---! @brief Extract elements of an encrypted JSONB array as ciphertext text.
---! @param val jsonb encrypted EQL payload (must have `a` flag true).
---! @return SETOF text One ciphertext per element.
---! @throws Exception 'cannot extract elements from non-array' if not an array.
-CREATE FUNCTION eql_v3.jsonb_array_elements_text(val jsonb)
-  RETURNS SETOF text
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
-AS $$
-  DECLARE
-    sv jsonb[];
-  BEGIN
-    IF NOT eql_v3_internal.is_ste_vec_array(val) THEN
-      RAISE 'cannot extract elements from non-array';
-    END IF;
-
-    sv := eql_v3.ste_vec(val);
-
-    FOR idx IN 1..array_length(sv, 1) LOOP
-      RETURN NEXT eql_v3.ciphertext(sv[idx]);
-    END LOOP;
-
-    RETURN;
-  END;
-$$ LANGUAGE plpgsql;
+-- NOTE: `eql_v3.jsonb_array_elements_text` (SETOF bare per-element ciphertext
+-- text) was removed with the envelope wire format: an sv entry's `c` is raw
+-- AEAD output whose nonce derives from the entry's `s`, so a bare ciphertext
+-- stream is not decryptable and the function had no remaining correct use.
+-- Use `eql_v3.jsonb_array_elements` — its entry rows carry `s`, `c`, and the
+-- grafted document key header `h`, the complete decryption unit.
 -- AUTOMATICALLY GENERATED FILE
 -- Source is src/v3/version.template
 
@@ -34834,406 +34846,6 @@ $$ LANGUAGE SQL;
 --! Mirrors eql_v3.version() as a comment on the schema so the installed
 --! version can also be read via obj_description('eql_v3'::regnamespace).
 COMMENT ON SCHEMA eql_v3 IS '3.0.1-alpha.0';
-
---! @brief EQL lint: detect non-inlinable operator implementation functions
---!
---! Returns one row per violation found in the installed `eql_v3` surface. The
---! Postgres planner can only inline a function during index matching when:
---!
---!   * `LANGUAGE sql` (plpgsql / C / etc. cannot be inlined)
---!   * `IMMUTABLE` or `STABLE` volatility (VOLATILE cannot be inlined into
---!     index expressions)
---!   * No `SET` clauses (e.g. `SET search_path = ...`)
---!   * Not `SECURITY DEFINER`
---!   * Single-statement SELECT body
---!
---! @note The single-statement SELECT body condition is **not yet checked** by
---! this lint. A `LANGUAGE sql` function with a multi-statement body, a CTE,
---! or any pre-SELECT statement will pass all four implemented checks while
---! remaining non-inlinable. Implementing the check requires walking `prosrc`
---! (or `pg_get_functiondef`); tracked as a follow-up.
---!
---! Operators on `eql_v3` types (the jsonb-backed encrypted-domain families and
---! the SEM index-term type `eql_v3_internal.ore_block_256`) whose
---! implementation functions fail any of these rules silently fall back to seq
---! scan when the documented functional indexes (`eql_v3.eq_term(col)`,
---! `eql_v3.ord_term(col)`) are in place. This lint surfaces every such case.
---!
---! Severity:
---!   `error`   — fixable, blocks index matching, ship-blocking.
---!   `warning` — likely-fixable, may not block matching but signals intent.
---!   `info`    — observational; useful for review, not a defect on its own.
---!
---! Categories:
---!   `inlinability_language`   — implementation function isn't `LANGUAGE sql`.
---!   `inlinability_volatility` — implementation function is VOLATILE.
---!   `inlinability_set_clause` — implementation function has a `SET` clause.
---!   `inlinability_secdef`     — implementation function is `SECURITY DEFINER`.
---!   `inlinability_transitive` — implementation function is itself inlinable
---!                                but its body invokes a non-inlinable function
---!                                (depth 1; the planner can't peek through
---!                                that boundary).
---!   `blocker_language`        — encrypted-domain blocker is not LANGUAGE
---!                                plpgsql. The planner can inline / elide a
---!                                LANGUAGE sql body when the result is
---!                                provably unused, silently bypassing the
---!                                RAISE that the blocker exists to perform.
---!   `blocker_strict`          — encrypted-domain blocker is STRICT.
---!                                PostgreSQL skips the body and returns NULL
---!                                on NULL arguments, silently bypassing the
---!                                RAISE.
---!   `domain_over_domain`      — an `eql_v3` encrypted domain is derived from
---!                                another encrypted domain rather than jsonb.
---!                                Operators resolve against the ultimate base
---!                                type, so the derived domain does not
---!                                inherit the base domain's blocker surface.
---!   `domain_opclass`          — an operator class is declared FOR TYPE on an
---!                                `eql_v3` encrypted domain. Opclasses on
---!                                domains bypass operator resolution; use a
---!                                functional index on the extractor instead.
---!   `schema_placement`        — a naked composite or enum TYPE lives in the
---!                                public `eql_v3` schema. Internal index-term
---!                                types (e.g. `ore_block_256_term`) belong in
---!                                `eql_v3_internal`; a composite/enum in
---!                                `eql_v3` clutters the Supabase Table Builder
---!                                type picker, which the schema split exists to
---!                                prevent. Move it to `eql_v3_internal`.
---!
---! @example
---! ```
---! SELECT severity, category, object_name, message
---!   FROM eql_v3.lints()
---!  WHERE severity = 'error'
---!  ORDER BY category, object_name;
---! ```
---!
---! @return SETOF record (severity text, category text, object_name text, message text)
-CREATE OR REPLACE FUNCTION eql_v3.lints()
-RETURNS TABLE (
-  severity text,
-  category text,
-  object_name text,
-  message text
-)
-LANGUAGE sql STABLE
-AS $$
-  WITH
-  -- User-column encrypted domains now live in public so application tables
-  -- survive EQL uninstall. Keep this separate from owned_schemas(): public is
-  -- not installer-owned, but its EQL jsonb-backed domains are still the domain
-  -- types whose blockers/operator surfaces the lint must understand.
-  encrypted_domain_types AS (
-    SELECT
-      dt.oid AS typid
-    FROM pg_catalog.pg_type dt
-    JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
-    JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
-    JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
-    WHERE dt.typtype = 'd'
-      AND bt.typname = 'jsonb'
-      AND bn.nspname = 'pg_catalog'
-      AND (
-           dn.nspname = 'public'
-        OR dn.nspname = ANY(eql_v3_internal.owned_schemas())
-      )
-  ),
-
-  -- All operators where at least one operand is an EQL-owned type or a public
-  -- encrypted domain. Limits the scope of the lint to the operator surface
-  -- customers actually hit via SQL (`col = val`, `col @> '...'` and friends).
-  eql_operators AS (
-    SELECT
-      op.oid              AS oprid,
-      op.oprname          AS opname,
-      op.oprcode          AS implfunc,
-      op.oprleft::regtype AS lhs,
-      op.oprright::regtype AS rhs,
-      op.oprcode::regprocedure AS impl_signature
-    FROM pg_operator op
-    WHERE EXISTS (
-        SELECT 1 FROM pg_type t
-         WHERE t.oid IN (op.oprleft, op.oprright)
-           AND (
-                t.typnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = ANY(eql_v3_internal.owned_schemas()))
-             OR t.oid IN (SELECT typid FROM encrypted_domain_types)
-           )
-      )
-  ),
-
-  -- Cross-join with each operator's implementation function metadata.
-  -- One row per operator; columns describe the inlinability of the impl.
-  op_impl AS (
-    SELECT
-      eo.opname,
-      eo.lhs,
-      eo.rhs,
-      eo.implfunc                                  AS impl_oid,
-      eo.impl_signature::text                       AS impl_signature,
-      lang_l.lanname                                AS lang,
-      p.provolatile                                 AS volatility,
-      p.proconfig                                   AS config,
-      p.prosecdef                                   AS secdef,
-      p.prosrc                                      AS body
-    FROM eql_operators eo
-    JOIN pg_proc p ON p.oid = eo.implfunc
-    JOIN pg_language lang_l ON lang_l.oid = p.prolang
-  ),
-
-  -- Encrypted-domain blockers: functions in `eql_v3` whose body contains
-  -- a blocker marker emitted by the codegen (any of the
-  -- `encrypted_domain_unsupported_*` helper calls — `_bool` for boolean
-  -- blockers, `_jsonb` for the native-jsonb-operator blockers; plus the
-  -- literal `is not supported for` for older path-operator blockers) AND
-  -- that take at least one encrypted domain over jsonb argument. The argument
-  -- filter excludes the shared `encrypted_domain_unsupported_*(text, text)`
-  -- helpers themselves, which contain the marker in their body but are not
-  -- blockers (they take text arguments, not a domain).
-  encrypted_domain_blockers AS (
-    SELECT
-      p.oid                                        AS oid,
-      p.oid::regprocedure::text                    AS signature,
-      lang_l.lanname                               AS lang,
-      p.proisstrict                                AS isstrict
-    FROM pg_catalog.pg_proc p
-    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
-    JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
-    WHERE n.nspname = ANY(eql_v3_internal.owned_schemas())
-      AND (p.prosrc LIKE '%encrypted_domain_unsupported%'
-        OR p.prosrc LIKE '%is not supported for%')
-      AND EXISTS (
-        SELECT 1
-        FROM pg_catalog.unnest(p.proargtypes::oid[]) AS arg(typ)
-        JOIN encrypted_domain_types edt ON edt.typid = arg.typ
-      )
-  )
-
-  -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Direct inlinability checks: each row examines one operator's    │
-  -- │ implementation function and emits a violation if any rule is    │
-  -- │ broken. Multiple violations on the same function become         │
-  -- │ multiple rows (developers see every reason it doesn't inline).  │
-  -- └─────────────────────────────────────────────────────────────────┘
-
-  SELECT
-    'error'                                                             AS severity,
-    'inlinability_language'                                             AS category,
-    format('operator %s(%s, %s) -> %s',
-           opname, lhs, rhs, impl_signature)                            AS object_name,
-    format(
-      'Operator implementation function is `LANGUAGE %s`; only `LANGUAGE sql` functions can be inlined by the planner. Bare `col %s val` queries fall back to seq scan even when a matching functional index exists.',
-      lang, opname)                                                     AS message
-  FROM op_impl
-  WHERE lang <> 'sql'
-    AND NOT EXISTS (
-      SELECT 1 FROM encrypted_domain_blockers b
-      WHERE b.oid = op_impl.impl_oid
-    )
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'inlinability_volatility',
-    format('operator %s(%s, %s) -> %s', opname, lhs, rhs, impl_signature),
-    format(
-      'Operator implementation function is `VOLATILE`. The Postgres planner refuses to inline volatile functions into index expressions, so functional indexes never engage. Mark the function `IMMUTABLE` (or `STABLE` if it depends on session state).',
-      opname)
-  FROM op_impl
-  WHERE volatility = 'v'
-    AND NOT EXISTS (
-      SELECT 1 FROM encrypted_domain_blockers b
-      WHERE b.oid = op_impl.impl_oid
-    )
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'inlinability_set_clause',
-    format('operator %s(%s, %s) -> %s', opname, lhs, rhs, impl_signature),
-    format(
-      'Operator implementation function has a `SET` clause (e.g. `SET search_path = ...`). Per Postgres function-inlining rules, any `SET` clause blocks inlining. Use schema-qualified identifiers in the body and remove the `SET` clause to allow the planner to inline.')
-  FROM op_impl
-  WHERE config IS NOT NULL
-    AND NOT EXISTS (
-      SELECT 1 FROM encrypted_domain_blockers b
-      WHERE b.oid = op_impl.impl_oid
-    )
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'inlinability_secdef',
-    format('operator %s(%s, %s) -> %s', opname, lhs, rhs, impl_signature),
-    'Operator implementation function is `SECURITY DEFINER`. Such functions cannot be inlined; remove `SECURITY DEFINER` or use a non-inlinable wrapper layer.'
-  FROM op_impl
-  WHERE secdef
-    AND NOT EXISTS (
-      SELECT 1 FROM encrypted_domain_blockers b
-      WHERE b.oid = op_impl.impl_oid
-    )
-
-  -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Transitive inlinability: an operator implementation function    │
-  -- │ that's itself inlinable can still fail to inline if its body    │
-  -- │ calls a non-inlinable function. Walk one level via pg_depend.   │
-  -- │                                                                 │
-  -- │ Postgres records function-to-function dependencies in           │
-  -- │ pg_depend with deptype 'n' (normal) when one function references│
-  -- │ another in its body — but only at CREATE time and only for      │
-  -- │ direct calls. This is good enough for v1; deeper transitive     │
-  -- │ analysis is a follow-up.                                        │
-  -- └─────────────────────────────────────────────────────────────────┘
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'inlinability_transitive',
-    format('operator %s(%s, %s) -> %s', oi.opname, oi.lhs, oi.rhs,
-           oi.impl_signature),
-    format(
-      'Operator implementation function is inlinable but invokes non-inlinable function `%s` (lang=%s, volatility=%s%s). The chain blocks at depth 1: the planner inlines the outer call but cannot reduce the inner call into an index expression.',
-      called.proname,
-      called_lang.lanname,
-      CASE called.provolatile
-        WHEN 'i' THEN 'IMMUTABLE'
-        WHEN 's' THEN 'STABLE'
-        WHEN 'v' THEN 'VOLATILE'
-      END,
-      CASE WHEN called.proconfig IS NOT NULL
-           THEN ', has SET clause'
-           ELSE '' END)
-  FROM op_impl oi
-  -- Only worth the transitive check if the outer function is otherwise
-  -- inlinable — otherwise the direct lints above already report it.
-  JOIN pg_proc outer_p ON outer_p.oid = oi.impl_signature::regprocedure
-  JOIN pg_depend d
-    ON d.classid = 'pg_proc'::regclass
-   AND d.objid = outer_p.oid
-   AND d.refclassid = 'pg_proc'::regclass
-   AND d.deptype = 'n'
-  JOIN pg_proc called ON called.oid = d.refobjid
-  JOIN pg_language called_lang ON called_lang.oid = called.prolang
-  WHERE oi.lang = 'sql'
-    AND oi.volatility IN ('i', 's')
-    AND oi.config IS NULL
-    AND NOT oi.secdef
-    AND called.oid <> outer_p.oid
-    AND (
-         called_lang.lanname <> 'sql'
-      OR called.provolatile = 'v'
-      OR called.proconfig IS NOT NULL
-      OR called.prosecdef
-    )
-
-  -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Encrypted-domain footguns: blockers exist to RAISE, so they     │
-  -- │ have inverted inlinability requirements vs operator impls.      │
-  -- │ A LANGUAGE sql blocker can be elided by the planner; a STRICT   │
-  -- │ blocker returns NULL on NULL args. Both silently re-enable      │
-  -- │ operators the storage variant is supposed to block.             │
-  -- └─────────────────────────────────────────────────────────────────┘
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'blocker_language',
-    format('function %s', signature),
-    format(
-      'Encrypted-domain blocker is `LANGUAGE %s`; must be `LANGUAGE plpgsql` so the RAISE is opaque to the planner. A `LANGUAGE sql` body is inlinable and may be elided when the result is provably unused, silently re-enabling the operator.',
-      lang)
-  FROM encrypted_domain_blockers
-  WHERE lang <> 'plpgsql'
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'blocker_strict',
-    format('function %s', signature),
-    'Encrypted-domain blocker is `STRICT`. PostgreSQL skips the body and returns NULL on a NULL argument, silently bypassing the RAISE. Remove `STRICT`.'
-  FROM encrypted_domain_blockers
-  WHERE isstrict
-
-  -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Domain identity: an encrypted-domain must be defined directly   │
-  -- │ over jsonb. Operators resolve against the ultimate base type,   │
-  -- │ so domain-over-domain inherits jsonb's operator surface and not │
-  -- │ the base domain's blockers.                                     │
-  -- └─────────────────────────────────────────────────────────────────┘
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'domain_over_domain',
-    format('domain %I.%I', dn.nspname, dt.typname),
-    format(
-      'Domain `%s.%s` is derived from another encrypted-domain `%s.%s` rather than jsonb. Operators resolve against the ultimate base type, so the derived domain does not inherit the base domain''s operator surface and storage blockers do not engage. Define this domain directly over jsonb.',
-      dn.nspname, dt.typname, bn.nspname, bt.typname)
-  FROM pg_catalog.pg_type dt
-  JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
-  JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
-  JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
-  WHERE dt.typtype = 'd'
-    AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
-    AND bt.typtype = 'd'
-    AND bt.oid IN (SELECT typid FROM encrypted_domain_types)
-
-  -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Domain opclass: an operator class declared FOR TYPE on an       │
-  -- │ encrypted-domain bypasses operator resolution at index time.    │
-  -- │ Use a functional index on the extractor instead.                │
-  -- └─────────────────────────────────────────────────────────────────┘
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'domain_opclass',
-    format('opclass %I.%I FOR TYPE %s.%s', cn.nspname, oc.opcname, tn.nspname, t.typname),
-    format(
-      'Operator class `%s.%s` is declared FOR TYPE `%s.%s`, which is an encrypted-domain type. Opclasses on domains bypass operator resolution. Use a functional index on the extractor (e.g. `%s.eq_term(col)`, `%s.ord_term(col)`) instead.',
-      cn.nspname, oc.opcname, tn.nspname, t.typname, tn.nspname, tn.nspname)
-  FROM pg_catalog.pg_opclass oc
-  JOIN pg_catalog.pg_type t ON t.oid = oc.opcintype
-  JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
-  JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
-  WHERE t.oid IN (SELECT typid FROM encrypted_domain_types)
-
-  -- ┌─────────────────────────────────────────────────────────────────┐
-  -- │ Schema placement: the public `eql_v3` schema must hold only the  │
-  -- │ jsonb-backed encrypted-domain types. A naked composite/enum type │
-  -- │ there is an internal index-term type in the wrong schema — it     │
-  -- │ clutters the Supabase type picker the split exists to keep clean. │
-  -- └─────────────────────────────────────────────────────────────────┘
-
-  UNION ALL
-
-  SELECT
-    'error',
-    'schema_placement',
-    format('type %I.%I', n.nspname, t.typname),
-    format(
-      'Type `%s.%s` is a %s in the public `eql_v3` schema. Only jsonb-backed encrypted-domain types belong in `eql_v3`; internal index-term types belong in `eql_v3_internal` so they stay out of the Supabase Table Builder type picker. Move it to `eql_v3_internal`.',
-      n.nspname, t.typname,
-      CASE t.typtype WHEN 'c' THEN 'composite type' WHEN 'e' THEN 'enum type' ELSE 'type' END)
-  FROM pg_catalog.pg_type t
-  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
-  WHERE n.nspname = 'eql_v3'
-    AND t.typtype IN ('c', 'e')
-
-  ORDER BY 1, 2, 3;
-$$;
-
-COMMENT ON FUNCTION eql_v3.lints() IS
-  'EQL lint: returns one row per non-inlinable operator implementation. '
-  'Run `SELECT * FROM eql_v3.lints() WHERE severity = ''error''` for a '
-  'CI-gateable check that all operator implementations on eql_v3 types are '
-  'eligible for planner inlining.';
 -- AUTOMATICALLY GENERATED FILE.
 
 --! @file encrypted_domain/bigint/bigint_operators.sql
@@ -48912,7 +48524,7 @@ CREATE OPERATOR >= (
 -- AUTOMATICALLY GENERATED FILE.
 
 --! @file v3/scalars/ore_fallback.sql
---! @brief Disable the ORE-backed encrypted domains when the ORE operator class is absent (CIP-3468).
+--! @brief Disable the ORE-backed encrypted domains when the ORE operator class is absent.
 --!
 --! Runs after the DO block in src/v3/sem/ore_block_256/operator_class.sql,
 --! which ATTEMPTS to create the default btree operator class for
@@ -54675,7 +54287,8 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ste_vec_contains(a, b)
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
 $$;
 
 CREATE OPERATOR @>(
@@ -54696,7 +54309,8 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b eql_v3.query_json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb @> b::jsonb
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
 $$;
 
 CREATE OPERATOR @>(
@@ -54705,38 +54319,15 @@ CREATE OPERATOR @>(
   RIGHTARG=eql_v3.query_json
 );
 
---! @brief @> contains operator with a single jsonb_entry needle.
---!
---! Wraps the entry into a single-element sv array (stripping `c`) and reduces
---! to the same `to_ste_vec_query(a)::jsonb @> needle::jsonb` form.
---!
---! @param a public.eql_v3_json_search Container.
---! @param b public.eql_v3_json_entry Single entry.
---! @return boolean True if a contains an sv entry matching b.
-CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_entry)
-RETURNS boolean
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb
-       @> jsonb_build_object(
-            'sv',
-            jsonb_build_array(
-              jsonb_strip_nulls(
-                jsonb_build_object(
-                  's',  b -> 's',
-                  'hm', b -> 'hm',
-                  'op', b -> 'op'
-                )
-              )
-            )
-          )
-$$;
-
-CREATE OPERATOR @>(
-  FUNCTION=eql_v3."@>",
-  LEFTARG=public.eql_v3_json_search,
-  RIGHTARG=public.eql_v3_json_entry
-);
+-- NOTE: there is deliberately NO `@>`(json_search, json_entry)
+-- single-entry containment operator. An extracted `json_entry` is a PATH entry
+-- ({s,c,op?}) and carries no value selector, so it can only ever match
+-- structurally ("the document has a node at this path") — value-blind for
+-- bool/null/object/array and op-lossy for number/string. Exact field equality is
+-- document containment on the value selector: `col @> $1::eql_v3.query_json`,
+-- where a value-selector's presence in the stored document IS the exact match.
+-- Routing all value equality through that one exact mechanism is why the
+-- structural single-entry operator (and its `<@` reverse) were dropped.
 
 ------------------------------------------------------------------------------
 -- <@ contained-by (reverse of @>)
@@ -54750,7 +54341,8 @@ CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ste_vec_contains(b, a)
+  SELECT eql_v3.to_ste_vec_query(b)::jsonb
+       @> eql_v3.to_ste_vec_query(a)::jsonb
 $$;
 
 CREATE OPERATOR <@(
@@ -54776,31 +54368,22 @@ CREATE OPERATOR <@(
   RIGHTARG=public.eql_v3_json_search
 );
 
---! @brief <@ contained-by operator with a jsonb_entry LHS.
---! @param a public.eql_v3_json_entry Single entry.
---! @param b public.eql_v3_json_search Container.
---! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_entry, b public.eql_v3_json_search)
-RETURNS boolean
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3."@>"(b, a)
-$$;
-
-CREATE OPERATOR <@(
-  FUNCTION=eql_v3."<@",
-  LEFTARG=public.eql_v3_json_entry,
-  RIGHTARG=public.eql_v3_json_search
-);
+-- NOTE: no `<@`(json_entry, json_search) either — it was the reverse
+-- of the dropped single-entry `@>`(json_search, json_entry). See the note above.
 
 ------------------------------------------------------------------------------
 -- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on jsonb_entry via eq_term (hm-or-op byte equality).
+--! @brief Equality on jsonb_entry via eq_term (`op` byte equality).
+--! @note Compares the deterministic `op` term, so it is exact for leaves whose
+--!       `op` encoding is injective and lossy for `bigint`/`numeric`/`text`
+--!       (same caveat as the scalar `_ord` surface). Term-less entries
+--!       (bool/null/value entries) have no `op`, so `=` is NULL there — exact,
+--!       loss-free field equality is selector presence (containment).
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
---! @return boolean True if the entries are equal
+--! @return boolean True if the entries' `op` terms are equal
 CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b public.eql_v3_json_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -54818,10 +54401,10 @@ CREATE OPERATOR = (
   JOIN     = eqjoinsel
 );
 
---! @brief Inequality on jsonb_entry via eq_term.
+--! @brief Inequality on jsonb_entry via eq_term (`op` byte inequality).
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
---! @return boolean True if the entries are not equal
+--! @return boolean True if the entries' `op` terms differ
 CREATE FUNCTION eql_v3.neq(a public.eql_v3_json_entry, b public.eql_v3_json_entry)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -55441,6 +55024,4250 @@ CREATE OPERATOR <@ (
   LEFTARG = jsonb,
   RIGHTARG = public.eql_v3_json_search
 );
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/timestamp/json_entry_timestamp_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_timestamp_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_timestamp_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.query_timestamp_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.query_timestamp_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.query_timestamp_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.query_timestamp_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_timestamp_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_timestamp_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.query_timestamp_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.query_timestamp_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.query_timestamp_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_timestamp_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a public.eql_v3_json_entry, b eql_v3.query_timestamp_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_timestamp_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.query_timestamp_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/text/json_entry_text_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_text_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_text_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_text_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_text_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_text_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_text_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_text_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_text_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_text_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_text_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_text_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_text_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_text_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_text_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_text_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_text_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_text_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_text_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_text_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_text_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_text_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_search right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_search left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_text_search, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_search right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_search left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_text_search, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_search right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a public.eql_v3_json_entry, b eql_v3.query_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_search left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.query_text_search, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_search right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a public.eql_v3_json_entry, b eql_v3.query_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_search left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.query_text_search, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_search right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a public.eql_v3_json_entry, b eql_v3.query_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_search left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.query_text_search, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_text_search right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a public.eql_v3_json_entry, b eql_v3.query_text_search)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_text_search left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.query_text_search, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/smallint/json_entry_smallint_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_smallint_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_smallint_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_smallint_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_smallint_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_smallint_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_smallint_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_smallint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_smallint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_smallint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_smallint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_smallint_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_smallint_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_smallint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_smallint_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_smallint_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_smallint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_smallint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_smallint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_smallint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_smallint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_smallint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_smallint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_smallint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/real/json_entry_real_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_real_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_real_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_real_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_real_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_real_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_real_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_real_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_real_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_real_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_real_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_real_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_real_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_real_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_real_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_real_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_real_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_real_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_real_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_real_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_real_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_real_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_real_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_real_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_real_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_real_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_real_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_real_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_real_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_real_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_real_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_real_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_real_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_real_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_real_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/numeric/json_entry_numeric_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_numeric_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_numeric_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_numeric_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_numeric_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_numeric_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_numeric_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_numeric_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_numeric_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_numeric_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_numeric_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_numeric_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_numeric_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_numeric_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_numeric_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_numeric_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_numeric_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_numeric_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_numeric_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_numeric_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_numeric_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_numeric_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_numeric_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_numeric_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/integer/json_entry_integer_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_integer_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_integer_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_integer_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_integer_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_integer_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_integer_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_integer_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_integer_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_integer_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_integer_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_integer_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_integer_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_integer_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_integer_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_integer_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_integer_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/double/json_entry_double_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_double_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_double_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_double_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_double_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_double_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_double_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_double_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_double_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_double_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_double_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_double_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_double_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_double_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_double_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_double_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_double_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_double_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_double_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_double_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_double_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_double_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_double_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_double_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_double_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_double_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_double_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_double_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_double_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_double_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_double_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_double_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_double_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_double_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_double_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/date/json_entry_date_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_date_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_date_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_date_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_date_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a public.eql_v3_json_entry, b eql_v3.query_date_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.query_date_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a public.eql_v3_json_entry, b eql_v3.query_date_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.query_date_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a public.eql_v3_json_entry, b eql_v3.query_date_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.query_date_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a public.eql_v3_json_entry, b eql_v3.query_date_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.query_date_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_date_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_date_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_date_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_date_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a public.eql_v3_json_entry, b eql_v3.query_date_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lt(a eql_v3.query_date_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a public.eql_v3_json_entry, b eql_v3.query_date_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.lte(a eql_v3.query_date_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a public.eql_v3_json_entry, b eql_v3.query_date_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gt(a eql_v3.query_date_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_date_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a public.eql_v3_json_entry, b eql_v3.query_date_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_date_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.gte(a eql_v3.query_date_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '>=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/bigint/json_entry_bigint_functions.sql
+--! @brief Functions for public.eql_v3_json_entry.
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_bigint_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_bigint_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_bigint_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_bigint_ord right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_bigint_ord left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_bigint_ord, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_bigint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_bigint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_bigint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_bigint_ord, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_bigint_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_bigint_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_bigint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '=', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a public.eql_v3_json_entry left operand of the blocked operator
+--! @param b eql_v3.query_bigint_ord_ope right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord_ope)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Unsupported operator blocker for public.eql_v3_json_entry.
+--!
+--! Intercepts an operator that is not supported on public.eql_v3_json_entry and always raises;
+--! it never returns a value. The declared signature exists only so the operator
+--! resolves to this blocker instead of a base-type fallback.
+--!
+--! @param a eql_v3.query_bigint_ord_ope left operand of the blocked operator
+--! @param b public.eql_v3_json_entry right operand of the blocked operator
+--! @return boolean never returned — the function always raises "operator not supported"
+CREATE FUNCTION eql_v3_internal.neq(a eql_v3.query_bigint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean IMMUTABLE PARALLEL SAFE
+AS $$ BEGIN RAISE EXCEPTION 'operator % is not supported for %', '<>', 'public.eql_v3_json_entry'; END; $$
+LANGUAGE plpgsql;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lt(a eql_v3.query_bigint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.lte(a eql_v3.query_bigint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) <= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gt(a eql_v3.query_bigint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) > eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a public.eql_v3_json_entry
+--! @param b eql_v3.query_bigint_ord_ope
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_bigint_ord_ope)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+
+--! @brief Operator wrapper for public.eql_v3_json_entry.
+--! @param a eql_v3.query_bigint_ord_ope
+--! @param b public.eql_v3_json_entry
+--! @return boolean
+CREATE FUNCTION eql_v3.gte(a eql_v3.query_bigint_ord_ope, b public.eql_v3_json_entry)
+RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$ SELECT eql_v3.ord_term(a) >= eql_v3.ord_term(b) $$;
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/timestamp/json_entry_timestamp_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = eql_v3.query_timestamp_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_timestamp_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_timestamp_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord_ope
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = eql_v3.query_timestamp_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord_ope
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = eql_v3.query_timestamp_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord_ope
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = eql_v3.query_timestamp_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_timestamp_ord_ope
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = eql_v3.query_timestamp_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/text/json_entry_text_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_text_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_text_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_search
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_text_search, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_search
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_text_search, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_search
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = eql_v3.query_text_search, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_search
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = eql_v3.query_text_search, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_search
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = eql_v3.query_text_search, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_text_search
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = eql_v3.query_text_search, RIGHTARG = public.eql_v3_json_entry
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/smallint/json_entry_smallint_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/real/json_entry_real_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_real_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_real_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_real_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_real_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_real_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_real_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_real_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_real_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_real_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_real_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_real_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_real_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_real_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/numeric/json_entry_numeric_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_numeric_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_numeric_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_numeric_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_numeric_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_numeric_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_numeric_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_numeric_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_numeric_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_numeric_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_numeric_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_numeric_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_numeric_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_numeric_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/integer/json_entry_integer_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_integer_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_integer_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_integer_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_integer_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_integer_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_integer_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_integer_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/double/json_entry_double_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_double_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_double_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_double_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_double_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_double_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_double_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_double_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_double_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_double_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_double_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_double_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_double_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_double_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/date/json_entry_date_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_date_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_date_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = eql_v3.query_date_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = eql_v3.query_date_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = eql_v3.query_date_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = eql_v3.query_date_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_date_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_date_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord_ope
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3_internal.lt,
+  LEFTARG = eql_v3.query_date_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord_ope
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3_internal.lte,
+  LEFTARG = eql_v3.query_date_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord_ope
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3_internal.gt,
+  LEFTARG = eql_v3.query_date_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_date_ord_ope
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3_internal.gte,
+  LEFTARG = eql_v3.query_date_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+-- AUTOMATICALLY GENERATED FILE.
+
+--! @file encrypted_domain/bigint/json_entry_bigint_operators.sql
+--! @brief Operators for public.eql_v3_json_entry.
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_bigint_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_bigint_ord, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_bigint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_bigint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_bigint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_bigint_ord, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord_ope
+);
+
+CREATE OPERATOR = (
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_bigint_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord_ope
+);
+
+CREATE OPERATOR <> (
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_bigint_ord_ope, RIGHTARG = public.eql_v3_json_entry
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord_ope,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR < (
+  FUNCTION = eql_v3.lt,
+  LEFTARG = eql_v3.query_bigint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord_ope,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR <= (
+  FUNCTION = eql_v3.lte,
+  LEFTARG = eql_v3.query_bigint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = >=, NEGATOR = >, RESTRICT = scalarlesel, JOIN = scalarlejoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord_ope,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR > (
+  FUNCTION = eql_v3.gt,
+  LEFTARG = eql_v3.query_bigint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <, NEGATOR = <=, RESTRICT = scalargtsel, JOIN = scalargtjoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_bigint_ord_ope,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+CREATE OPERATOR >= (
+  FUNCTION = eql_v3.gte,
+  LEFTARG = eql_v3.query_bigint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
+  COMMUTATOR = <=, NEGATOR = <, RESTRICT = scalargesel, JOIN = scalargejoinsel
+);
+
+--! @brief EQL lint: detect non-inlinable operator implementation functions
+--!
+--! Returns one row per violation found in the installed `eql_v3` surface. The
+--! Postgres planner can only inline a function during index matching when:
+--!
+--!   * `LANGUAGE sql` (plpgsql / C / etc. cannot be inlined)
+--!   * `IMMUTABLE` or `STABLE` volatility (VOLATILE cannot be inlined into
+--!     index expressions)
+--!   * No `SET` clauses (e.g. `SET search_path = ...`)
+--!   * Not `SECURITY DEFINER`
+--!   * Single-statement SELECT body
+--!
+--! @note The single-statement SELECT body condition is **not yet checked** by
+--! this lint. A `LANGUAGE sql` function with a multi-statement body, a CTE,
+--! or any pre-SELECT statement will pass all four implemented checks while
+--! remaining non-inlinable. Implementing the check requires walking `prosrc`
+--! (or `pg_get_functiondef`); tracked as a follow-up.
+--!
+--! Operators on `eql_v3` types (the jsonb-backed encrypted-domain families and
+--! the SEM index-term type `eql_v3_internal.ore_block_256`) whose
+--! implementation functions fail any of these rules silently fall back to seq
+--! scan when the documented functional indexes (`eql_v3.eq_term(col)`,
+--! `eql_v3.ord_term(col)`) are in place. This lint surfaces every such case.
+--!
+--! Severity:
+--!   `error`   — fixable, blocks index matching, ship-blocking.
+--!   `warning` — likely-fixable, may not block matching but signals intent.
+--!   `info`    — observational; useful for review, not a defect on its own.
+--!
+--! Categories:
+--!   `inlinability_language`   — implementation function isn't `LANGUAGE sql`.
+--!   `inlinability_volatility` — implementation function is VOLATILE.
+--!   `inlinability_set_clause` — implementation function has a `SET` clause.
+--!   `inlinability_secdef`     — implementation function is `SECURITY DEFINER`.
+--!   `inlinability_transitive` — implementation function is itself inlinable
+--!                                but its body invokes a non-inlinable function
+--!                                (depth 1; the planner can't peek through
+--!                                that boundary).
+--!   `blocker_language`        — encrypted-domain blocker is not LANGUAGE
+--!                                plpgsql. The planner can inline / elide a
+--!                                LANGUAGE sql body when the result is
+--!                                provably unused, silently bypassing the
+--!                                RAISE that the blocker exists to perform.
+--!   `blocker_strict`          — encrypted-domain blocker is STRICT.
+--!                                PostgreSQL skips the body and returns NULL
+--!                                on NULL arguments, silently bypassing the
+--!                                RAISE.
+--!   `domain_over_domain`      — an `eql_v3` encrypted domain is derived from
+--!                                another encrypted domain rather than jsonb.
+--!                                Operators resolve against the ultimate base
+--!                                type, so the derived domain does not
+--!                                inherit the base domain's blocker surface.
+--!   `domain_opclass`          — an operator class is declared FOR TYPE on an
+--!                                `eql_v3` encrypted domain. Opclasses on
+--!                                domains bypass operator resolution; use a
+--!                                functional index on the extractor instead.
+--!   `schema_placement`        — a naked composite or enum TYPE lives in the
+--!                                public `eql_v3` schema. Internal index-term
+--!                                types (e.g. `ore_block_256_term`) belong in
+--!                                `eql_v3_internal`; a composite/enum in
+--!                                `eql_v3` clutters the Supabase Table Builder
+--!                                type picker, which the schema split exists to
+--!                                prevent. Move it to `eql_v3_internal`.
+--!
+--! @example
+--! ```
+--! SELECT severity, category, object_name, message
+--!   FROM eql_v3.lints()
+--!  WHERE severity = 'error'
+--!  ORDER BY category, object_name;
+--! ```
+--!
+--! @return SETOF record (severity text, category text, object_name text, message text)
+CREATE OR REPLACE FUNCTION eql_v3.lints()
+RETURNS TABLE (
+  severity text,
+  category text,
+  object_name text,
+  message text
+)
+LANGUAGE sql STABLE
+AS $$
+  WITH
+  -- User-column encrypted domains now live in public so application tables
+  -- survive EQL uninstall. Keep this separate from owned_schemas(): public is
+  -- not installer-owned, but its EQL jsonb-backed domains are still the domain
+  -- types whose blockers/operator surfaces the lint must understand.
+  encrypted_domain_types AS (
+    SELECT
+      dt.oid AS typid
+    FROM pg_catalog.pg_type dt
+    JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
+    JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
+    JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
+    WHERE dt.typtype = 'd'
+      AND bt.typname = 'jsonb'
+      AND bn.nspname = 'pg_catalog'
+      AND (
+           dn.nspname = 'public'
+        OR dn.nspname = ANY(eql_v3_internal.owned_schemas())
+      )
+  ),
+
+  -- All operators where at least one operand is an EQL-owned type or a public
+  -- encrypted domain. Limits the scope of the lint to the operator surface
+  -- customers actually hit via SQL (`col = val`, `col @> '...'` and friends).
+  eql_operators AS (
+    SELECT
+      op.oid              AS oprid,
+      op.oprname          AS opname,
+      op.oprcode          AS implfunc,
+      op.oprleft::regtype AS lhs,
+      op.oprright::regtype AS rhs,
+      op.oprcode::regprocedure AS impl_signature
+    FROM pg_operator op
+    WHERE EXISTS (
+        SELECT 1 FROM pg_type t
+         WHERE t.oid IN (op.oprleft, op.oprright)
+           AND (
+                t.typnamespace IN (SELECT oid FROM pg_namespace WHERE nspname = ANY(eql_v3_internal.owned_schemas()))
+             OR t.oid IN (SELECT typid FROM encrypted_domain_types)
+           )
+      )
+  ),
+
+  -- Cross-join with each operator's implementation function metadata.
+  -- One row per operator; columns describe the inlinability of the impl.
+  op_impl AS (
+    SELECT
+      eo.opname,
+      eo.lhs,
+      eo.rhs,
+      eo.implfunc                                  AS impl_oid,
+      eo.impl_signature::text                       AS impl_signature,
+      lang_l.lanname                                AS lang,
+      p.provolatile                                 AS volatility,
+      p.proconfig                                   AS config,
+      p.prosecdef                                   AS secdef,
+      p.prosrc                                      AS body
+    FROM eql_operators eo
+    JOIN pg_proc p ON p.oid = eo.implfunc
+    JOIN pg_language lang_l ON lang_l.oid = p.prolang
+  ),
+
+  -- Encrypted-domain blockers: functions in `eql_v3` whose body contains
+  -- a blocker marker emitted by the codegen (any of the
+  -- `encrypted_domain_unsupported_*` helper calls — `_bool` for boolean
+  -- blockers, `_jsonb` for the native-jsonb-operator blockers; plus the
+  -- literal `is not supported for` for older path-operator blockers) AND
+  -- that take at least one encrypted domain over jsonb argument. The argument
+  -- filter excludes the shared `encrypted_domain_unsupported_*(text, text)`
+  -- helpers themselves, which contain the marker in their body but are not
+  -- blockers (they take text arguments, not a domain).
+  encrypted_domain_blockers AS (
+    SELECT
+      p.oid                                        AS oid,
+      p.oid::regprocedure::text                    AS signature,
+      lang_l.lanname                               AS lang,
+      p.proisstrict                                AS isstrict
+    FROM pg_catalog.pg_proc p
+    JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+    JOIN pg_catalog.pg_language lang_l ON lang_l.oid = p.prolang
+    WHERE n.nspname = ANY(eql_v3_internal.owned_schemas())
+      AND (p.prosrc LIKE '%encrypted_domain_unsupported%'
+        OR p.prosrc LIKE '%is not supported for%')
+      AND EXISTS (
+        SELECT 1
+        FROM pg_catalog.unnest(p.proargtypes::oid[]) AS arg(typ)
+        JOIN encrypted_domain_types edt ON edt.typid = arg.typ
+      )
+  )
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Direct inlinability checks: each row examines one operator's    │
+  -- │ implementation function and emits a violation if any rule is    │
+  -- │ broken. Multiple violations on the same function become         │
+  -- │ multiple rows (developers see every reason it doesn't inline).  │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  SELECT
+    'error'                                                             AS severity,
+    'inlinability_language'                                             AS category,
+    format('operator %s(%s, %s) -> %s',
+           opname, lhs, rhs, impl_signature)                            AS object_name,
+    format(
+      'Operator implementation function is `LANGUAGE %s`; only `LANGUAGE sql` functions can be inlined by the planner. Bare `col %s val` queries fall back to seq scan even when a matching functional index exists.',
+      lang, opname)                                                     AS message
+  FROM op_impl
+  WHERE lang <> 'sql'
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'inlinability_volatility',
+    format('operator %s(%s, %s) -> %s', opname, lhs, rhs, impl_signature),
+    format(
+      'Operator implementation function is `VOLATILE`. The Postgres planner refuses to inline volatile functions into index expressions, so functional indexes never engage. Mark the function `IMMUTABLE` (or `STABLE` if it depends on session state).',
+      opname)
+  FROM op_impl
+  WHERE volatility = 'v'
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'inlinability_set_clause',
+    format('operator %s(%s, %s) -> %s', opname, lhs, rhs, impl_signature),
+    format(
+      'Operator implementation function has a `SET` clause (e.g. `SET search_path = ...`). Per Postgres function-inlining rules, any `SET` clause blocks inlining. Use schema-qualified identifiers in the body and remove the `SET` clause to allow the planner to inline.')
+  FROM op_impl
+  WHERE config IS NOT NULL
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'inlinability_secdef',
+    format('operator %s(%s, %s) -> %s', opname, lhs, rhs, impl_signature),
+    'Operator implementation function is `SECURITY DEFINER`. Such functions cannot be inlined; remove `SECURITY DEFINER` or use a non-inlinable wrapper layer.'
+  FROM op_impl
+  WHERE secdef
+    AND NOT EXISTS (
+      SELECT 1 FROM encrypted_domain_blockers b
+      WHERE b.oid = op_impl.impl_oid
+    )
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Transitive inlinability: an operator implementation function    │
+  -- │ that's itself inlinable can still fail to inline if its body    │
+  -- │ calls a non-inlinable function. Walk one level via pg_depend.   │
+  -- │                                                                 │
+  -- │ Postgres records function-to-function dependencies in           │
+  -- │ pg_depend with deptype 'n' (normal) when one function references│
+  -- │ another in its body — but only at CREATE time and only for      │
+  -- │ direct calls. This is good enough for v1; deeper transitive     │
+  -- │ analysis is a follow-up.                                        │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'inlinability_transitive',
+    format('operator %s(%s, %s) -> %s', oi.opname, oi.lhs, oi.rhs,
+           oi.impl_signature),
+    format(
+      'Operator implementation function is inlinable but invokes non-inlinable function `%s` (lang=%s, volatility=%s%s). The chain blocks at depth 1: the planner inlines the outer call but cannot reduce the inner call into an index expression.',
+      called.proname,
+      called_lang.lanname,
+      CASE called.provolatile
+        WHEN 'i' THEN 'IMMUTABLE'
+        WHEN 's' THEN 'STABLE'
+        WHEN 'v' THEN 'VOLATILE'
+      END,
+      CASE WHEN called.proconfig IS NOT NULL
+           THEN ', has SET clause'
+           ELSE '' END)
+  FROM op_impl oi
+  -- Only worth the transitive check if the outer function is otherwise
+  -- inlinable — otherwise the direct lints above already report it.
+  JOIN pg_proc outer_p ON outer_p.oid = oi.impl_signature::regprocedure
+  JOIN pg_depend d
+    ON d.classid = 'pg_proc'::regclass
+   AND d.objid = outer_p.oid
+   AND d.refclassid = 'pg_proc'::regclass
+   AND d.deptype = 'n'
+  JOIN pg_proc called ON called.oid = d.refobjid
+  JOIN pg_language called_lang ON called_lang.oid = called.prolang
+  WHERE oi.lang = 'sql'
+    AND oi.volatility IN ('i', 's')
+    AND oi.config IS NULL
+    AND NOT oi.secdef
+    AND called.oid <> outer_p.oid
+    AND (
+         called_lang.lanname <> 'sql'
+      OR called.provolatile = 'v'
+      OR called.proconfig IS NOT NULL
+      OR called.prosecdef
+    )
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Encrypted-domain footguns: blockers exist to RAISE, so they     │
+  -- │ have inverted inlinability requirements vs operator impls.      │
+  -- │ A LANGUAGE sql blocker can be elided by the planner; a STRICT   │
+  -- │ blocker returns NULL on NULL args. Both silently re-enable      │
+  -- │ operators the storage variant is supposed to block.             │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'blocker_language',
+    format('function %s', signature),
+    format(
+      'Encrypted-domain blocker is `LANGUAGE %s`; must be `LANGUAGE plpgsql` so the RAISE is opaque to the planner. A `LANGUAGE sql` body is inlinable and may be elided when the result is provably unused, silently re-enabling the operator.',
+      lang)
+  FROM encrypted_domain_blockers
+  WHERE lang <> 'plpgsql'
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'blocker_strict',
+    format('function %s', signature),
+    'Encrypted-domain blocker is `STRICT`. PostgreSQL skips the body and returns NULL on a NULL argument, silently bypassing the RAISE. Remove `STRICT`.'
+  FROM encrypted_domain_blockers
+  WHERE isstrict
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Domain identity: an encrypted-domain must be defined directly   │
+  -- │ over jsonb. Operators resolve against the ultimate base type,   │
+  -- │ so domain-over-domain inherits jsonb's operator surface and not │
+  -- │ the base domain's blockers.                                     │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'domain_over_domain',
+    format('domain %I.%I', dn.nspname, dt.typname),
+    format(
+      'Domain `%s.%s` is derived from another encrypted-domain `%s.%s` rather than jsonb. Operators resolve against the ultimate base type, so the derived domain does not inherit the base domain''s operator surface and storage blockers do not engage. Define this domain directly over jsonb.',
+      dn.nspname, dt.typname, bn.nspname, bt.typname)
+  FROM pg_catalog.pg_type dt
+  JOIN pg_catalog.pg_namespace dn ON dn.oid = dt.typnamespace
+  JOIN pg_catalog.pg_type bt ON bt.oid = dt.typbasetype
+  JOIN pg_catalog.pg_namespace bn ON bn.oid = bt.typnamespace
+  WHERE dt.typtype = 'd'
+    AND dn.nspname = ANY(eql_v3_internal.owned_schemas())
+    AND bt.typtype = 'd'
+    AND bt.oid IN (SELECT typid FROM encrypted_domain_types)
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Domain opclass: an operator class declared FOR TYPE on an       │
+  -- │ encrypted-domain bypasses operator resolution at index time.    │
+  -- │ Use a functional index on the extractor instead.                │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'domain_opclass',
+    format('opclass %I.%I FOR TYPE %s.%s', cn.nspname, oc.opcname, tn.nspname, t.typname),
+    format(
+      'Operator class `%s.%s` is declared FOR TYPE `%s.%s`, which is an encrypted-domain type. Opclasses on domains bypass operator resolution. Use a functional index on the extractor (e.g. `%s.eq_term(col)`, `%s.ord_term(col)`) instead.',
+      cn.nspname, oc.opcname, tn.nspname, t.typname, tn.nspname, tn.nspname)
+  FROM pg_catalog.pg_opclass oc
+  JOIN pg_catalog.pg_type t ON t.oid = oc.opcintype
+  JOIN pg_catalog.pg_namespace tn ON tn.oid = t.typnamespace
+  JOIN pg_catalog.pg_namespace cn ON cn.oid = oc.opcnamespace
+  WHERE t.oid IN (SELECT typid FROM encrypted_domain_types)
+
+  -- ┌─────────────────────────────────────────────────────────────────┐
+  -- │ Schema placement: the public `eql_v3` schema must hold only the  │
+  -- │ jsonb-backed encrypted-domain types. A naked composite/enum type │
+  -- │ there is an internal index-term type in the wrong schema — it     │
+  -- │ clutters the Supabase type picker the split exists to keep clean. │
+  -- └─────────────────────────────────────────────────────────────────┘
+
+  UNION ALL
+
+  SELECT
+    'error',
+    'schema_placement',
+    format('type %I.%I', n.nspname, t.typname),
+    format(
+      'Type `%s.%s` is a %s in the public `eql_v3` schema. Only jsonb-backed encrypted-domain types belong in `eql_v3`; internal index-term types belong in `eql_v3_internal` so they stay out of the Supabase Table Builder type picker. Move it to `eql_v3_internal`.',
+      n.nspname, t.typname,
+      CASE t.typtype WHEN 'c' THEN 'composite type' WHEN 'e' THEN 'enum type' ELSE 'type' END)
+  FROM pg_catalog.pg_type t
+  JOIN pg_catalog.pg_namespace n ON n.oid = t.typnamespace
+  WHERE n.nspname = 'eql_v3'
+    AND t.typtype IN ('c', 'e')
+
+  ORDER BY 1, 2, 3;
+$$;
+
+COMMENT ON FUNCTION eql_v3.lints() IS
+  'EQL lint: returns one row per non-inlinable operator implementation. '
+  'Run `SELECT * FROM eql_v3.lints() WHERE severity = ''error''` for a '
+  'CI-gateable check that all operator implementations on eql_v3 types are '
+  'eligible for planner inlining.';
 --! @file pin_search_path_v3.sql
 --! @brief Post-install: pin search_path on every eql_v3.* function.
 --!

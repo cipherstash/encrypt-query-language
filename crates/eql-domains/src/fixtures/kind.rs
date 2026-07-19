@@ -183,7 +183,7 @@ impl ScalarKind {
     /// boolean)?
     ///
     /// This is the PARTICIPATION gate for the `json_entry` cross-type seam
-    /// (CIP-3526): a family whose values have no native JSON representation has
+    ///: a family whose values have no native JSON representation has
     /// no JSON leaf to compare against, so its query operands must not bind
     /// `public.eql_v3_json_entry` at all — for ANY operator, not just `=`.
     ///

@@ -1,4 +1,4 @@
-//! Unit edge cases for the eql_v3 scalar domains (CIP-3141): NULL propagation on
+//! Unit edge cases for the eql_v3 scalar domains: NULL propagation on
 //! supported operators, blocker functions raising on unsupported operators
 //! (equality, ordering, path, and containment families — the documented
 //! domain-fallback footgun), ordering blocked on the equality-only `_eq` domain,

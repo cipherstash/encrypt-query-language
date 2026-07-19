@@ -7,11 +7,11 @@
 //! is `#[serde(untagged)]`, so typing a query payload can never change the
 //! wire) — plus failure parity: both entry points reject the same inputs with
 //! the same errors, including [`FromV2Error::UnsupportedQueryTarget`] for
-//! STORAGE-ONLY scalar targets (term-bearing scalars now hoist to their
-//! `query_<name>` operand — CIP-3432, prefix naming CIP-3442).
+//! STORAGE-ONLY scalar targets (term-bearing scalars hoist to their
+//! `query_<name>` operand).
 
 use eql_bindings::from_v2::{from_v2_query, from_v2_query_typed, FromV2Error, TargetDomain};
-use eql_bindings::v3::{DomainType, QueryPayload};
+use eql_bindings::v3::QueryPayload;
 use serde_json::{json, Value};
 
 const CIPHERTEXT: &str = "mBbL@V^%dN?0W$;g)1-JP*cmqX%JhW0ZKZ^G?lNn$CfXJH";
@@ -25,77 +25,6 @@ fn ident() -> Value {
 
 fn target(name: &str) -> TargetDomain {
     TargetDomain::parse(name).unwrap_or_else(|e| panic!("target {name} must parse: {e}"))
-}
-
-/// The serialization pin for one query conversion: the typed payload must
-/// serialize to exactly the `Value` the untyped `from_v2_query` returns — as
-/// a `Value` and as a canonical JSON string (mirrors
-/// `tests/domain_payload.rs::assert_serialization_pin`).
-fn assert_serialization_pin(v2: &Value) -> QueryPayload {
-    let typed = from_v2_query_typed(v2, TargetDomain::Json).expect("typed conversion succeeds");
-    let untyped = from_v2_query(v2, TargetDomain::Json).expect("untyped conversion succeeds");
-
-    let typed_value = serde_json::to_value(&typed).expect("typed payload serializes");
-    assert_eq!(
-        typed_value, untyped,
-        "to_value must match from_v2_query exactly"
-    );
-
-    assert_eq!(
-        serde_json::to_string(&typed_value).unwrap(),
-        serde_json::to_string(&untyped).unwrap(),
-        "canonical string form must be byte-identical"
-    );
-    let direct: Value =
-        serde_json::from_str(&serde_json::to_string(&typed).unwrap()).expect("direct form parses");
-    assert_eq!(direct, untyped, "direct string form must round-trip equal");
-
-    typed
-}
-
-// ---------------------------------------------------------------------------
-// from_v2_query_typed — happy path (the jsonb containment needle)
-// ---------------------------------------------------------------------------
-
-#[test]
-fn typed_needle_yields_the_ste_vec_variant() {
-    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope. Only
-    // `op` (ordered) entries are convertible: a per-entry `hm` equality term
-    // has no v3 representation (v3 exact matching is value-inclusive
-    // selector presence).
-    let v2 = json!({
-        "sv": [
-            { "s": SELECTOR, "op": HEX_LONG }
-        ]
-    });
-    let typed = assert_serialization_pin(&v2);
-    assert_eq!(typed.domain(), "query_json");
-    assert_eq!(typed.sql_domain(), "eql_v3.query_json");
-    match &typed {
-        QueryPayload::SteVec(q) => {
-            assert_eq!(q.sv.len(), 1, "entry order/count preserved");
-            assert_eq!(q.sql_domain(), "eql_v3.query_json");
-        }
-        other => panic!("a jsonb target must yield the SteVec needle, got {other:?}"),
-    }
-}
-
-#[test]
-fn typed_needle_normalizes_exactly_like_from_v2_query() {
-    // A stored-document payload used as a needle: the envelope is dropped and
-    // entries normalize to `s` + the op term (`a`/`c` stripped) — pinned
-    // equal to from_v2_query byte-for-byte.
-    let v2 = json!({
-        "v": 2,
-        "k": "sv",
-        "i": ident(),
-        "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG } ]
-    });
-    let typed = assert_serialization_pin(&v2);
-    assert_eq!(
-        serde_json::to_value(&typed).unwrap(),
-        json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] })
-    );
 }
 
 // ---------------------------------------------------------------------------
@@ -122,7 +51,7 @@ fn v2_scalar_query(term_keys: &[&str]) -> Value {
 
 #[test]
 fn scalar_query_hoist_and_storage_only_unsupported() {
-    // CIP-3432: a term-bearing scalar target hoists the v2 payload's required
+    // A term-bearing scalar target hoists the v2 payload's required
     // terms into the enveloped term-only operand `{v:3, i, <terms>}` for its
     // `query_<name>` domain (dropping `c`/`k`); a storage-only scalar target
     // (no operators) still fails closed with UnsupportedQueryTarget. Exhaustive
@@ -168,7 +97,7 @@ fn scalar_query_hoist_and_storage_only_unsupported() {
             let typed =
                 from_v2_query_typed(&v2, t).unwrap_or_else(|e| panic!("{name} typed hoist: {e:?}"));
             // The query twin joins `query_` to the BARE name: the stored
-            // domain's `eql_v3_` version prefix (CIP-3472) never applies to
+            // domain's `eql_v3_` version prefix never applies to
             // query operands (the `eql_v3` schema already versions them).
             let query_name = domain.query_name(family.name);
             assert_eq!(typed.domain(), query_name, "{name} domain");
@@ -183,42 +112,19 @@ fn scalar_query_hoist_and_storage_only_unsupported() {
 }
 
 #[test]
-fn typed_entry_term_errors_match_from_v2_query() {
-    // A per-entry `hm` equality term is unconvertible (even alongside `op`):
-    // v3 exact matching is value-inclusive selector presence.
-    let hm = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] });
-    assert!(matches!(
-        from_v2_query_typed(&hm, TargetDomain::Json).unwrap_err(),
-        FromV2Error::UnconvertibleEqualityTerm { entry: 0 }
-    ));
-    // A term-less element is valid — selector-only (presence matching),
-    // mirroring eql_v3.to_ste_vec_query.
-    let termless = json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG }, { "s": SELECTOR } ] });
-    let typed = from_v2_query_typed(&termless, TargetDomain::Json)
-        .expect("term-less elements convert to selector-only");
-    assert_eq!(serde_json::to_value(&typed).unwrap(), termless);
-}
-
-#[test]
-fn typed_rejects_the_same_envelopes_as_from_v2_query() {
-    // A versioned input must be v2, and a kind-discriminated one must be sv —
-    // shared conversion path, so both entry points agree.
-    let v3 = json!({ "v": 3, "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] });
-    for err in [
-        from_v2_query_typed(&v3, TargetDomain::Json).unwrap_err(),
-        from_v2_query(&v3, TargetDomain::Json).unwrap_err(),
+fn typed_ste_vec_queries_fail_closed() {
+    for input in [
+        json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] }),
+        json!({ "sv": [ { "s": SELECTOR } ] }),
+        json!({ "v": 3, "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] }),
+        json!({ "k": "ct", "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] }),
     ] {
-        assert!(matches!(
-            err,
-            FromV2Error::UnsupportedVersion { found: Some(3) }
-        ));
-    }
-    let ct = json!({ "k": "ct", "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] });
-    for err in [
-        from_v2_query_typed(&ct, TargetDomain::Json).unwrap_err(),
-        from_v2_query(&ct, TargetDomain::Json).unwrap_err(),
-    ] {
-        assert!(matches!(err, FromV2Error::KindMismatch { .. }));
+        for err in [
+            from_v2_query_typed(&input, TargetDomain::Json).unwrap_err(),
+            from_v2_query(&input, TargetDomain::Json).unwrap_err(),
+        ] {
+            assert!(matches!(err, FromV2Error::UnconvertibleSteVecQuery));
+        }
     }
 }
 

@@ -569,6 +569,28 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
         "jsonb_contains must agree with the typed @> operator"
     );
 
+    // Ordering terms are not equality terms. All containment entry points
+    // normalize to selector-only matching, so two entries with the same value
+    // selector match even when one carries a different `op`.
+    let same_selector_different_op = doc(&[entry(VALUE_SEL, "op", OP_LADDER[0])]);
+    let raw_ignores_op: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.jsonb_contains('{full}'::jsonb, '{same_selector_different_op}'::jsonb)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    let document_ignores_op: bool = sqlx::query_scalar(&format!(
+        "SELECT '{full}'::public.eql_v3_json_search @> '{same_selector_different_op}'::public.eql_v3_json_search"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    let query_ignores_op: bool = sqlx::query_scalar(&format!(
+        "SELECT '{full}'::public.eql_v3_json_search @> '{{\"sv\":[{{\"s\":\"{VALUE_SEL}\",\"op\":\"{}\"}}]}}'::eql_v3.query_json",
+        OP_LADDER[0]
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(raw_ignores_op && document_ignores_op && query_ignores_op);
+
     Ok(())
 }
 
@@ -1149,6 +1171,7 @@ v3_jsonb_payload_reject!(
         "{\"s\":null,\"c\":\"y\"}",                              // s must be a string
         "{\"s\":\"x\",\"c\":1}",                                 // c must be a string
         "{\"s\":\"x\",\"c\":\"y\",\"op\":1}",                    // op must be a string
+        "{\"s\":\"x\",\"c\":\"y\",\"bogus\":true}",              // unknown fields are rejected
     ]
 );
 
@@ -1164,6 +1187,8 @@ v3_jsonb_payload_reject!(
         "{\"sv\":[{\"s\":\"x\",\"hm\":\"00\",\"op\":\"01\"}]}", // hm present (even with op)
         "{\"sv\":[{\"s\":null}]}",                              // s must be a string
         "{\"sv\":[{\"s\":\"x\",\"op\":1}]}",                    // op must be a string
+        "{\"sv\":[{\"s\":\"x\",\"bogus\":true}]}",              // unknown element fields
+        "{\"sv\":[],\"bogus\":true}",                           // unknown root fields
     ]
 );
 
@@ -1399,6 +1424,58 @@ async fn v3_jsonb_index_to_ste_vec_query_gin_engages(pool: PgPool) -> anyhow::Re
     // empty leaf. Without this, an index-scan-over-nothing would pass green.
     let matched: Vec<i64> = sqlx::query_scalar(&query).fetch_all(&mut *tx).await?;
     assert!(!matched.is_empty(), "the GIN-engaged query must match rows");
+
+    tx.rollback().await?;
+    Ok(())
+}
+
+#[sqlx::test]
+async fn v3_jsonb_document_containment_uses_the_query_gin_index(
+    pool: PgPool,
+) -> anyhow::Result<()> {
+    const VALUE_SEL: &str = "00000000000000000000000000000001";
+    let full = doc(&[value_entry(VALUE_SEL), op_entry(OP_LADDER[2])]);
+    let subset = doc(&[value_entry(VALUE_SEL)]);
+
+    let mut tx = pool.begin().await?;
+    sqlx::query(
+        "CREATE TEMP TABLE ste_vec_document_gin (\
+           id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY, \
+           payload public.eql_v3_json_search NOT NULL\
+         )",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(&format!(
+        "INSERT INTO ste_vec_document_gin (payload) VALUES \
+         ('{full}'::public.eql_v3_json_search), \
+         ('{subset}'::public.eql_v3_json_search)"
+    ))
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query(
+        "CREATE INDEX ste_vec_document_gin_idx ON ste_vec_document_gin \
+         USING gin ((eql_v3.to_ste_vec_query(payload)::jsonb) jsonb_path_ops)",
+    )
+    .execute(&mut *tx)
+    .await?;
+    sqlx::query("SET LOCAL enable_seqscan = off")
+        .execute(&mut *tx)
+        .await?;
+
+    let query = format!(
+        "SELECT id FROM ste_vec_document_gin \
+         WHERE payload @> '{subset}'::public.eql_v3_json_search"
+    );
+    assert_index_scan_uses(
+        &mut *tx,
+        &query,
+        "ste_vec_document_gin_idx",
+        "document-to-document containment must use the canonical query GIN index",
+    )
+    .await?;
+    let matched: Vec<i64> = sqlx::query_scalar(&query).fetch_all(&mut *tx).await?;
+    assert_eq!(matched.len(), 2, "both selector supersets must match");
 
     tx.rollback().await?;
     Ok(())

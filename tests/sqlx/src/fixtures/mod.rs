@@ -28,7 +28,7 @@ pub mod driver;
 
 // The v2 → v3 envelope conversion seam: generated client payloads (`v: 2`)
 // are routed through `eql_bindings::from_v2` before staging, so every
-// written fixture satisfies the `v = '3'` domain CHECKs (CIP-3347).
+// written fixture satisfies the `v = '3'` domain CHECKs.
 
 // The v3 json (SteVec document) fixture — a hand-written `FixtureSpec`
 // over `serde_json::Value`, generated through the same pipeline as the
@@ -36,7 +36,7 @@ pub mod driver;
 // here directly rather than via `scalar_types!`.
 pub mod v3_ste_vec;
 
-// The storage-only / encryption-only json fixture (CIP-3512) — a hand-written
+// The storage-only / encryption-only json fixture — a hand-written
 // `FixtureSpec<serde_json::Value>` with NO index, so each document encrypts to a
 // plain `{v, i, c}` envelope for the storage-only `public.eql_v3_json` domain.
 // Same pipeline as `v3_ste_vec`, minus the SteVec index.

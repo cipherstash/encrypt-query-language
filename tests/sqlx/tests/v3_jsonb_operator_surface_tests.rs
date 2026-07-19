@@ -265,7 +265,7 @@ async fn v3_jsonb_surface_root_comparisons_blocked(pool: PgPool) -> anyhow::Resu
 #[sqlx::test]
 async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Result<()> {
     // Mixed-shape entry comparisons are allowed ONLY against an eql_v3.query_*
-    // operand (CIP-3526 cross-type operators); a raw `jsonb` partner is still
+    // operand ( cross-type operators); a raw `jsonb` partner is still
     // forbidden (it would let an untyped operand flatten past the domain).
     let mixed: Vec<(String, String, String)> = sqlx::query_as(
         r#"
@@ -320,7 +320,7 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
 }
 
 // ============================================================================
-// CIP-3526: cross-type operators binding json_entry to per-type query operands
+// : cross-type operators binding json_entry to per-type query operands
 // ARE present (positive intent, complementing the "no illegal mixed shapes"
 // negative guard above).
 // ============================================================================
@@ -366,7 +366,7 @@ async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> an
 
     // Negative lock: NO `query_<T>_eq` operand is ever bound to json_entry. Such an
     // operator would be dead surface — a JSON scalar leaf has no per-value `hm`, so
-    // `eq_term(json_entry) = eq_term(query_<T>_eq)` can never match (CIP-3526).
+    // `eq_term(json_entry) = eq_term(query_<T>_eq)` can never match.
     let eq_bound: i64 = sqlx::query_scalar(
         r#"
         SELECT count(*)

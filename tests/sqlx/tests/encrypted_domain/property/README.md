@@ -4,7 +4,7 @@ These tests assert that SQL operator results on the `eql_v3` encrypted-domain
 types agree with a **plaintext oracle** across a *generated* input space — the
 fixed-pivot scalar matrix only checks hand-picked values, so property tests are
 what catch operator/oracle disagreements across the whole value space. Origin:
-CIP-3141.
+.
 
 ## The three suites
 

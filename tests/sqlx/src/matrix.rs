@@ -1513,7 +1513,7 @@ macro_rules! __scalar_matrix_planner_metadata_case {
                     sqlx::query_as(&sql).fetch_all(&pool).await?;
 
                 // 5 arg shapes per operator: the 3 storage shapes — (d,d),
-                // (d,jsonb), (jsonb,d) — plus the 2 CIP-3432 query-operand shapes
+                // (d,jsonb), (jsonb,d) — plus the 2  query-operand shapes
                 // — (d, query_d), (query_d, d). Every term-bearing domain the
                 // planner-metadata suite runs on has a `query_<name>` twin, so
                 // the count is uniformly ops x 5.
@@ -1954,7 +1954,7 @@ macro_rules! __scalar_matrix_fixture_shape {
                             ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
                         );
                     }
-                    // Flipped tripwire (CIP-3348): cipherstash-client 0.38.1
+                    // Flipped tripwire: cipherstash-client 0.38.1
                     // emits the scalar CLLW-OPE term, the fixtures declare the
                     // `ope` index, and the conversion routes `op` through to
                     // every `_ord_ope`-capable payload. `op` must now be
@@ -1995,13 +1995,13 @@ macro_rules! __scalar_matrix_fixture_shape {
                     } else {
                         // A non-Ope family's fixture must NOT carry `op` —
                         // its index set never declares `ope`, so a stray key
-                        // means the conversion targets drifted (CIP-3348).
+                        // means the conversion targets drifted.
                         let with_op: i64 = sqlx::query_scalar(&format!(
                             "SELECT COUNT(*) FROM {table} WHERE payload ? 'op'",
                         )).fetch_one(&pool).await?;
                         anyhow::ensure!(with_op == 0,
                             "fixture payload carries an `op` term but the catalog family \
-                             declares no Ope domain — conversion targets drifted (CIP-3348)");
+                             declares no Ope domain — conversion targets drifted");
                     }
                 }
 

@@ -461,32 +461,30 @@ fn stevec_document_round_trips_and_enforces_envelope() {
 
 #[test]
 fn stevec_entry_term_is_optional_and_op_only() {
-    use eql_bindings::v3::json::{SteVecEntry, SteVecTerm};
+    use eql_bindings::v3::json::SteVecEntry;
     // Term-less entries — value entries and non-orderable path entries — are
     // the common case: exact matching is selector presence, not a term.
     let termless: SteVecEntry = serde_json::from_value(json!({ "s": "sel", "c": "ct" })).unwrap();
-    assert!(
-        termless.term.is_none(),
-        "term-less entries take the None arm"
-    );
+    assert!(termless.op.is_none(), "term-less entries have no op");
     // op arm (ordered number/string path entries).
     let op: SteVecEntry =
         serde_json::from_value(json!({ "s": "sel", "c": "ct", "op": "cllw" })).unwrap();
-    assert!(matches!(op.term, SteVecTerm::OpeCllw { .. }));
-    // Lax: tolerates root i/v/h merged in by `->`.
+    assert!(op.op.is_some());
+    // Explicit optional fields preserve root i/v/h merged in by `->`.
     let merged: SteVecEntry = serde_json::from_value(
         json!({ "s": "sel", "c": "ct", "op": "cllw", "i": {"t":"a","c":"b"}, "v": 3, "h": "kh" }),
     )
     .unwrap();
-    assert!(matches!(merged.term, SteVecTerm::OpeCllw { .. }));
-    // A retired `hm` key never becomes a term: the lax entry parses, the
-    // stray key is ignored client-side, and the SQL CHECK is what rejects it
-    // on the real wire (`NOT (val ? 'hm')`).
-    let stray_hm: SteVecEntry =
-        serde_json::from_value(json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })).unwrap();
+    assert!(merged.op.is_some());
+    assert!(merged.i.is_some() && merged.v.is_some() && merged.h.is_some());
+    // Retired and unknown keys fail at the binding boundary, matching SQL.
+    assert!(serde_json::from_value::<SteVecEntry>(
+        json!({ "s": "sel", "c": "ct", "hm": "deadbeef" })
+    )
+    .is_err());
     assert!(
-        stray_hm.term.is_none(),
-        "hm is retired and must not parse as a term"
+        serde_json::from_value::<SteVecEntry>(json!({ "s": "sel", "c": "ct", "bogus": true }))
+            .is_err()
     );
 }
 
@@ -502,10 +500,14 @@ fn stevec_query_round_trips() {
     assert_eq!(SteVecQuery::sql_domain_static(), "eql_v3.query_json");
     // Unknown top-level key rejected (SteVecQuery has no flatten field).
     assert!(serde_json::from_value::<SteVecQuery>(json!({ "sv": [], "bogus": 1 })).is_err());
-    // NOTE: a query ELEMENT carrying `c` is NOT rejected here — SteVecQueryEntry
-    // has a flattened term, so deny_unknown_fields is inert. The "no ciphertext"
-    // rule is enforced by the SQL CHECK (is_valid_ste_vec_query_payload) and
-    // exercised in the real-crypto test (v3_ste_vec).
+    assert!(serde_json::from_value::<SteVecQuery>(
+        json!({ "sv": [{ "s": "sel", "c": "ciphertext" }] })
+    )
+    .is_err());
+    assert!(serde_json::from_value::<SteVecQuery>(
+        json!({ "sv": [{ "s": "sel", "hm": "deadbeef" }] })
+    )
+    .is_err());
 }
 
 #[test]
@@ -552,7 +554,7 @@ fn stevec_document_and_query_schemas_are_strict() {
 
 #[test]
 fn stevec_ts_exports_have_expected_shape() {
-    // The ts-rs flatten/untagged risk: pin the emitted .ts STRUCTURALLY so a
+    // Pin the emitted .ts STRUCTURALLY so a
     // regression is a test failure, not a human-inspection miss. Assertions match
     // against the `export type <Name> = ...;` BODY LINE — never loose single-char
     // `contains` over the whole file, which the generated header / imports / doc
@@ -564,62 +566,61 @@ fn stevec_ts_exports_have_expected_shape() {
         _ => format!("{}/bindings/v3", env!("CARGO_MANIFEST_DIR")),
     };
 
-    // The single `export type <Name> = ...;` body line, isolated from the header,
-    // imports, and doc comment so substring checks pin the emitted TYPE, not prose.
-    let export_line = |file: &str, name: &str| -> String {
+    // Isolate and normalize the generated type body. Field-level Rustdoc makes
+    // ts-rs split the declaration over several lines, so remove generated block
+    // comments before collapsing whitespace.
+    let export_body = |file: &str, name: &str| -> String {
         let text = std::fs::read_to_string(format!("{base}/{file}")).unwrap();
-        text.lines()
-            .find(|l| l.trim_start().starts_with(&format!("export type {name} ")))
-            .unwrap_or_else(|| panic!("{file}: no `export type {name}` line"))
-            .to_string()
+        let start = text
+            .find(&format!("export type {name} "))
+            .unwrap_or_else(|| panic!("{file}: no `export type {name}` declaration"));
+        let declaration = &text[start..];
+        let mut without_comments = String::new();
+        let mut rest = declaration;
+        while let Some(comment_start) = rest.find("/**") {
+            without_comments.push_str(&rest[..comment_start]);
+            let comment_end = rest[comment_start + 3..]
+                .find("*/")
+                .unwrap_or_else(|| panic!("{file}: unterminated generated comment"));
+            rest = &rest[comment_start + 3 + comment_end + 2..];
+        }
+        without_comments.push_str(rest);
+        without_comments
+            .split_whitespace()
+            .collect::<Vec<_>>()
+            .join(" ")
     };
 
-    // SteVecTerm: the untagged `{ op } | {}` union — the op arm and the
-    // term-less arm. `{ op?: never }` remains composable when flattened into
-    // an entry with required `s`/`c` fields. No `hm` arm may reappear.
-    let term = export_line("SteVecTerm.ts", "SteVecTerm");
-    assert!(
-        term.contains("{ op: OpeCllw }")
-            && term.contains("{ op?: never }")
-            && term.contains('|')
-            && !term.contains("hm"),
-        "SteVecTerm.ts must be the `{{ op }} | {{}}` union, got: {term}"
-    );
-
-    // SteVecEntry: direct fields s/c, the flattened op|termless union, and the
-    // OPTIONAL nullable array marker `a`. `a?: boolean | null` (not `a: boolean |
+    // SteVecEntry: direct fields s/c, optional op and extracted metadata, and
+    // the OPTIONAL nullable array marker `a`. `a?: boolean | null` (not `a: boolean |
     // null`) pins ts-rs optionality so the TS binding agrees with the JSON Schema,
     // which excludes `a` from `required` — the drift a bare `Option<bool>` without
     // `#[ts(optional = nullable)]` silently reintroduces.
-    let entry = export_line("SteVecEntry.ts", "SteVecEntry");
+    let entry = export_body("SteVecEntry.ts", "SteVecEntry");
     for needle in [
         "s: Selector",
         "c: EntryCiphertext",
         "a?: boolean | null",
-        "{ op: OpeCllw }",
-        "{ op?: never }",
+        "op?: OpeCllw",
+        "i?: Identifier",
+        "v?: SchemaVersion",
+        "h?: KeyHeader",
     ] {
         assert!(
             entry.contains(needle),
             "SteVecEntry.ts body must contain `{needle}`, got: {entry}"
         );
     }
-    assert!(
-        !entry.contains("term:"),
-        "the term union must stay FLATTENED (a literal `term` property means \
-         ts-rs stopped flattening the enum), got: {entry}"
-    );
-
     // Property ORDER pin. The generic `ts_property_order.rs` guard structurally
     // skips non-scalar (jsonb) domains, so the SteVec property order has no other
     // regression guard. Assert the exact ordered field prefix so a field reorder
     // in `json.rs` (which changes the wire/consumer contract) fails here rather
     // than escaping to a manual diff.
     assert!(
-        entry.contains("{ s: Selector, c: EntryCiphertext, a?: boolean | null, }"),
-        "SteVecEntry.ts field order must be s, c, a (then the flattened term union), got: {entry}"
+        entry.contains("{ s: Selector, c: EntryCiphertext, a?: boolean | null, op?: OpeCllw, i?: Identifier, v?: SchemaVersion, h?: KeyHeader, }"),
+        "SteVecEntry.ts field order must be s, c, a, op, i, v, h; got: {entry}"
     );
-    let document = export_line("SteVecDocument.ts", "SteVecDocument");
+    let document = export_body("SteVecDocument.ts", "SteVecDocument");
     assert!(
         document.contains(
             "{ v: SchemaVersion, k: SteVecForm, i: Identifier, h: KeyHeader, sv: Array<SteVecEntry>, }"

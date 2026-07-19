@@ -198,13 +198,13 @@ fn render_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
 /// only index terms (no stored ciphertext), so its `eql_v3.query_<name>` domain
 /// admits exactly `{v, i, <terms>}` — `deny_unknown_fields` makes a stray `c`
 /// (or any storage key) a parse error, mirroring the SQL `query_<name>` domain
-/// CHECK (CIP-3432). Emitted only for term-bearing domains: a storage-only
+/// CHECK. Emitted only for term-bearing domains: a storage-only
 /// domain has no operators, so no query operand.
 fn render_query_struct(family: &DomainFamily, domain: &Domain) -> TokenStream {
     let query_name = domain.query_name(family.name);
     let ident = format_ident!("{}Query", domain.struct_ident(family.name));
     // Query operands live in the public-API schema, NOT `public`: they are
-    // never valid column types (CIP-3442).
+    // never valid column types.
     let sql_domain = format!("eql_v3.{query_name}");
 
     // Query doc: same capability label + operator union as storage, but the
@@ -505,7 +505,7 @@ pub fn render_payload_rs() -> String {
             #strukt(super::#module::#strukt),
         });
         // Match on the installed typname (the `eql_v3_`-prefixed unqualified
-        // SQL name — CIP-3472), the same name `DomainType::domain` reports.
+        // SQL name), the same name `DomainType::domain` reports.
         let typname = f.domain_name(d);
         parse_arms.extend(quote! {
             #typname => Some(super::#module::#strukt::deserialize(value).map(Self::#strukt)),
@@ -622,7 +622,7 @@ fn query_payload_domains() -> Vec<(String, String, String, String)> {
 /// construct-from-known-domain `parse` constructor.
 ///
 /// Generated for the same reason as [`render_payload_rs`]'s `DomainPayload`:
-/// enveloped, per-capability query payloads (CIP-3432) are catalog-per-domain
+/// enveloped, per-capability query payloads are catalog-per-domain
 /// (one twin per capability domain), so the variant set IS the catalog and must
 /// reshape with it. Serialize-only + `#[serde(untagged)]` + no ts-rs/schemars,
 /// exactly like `DomainPayload`: the enum adds no wire shape (each variant
@@ -635,7 +635,7 @@ pub fn render_query_payload_rs() -> String {
         let m = format_ident!("{module}");
         let v = format_ident!("{variant}");
         let s = format_ident!("{strukt}");
-        // Every query-operand domain lives in eql_v3 (CIP-3442).
+        // Every query-operand domain lives in eql_v3.
         let doc = format!(" The `eql_v3.{key}` query operand.");
         variants.extend(quote! {
             #[doc = #doc]
@@ -861,9 +861,9 @@ mod tests {
 
     #[test]
     fn query_twins_drop_c_and_name_query_domains() {
-        // CIP-3432: every term-bearing capability domain gets a `<Name>Query`
+        // : every term-bearing capability domain gets a `<Name>Query`
         // twin = the storage struct minus `c`, on the `eql_v3.query_<name>`
-        // domain (prefix naming — CIP-3442). Storage-only domains (no
+        // domain (prefix naming). Storage-only domains (no
         // operators) get no twin.
         let out = render_family_bindings(family("integer"));
         for s in [
@@ -1112,7 +1112,7 @@ mod tests {
 
     #[test]
     fn query_payload_enum_spans_query_twins_and_stevec_needle() {
-        // CIP-3432: QueryPayload is now generated — one variant per term-bearing
+        // : QueryPayload is now generated — one variant per term-bearing
         // scalar query twin (`query_<name>`) plus the SteVec needle
         // (`query_jsonb`), in query_payload_domains() order (scalars, then
         // SteVec). Serialize-only + untagged + no export derives, like

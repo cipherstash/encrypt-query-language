@@ -296,7 +296,7 @@ pub trait SignedScalar: OrderedScalar {
 }
 
 /// A scalar with a **bloom-filter match** capability (the `@@` fuzzy match /
-/// `eql_v3.matches`, CIP-3517) — currently only `text`, the one kind that
+/// `eql_v3.matches`) — currently only `text`, the one kind that
 /// declares a `Bloom`-bearing domain (`_match`/`_search`). Provides three fixture
 /// plaintexts with known n-gram relationships so the generated match arms can
 /// assert true hits and a deterministic miss. The bound gates the match arms: a non-match scalar
@@ -1501,7 +1501,7 @@ pub fn token_has_bloom_term(token: &str) -> bool {
 /// True when scalar `token` declares any domain carrying the `Ope` term —
 /// i.e. its generated fixture is encrypted with the `ope` index and its
 /// payload includes an `op` (CLLW-OPE) key: a single hex string, natively
-/// bytea-sortable after hex-decode (CIP-3348, cipherstash-client 0.38.1+).
+/// bytea-sortable after hex-decode (cipherstash-client 0.38.1+).
 /// Catalog-derived: every ordered family declares an `_ord_ope` domain, so
 /// every non-storage-only scalar's fixture carries `op`; a storage-only
 /// scalar (`boolean`) does not.

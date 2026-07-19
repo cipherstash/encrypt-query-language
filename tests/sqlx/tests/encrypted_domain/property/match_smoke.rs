@@ -1,4 +1,4 @@
-//! fixture-suite (CIP-3141) bloom-filter **match** smoke for the text `_match`
+//! fixture-suite bloom-filter **match** smoke for the text `_match`
 //! domain.
 //!
 //! Unlike the eq/ord oracles, bloom matching is not a random property: `@@`

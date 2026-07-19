@@ -108,7 +108,7 @@ pub fn render_types_file(spec: &DomainFamily) -> String {
 
 /// Body for query_<T>_types.sql: a `public.query_<name>` operand domain per
 /// TERM-BEARING domain — the index-terms-only twin (no `c`) whose operators
-/// consume a query operand (CIP-3432). Storage-only domains have no operators,
+/// consume a query operand. Storage-only domains have no operators,
 /// so no query twin.
 pub fn render_query_types_file(spec: &DomainFamily) -> String {
     use crate::context::{environment, query_domain_block, TypesContext};
@@ -248,7 +248,7 @@ fn query_types_path(family_name: &str) -> String {
     scalar_path(family_name, &format!("query_{family_name}_types.sql"))
 }
 
-/// Body for a term-bearing domain's query_<name>_functions.sql (CIP-3432): the
+/// Body for a term-bearing domain's query_<name>_functions.sql: the
 /// query-operand extractor OVERLOADS (the same extractors, on
 /// `eql_v3.query_<name>`) plus the comparison WRAPPERS binding the storage
 /// domain to its query twin — for the domain's SUPPORTED operators only, in
@@ -326,7 +326,7 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
         .expect("render query functions.sql")
 }
 
-/// Body for a term-bearing domain's query_<name>_operators.sql (CIP-3432): a
+/// Body for a term-bearing domain's query_<name>_operators.sql: a
 /// `CREATE OPERATOR` binding `(storage_domain, query_<name>)` for every
 /// supported operator, plus its `(query_<name>, storage_domain)` commutator, so
 /// `col <op> $1::eql_v3.query_<name>` resolves to the query wrapper.
@@ -550,7 +550,7 @@ fn json_entry_extractor() -> &'static str {
     JSON_ENTRY_TERM.extractor()
 }
 
-/// Body for a family's json_entry_<T>_functions.sql (CIP-3526): comparison
+/// Body for a family's json_entry_<T>_functions.sql: comparison
 /// WRAPPERS binding the fixed `public.eql_v3_json_entry` leaf to the family's
 /// `_ord` / `_ord_ope` query operands, for every operator json_entry can serve
 /// through `ord_term` → ope_cllw (op byte-comparison, which covers ordering and
@@ -708,7 +708,7 @@ pub fn render_json_entry_cross_functions(
         .expect("render json_entry cross functions")
 }
 
-/// Body for a family's json_entry_<T>_operators.sql (CIP-3526): a CREATE
+/// Body for a family's json_entry_<T>_operators.sql: a CREATE
 /// OPERATOR binding `(public.eql_v3_json_entry, query_<T>_<d>)` and its
 /// `(query_<T>_<d>, public.eql_v3_json_entry)` commutator for every operator
 /// [`JSON_ENTRY_TERM`] provides — bound to the public WRAPPER where the family's
@@ -848,7 +848,7 @@ fn ore_alternatives(spec: &DomainFamily, qualify: &dyn Fn(&Domain) -> String) ->
     }
 }
 
-/// Body for the cross-family `src/v3/scalars/ore_fallback.sql` (CIP-3468).
+/// Body for the cross-family `src/v3/scalars/ore_fallback.sql`.
 ///
 /// The rendered DO block runs after the ORE opclass creation attempt
 /// (`V3_ORE_OPCLASS`). If the default btree opclass for
@@ -947,7 +947,7 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
             out_dir.join(format!("{name}_operators.sql")),
             render_operators_file(family_name, d),
         ));
-        // Query-operand surface (CIP-3432): extractor overloads + wrappers +
+        // Query-operand surface: extractor overloads + wrappers +
         // operators binding the storage domain to its `query_<name>` twin. Only
         // term-bearing domains have a query twin (storage-only = no operators).
         if !d.terms.is_empty() {
@@ -965,7 +965,7 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
             rendered.push((out_dir.join(format!("{name}_aggregates.sql")), agg));
         }
     }
-    // json_entry cross-type operators (CIP-3526): bind the fixed
+    // json_entry cross-type operators: bind the fixed
     // public.eql_v3_json_entry leaf to every query operand this family declares
     // that carries the term json_entry can serve (Term::Ope) AND whose values
     // exist in JSON as themselves. Ope-carrying operands the seam does not serve
@@ -1035,7 +1035,7 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         all_written.extend(written.iter().cloned());
     }
 
-    // Cross-family ORE capability-detection fallback (CIP-3468). Depth-1 under
+    // Cross-family ORE capability-detection fallback. Depth-1 under
     // src/v3/scalars (it spans families, so it belongs to no type dir), written
     // after every per-family surface so all its REQUIRE targets exist.
     let fallback_path = scalars_root.join("ore_fallback.sql");
@@ -1219,7 +1219,7 @@ mod tests {
         assert!(names.contains(&"json_entry_integer_operators.sql".to_string()));
         // 1 types + 1 query_types + 2 per domain (5) + 2 query per term-bearing
         // domain (4) + 3 ord-capable aggregates = 1+1+10+8+3 = 23, plus the 2
-        // json_entry cross files (CIP-3526).
+        // json_entry cross files.
         assert_eq!(written.len(), 25);
         for p in &written {
             assert!(fs::read_to_string(p)
@@ -1967,7 +1967,7 @@ mod tests {
         assert!(hand.exists(), "hand-written depth-1 functions.sql survives");
     }
 
-    // --- CIP-3526: json_entry <-> query_<T> cross-type operator surface ---
+    // --- : json_entry <-> query_<T> cross-type operator surface ---
 
     #[test]
     fn json_entry_cross_domains_selects_every_ope_carrying_operand() {

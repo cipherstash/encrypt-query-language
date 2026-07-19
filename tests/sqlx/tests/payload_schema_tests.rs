@@ -599,23 +599,20 @@ fn native_v3_ste_vec_document_validates_against_published_v3_schema() {
 }
 
 #[test]
-fn from_v2_query_output_validates_against_published_v3_schema() {
+fn from_v2_ste_vec_query_fails_closed() {
     use eql_bindings::from_v2::{from_v2_query, TargetDomain};
-    // Only `op` (ordered) and term-less (selector-only) entries convert; a
-    // per-entry `hm` equality term is unconvertible (v3 exact matching is
-    // value-inclusive selector presence).
+    // Legacy selectors do not include the plaintext value, so no legacy
+    // SteVec query can be transformed into a v3 exact-match query.
     let v2 = json!({
         "sv": [
             { "s": SELECTOR },
             { "s": SELECTOR, "op": HEX_LONG }
         ]
     });
-    let out = from_v2_query(&v2, TargetDomain::Json).expect("query conversion must succeed");
-    assert_valid(
-        &load_v3_schema("query_json"),
-        &out,
-        "from_v2_query output for query_json",
-    );
+    assert!(matches!(
+        from_v2_query(&v2, TargetDomain::Json).unwrap_err(),
+        eql_bindings::from_v2::FromV2Error::UnconvertibleSteVecQuery
+    ));
 }
 
 #[test]

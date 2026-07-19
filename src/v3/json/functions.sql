@@ -203,12 +203,12 @@ $$ LANGUAGE plpgsql;
 -- Deterministic-fields array for GIN containment
 ------------------------------------------------------------------------------
 
---! @brief Extract deterministic search fields (s, op) per sv element.
+--! @brief Extract deterministic containment fields (s) per sv element.
 --!
 --! Excludes non-deterministic ciphertext so PostgreSQL's native jsonb `@>` can
 --! compare for containment. Use for GIN indexes and containment queries.
---! (`hm` is retired — exact matching is the value-inclusive selector — so the
---! deterministic key set is exactly `s` and `op`.)
+--! Exact and structural containment are selector-set containment, so ordering
+--! terms are deliberately excluded.
 --!
 --! @param val jsonb encrypted EQL payload
 --! @return jsonb[] Array of objects with only deterministic fields.
@@ -223,7 +223,7 @@ AS $$
       CASE WHEN val ? 'sv' THEN val->'sv' ELSE jsonb_build_array(val) END
     ) AS elem,
     LATERAL jsonb_each(elem) AS kv(key, value)
-    WHERE kv.key IN ('s', 'op')
+    WHERE kv.key = 's'
     GROUP BY elem
   );
 $$;
@@ -324,36 +324,11 @@ $$ LANGUAGE plpgsql;
 --! @see eql_v3.ste_vec_contains(jsonb[], jsonb)
 CREATE FUNCTION eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search)
   RETURNS boolean
-  IMMUTABLE STRICT PARALLEL SAFE
-  SET search_path = pg_catalog, extensions, public
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  DECLARE
-    result boolean;
-    sv_a jsonb[];
-    sv_b jsonb[];
-    _b jsonb;
-  BEGIN
-    sv_a := eql_v3.ste_vec(a);
-    sv_b := eql_v3.ste_vec(b);
-
-    IF array_length(sv_b, 1) IS NULL THEN
-      RETURN true;
-    END IF;
-
-    IF array_length(sv_a, 1) IS NULL THEN
-      RETURN false;
-    END IF;
-
-    result := true;
-
-    FOR idx IN 1..array_length(sv_b, 1) LOOP
-      _b := sv_b[idx];
-      result := result AND eql_v3.ste_vec_contains(sv_a, _b);
-    END LOOP;
-
-    RETURN result;
-  END;
-$$ LANGUAGE plpgsql;
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
+$$;
 
 ------------------------------------------------------------------------------
 -- Path queries (text selector only)

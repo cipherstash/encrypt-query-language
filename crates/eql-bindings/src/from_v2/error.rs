@@ -29,35 +29,14 @@ pub enum FromV2Error {
         /// The name that failed to resolve.
         name: String,
     },
-    /// A term key the target domain requires is absent from the input. For
-    /// SteVec entries `key` is `"hm|op"`: an entry must carry exactly one of
-    /// the two, and this variant reports the "neither" half (the "both" half
-    /// is [`FromV2Error::AmbiguousTerm`]) with `entry` locating the offender.
+    /// A term key the target scalar domain requires is absent from the input.
     MissingTerm {
-        /// The (unqualified) target domain name, e.g. `text_eq`, or the
-        /// SteVec shape (`json` / `query_json`) for per-entry terms.
+        /// The (unqualified) target domain name, e.g. `text_eq`.
         domain: String,
-        /// The missing wire key (`hm`/`ob`/`bf`/`op`, or `hm|op` for entries).
+        /// The missing wire key (`hm`/`ob`/`bf`/`op`).
         key: String,
-        /// Zero-based index of the term-less `sv` entry; `None` for flat
-        /// scalar payloads, which have no entries to index.
+        /// Reserved for structured payloads; scalar payloads use `None`.
         entry: Option<usize>,
-    },
-    /// A SteVec entry carries BOTH `hm` and `op`; the v2 and v3 contracts
-    /// both require exactly one, and picking one would silently drop a term.
-    AmbiguousTerm {
-        /// Zero-based index of the offending `sv` entry.
-        entry: usize,
-    },
-    /// A SteVec entry carries a CLLW-ORE ordering term (`oc`), which v3
-    /// cannot represent: v3 orders SteVec entries by the CLLW-OPE `op` term
-    /// (native byte order), and CLLW-ORE ciphertext bytes do not order under
-    /// byte comparison — passing them through would silently misorder. An
-    /// `oc`-bearing v2 document must be re-encrypted through a client that
-    /// emits OPE SteVec terms; no mechanical conversion exists.
-    UnconvertibleOreTerm {
-        /// Zero-based index of the offending `sv` entry.
-        entry: usize,
     },
     /// A v2 SteVec **document** has no v3 representation: the v3 envelope
     /// wire format stores one key header (`h`) per document with per-entry
@@ -66,14 +45,13 @@ pub enum FromV2Error {
     /// re-encryption. Encrypt the document through a v3-emitting client
     /// (`encrypt_eql_v3`).
     UnconvertibleSteVecDocument,
-    /// A v2 SteVec query entry carries a per-entry `hm` equality term, which
-    /// v3 cannot represent: v3 exact matching is value-inclusive **selector
-    /// presence**, and the value selector cannot be derived from an HMAC
-    /// term. Produce the needle through a v3-emitting client.
-    UnconvertibleEqualityTerm {
-        /// Zero-based index of the offending `sv` entry.
-        entry: usize,
-    },
+    /// A v2 SteVec **query** has no v3 exact-match representation. Legacy
+    /// SteVec equality needles carry a path selector plus `hm` or `op`; v3
+    /// equality requires a value-inclusive selector derived from the original
+    /// plaintext. Neither legacy term contains enough information to construct
+    /// that selector, so callers must produce the query through a v3-emitting
+    /// client.
+    UnconvertibleSteVecQuery,
     /// The input's kind contradicts the target: an `sv` payload for a scalar
     /// target, or a `ct` payload for [`TargetDomain::Json`](super::TargetDomain::Json).
     KindMismatch {
@@ -91,11 +69,9 @@ pub enum FromV2Error {
         /// The out-of-range element value.
         value: i64,
     },
-    /// [`from_v2_query`](super::from_v2_query) was asked for a scalar target,
-    /// but no v3 scalar query wire shape exists (every scalar domain CHECK
-    /// requires the ciphertext `c` a query payload omits). Scalar query
-    /// conversion is pending the mapper redesign; this crate will not invent
-    /// a wire shape ahead of it.
+    /// [`from_v2_query`](super::from_v2_query) was asked for a storage-only
+    /// scalar target. Storage-only domains have no operators or query-operand
+    /// twin, so there is no meaningful query payload to produce.
     UnsupportedQueryTarget {
         /// The (unqualified) scalar domain name that was requested.
         domain: String,
@@ -150,20 +126,6 @@ impl fmt::Display for FromV2Error {
             } => {
                 write!(f, "target domain `{domain}` requires term key `{key}`, absent from the v2 payload")
             }
-            Self::AmbiguousTerm { entry } => {
-                write!(
-                    f,
-                    "sv entry {entry} carries both `hm` and `op` (exactly one is required)"
-                )
-            }
-            Self::UnconvertibleOreTerm { entry } => {
-                write!(
-                    f,
-                    "sv entry {entry} carries a CLLW-ORE ordering term `oc`; v3 orders SteVec \
-                     entries by the CLLW-OPE `op` term, and ORE ciphertext bytes cannot be \
-                     converted — re-encrypt through a client that emits OPE SteVec terms"
-                )
-            }
             Self::UnconvertibleSteVecDocument => {
                 write!(
                     f,
@@ -172,12 +134,12 @@ impl fmt::Display for FromV2Error {
                      re-encryption, not a JSON transformation; encrypt through encrypt_eql_v3"
                 )
             }
-            Self::UnconvertibleEqualityTerm { entry } => {
+            Self::UnconvertibleSteVecQuery => {
                 write!(
                     f,
-                    "sv query entry {entry} carries a per-entry `hm` equality term; v3 exact \
-                     matching is value-inclusive selector presence, which cannot be derived \
-                     from an HMAC term — produce the needle through a v3-emitting client"
+                    "a v2 SteVec query cannot be converted to v3 exact-match semantics: \
+                     a value-inclusive selector cannot be derived from a legacy hm/op term; \
+                     produce the query through a v3-emitting client"
                 )
             }
             Self::KindMismatch { kind, target } => {
@@ -193,10 +155,7 @@ impl fmt::Display for FromV2Error {
                 )
             }
             Self::UnsupportedQueryTarget { domain } => {
-                write!(
-                    f,
-                    "no v3 scalar query wire shape exists for `{domain}` (pending the mapper redesign)"
-                )
+                write!(f, "storage-only domain `{domain}` has no v3 query operand")
             }
             Self::Invalid(e) => {
                 write!(f, "converted payload failed v3 validation: {e}")

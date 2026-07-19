@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Scalar query-operand bindings (CIP-3432).** Every term-bearing scalar
+- **Scalar query-operand bindings.** Every term-bearing scalar
   domain now has a generated query twin — `IntegerEqQuery`, `IntegerOrdOpeQuery`,
   `TextSearchQuery`, … — the **enveloped term-only** operand `{v, i, <terms>}`
   (envelope minus the ciphertext `c`) for its `eql_v3.query_<name>` query
@@ -24,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - **Query-operand domain names switched to the `query_<name>` prefix, homed
-  in the `eql_v3` schema (CIP-3442).** The SQL domain names carried by the
+  in the `eql_v3` schema.** The SQL domain names carried by the
   query twins — in `DomainType::sql_domain`, the names `QueryPayload::parse`
   accepts, and the exported JSON Schema file names — are now `query_<name>` /
   `eql_v3.query_<name>` (e.g. `query_integer_eq`), and the SteVec containment

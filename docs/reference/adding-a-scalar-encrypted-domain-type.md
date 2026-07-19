@@ -625,7 +625,7 @@ single-capability `_match` domain (e.g. `public.eql_v3_text_match`) **and** the 
 `_search` domain (`public.eql_v3_text_search`, `[Hm, Ope, Bloom]`) — and elsewhere stay
 blockers — matching the per-domain table just below, where every `Bloom`-bearing
 row carries three match wrappers. (`@>`/`<@` are **containment**, distinct from the
-`@@` fuzzy match — CIP-3517 — and are blockers on every scalar domain.)
+`@@` fuzzy match —  — and are blockers on every scalar domain.)
 
 The wrapper/blocker split per domain (the 47-operator total never moves). A
 domain's wrappers are the **union** of its terms' operators

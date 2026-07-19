@@ -1,5 +1,5 @@
 //! Real-ciphertext coverage for the storage-only / encryption-only
-//! `public.eql_v3_json` domain (CIP-3512) — the json analogue of boolean's
+//! `public.eql_v3_json` domain — the json analogue of boolean's
 //! `caps=[storage]` matrix arm.
 //!
 //! `json` cannot ride the `scalar_matrix!` machinery (its family is non-scalar

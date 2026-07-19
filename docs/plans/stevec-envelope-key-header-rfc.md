@@ -301,7 +301,7 @@ radius is client-side serialization plus the nonce input to the AEAD call
 |---|---|
 | cipherstash-client (2103) | `SteVecPendingEncryption::encrypt` emits envelope header + slim entries; `EncryptionTarget::nonce()` for SteVec targets derives from the entry selector; value-entry plaintext becomes the versioned sentinel; descriptor populated; `a` emitted only when true; decrypt path mirrors all of it. New `KeyHeader` struct + serialization. |
 | EQL | `types.sql` document CHECK gains `h`; `meta_data` grafts `h`; `jsonb_array` drops `'hm'`; `jsonb_array_elements_text` dropped; `eql_v3.ciphertext` doc update; bindings (`SteVecDocument.h: KeyHeader` newtype, `Ciphertext` docs) + TS/JSON Schema regen; fixtures regen; `docs/reference/json-support.md` + payload docs. |
-| protect-ffi | Decrypt reads `h` + per-entry `s`/`c` (rides the Path B native-v3 rework, task #19). |
+| protect-ffi | Decrypt reads `h` + per-entry `s`/`c` as part of its native-v3 support. |
 | ZeroKMS | Nothing. |
 
 ## Resolved questions

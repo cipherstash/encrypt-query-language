@@ -8,7 +8,7 @@
 //! same wire shape the domain CHECK (`is_valid_ste_vec_document_payload`)
 //! validated at INSERT — not a hand-written literal.
 
-use eql_bindings::v3::json::{SteVecDocument, SteVecEntry, SteVecQuery, SteVecTerm};
+use eql_bindings::v3::json::{SteVecDocument, SteVecEntry, SteVecQuery};
 use sqlx::PgPool;
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
@@ -50,9 +50,10 @@ async fn real_ste_vec_row_parses_into_document_and_entries(pool: PgPool) -> anyh
         );
         // Fails if the real wire shape drifts from the bindings.
         let entry: SteVecEntry = serde_json::from_value(e)?;
-        match entry.term {
-            SteVecTerm::None {} => saw_termless = true,
-            SteVecTerm::OpeCllw { .. } => saw_op = true,
+        if entry.op.is_some() {
+            saw_op = true;
+        } else {
+            saw_termless = true;
         }
     }
     assert!(
@@ -86,12 +87,7 @@ async fn real_ste_vec_query_parses_into_bindings(pool: PgPool) -> anyhow::Result
         !query.sv.is_empty(),
         "a real SteVec query must have sv entries"
     );
-    // Each query element parsed as part of SteVecQuery above; confirm the term
-    // arms are well-formed (selector-only elements take the None arm).
-    for entry in &query.sv {
-        match &entry.term {
-            SteVecTerm::None {} | SteVecTerm::OpeCllw { .. } => {}
-        }
-    }
+    // The canonical SQL projection is selector-only.
+    assert!(query.sv.iter().all(|entry| entry.op.is_none()));
     Ok(())
 }

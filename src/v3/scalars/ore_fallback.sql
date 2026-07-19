@@ -21,7 +21,7 @@
 -- REQUIRE: src/v3/scalars/double/query_double_types.sql
 
 --! @file v3/scalars/ore_fallback.sql
---! @brief Disable the ORE-backed encrypted domains when the ORE operator class is absent (CIP-3468).
+--! @brief Disable the ORE-backed encrypted domains when the ORE operator class is absent.
 --!
 --! Runs after the DO block in src/v3/sem/ore_block_256/operator_class.sql,
 --! which ATTEMPTS to create the default btree operator class for

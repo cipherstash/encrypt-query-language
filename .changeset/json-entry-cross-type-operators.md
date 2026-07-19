@@ -4,9 +4,20 @@
 
 **Exact equality on an encrypted-JSON field now works for _every_ scalar type — including `text`, `bigint`, and `numeric` — via document containment with value-inclusive selectors.** The SteVec index now tokenises each leaf's value into its own selector (`SEL(type-tag ‖ path ‖ canonical(value))`), so a value-selector's *presence* in the stored document is an exact, injective match — a `bigint` field holding `9007199254740993` and a `text` field holding `"café"` are matched exactly, not collided with `9007199254740992` / `"cafe"` as the previous `op`-based comparison did. Spell it as containment: `WHERE encrypted_json @> $1::eql_v3.query_json`, where the client emits a value-selector needle for the field/value; a functional GIN index on `eql_v3.to_ste_vec_query(col)::jsonb` engages it. This is a **breaking wire-format change**: SteVec entries no longer carry the per-value `hm` term (exact match is selector presence, not a MAC comparison), every leaf now emits a path entry (`{s, c, op?}`) plus value entries (`{s, c}`), and containment is selector-subset over that shape. Documents encrypted by an earlier client must be **re-encrypted**.
 
-The TypeScript bindings model a term-less entry as `{ op?: never }`, so both
-stored `{s, c}` entries and selector-only `{s}` query entries are directly
-constructible without weakening the optional `op` contract.
+The TypeScript bindings model `op` as optional, so both stored `{s, c}` entries
+and selector-only `{s}` query entries are directly constructible. Unknown term
+fields remain rejected by the Rust and JSON Schema bindings and by PostgreSQL.
+
+All containment overloads now normalize entries to selector-only form before
+comparison. In particular, `op` is an ordering term and never changes
+containment equality. Document-to-document containment uses the same native
+`jsonb @>` expression as `query_json`, so the documented functional GIN index
+on `eql_v3.to_ste_vec_query(col)::jsonb` applies to both forms.
+
+Legacy SteVec queries cannot be mechanically converted: their selector names a
+path, while v3 exact equality requires a selector derived from both path and
+plaintext value. `from_v2_query` therefore fails closed for every SteVec query;
+callers must create a native v3 query with a v3-capable encryption client.
 
 **The SteVec document wire format is restructured: a per-document key header plus selector-derived entry nonces.** The key-retrieval material (IV, tag, descriptor, keyset) is now hoisted **once** to a document-level `h` field instead of being repeated inside every entry's ciphertext, and each entry's `c` is the raw AEAD output only — its nonce derived from the entry's own selector (`nonce = hex_decode(s)[..12]`) rather than a shared per-document IV. This shrinks a document ~30% (measured: the eliminated per-entry key framing was ~half the payload) and closes an intra-document leak: because every entry gets a distinct nonce under the document's single data key, equal values at different paths — and the constant value-entry plaintext — no longer produce byte-identical ciphertexts, and each entry's ciphertext is now cryptographically bound to its selector (a within-document ciphertext graft fails to decrypt). Value entries encrypt a fixed versioned **sentinel** rather than the empty string, so a value entry stays distinguishable from a genuine `""` leaf. A stored SteVec document is now `{v, k:"sv", i, h, sv:[…]}` (no root `c`; the root document ciphertext is the root `sv` entry), and `eql_v3.jsonb_array_elements_text` (a bare-ciphertext stream, no longer independently decryptable) is **removed** — use `eql_v3.jsonb_array_elements`, whose entry rows carry the grafted `h`. Because the key material, entry ciphertexts, and nonces all change, this is re-encryption, not a migration: there is no mechanical v2→v3 conversion for a stored SteVec document.
 

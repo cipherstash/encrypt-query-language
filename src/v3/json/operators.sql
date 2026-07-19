@@ -135,7 +135,8 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ste_vec_contains(a, b)
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
 $$;
 
 CREATE OPERATOR @>(
@@ -156,7 +157,8 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b eql_v3.query_json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb @> b::jsonb
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
 $$;
 
 CREATE OPERATOR @>(
@@ -187,7 +189,8 @@ CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ste_vec_contains(b, a)
+  SELECT eql_v3.to_ste_vec_query(b)::jsonb
+       @> eql_v3.to_ste_vec_query(a)::jsonb
 $$;
 
 CREATE OPERATOR <@(

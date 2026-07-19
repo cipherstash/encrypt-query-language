@@ -9,7 +9,7 @@
 
 use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
-use ts_rs::{TypeVisitor, TS};
+use ts_rs::TS;
 
 use crate::v3::terms::{EntryCiphertext, KeyHeader, OpeCllw, Selector};
 use crate::v3::DomainType;
@@ -104,11 +104,12 @@ pub struct SteVecDocument {
 /// (emitted only when true), and — for ordered (number/string) path entries
 /// only — the `op` ordering term. Value entries (value-inclusive selectors)
 /// and non-orderable path entries are term-less: exact matching is selector
-/// presence, so no per-entry equality term exists (`hm` is retired). LAX
-/// (flatten precludes `deny_unknown_fields`): tolerates the root `i`/`v`/`h`
-/// merged in by `->`.
+/// presence, so no per-entry equality term exists (`hm` is retired). The
+/// optional `i`/`v`/`h` fields model metadata grafted onto an entry returned by
+/// `->`; naming them explicitly keeps unknown keys rejectable.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
 pub struct SteVecEntry {
     pub s: Selector,
     pub c: EntryCiphertext,
@@ -120,12 +121,18 @@ pub struct SteVecEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional = nullable)]
     pub a: Option<bool>,
-    // Flattened, NOT `Option<SteVecTerm>`: ts-rs does not flatten `Option`
-    // (it would emit a literal `term` property and drift from the wire), so
-    // term-lessness is the enum's own `None {}` arm — serde flattens it to
-    // no keys at all, and both generators render the union faithfully.
-    #[serde(flatten)]
-    pub term: SteVecTerm,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub op: Option<OpeCllw>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub i: Option<Identifier>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub v: Option<SchemaVersion>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub h: Option<KeyHeader>,
 }
 
 /// `eql_v3.query_json` — a containment needle (`{sv:[query-entry]}`). Strict.
@@ -139,85 +146,16 @@ pub struct SteVecQuery {
 /// One element of a SteVec containment needle: a selector plus — for ordered
 /// path entries only — the `op` ordering term; value-selector and structural
 /// entries are selector-only (matched on presence), and (per the SQL CHECK)
-/// no element carries a ciphertext. LAX for the same flatten reason as
-/// `SteVecEntry`; the "no `c`" contract is enforced by `is_valid_ste_vec_query_payload`.
+/// no element carries a ciphertext. Unknown fields are rejected so the Rust
+/// parser and published JSON Schema enforce the same boundary as PostgreSQL.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
 pub struct SteVecQueryEntry {
     pub s: Selector,
-    // Same flattened-enum modeling as `SteVecEntry.term` (see there for why
-    // this is not an `Option`).
-    #[serde(flatten)]
-    pub term: SteVecTerm,
-}
-
-/// The per-entry ordering term: `op` (CLLW-OPE) on ordered (number/string)
-/// path entries, or nothing at all — value entries (value-inclusive
-/// selectors) and non-orderable path entries are term-less, because exact
-/// matching is selector presence, not a per-entry term (`hm` is retired).
-///
-/// Untagged, with term-lessness as the explicit `None` arm rather than an
-/// `Option` on the field: serde serializes `None {}` to no keys (flattened:
-/// nothing), and — unlike a flattened `Option`, which ts-rs renders as a
-/// literal `term` property — schemars renders this union faithfully as
-/// `{ op } | {}`. The TypeScript override represents the empty arm as
-/// `{ op?: never }`: ts-rs's default `Record<string, never>` cannot be
-/// intersected with an entry's required `s`/`c` fields. Arm ORDER remains
-/// load-bearing for serde: `None {}` matches any object, so it must be last.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, JsonSchema)]
-#[serde(untagged)]
-pub enum SteVecTerm {
-    /// Ordered (number/string) path entry: the CLLW-OPE `op` term.
-    OpeCllw { op: OpeCllw },
-    /// Term-less: a value entry or a non-orderable path entry.
-    None {},
-}
-
-impl TS for SteVecTerm {
-    type WithoutGenerics = Self;
-
-    const DOCS: Option<&'static str> = Some(
-        "/**\n * The per-entry ordering term: `op` on ordered path entries, or a term-less\n \
-         * arm for value selectors and non-orderable path entries.\n */\n",
-    );
-
-    fn decl() -> String {
-        "type SteVecTerm = { op: OpeCllw } | { op?: never };".to_string()
-    }
-
-    fn decl_concrete() -> String {
-        Self::decl()
-    }
-
-    fn name() -> String {
-        "SteVecTerm".to_string()
-    }
-
-    fn inline() -> String {
-        "{ op: OpeCllw } | { op?: never }".to_string()
-    }
-
-    fn inline_flattened() -> String {
-        format!("({})", Self::inline())
-    }
-
-    fn visit_dependencies(visitor: &mut impl TypeVisitor)
-    where
-        Self: 'static,
-    {
-        visitor.visit::<OpeCllw>();
-    }
-
-    fn output_path() -> Option<&'static std::path::Path> {
-        Some(std::path::Path::new("v3/SteVecTerm.ts"))
-    }
-}
-
-impl SteVecTerm {
-    /// True for the term-less arm.
-    pub fn is_none(&self) -> bool {
-        matches!(self, Self::None {})
-    }
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub op: Option<OpeCllw>,
 }
 
 macro_rules! ste_vec_domain_type {
@@ -229,8 +167,8 @@ macro_rules! ste_vec_domain_type {
             fn sql_domain(&self) -> &'static str {
                 Self::sql_domain_static()
             }
-            // `term_json_keys` keeps the trait default (`None`): SteVec index
-            // terms live per sv leaf (`hm` XOR `op`), not as flat payload keys.
+            // `term_json_keys` keeps the trait default (`None`): SteVec ordering
+            // terms live per entry, not as flat payload keys.
             fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
                 <$ty as Deserialize>::deserialize(value).map(|_| ())
             }

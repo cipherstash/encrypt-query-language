@@ -10,17 +10,6 @@
 //! throwaway temp dir and only swap it into place after a successful build.
 
 use eql_bindings::v3;
-use ts_rs::TS;
-
-#[test]
-fn dump_manual_v3_typescript_bindings() {
-    // SteVecTerm has a manual TS impl because ts-rs renders an empty struct
-    // variant as `Record<string, never>`, which cannot be flattened into an
-    // object with required fields. Keep its export in the same generation
-    // lifecycle as the derive-driven bindings.
-    v3::json::SteVecTerm::export().unwrap();
-}
-
 #[test]
 fn dump_v3_json_schemas() {
     let base = std::env::var("EQL_TYPES_SCHEMA_DIR").unwrap_or_else(|_| "schema".into());

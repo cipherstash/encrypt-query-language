@@ -31,7 +31,7 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 | `public.eql_v3_text_search`          | `hm` + `op` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 | `public.eql_v3_text_search_ore`      | `hm` + `ob` + `bf`        | all three extractors     |    ✅    |        ✅         |      ✅       |    ✅\*   |
 
-\* On `text_match` / `text_search` / `text_search_ore`, `@@` (`eql_v3.matches`) is **bloom-filter token matching** (probabilistic ngram match), **not** containment and **not** SQL `LIKE`. The containment operators `@>` / `<@` **raise** on these domains (CIP-3517). See [Indexing](#indexing).
+\* On `text_match` / `text_search` / `text_search_ore`, `@@` (`eql_v3.matches`) is **bloom-filter token matching** (probabilistic ngram match), **not** containment and **not** SQL `LIKE`. The containment operators `@>` / `<@` **raise** on these domains. See [Indexing](#indexing).
 
 Notes:
 
@@ -64,7 +64,7 @@ A ✅ means the operator resolves on a column typed as that domain variant. A �
 Notes:
 
 - A SQL `NULL` column value is not encrypted, so `IS NULL` / `IS NOT NULL` always work regardless of variant.
-- `@@` on `text_match` / `text_search` / `text_search_ore` tests whether the encrypted text **matches** the (encrypted) search terms via the bloom filter (n-gram token match, not containment; `@>` / `<@` raise here — CIP-3517). This replaces the old `LIKE`/`ILIKE`-on-`match`-index recipe: there is no `LIKE` on encrypted text — use `@@`.
+- `@@` on `text_match` / `text_search` / `text_search_ore` tests whether the encrypted text **matches** the (encrypted) search terms via the bloom filter (n-gram token match, not containment; `@>` / `<@` raise here). This replaces the old `LIKE`/`ILIKE`-on-`match`-index recipe: there is no `LIKE` on encrypted text — use `@@`.
 
 ---
 

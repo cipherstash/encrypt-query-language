@@ -10,13 +10,17 @@ import type {
 
 describe('@cipherstash/eql generated surface', () => {
   test('exports schema metadata for generated domains', () => {
-    expect(schemaNames).toContain('integer_eq')
-    expect(schemaNames).toContain('text_search')
-    expect(schemaNames).toContain('text_search_ore')
-    expect(schemaId('integer_eq')).toBe('https://schemas.cipherstash.com/eql/v3/integer_eq.json')
-    expect(schemaIds.text_search).toBe('https://schemas.cipherstash.com/eql/v3/text_search.json')
-    expect(schemaIds.text_search_ore).toBe(
-      'https://schemas.cipherstash.com/eql/v3/text_search_ore.json',
+    expect(schemaNames).toContain('eql_v3_integer_eq')
+    expect(schemaNames).toContain('eql_v3_text_search')
+    expect(schemaNames).toContain('eql_v3_text_search_ore')
+    expect(schemaId('eql_v3_integer_eq')).toBe(
+      'https://schemas.cipherstash.com/eql/v3/eql_v3_integer_eq.json',
+    )
+    expect(schemaIds.eql_v3_text_search).toBe(
+      'https://schemas.cipherstash.com/eql/v3/eql_v3_text_search.json',
+    )
+    expect(schemaIds.eql_v3_text_search_ore).toBe(
+      'https://schemas.cipherstash.com/eql/v3/eql_v3_text_search_ore.json',
     )
   })
 
@@ -48,8 +52,8 @@ describe('@cipherstash/eql generated surface', () => {
       bf: [1, 2, 3],
     }
 
-    // The term-less arm must remain composable with each entry's required
-    // fields. `Record<string, never>` here would turn `s`/`c` into `never`.
+    // The optional ordering term must remain independently composable with
+    // each entry's required fields.
     const steVec: SteVecDocument = {
       v: 3,
       k: 'sv',

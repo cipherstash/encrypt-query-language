@@ -6,7 +6,7 @@ import type { Selector } from "./Selector";
  * One element of a SteVec containment needle: a selector plus — for ordered
  * path entries only — the `op` ordering term; value-selector and structural
  * entries are selector-only (matched on presence), and (per the SQL CHECK)
- * no element carries a ciphertext. LAX for the same flatten reason as
- * `SteVecEntry`; the "no `c`" contract is enforced by `is_valid_ste_vec_query_payload`.
+ * no element carries a ciphertext. Unknown fields are rejected so the Rust
+ * parser and published JSON Schema enforce the same boundary as PostgreSQL.
  */
-export type SteVecQueryEntry = { s: Selector, } & ({ op: OpeCllw } | { op?: never });
+export type SteVecQueryEntry = { s: Selector, op?: OpeCllw, };

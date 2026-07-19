@@ -8,7 +8,8 @@
 //! `tests/sqlx/tests/payload_schema_tests.rs`).
 
 use eql_bindings::from_v2::{
-    from_v2, from_v2_query, from_v2_typed, is_v3_payload, FromV2Error, TargetDomain,
+    from_v2, from_v2_query, from_v2_query_typed, from_v2_typed, is_v3_payload, FromV2Error,
+    TargetDomain,
 };
 use serde_json::{json, Value};
 
@@ -367,63 +368,31 @@ fn ste_vec_document_is_unconvertible() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ste_vec_query_converts_op_entries_to_v3_needle() {
-    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope. Only
-    // `op` (ordered) entries survive conversion; the needle shape is
-    // unchanged for them.
-    let v2 = json!({
-        "sv": [
-            { "s": SELECTOR, "op": HEX_LONG }
-        ]
-    });
-    let out = from_v2_query(&v2, TargetDomain::Json).unwrap();
-    assert_eq!(out, v2);
-}
-
-#[test]
-fn ste_vec_query_normalizes_c_and_a_away() {
-    // Mirrors `eql_v3.to_ste_vec_query`: the canonical needle carries only
-    // `s` + one term, so stray `a` markers (legal on v2 query elements) and
-    // `c` (a stored-document entry re-used as a needle) are stripped.
-    let v2 = json!({
-        "v": 2,
-        "k": "sv",
-        "i": ident(),
-        "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG } ]
-    });
-    let out = from_v2_query(&v2, TargetDomain::Json).unwrap();
-    assert_eq!(out, json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] }));
-}
-
-#[test]
-fn ste_vec_query_entry_term_errors() {
-    // A per-entry `hm` equality term has no v3 representation: v3 exact
-    // matching is value-inclusive selector presence, not derivable from an
-    // HMAC term. `hm` presence is disqualifying even alongside `op`.
-    let hm = json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] });
-    assert!(matches!(
-        from_v2_query(&hm, TargetDomain::Json).unwrap_err(),
-        FromV2Error::UnconvertibleEqualityTerm { entry: 0 }
-    ));
-    let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] });
-    assert!(matches!(
-        from_v2_query(&both, TargetDomain::Json).unwrap_err(),
-        FromV2Error::UnconvertibleEqualityTerm { entry: 0 }
-    ));
-    // A term-less element is VALID: it converts to a selector-only needle
-    // element (selector-presence matching — the selector-presence exact-match
-    // semantics, mirroring eql_v3.to_ste_vec_query).
-    let termless = json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG }, { "s": SELECTOR } ] });
-    let out = from_v2_query(&termless, TargetDomain::Json).unwrap();
-    assert_eq!(
-        out,
-        json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG }, { "s": SELECTOR } ] })
-    );
+fn ste_vec_queries_are_unconvertible() {
+    // Legacy selectors identify paths, while v3 exact matching uses selectors
+    // derived from both path and plaintext value. No legacy entry shape has
+    // enough information to construct the v3 selector.
+    for v2 in [
+        json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] }),
+        json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] }),
+        json!({ "sv": [ { "s": SELECTOR } ] }),
+        json!({
+            "v": 2, "k": "sv", "i": ident(),
+            "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG } ]
+        }),
+    ] {
+        for err in [
+            from_v2_query(&v2, TargetDomain::Json).unwrap_err(),
+            from_v2_query_typed(&v2, TargetDomain::Json).unwrap_err(),
+        ] {
+            assert!(matches!(err, FromV2Error::UnconvertibleSteVecQuery));
+        }
+    }
 }
 
 #[test]
 fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
-    // CIP-3432: a term-bearing scalar target hoists its terms into the
+    // A term-bearing scalar target hoists its terms into the
     // enveloped term-only `<name>_query` operand — `{v:3, i, <terms>}`, dropping
     // the stored `c`/`k`. A storage-only target has no operators, so it stays
     // UnsupportedQueryTarget.

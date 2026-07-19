@@ -1,6 +1,6 @@
 //! Literal-payload smoke tests for the generated `public.eql_v3_text_match` surface:
 //! `@@` fuzzy match engages (the `eql_v3.matches` wrapper), `=`/`@>`/`<@` raise
-//! (blockers — `@@` is n-gram matching, NOT containment; CIP-3517), `~~`/`~~*`
+//! (blockers — `@@` is n-gram matching, NOT containment; ), `~~`/`~~*`
 //! are absent (no pattern-match), and the domain CHECK requires `bf`. Uses
 //! hand-written jsonb payloads carrying `bf` — no encryption/fixtures needed.
 //! The fixture-backed match behaviour lives in `text_match.rs`.
@@ -49,7 +49,7 @@ async fn text_match_containment_operators_are_blocked(pool: PgPool) -> anyhow::R
     // `@>` / `<@` are NOT the match operator on text_match — the fuzzy match is
     // `@@` (`eql_v3.matches`). The containment operators are generated as blockers
     // and must raise, so a caller who reaches for containment semantics gets a
-    // clear error instead of a silently-different result (CIP-3517).
+    // clear error instead of a silently-different result.
     const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1,2,3]}"#;
     for op in ["@>", "<@"] {
         let sql = format!(

@@ -41,7 +41,7 @@
 ///
 /// `Unique` drives `=` / `<>` (HMAC); `Ore` drives `<` `<=` `>` `>=` (ORE block
 /// terms); `Ope` drives the CLLW-OPE `op` term for the `_ord_ope` domains
-/// (cipherstash-client 0.38.1+, CIP-3348); `Match` drives `@>` / `<@` (bloom
+/// (cipherstash-client 0.38.1+); `Match` drives `@>` / `<@` (bloom
 /// filter). The generated payload is always `jsonb`.
 #[macro_export]
 macro_rules! scalar_fixture {

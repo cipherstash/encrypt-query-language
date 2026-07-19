@@ -2869,7 +2869,7 @@ pub mod boolean {
                             return ::anyhow::__private::Err({
                                 let error = ::anyhow::__private::format_err(
                                     format_args!(
-                                        "fixture payload carries an `op` term but the catalog family declares no Ope domain — conversion targets drifted (CIP-3348)",
+                                        "fixture payload carries an `op` term but the catalog family declares no Ope domain — conversion targets drifted",
                                     ),
                                 );
                                 error
