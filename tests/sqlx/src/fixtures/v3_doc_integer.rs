@@ -35,11 +35,9 @@ const FIELD: &str = "field";
 
 /// The SteVec selector hash for the `$.field` **CLLW-OPE (`op`)** entry,
 /// constant across every row (same path + index → same selector). SteVec emits
-/// two sv entries per ordered field — an `hm` entry (equality only) and an `op`
-/// entry — under distinct selectors. The matrix needs the entry that supports
-/// BOTH comparisons: `eql_v3.eq_term` reads `coalesce(hm, op)` (so it works on
-/// the `op` entry, injective on distinct plaintexts) and `eql_v3.ord_term`
-/// requires `op`. The `hm` entry would have no `op`, breaking ordering.
+/// a path entry carrying `op` plus term-less value-selector entries under
+/// distinct selectors. The matrix needs the path entry because
+/// `eql_v3.ord_term` requires `op`.
 ///
 /// Read from the generated fixture and pinned here so a future selector drift
 /// fails loudly: the integration `jsonb_entry` suite extracts the entry at
@@ -48,7 +46,7 @@ const FIELD: &str = "field";
 /// derived from the workspace keyset + the fixed STE_VEC_PREFIX + the `field`
 /// path, so it is stable for a given CipherStash workspace; if it drifts,
 /// regenerate the fixture and re-pin from the emitted `"s"`.
-pub const SELECTOR: &str = "dbb03d42501c96d05848c5877dc1934a";
+pub const SELECTOR: &str = "fce8be759db230351b10a058b7ba50a7";
 
 /// Build the plaintext documents: `{"field": <value>}` per integer fixture value,
 /// paired with the bare integer oracle value.
@@ -79,7 +77,7 @@ pub async fn generate() -> Result<()> {
 
     // `encrypt_store` builds the SteVec ColumnConfig from the spec's index
     // set + the document CAST, and returns payloads already converted to the
-    // v3 envelope (root `{v: 3, k: "sv", i, sv}`), emitted natively by the
+    // v3 envelope (root `{v: 3, k: "sv", i, h, sv}`), emitted natively by the
     // client's v3 assembler.
     let payloads =
         cipherstash::encrypt_store(&working, cipherstash::PAYLOAD_COLUMN, &docs, spec.indexes())

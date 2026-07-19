@@ -22,13 +22,9 @@
 //! client derives it via `ste_vec_query_value_selector`; nothing is pinned as a
 //! constant, so the suite cannot drift onto the wrong field/value.
 //!
-//! RANGE independence (`col -> 'sel' > $1::query_<T>_ord`) is NOT proven here yet:
-//! the current client cannot assemble a bare-`op` range operand into a v3 query
-//! payload (`QueryOp::SteVecTerm` → `index term has no EQL v3 query-operand
-//! representation` — v3 jsonb queries are the containment needle or the selector).
-//! Range CORRECTNESS is covered against stored fixtures in
-//! `v3_json_entry_cross_type_tests`; the fresh-crypto range-independence arm returns
-//! when the client exposes a v3 range op.
+//! RANGE independence (`col -> 'sel' > $1::query_<T>_ord`) is outside this
+//! equality-focused suite. Range correctness is covered against stored fixtures
+//! in `v3_json_entry_cross_type_tests`.
 
 use anyhow::Result;
 use serde_json::json;
@@ -42,9 +38,16 @@ use eql_tests::fixtures::cipherstash::{ste_vec_query_value_selector, PAYLOAD_COL
 /// table/column keep the needle honest about the column it targets.
 const FIXTURE_TABLE: &str = "_fixture_v3_ste_vec";
 
-/// Assert a freshly-derived selector is a plausible non-empty hex string, so a
-/// silently-empty selector cannot make containment vacuously match nothing.
-fn assert_hex_selector(sel: &str, what: &str) {
+/// Assert a freshly-derived needle contains one plausible value selector, so a
+/// malformed or empty operand cannot make containment vacuously match nothing.
+fn assert_value_selector_needle(needle: &serde_json::Value, what: &str) {
+    let sel = needle
+        .get("sv")
+        .and_then(serde_json::Value::as_array)
+        .and_then(|entries| entries.first())
+        .and_then(|entry| entry.get("s"))
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_else(|| panic!("{what} must contain one value selector; got {needle}"));
     assert!(
         !sel.is_empty()
             && sel.len().is_multiple_of(2)
@@ -53,16 +56,14 @@ fn assert_hex_selector(sel: &str, what: &str) {
     );
 }
 
-/// Rows whose stored document CONTAINS the given value selector — the exact
-/// field-equality path (`col @> $1::eql_v3.query_json`, presence = exact match).
-/// The needle is a single-element containment query `{"sv":[{"s":"<selector>"}]}`.
-async fn contains_ids(pool: &PgPool, value_selector: &str) -> Result<Vec<i64>> {
-    let needle = json!({ "sv": [{ "s": value_selector }] }).to_string();
+/// Rows whose stored document CONTAINS the given client-generated value-selector
+/// needle — the exact field-equality path (`col @> $1::eql_v3.query_json`).
+async fn contains_ids(pool: &PgPool, needle: &serde_json::Value) -> Result<Vec<i64>> {
     let ids: Vec<i64> = sqlx::query_scalar(
         "SELECT id FROM fixtures.v3_ste_vec \
          WHERE payload @> $1::jsonb::eql_v3.query_json ORDER BY id",
     )
-    .bind(&needle)
+    .bind(needle.to_string())
     .fetch_all(pool)
     .await?;
     Ok(ids)
@@ -96,7 +97,7 @@ async fn fresh_numeric_value_selector_equality(pool: PgPool) -> Result<()> {
 
     let vsel =
         ste_vec_query_value_selector(FIXTURE_TABLE, PAYLOAD_COLUMN, "$.number", &json!(2)).await?;
-    assert_hex_selector(&vsel, "the fresh $.number=2 value selector");
+    assert_value_selector_needle(&vsel, "the fresh $.number=2 value selector");
     let contained = contains_ids(&pool, &vsel).await?;
     assert_eq!(
         contained, eq_oracle,
@@ -133,7 +134,7 @@ async fn fresh_text_value_selector_equality(pool: PgPool) -> Result<()> {
     let vsel =
         ste_vec_query_value_selector(FIXTURE_TABLE, PAYLOAD_COLUMN, "$.hello", &json!("world-2"))
             .await?;
-    assert_hex_selector(&vsel, "the fresh $.hello=\"world-2\" value selector");
+    assert_value_selector_needle(&vsel, "the fresh $.hello=\"world-2\" value selector");
     let contained = contains_ids(&pool, &vsel).await?;
     assert_eq!(
         contained, eq_oracle,

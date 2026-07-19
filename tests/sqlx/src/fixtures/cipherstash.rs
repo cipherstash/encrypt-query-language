@@ -344,9 +344,8 @@ pub async fn ste_vec_query_term<T: EqlPlaintext>(
     query_payload_str(&payload, "op")
 }
 
-/// The tokenized **value selector** for an exact value at a JSON path
-/// (`"$.number"`, `2`), as the opaque hex string a `query_json` containment needle
-/// carries under `s`: `{"sv":[{"s":"<value_selector>"}]}`.
+/// A complete `query_json` containment needle for an exact value at a JSON path
+/// (`"$.number"`, `2`): `{"sv":[{"s":"<value_selector>"}]}`.
 ///
 /// Derived from the client (`QueryOp::SteVecValueSelector` →
 /// `generate_value_selector`, a MAC over the index key + prefix + path +
@@ -361,16 +360,29 @@ pub async fn ste_vec_query_value_selector(
     column: &str,
     path: &str,
     value: &serde_json::Value,
-) -> Result<String> {
+) -> Result<serde_json::Value> {
     let input = serde_json::json!({ "path": path, "value": value });
     let payload =
         encrypt_ste_vec_query(table, column, &input, QueryOp::SteVecValueSelector).await?;
-    // The value-selector query payload is the bare tokenized-selector hex string
-    // (same shape as the `SteVecSelector` path selector).
-    payload
-        .as_str()
-        .map(str::to_owned)
-        .ok_or_else(|| anyhow!("v3 value-selector payload must be a bare string; got {payload}"))
+    // Unlike a path selector (a bare string), an exact-value selector is already
+    // assembled by cipherstash-client into the complete term-less containment
+    // needle expected by eql_v3.query_json.
+    let entries = payload
+        .get("sv")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            anyhow!("v3 value-selector payload must contain an `sv` array; got {payload}")
+        })?;
+    anyhow::ensure!(
+        entries.len() == 1
+            && entries[0]
+                .get("s")
+                .and_then(serde_json::Value::as_str)
+                .is_some()
+            && entries[0].as_object().is_some_and(|entry| entry.len() == 1),
+        "v3 value-selector payload must be one term-less `s` entry; got {payload}",
+    );
+    Ok(payload)
 }
 
 #[cfg(test)]
