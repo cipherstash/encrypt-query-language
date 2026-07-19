@@ -6,7 +6,7 @@
 //! This file owns dimensions D1–D11 and D13–D14. The signature-aware
 //! operator-surface guard (D12) lives in `v3_jsonb_operator_surface_tests.rs`.
 //!
-//! Parameter axes are `{leaf kind: hm, op} × {operator / behavior}` — NOT
+//! Parameter axes are `{leaf kind: term-less value selector, op path entry} × {operator / behavior}` — NOT
 //! `{scalar type}`, because a SteVec value is a *document* (a collection of
 //! leaves addressed by selector), so it does not fit `scalar_matrix!`.
 //!
@@ -41,11 +41,9 @@ use sqlx::PgPool;
 
 /// The `$.hello` op PATH selector — a distinct-per-row `op` leaf, imported from
 /// the ONE shared copy (see its doc for provenance and how to re-derive it).
-/// Distinctness is load-bearing for the W1 containment oracle
-/// (`v3_jsonb_containment_op_only`) — a constant op would hollow it (Risk #0),
-/// guarded by `v3_jsonb_fixture_structural_invariants`. Every use in this suite
-/// is type-agnostic (self-needles and forged `op` ladders, which need only *a*
-/// distinct-per-row selector).
+/// Distinctness is load-bearing for the ordering tests and is guarded by
+/// `v3_jsonb_fixture_structural_invariants`. Containment deliberately ignores
+/// `op`: exact equality uses value-selector presence instead.
 use eql_tests::fixtures::v3_ste_vec::SEL_HELLO_OP;
 
 // ============================================================================
@@ -173,8 +171,8 @@ async fn row_value_selector(pool: &PgPool, id: i64) -> anyhow::Result<String> {
 }
 
 // ============================================================================
-// D1 — Equality correctness on a leaf (entry = needle iff terms equal; <> is
-//      the negation). Parameterized over leaf kind ∈ {hm, op}.
+// D1 — Equality correctness on an op-bearing path entry: entry = entry iff
+//      ordering terms are equal; <> is the negation.
 // ============================================================================
 
 macro_rules! v3_jsonb_eq_correctness {
@@ -321,8 +319,9 @@ async fn v3_jsonb_entry_entry_shape_resolves(pool: PgPool) -> anyhow::Result<()>
 
 // ============================================================================
 // D4 — Containment positives + commutator agreement `a @> b ⇔ b <@ a`.
-//      Parameterized over needle kind ∈ {constant-value-selector, op-only,
-//      mixed}. Exact value equality is value-selector PRESENCE.
+//      Covers value selectors and compatibility needles that still carry `op`.
+//      Exact value equality is value-selector PRESENCE; containment ignores
+//      ordering terms.
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
@@ -379,8 +378,8 @@ async fn v3_jsonb_containment_constant_value_selector(pool: PgPool) -> anyhow::R
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn v3_jsonb_containment_op_only(pool: PgPool) -> anyhow::Result<()> {
-    // Use a self-needle: extract row 1's `$.hello` op term and search for it.
+async fn v3_jsonb_containment_ignores_op(pool: PgPool) -> anyhow::Result<()> {
+    // Use a compatibility needle that carries row 1's `$.hello` ordering term.
     let op: String = sqlx::query_scalar(&format!(
         "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
@@ -388,13 +387,13 @@ async fn v3_jsonb_containment_op_only(pool: PgPool) -> anyhow::Result<()> {
     .await?;
     let n = needle(&[(SEL_HELLO_OP, "op", &op)]);
 
-    // Row 1 must be among the matches (op terms can repeat across rows).
+    // Row 1 must be among the matches.
     let row1: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_json"
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(row1, 1, "row 1 must contain its own op leaf");
+    assert_eq!(row1, 1, "row 1 must contain its own path selector");
 
     // Commutator agreement over the whole table.
     let fwd: i64 = sqlx::query_scalar(&format!(
@@ -407,47 +406,25 @@ async fn v3_jsonb_containment_op_only(pool: PgPool) -> anyhow::Result<()> {
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(fwd, rev, "op-only @> must agree with <@");
+    assert_eq!(fwd, rev, "an op-bearing needle must agree across @> and <@");
 
-    // Independent oracle (W1): the exact match count, computed by plain field
-    // extraction + string equality — NOT via the `@>` operator under test. This
-    // pins containment to the ground-truth multiplicity, so an over-matching or
-    // collapsed containment fails (`fwd > expected`) rather than passing the old
-    // tautological `fwd >= 1`.
-    let expected: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec \
-         WHERE (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' = '{op}'"
-    ))
-    .fetch_one(&pool)
-    .await?;
-    assert!(
-        expected >= 1,
-        "fixture sanity: row 1's op term must be present"
-    );
-    assert_eq!(
-        fwd, expected,
-        "@> must match exactly the rows whose $.hello op equals the needle term"
-    );
-
-    // W1 strict-subset (Risk #0): the self-needle must match a PROPER subset,
-    // not the whole table. With `$.hello` distinct per row, `expected == 1 <
-    // total`. A full-table match means `$.hello` collapsed to a constant op and
-    // the exact-multiplicity check above is vacuous.
+    // The path selector is present in every document. The differing `op` bytes
+    // must not narrow containment: ordering encodings are deliberately excluded
+    // from the selector-set predicate.
     let total: i64 = sqlx::query_scalar("SELECT count(*) FROM fixtures.v3_ste_vec")
         .fetch_one(&pool)
         .await?;
-    assert!(
-        expected < total,
-        "W1: $.hello op self-needle must match a strict subset ({expected} of {total}); \
-         a full-table match means $.hello is constant and the oracle is hollow (Risk #0)"
+    assert_eq!(
+        fwd, total,
+        "containment must normalize an op-bearing needle to its selector"
     );
     Ok(())
 }
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
-    // Mixed needle: a constant value selector (matches everything) + row 1's own
-    // `$.hello` op leaf (matches only row 1). Row 1 carries both, so it matches.
+    // Mixed needle: a constant value selector plus an op-bearing path selector.
+    // Both selectors occur in every row; the ordering term is ignored.
     let op: String = sqlx::query_scalar(&format!(
         "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
@@ -457,14 +434,17 @@ async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
     // A value-selector element (`{s}`) + an op element (`{s, op}`).
     let n = format!(r#"{{"sv":[{{"s":"{sel}"}},{{"s":"{SEL_HELLO_OP}","op":"{op}"}}]}}"#);
 
-    let row1: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE id = 1 AND payload @> '{n}'::eql_v3.query_json"
+    let hits: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_json"
     ))
     .fetch_one(&pool)
     .await?;
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM fixtures.v3_ste_vec")
+        .fetch_one(&pool)
+        .await?;
     assert_eq!(
-        row1, 1,
-        "row 1 contains both the constant value selector and its own op leaf"
+        hits, total,
+        "the mixed needle must match by selector presence, independently of op"
     );
     Ok(())
 }
@@ -696,14 +676,14 @@ async fn v3_jsonb_fixture_structural_invariants(pool: PgPool) -> anyhow::Result<
 }
 
 // ============================================================================
-// D5 — Negative / discriminating containment: a real op selector rejects when
-//      the op BYTES are wrong, and a non-existent selector never matches.
+// D5 — Discriminating containment: ordering bytes do not affect selector-set
+//      matching, while a non-existent selector never matches.
 // ============================================================================
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn v3_jsonb_containment_rejects_wrong_bytes(pool: PgPool) -> anyhow::Result<()> {
-    // Non-vacuity floor (W3): row 1's OWN `$.hello` op self-needle must match at
-    // least one row, so the `== 0` below means "rejected", not "table empty".
+async fn v3_jsonb_containment_ignores_wrong_op_bytes(pool: PgPool) -> anyhow::Result<()> {
+    // A compatibility needle carrying the real ordering term matches every row
+    // that carries the shared path selector.
     let op: String = sqlx::query_scalar(&format!(
         "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
@@ -715,22 +695,23 @@ async fn v3_jsonb_containment_rejects_wrong_bytes(pool: PgPool) -> anyhow::Resul
     ))
     .fetch_one(&pool)
     .await?;
-    assert!(
-        good_hits > 0,
-        "fixture sanity: the correct op needle must match"
+    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM fixtures.v3_ste_vec")
+        .fetch_one(&pool)
+        .await?;
+    assert_eq!(
+        good_hits, total,
+        "the real path selector must match every row"
     );
 
-    // Real op selector, WRONG op bytes — must match nothing.
+    // Real path selector with different ordering bytes. Containment strips the
+    // ordering term and therefore still matches every row carrying the path.
     let n = needle(&[(SEL_HELLO_OP, "op", "deadbeefdeadbeefdeadbeefdeadbeef")]);
     let hits: i64 = sqlx::query_scalar(&format!(
         "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_json"
     ))
     .fetch_one(&pool)
     .await?;
-    assert_eq!(
-        hits, 0,
-        "a needle with wrong op bytes at a real selector must not match"
-    );
+    assert_eq!(hits, total, "containment must ignore op bytes");
     Ok(())
 }
 
@@ -1495,20 +1476,15 @@ async fn v3_jsonb_document_containment_uses_the_query_gin_index(
 //
 // Real ciphertext only: both documents come from the generated `v3_ste_vec`
 // fixture, replicated via generate_series — no new fixture, no static blob.
-// Selectivity comes from the distinct-per-row `$.hello` op leaf
-// (`SEL_HELLO_OP`, whose load-bearing distinctness is asserted by
-// `v3_jsonb_containment_op_only` / `v3_jsonb_fixture_structural_invariants`):
-// the pivot's own op term matches ONLY the pivot row, never the 5000 bulk rows
-// (whose op term is the filler document's, a different value). A precondition
-// check below fails loudly if the two leaves ever collide.
+// Selectivity comes from a value selector unique to the pivot document. This
+// exercises the same exact-equality representation clients use in production,
+// while ordering terms remain outside the containment predicate.
 // ============================================================================
 
 #[cfg(feature = "scale")]
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::Result<()> {
-    // Two DISTINCT real fixture rows: the filler (bulk) and the pivot. Their
-    // `$.hello` op leaves differ (distinct per row), so a needle for the
-    // pivot's op isolates exactly the single pivot row.
+    // Two distinct real fixture rows: the filler (bulk) and the pivot.
     let filler_payload: String = sqlx::query_scalar(
         "SELECT payload::jsonb::text FROM fixtures.v3_ste_vec ORDER BY id ASC LIMIT 1",
     )
@@ -1520,27 +1496,11 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     .fetch_one(&pool)
     .await?;
 
-    // The pivot's own `$.hello` op term — the same extraction the op-containment
-    // oracle (`v3_jsonb_containment_op_only`) uses — which the needle searches
-    // for. The filler's op term is extracted only to assert the two differ.
-    let pivot_op: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' \
-         FROM fixtures.v3_ste_vec ORDER BY id DESC LIMIT 1"
-    ))
-    .fetch_one(&pool)
-    .await?;
-    let filler_op: String = sqlx::query_scalar(&format!(
-        "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' \
-         FROM fixtures.v3_ste_vec ORDER BY id ASC LIMIT 1"
-    ))
-    .fetch_one(&pool)
-    .await?;
-    anyhow::ensure!(
-        filler_op != pivot_op,
-        "fixture precondition: filler and pivot rows must have distinct $.hello op \
-         leaves for single-row selectivity (distinct-per-row op is the load-bearing \
-         W1 invariant); got identical terms"
-    );
+    let pivot_id: i64 =
+        sqlx::query_scalar("SELECT id FROM fixtures.v3_ste_vec ORDER BY id DESC LIMIT 1")
+            .fetch_one(&pool)
+            .await?;
+    let pivot_selector = row_value_selector(&pool, pivot_id).await?;
 
     let mut tx = pool.begin().await?;
     sqlx::query(
@@ -1575,9 +1535,8 @@ async fn v3_jsonb_to_ste_vec_query_gin_is_cost_chosen(pool: PgPool) -> anyhow::R
     // enable_seqscan LEFT ON — this is the cost-PREFERENCE proof, not the
     // usability proof (the sibling `*_gin_engages` arm forces seqscan off).
 
-    // Selective needle: the pivot's own `$.hello` op leaf. With distinct-per-row
-    // op, exactly the single pivot row contains it.
-    let n = needle(&[(SEL_HELLO_OP, "op", &pivot_op)]);
+    // Selective needle: a value selector carried only by the pivot row.
+    let n = value_needle(&[&pivot_selector]);
     let query =
         format!("SELECT count(*) FROM v3_jsonb_scale WHERE payload @> '{n}'::eql_v3.query_json");
     assert_index_scan_uses(

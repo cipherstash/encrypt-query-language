@@ -20,7 +20,9 @@
 --!         `{s, c}`: exact matching is selector presence, so an entry carries
 --!         no per-value equality term. `hm` is retired and must be absent —
 --!         a stale `hm`-bearing payload fails loudly rather than degrading to
---!         a value-less entry.
+--!         a value-less entry. The optional document metadata `i`, `v`, and
+--!         `h` is accepted because selector lookup grafts it onto the entry
+--!         before casting to `public.eql_v3_json_entry`.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -32,7 +34,7 @@ AS $$
      AND NOT (val ? 'hm')
      AND (NOT (val ? 'a') OR jsonb_typeof(val -> 'a') = 'boolean')
      AND (NOT (val ? 'op') OR jsonb_typeof(val -> 'op') = 'string')
-     AND val - ARRAY['s', 'c', 'a', 'op']::text[] = '{}'::jsonb,
+     AND val - ARRAY['s', 'c', 'a', 'op', 'i', 'v', 'h']::text[] = '{}'::jsonb,
     false
   )
 $$;
