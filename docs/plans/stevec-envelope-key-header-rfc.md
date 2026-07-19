@@ -338,4 +338,3 @@ radius is client-side serialization plus the nonce input to the AEAD call
 - Length bucketing/padding of entry ciphertexts (see the sentinel caveat).
 - Renaming `k`/form discrimination, purpose-named fields (`e`/`r`/`m`) — the
   v3 target state of the payload-scheme-discipline RFC is a separate track.
-- Any `eql_v2` surface (removed in 3.0.0).
