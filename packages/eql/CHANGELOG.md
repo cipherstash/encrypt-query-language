@@ -1,8 +1,8 @@
 # @cipherstash/eql
 
-## 4.0.0
+## 3.0.2
 
-### Major Changes
+### Patch Changes
 
 - bd54115: **Exact equality on an encrypted-JSON field now works for _every_ scalar type — including `text`, `bigint`, and `numeric` — via document containment with value-inclusive selectors.** The SteVec index now tokenises each leaf's value into its own selector (`SEL(type-tag ‖ path ‖ canonical(value))`), so a value-selector's _presence_ in the stored document is an exact, injective match — a `bigint` field holding `9007199254740993` and a `text` field holding `"café"` are matched exactly, not collided with `9007199254740992` / `"cafe"` as the previous `op`-based comparison did. Spell it as containment: `WHERE encrypted_json @> $1::eql_v3.query_json`, where the client emits a value-selector needle for the field/value; a functional GIN index on `eql_v3.to_ste_vec_query(col)::jsonb` engages it. This is a **breaking wire-format change**: SteVec entries no longer carry the per-value `hm` term (exact match is selector presence, not a MAC comparison), every leaf now emits a path entry (`{s, c, op?}`) plus value entries (`{s, c}`), and containment is selector-subset over that shape. Documents encrypted by an earlier client must be **re-encrypted**.
 
@@ -13,8 +13,10 @@
   All containment overloads now normalize entries to selector-only form before
   comparison. In particular, `op` is an ordering term and never changes
   containment equality. Document-to-document containment uses the same native
-  `jsonb @>` expression as `query_json`, so the documented functional GIN index
-  on `eql_v3.to_ste_vec_query(col)::jsonb` applies to both forms.
+  `jsonb @>` semantics as `query_json`. The documented functional GIN index on
+  `eql_v3.to_ste_vec_query(col)::jsonb` engages when the indexed document is
+  compared with a stable query value; a genuinely column-to-column predicate
+  remains non-indexable because its right-hand key varies for each row.
 
   Legacy SteVec queries cannot be mechanically converted: their selector names a
   path, while v3 exact equality requires a selector derived from both path and
@@ -26,8 +28,6 @@
   **Extract-surface equality is removed; ranges stay.** An extracted `public.eql_v3_json_entry` is a _path_ entry — it carries no value selector — so it cannot express exact equality. `=` / `<>` binding an extracted leaf to a query operand (`encrypted_json -> 'sel'::text = $1::eql_v3.query_<T>_ord`) are therefore **blocked for every family** (they `RAISE 'operator is not supported'` rather than falling back to native whole-envelope `jsonb = jsonb`, which would silently return zero rows). Route field equality through document containment (above) instead. Range queries are unchanged and still index-accelerated: `encrypted_json -> 'age_sel'::text > $1::eql_v3.query_integer_ord` matches a functional btree on `eql_v3.ord_term(encrypted_json -> 'sel'::text)`, across the families whose values natively exist in JSON (`integer`, `smallint`, `bigint`, `numeric`, `real`, `double`, `text`), in both directions, each backed by a public `eql_v3.*` wrapper so operator-free platforms can call it by name. `date` / `timestamp` do not participate (JSON has no temporal type — a date-in-JSON is a text leaf; order it with `eql_v3.query_text_ord`), and their operands, plus `eql_v3.query_text_search`, are blocked on this surface.
 
   **Single-entry containment and entry equality fail loudly.** `@>`(`public.eql_v3_json_search`, `public.eql_v3_json_entry`) and its reverse `<@`(`public.eql_v3_json_entry`, `public.eql_v3_json_search`) are explicit blockers: an extracted path leaf carries no value, so single-entry containment could only ever match structurally (value-blind for bool/null/object/array, `op`-lossy for number/string). Entry-to-entry `=` / `<>` are blocked for the same reason: `op` bytes are not an exact equality key. Claiming these signatures prevents PostgreSQL from flattening the domains to native `jsonb` operators. All value equality goes through document containment on the value selector. Document-to-document containment (`@>`(`json_search`, `json_search`) / `eql_v3.ste_vec_contains`), the `eql_v3.query_json` needle overload, field/array access (`->`, `->>`), ordered entry comparison, `eql_v3.ord_term`, and the `min` / `max` aggregates remain available. The raw OPE-byte helper is named `eql_v3.ope_term`; `eq_term(json_entry)` remains only as a deprecated compatibility alias.
-
-### Patch Changes
 
 - 5a57908: **Documented: the uninstaller's lock footprint now exceeds Postgres's default budget.** The single-transaction uninstaller (`DROP SCHEMA eql_v3 CASCADE` + `DROP SCHEMA eql_v3_internal CASCADE`) takes one lock per dropped object — 6,433 measured on this release — against the 6,400 slots a default `max_locks_per_transaction = 64` cluster affords cluster-wide. A lone uninstall on a quiet cluster succeeds (the lock table overflows into spare shared memory), but under concurrent load it can fail with `out of shared memory / You might need to increase max_locks_per_transaction`, whose remedy requires a server restart. See upgrade note U-009 in `docs/upgrading/v3.0.md` for the quiet-window / raise-ahead-of-time guidance and a way to preview the footprint without dropping anything. Installation is unaffected — `CREATE` takes no per-object lock.
 
