@@ -36869,7 +36869,7 @@ DROP FUNCTION IF EXISTS eql_v3.version();
 --! @brief EQL version reporting (self-contained eql_v3 surface)
 --!
 --! This file is auto-generated from src/v3/version.template during build.
---! The 3.0.1-alpha.0 placeholder is replaced with the actual release
+--! The 3.0.1 placeholder is replaced with the actual release
 --! version (bare semver, e.g. "3.0.0") supplied via `mise run build --version`,
 --! or "DEV" for development builds.
 
@@ -36888,14 +36888,14 @@ CREATE FUNCTION eql_v3.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT '3.0.1-alpha.0';
+  SELECT '3.0.1';
 $$ LANGUAGE SQL;
 
 --! @brief Schema-level version marker for obj_description() discoverability
 --!
 --! Mirrors eql_v3.version() as a comment on the schema so the installed
 --! version can also be read via obj_description('eql_v3'::regnamespace).
-COMMENT ON SCHEMA eql_v3 IS '3.0.1-alpha.0';
+COMMENT ON SCHEMA eql_v3 IS '3.0.1';
 
 --! @brief EQL lint: detect non-inlinable operator implementation functions
 --!
