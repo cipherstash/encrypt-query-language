@@ -228,7 +228,12 @@ jobs:
           VERSION: ${{ needs.release.outputs.version }}
         run: |
           set -euo pipefail
-          gh workflow run release-postgres-eql-image.yml --ref "eql-${VERSION}" \
+          # This job deliberately has no checkout. Pass --repo explicitly so
+          # gh does not try to infer the repository from a nonexistent .git
+          # directory.
+          gh workflow run release-postgres-eql-image.yml \
+            --repo "${GITHUB_REPOSITORY}" \
+            --ref "eql-${VERSION}" \
             -f eql_version="$VERSION" \
             -f update_floating_tags=true
 
