@@ -129,7 +129,7 @@ All jobs run on `blacksmith-16vcpu-ubuntu-2204`. "PG set" follows the event
 | **known-failures** | `test:known-failures:parser` + `test:known-failures` | The gate's strict `ISSUE_` parser is sound; every `known_failure` marker names a real, OPEN issue and is referenced by a test (DB-free, needs `gh`) | no | no |
 | **doc-anchors** | `test:doc-anchors` | Every intra-document markdown anchor link resolves to a real heading (DB-free; not relevance-gated — its inputs are the docs) | no | no |
 | **validate** (per PG) | `docs:validate:documented-sql` + `test:clean_install_v3` | DB-backed SQL doc-syntax check; clean-DB `eql_v3` install smoke | yes | no |
-| **docs-static** | `docs:validate:source` | SQL doxygen coverage + required-tags (DB-free); relevance-gated like the other heavy jobs (its inputs — `src/**`, the `crates/**` codegen build, `tasks/docs/**` — are a subset of the `relevant` filter) | no | no |
+| **docs-static** | `docs:validate:source` + `test:docs_v3_grep` + `test:public_identifiers` | SQL doxygen coverage + required tags; user docs teach only v3; tracked public files contain no private issue identifiers or tracker links | no | no |
 | **schema** | `test:schema` | v2.2 / v2.3 payload JSON-schema validation | no | no |
 | **rust-crates** | `test:crates` + `types:check` | `cargo fmt --check`, clippy + `cargo test` for `eql-domains` / `eql-codegen` / `eql-tests-macros` / `eql-bindings`; verify TS bindings + JSON schemas are fresh | no | no |
 | **codegen** | `codegen:parity` | Regenerate encrypted-domain SQL in place + `git diff` drift gate (committed `src/v3/scalars/` matches the generator) | no | no |

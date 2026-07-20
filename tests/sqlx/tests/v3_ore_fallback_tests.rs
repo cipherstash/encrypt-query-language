@@ -1,5 +1,5 @@
 //! Non-superuser install gate for the ORE capability-detection fallback
-//! (CIP-3468).
+//!.
 //!
 //! `CREATE OPERATOR CLASS` requires superuser, and managed platforms (cloud
 //! Supabase and most hosted Postgres) run the installer as a non-superuser
@@ -164,7 +164,7 @@ async fn drop_role(conn: &mut sqlx::PgConnection, role: &str) -> Result<()> {
     Ok(())
 }
 
-/// The full CIP-3468 contract, catalog-driven: a non-superuser install
+/// The full  contract, catalog-driven: a non-superuser install
 /// succeeds, skips the ORE opclass, and poisons exactly the ORE-carrying
 /// domains (columns AND query twins), while every non-ORE domain stays fully
 /// functional.

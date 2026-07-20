@@ -1,4 +1,4 @@
-//! fixture suite (CIP-3141): property tests over the real, generated fixture rows.
+//! fixture suite: property tests over the real, generated fixture rows.
 //!
 //! The fixture table `fixtures.eql_v3_<T>` carries `(plaintext, payload)` rows
 //! encrypted by cipherstash-client during `test:sqlx:prep`. proptest selects a
@@ -336,7 +336,7 @@ fixture_oracle_suite!(text, String, ordered);
 fixture_oracle_suite!(real, eql_tests::scalar_domains::F4, ordered);
 fixture_oracle_suite!(double, eql_tests::scalar_domains::F8, ordered);
 
-// --- function-double oracles (CIP-3141) -------------------------------------
+// --- function-double oracles -------------------------------------
 //
 // The same fixture rows, but calling the generated `eql_v3.*` comparison
 // functions by name across all three overloads and asserting term-extractor

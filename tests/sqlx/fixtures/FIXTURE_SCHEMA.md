@@ -58,7 +58,7 @@ CREATE TABLE fixtures.eql_v3_integer (
   the v3 envelope via `eql_bindings::from_v2`, carrying `c` (ciphertext),
   `hm` (HMAC equality term), `ob` (ORE block ordering term), `op` (CLLW-OPE
   ordering term — a single hex string, not an array; every ordered family,
-  CIP-3348), `bf` (bloom filter — `text` only), an inert `i` metadata object,
+  ), `bf` (bloom filter — `text` only), an inert `i` metadata object,
   and `v = 3` (v3 scalars carry no `k` discriminator).
 
 **Used By:**

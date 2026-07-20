@@ -45,7 +45,7 @@ pub use fixtures::{
 pub const ENVELOPE_KEYS: &[&str] = &["v", "i", "c"];
 
 /// The version prefix every PUBLIC-SCHEMA EQL type name carries:
-/// `public.eql_v3_integer_eq`, `public.eql_v3_json`, … (CIP-3472). The prefix
+/// `public.eql_v3_integer_eq`, `public.eql_v3_json`, …. The prefix
 /// keeps EQL domains from shadowing PostgreSQL built-in type names
 /// (`integer`, `text`, `json`, …) and gives each EQL version a distinct
 /// column-type namespace so multiple EQL versions can coexist in one
@@ -70,7 +70,7 @@ pub const PUBLIC_TYPNAME_PREFIX: &str = "eql_v3_";
 /// being deterministic — an order-preserving encryption maps equal
 /// plaintexts to equal ciphertexts (a randomized term would make `op`-routed
 /// equality silently return false negatives). Verified against real
-/// ciphertexts (CIP-3348, cipherstash-client 0.38.1+): the fixture pipeline
+/// ciphertexts (cipherstash-client 0.38.1+): the fixture pipeline
 /// covers the `_ord_ope` domains and `property::cross_ciphertext` pins
 /// byte-identical `op` terms across independent encryptions of one
 /// plaintext. The `json_key`/`extractor`/`ctor` values
@@ -138,9 +138,9 @@ impl Role {
 /// Coupling invariant (pinned by `tests::shape_and_terms_are_consistent`): a
 /// non-`Scalar` domain always has empty `terms`, and any domain with non-empty
 /// `terms` is `Scalar`. Empty `terms` here does NOT mean "no index capability":
-/// a SteVec domain is fully searchable (hash-equality via `hm`, ordered via `op`
-/// CLLW-OPE). Its index terms live *inside* the payload shape — per `sv` leaf,
-/// `hm` XOR `op` — rather than as a flat family-level `Term` list. The `terms`
+/// a SteVec domain is searchable by value-selector presence and, for ordered
+/// path entries, an optional CLLW-OPE `op`. These fields live *inside* the
+/// payload shape rather than as a flat family-level `Term` list. The `terms`
 /// field models only the flat-scalar term set that `Term`/`Role`/
 /// `operators_for_terms`/`capability_label` consume; SteVec capability is carried
 /// structurally by the `Shape` and is invisible to those flat-term consumers by
@@ -150,8 +150,8 @@ pub enum Shape {
     /// Flat `{v, i, c, +terms}` — every existing scalar family (default).
     Scalar,
     /// A `json` family SteVec payload: `public.eql_v3_json_search`
-    /// (`{v, k, i, sv: [entry]}`), `public.eql_v3_json_entry`
-    /// (`{s, c, a?, #[flatten] SteVecTerm}`), or `eql_v3.query_json`
+    /// (`{v, k, i, h, sv: [entry]}`), `public.eql_v3_json_entry`
+    /// (`{s, c, a?, op?, i?, v?, h?}`), or `eql_v3.query_json`
     /// (`{sv: [query-entry]}`). The three differ in payload body but share the
     /// non-flat-scalar shape, so a single variant covers them; `Domain.name`
     /// (`"search"`/`"entry"`/`"query"`) already disambiguates which one a given

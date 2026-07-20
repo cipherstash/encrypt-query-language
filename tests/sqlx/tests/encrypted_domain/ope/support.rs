@@ -8,7 +8,7 @@
 //! be stated directly on hand-built hex strings — deterministic, no
 //! encryption/fixtures needed.
 //!
-//! **Real ciphertexts (CIP-3348).** cipherstash-client 0.38.1 emits `op`
+//! **Real ciphertexts.** cipherstash-client 0.38.1 emits `op`
 //! for `ope`-indexed scalar columns, the generated `eql_v3_<T>` fixtures
 //! declare the `ope` index, and the conversion routes the term through — so
 //! next to the literal-payload smoke tests (which verify the SQL surface:
@@ -127,8 +127,8 @@ macro_rules! ope_ord_smoke {
     };
 }
 
-/// Stamp the real-ciphertext `_ord_ope` fixture tests for one scalar
-/// (CIP-3348). The generated `fixtures.eql_v3_<T>` table carries
+/// Stamp the real-ciphertext `_ord_ope` fixture tests for one scalar.
+/// The generated `fixtures.eql_v3_<T>` table carries
 /// client-encrypted payloads whose `op` term came out of cipherstash-client's
 /// `ope` index (0.38.1+), so these assertions exercise the actual CLLW-OPE
 /// cryptography against the in-table `plaintext` oracle — the coverage the
@@ -256,9 +256,9 @@ macro_rules! ope_ord_fixture_smoke {
                 $domain
             );
 
-            // CIP-3432: the term-only query operand — the pivot payload minus
-            // its ciphertext `c`, cast to `query_<domain>` (prefix naming —
-            // CIP-3442). Every predicate must match the SAME oracle through the
+            // The term-only query operand is the pivot payload minus its
+            // ciphertext `c`, cast to `query_<domain>` (prefix naming). Every
+            // predicate must match the same oracle through the
             // `(storage, query_<domain>)` operators as through the
             // full-envelope operand.
             let pivot_query_cast = {
@@ -268,7 +268,7 @@ macro_rules! ope_ord_fixture_smoke {
                     o.remove("c");
                 }
                 // The query twin joins `query_` to the BARE name — the
-                // `eql_v3_` version prefix (CIP-3472) applies to public-schema
+                // `eql_v3_` version prefix applies to public-schema
                 // column types only, not the eql_v3-schema query operands.
                 format!(
                     "'{}'::jsonb::eql_v3.query_{}",

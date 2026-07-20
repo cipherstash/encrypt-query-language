@@ -784,72 +784,10 @@ mod catalog_tests {
     }
 
     #[test]
-    fn json_leaf_equality_is_exact_only_where_the_leaf_encoding_injects() {
-        use crate::ScalarKind;
-
-        // The rule the column-side test above escapes via catalog ORDERING (Hm
-        // before Ope). Stated directly here because seams with no `hm` to fall back
-        // on — the SteVec leaf surface — have to consult it instead.
-        //
-        // The question is NOT whether `orderable_to_u64` is a bijection (it is).
-        // It is whether the WHOLE leaf conversion injects, and cipherstash-client
-        // applies a lossy step FIRST:
-        //
-        //   Value::Number(x) => Number(orderable_to_u64(x.as_f64()...))   <- rounds
-        //   Value::String(x) => String(x)  -> orderize_string(x)          <- collates
-        //
-        // (`ste_plaintext_term.rs`, `impl From<&Value> for StePlaintextTerm`.)
-
-        // EXACT — every value of the kind survives its leaf encoding.
-        for (kind, why) in [
-            (ScalarKind::I16, "|i16| <= 2^15, an exact f64"),
-            (ScalarKind::I32, "|i32| <= 2^31 < 2^53, an exact f64"),
-            (ScalarKind::F32, "widening f32 -> f64 is exact"),
-            (
-                ScalarKind::F64,
-                "the leaf IS an f64; f64 equality is the semantic",
-            ),
-            // Date/Timestamp are exact BECAUSE their textual form is
-            // orderize-invariant, NOT merely because they are strings. Being a
-            // string leaf does not imply collision: orderize_string only drops
-            // chars outside {alphanumeric, whitespace, ASCII punctuation}, and
-            // ISO-8601/RFC3339 has none (cllw-ore's own
-            // `prop_orderize_safe_string_unchanged` pins that the safe set is
-            // identity).
-            (ScalarKind::Date, "ISO-8601 is orderize-invariant"),
-            (ScalarKind::Timestamp, "RFC3339 is orderize-invariant"),
-        ] {
-            assert!(
-                kind.json_leaf_equality_is_exact(),
-                "{kind:?} must claim exact leaf equality: {why}"
-            );
-        }
-
-        // LOSSY — distinct plaintexts a caller could legitimately store collapse
-        // to one `op`, so `=` is a FALSE POSITIVE. Verified end-to-end against
-        // cipherstash-client 0.38.1. The bar is "wrong when used as intended": a
-        // bigint field holding 2^53+1 and a text field holding "café" are both
-        // ordinary, and no client can avoid the loss.
-        for (kind, why) in [
-            (ScalarKind::I64, "2^53 and 2^53+1 round to the same f64"),
-            (ScalarKind::Numeric, "more precision than f64 carries"),
-            (
-                ScalarKind::Text,
-                "orderize_string collates: \"café\" == \"cafe\", \"hello😎\" == \"hello\"",
-            ),
-        ] {
-            assert!(
-                !kind.json_leaf_equality_is_exact(),
-                "{kind:?} must NOT claim exact leaf equality: {why}"
-            );
-        }
-    }
-
-    #[test]
     fn has_native_json_leaf_gates_the_json_entry_seam_by_json_type_system() {
         use crate::ScalarKind;
 
-        // The PARTICIPATION gate for the json_entry cross surface (CIP-3526).
+        // The PARTICIPATION gate for the json_entry cross surface.
         // The question is about JSON's own type system (RFC 8259), not about
         // encodings: does a JSON document hold this kind's values AS themselves?
 
@@ -1418,7 +1356,7 @@ mod invariant_tests {
         for s in CATALOG {
             for d in s.domains {
                 // The one documented exception: the json containment needle
-                // follows the query-operand PREFIX convention (CIP-3442):
+                // follows the query-operand PREFIX convention:
                 // `query_<family>`, matching the scalar `query_<name>` twins —
                 // see `Domain::full_name`. (Every other json domain — bare
                 // storage, `_search` document, `_entry` — follows the standard
@@ -1429,7 +1367,7 @@ mod invariant_tests {
                 }
                 // Pin the bare join rule on `full_name` (the installed
                 // `domain_name` additionally carries the `eql_v3_` version
-                // prefix — CIP-3472 — pinned separately below).
+                // prefix, which is pinned separately below).
                 let name = d.full_name(s.name);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),

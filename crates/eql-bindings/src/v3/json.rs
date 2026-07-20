@@ -11,7 +11,7 @@ use schemars::{schema_for, JsonSchema, Schema};
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use crate::v3::terms::{Ciphertext, Hmac256, OpeCllw, Selector};
+use crate::v3::terms::{EntryCiphertext, KeyHeader, OpeCllw, Selector};
 use crate::v3::DomainType;
 use crate::{Identifier, SchemaVersion};
 
@@ -79,9 +79,13 @@ impl JsonSchema for SteVecForm {
     }
 }
 
-/// `public.eql_v3_json_search` — a SteVec encrypted-JSON document (`{v, k, i, sv:[entry]}`,
-/// no root ciphertext). Strict. `k` is the `"sv"` form discriminator (see
-/// [`SteVecForm`]) — carried on the real wire, so the strict struct models it.
+/// `public.eql_v3_json_search` — a SteVec encrypted-JSON document
+/// (`{v, k, i, h, sv:[entry]}`, no root ciphertext — the root document
+/// ciphertext lives on the root sv entry). Strict. `k` is the `"sv"` form
+/// discriminator (see [`SteVecForm`]); `h` is the document [`KeyHeader`],
+/// stored once for the whole document (every entry encrypts under the
+/// document's single data key, with per-entry nonces derived from the
+/// entries' selectors).
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
 #[serde(deny_unknown_fields)]
@@ -89,18 +93,26 @@ pub struct SteVecDocument {
     pub v: SchemaVersion,
     pub k: SteVecForm,
     pub i: Identifier,
+    pub h: KeyHeader,
     pub sv: Vec<SteVecEntry>,
 }
 
-/// `public.eql_v3_json_entry` — one sv element (returned by `->`). Carries a selector
-/// `s`, ciphertext `c`, optional array-membership marker `a`, and exactly one of
-/// `hm` XOR `op`. LAX (flatten precludes `deny_unknown_fields`): tolerates the
-/// root `i`/`v` merged in by `->`. XOR of the term is enforced by the SQL CHECK.
+/// `public.eql_v3_json_entry` — one sv element (returned by `->`). Carries a
+/// selector `s`, raw AEAD ciphertext `c` (see [`EntryCiphertext`] — the
+/// decryption unit is `h` + `s` + `c`, with the document `h` grafted onto
+/// extracted entries by `->`), an optional array-membership marker `a`
+/// (emitted only when true), and — for ordered (number/string) path entries
+/// only — the `op` ordering term. Value entries (value-inclusive selectors)
+/// and non-orderable path entries are term-less: exact matching is selector
+/// presence, so no per-entry equality term exists (`hm` is retired). The
+/// optional `i`/`v`/`h` fields model metadata grafted onto an entry returned by
+/// `->`; naming them explicitly keeps unknown keys rejectable.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
 pub struct SteVecEntry {
     pub s: Selector,
-    pub c: Ciphertext,
+    pub c: EntryCiphertext,
     // `#[ts(optional = nullable)]` emits `a?: boolean | null` — ts-rs does NOT
     // infer optionality from serde `default`/`skip_serializing_if` (10.1: only an
     // explicit `#[ts(optional)]`/`optional = nullable` does), so without this the
@@ -109,8 +121,18 @@ pub struct SteVecEntry {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional = nullable)]
     pub a: Option<bool>,
-    #[serde(flatten)]
-    pub term: SteVecTerm,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub op: Option<OpeCllw>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub i: Option<Identifier>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub v: Option<SchemaVersion>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub h: Option<KeyHeader>,
 }
 
 /// `eql_v3.query_json` — a containment needle (`{sv:[query-entry]}`). Strict.
@@ -121,25 +143,19 @@ pub struct SteVecQuery {
     pub sv: Vec<SteVecQueryEntry>,
 }
 
-/// One element of a SteVec containment needle: a selector plus one term, and
-/// (per the SQL CHECK) no ciphertext. LAX for the same flatten reason as
-/// `SteVecEntry`; the "no `c`" contract is enforced by `is_valid_ste_vec_query_payload`.
+/// One element of a SteVec containment needle: a selector plus — for ordered
+/// path entries only — the `op` ordering term; value-selector and structural
+/// entries are selector-only (matched on presence), and (per the SQL CHECK)
+/// no element carries a ciphertext. Unknown fields are rejected so the Rust
+/// parser and published JSON Schema enforce the same boundary as PostgreSQL.
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
 #[ts(export, export_to = "v3/")]
+#[serde(deny_unknown_fields)]
 pub struct SteVecQueryEntry {
     pub s: Selector,
-    #[serde(flatten)]
-    pub term: SteVecTerm,
-}
-
-/// The per-entry deterministic term: exactly one of `hm` (HMAC equality) or `op`
-/// (CLLW-OPE ordering). Untagged — a document mixes both across its `sv` array.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize, TS, JsonSchema)]
-#[ts(export, export_to = "v3/")]
-#[serde(untagged)]
-pub enum SteVecTerm {
-    Hmac { hm: Hmac256 },
-    OpeCllw { op: OpeCllw },
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub op: Option<OpeCllw>,
 }
 
 macro_rules! ste_vec_domain_type {
@@ -151,8 +167,8 @@ macro_rules! ste_vec_domain_type {
             fn sql_domain(&self) -> &'static str {
                 Self::sql_domain_static()
             }
-            // `term_json_keys` keeps the trait default (`None`): SteVec index
-            // terms live per sv leaf (`hm` XOR `op`), not as flat payload keys.
+            // `term_json_keys` keeps the trait default (`None`): SteVec ordering
+            // terms live per entry, not as flat payload keys.
             fn parse_value(&self, value: &serde_json::Value) -> Result<(), serde_json::Error> {
                 <$ty as Deserialize>::deserialize(value).map(|_| ())
             }

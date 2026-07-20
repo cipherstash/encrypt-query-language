@@ -147,6 +147,8 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         .collect();
 
     // Exact supported operand signatures (verified against operators.sql).
+    // Computable signatures only. Entry equality and single-entry containment
+    // are claimed separately by fail-loud blockers below.
     let expected_supported: &[(&str, &str, &str)] = &[
         // containment
         (
@@ -156,28 +158,16 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
         ),
         ("@>", "public.eql_v3_json_search", "eql_v3.query_json"),
         (
-            "@>",
-            "public.eql_v3_json_search",
-            "public.eql_v3_json_entry",
-        ),
-        (
             "<@",
             "public.eql_v3_json_search",
             "public.eql_v3_json_search",
         ),
         ("<@", "eql_v3.query_json", "public.eql_v3_json_search"),
-        (
-            "<@",
-            "public.eql_v3_json_entry",
-            "public.eql_v3_json_search",
-        ),
         // path access
         ("->", "public.eql_v3_json_search", "text"),
         ("->", "public.eql_v3_json_search", "integer"),
         ("->>", "public.eql_v3_json_search", "text"),
-        // entry comparisons
-        ("=", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
-        ("<>", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
+        // entry ordering comparisons
         ("<", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
         ("<=", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
         (">", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
@@ -193,6 +183,31 @@ async fn v3_jsonb_surface_supported_signatures(pool: PgPool) -> anyhow::Result<(
     assert!(
         missing.is_empty(),
         "expected supported operand signature(s) are absent: {missing:#?}"
+    );
+
+    // Blocker lock: these exact signatures must exist so PostgreSQL cannot
+    // flatten the domains to native jsonb operators. Their functions raise.
+    let blocked: &[(&str, &str, &str)] = &[
+        ("=", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
+        ("<>", "public.eql_v3_json_entry", "public.eql_v3_json_entry"),
+        (
+            "@>",
+            "public.eql_v3_json_search",
+            "public.eql_v3_json_entry",
+        ),
+        (
+            "<@",
+            "public.eql_v3_json_entry",
+            "public.eql_v3_json_search",
+        ),
+    ];
+    let missing_blockers: Vec<&(&str, &str, &str)> = blocked
+        .iter()
+        .filter(|(op, l, r)| !have.contains(&(op.to_string(), l.to_string(), r.to_string())))
+        .collect();
+    assert!(
+        missing_blockers.is_empty(),
+        "fail-loud entry blocker signature(s) are absent: {missing_blockers:#?}"
     );
     Ok(())
 }
@@ -247,7 +262,7 @@ async fn v3_jsonb_surface_root_comparisons_blocked(pool: PgPool) -> anyhow::Resu
 #[sqlx::test]
 async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Result<()> {
     // Mixed-shape entry comparisons are allowed ONLY against an eql_v3.query_*
-    // operand (CIP-3526 cross-type operators); a raw `jsonb` partner is still
+    // operand ( cross-type operators); a raw `jsonb` partner is still
     // forbidden (it would let an untyped operand flatten past the domain).
     let mixed: Vec<(String, String, String)> = sqlx::query_as(
         r#"
@@ -279,7 +294,8 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
          (json_entry, eql_v3.query_<T>_*) only; found illegal mixed shape(s): {mixed:#?}"
     );
 
-    // Sanity: all six entry symbols ARE present in the symmetric shape.
+    // Sanity: all six entry symbols are claimed in the symmetric shape; the
+    // four range operators compute and equality/inequality are blockers.
     let present: BTreeSet<String> = sqlx::query_scalar::<_, String>(
         r#"
         SELECT o.oprname
@@ -302,17 +318,21 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
 }
 
 // ============================================================================
-// CIP-3526: cross-type operators binding json_entry to per-type query operands
+// Cross-type operators binding json_entry to per-type query operands
 // ARE present (positive intent, complementing the "no illegal mixed shapes"
 // negative guard above).
 // ============================================================================
 
 #[sqlx::test]
 async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> anyhow::Result<()> {
-    // (op, left, right) — a representative slice across ord / ord_ope. The `_eq`
-    // operand is deliberately NOT bound to json_entry (CIP-3526): a JSON scalar
-    // leaf carries no per-value `hm`, so equality is served by `= query_<T>_ord`
-    // (op byte-equality) — the `=` row below asserts exactly that.
+    // (op, left, right) — a representative slice across ord / ord_ope. Every
+    // operator the term provides claims the exact signature (so a bare
+    // `json_entry <op> query_<T>_ord` never flattens to native `jsonb <op> jsonb`);
+    // the RANGE rows resolve to public wrappers, while `=`/`<>` resolve to
+    // eql_v3_internal blockers (field equality is document containment
+    // on a value-selector needle, not an extract op). This test asserts PRESENCE;
+    // the public-vs-blocker split is pinned in v3_json_entry_cross_type_tests #1.
+    // The `_eq` operand is never bound to json_entry.
     let expected: &[(&str, &str, &str)] = &[
         ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
@@ -342,9 +362,9 @@ async fn v3_jsonb_surface_entry_cross_type_operators_present(pool: PgPool) -> an
         assert!(found, "missing cross-type operator {op}({l}, {r})");
     }
 
-    // Negative lock: NO `query_<T>_eq` operand is ever bound to json_entry. Such an
-    // operator would be dead surface — a JSON scalar leaf has no per-value `hm`, so
-    // `eq_term(json_entry) = eq_term(query_<T>_eq)` can never match (CIP-3526).
+    // Negative lock: NO `query_<T>_eq` operand is ever bound to json_entry. Such
+    // an operator would be dead surface: a path entry carries neither the query
+    // operand's per-value `hm` nor its exact value selector.
     let eq_bound: i64 = sqlx::query_scalar(
         r#"
         SELECT count(*)
@@ -577,7 +597,7 @@ async fn assert_composed_blocked(pool: &PgPool, sql: &str) -> anyhow::Result<()>
 #[sqlx::test]
 async fn v3_jsonb_blocked_composed_expression_raises(pool: PgPool) -> anyhow::Result<()> {
     // A valid public.eql_v3_json_search document literal (empty sv array satisfies the CHECK).
-    let j = r#"'{"i":{},"v":3,"sv":[]}'::public.eql_v3_json_search"#;
+    let j = r#"'{"i":{},"v":3,"h":"kh","sv":[]}'::public.eql_v3_json_search"#;
 
     // Each case wraps a blocked operator (whose return type was boolean before
     // the fix) in a surrounding operator that only resolves against the NATIVE

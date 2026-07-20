@@ -163,7 +163,7 @@ async fn shipped_installer_can_run_over_existing_public_domains(pool: PgPool) ->
     );
 
     // The query-operand domains are NOT column types and live in the EQL-owned
-    // eql_v3 schema (CIP-3442); a repeat install recreates them there.
+    // eql_v3 schema; a repeat install recreates them there.
     let mut query_domains: Vec<String> = sqlx::query_scalar(
         r#"
         SELECT format('%I.%I', n.nspname, t.typname)
@@ -200,8 +200,9 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
     );
 
     let scalar_payload = r#"{"v":3,"i":{},"c":"scalar-42","hm":"hm-42"}"#;
-    let json_payload = r#"{"i":{},"v":3,"sv":[{"s":"age","c":"cipher-age","hm":"hm-age"}]}"#;
-    let entry_payload = r#"{"s":"age","c":"cipher-age","hm":"hm-age"}"#;
+    // SteVec entries carry no `hm`: an op path entry / term-less entry.
+    let json_payload = r#"{"i":{},"v":3,"h":"kh","sv":[{"s":"age","c":"cipher-age","op":"ab"}]}"#;
+    let entry_payload = r#"{"s":"age","c":"cipher-age","op":"ab"}"#;
 
     sqlx::query(
         r#"
@@ -235,7 +236,7 @@ async fn uninstaller_preserves_application_tables_with_public_domain_columns(
     .execute(&pool)
     .await?;
 
-    // The inverse contract (CIP-3442): a query-operand domain is NOT a column
+    // The inverse contract: a query-operand domain is NOT a column
     // type and lives in the EQL-owned eql_v3 schema, so a column misusing it
     // is dropped with the schema. Pin that a table holding one loses exactly
     // that column on uninstall (CASCADE), while the table itself survives.

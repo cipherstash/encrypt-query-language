@@ -14,7 +14,15 @@
 --! @internal
 --! @param val jsonb Candidate entry payload.
 --! @return boolean True when `val` is an sv entry with string `s`, string `c`,
---!         and exactly one string deterministic term (`hm` XOR `op`).
+--!         and — for an ordered (number/string) path entry only — a string
+--!         `op` ordering term. Value entries (value-inclusive selectors) and
+--!         non-orderable path entries (bool/null/object/array) are term-less
+--!         `{s, c}`: exact matching is selector presence, so an entry carries
+--!         no per-value equality term. `hm` is retired and must be absent —
+--!         a stale `hm`-bearing payload fails loudly rather than degrading to
+--!         a value-less entry. The optional document metadata `i`, `v`, and
+--!         `h` is accepted because selector lookup grafts it onto the entry
+--!         before casting to `public.eql_v3_json_entry`.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_entry_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -23,11 +31,10 @@ AS $$
     jsonb_typeof(val) = 'object'
      AND jsonb_typeof(val -> 's') = 'string'
      AND jsonb_typeof(val -> 'c') = 'string'
-     AND (
-       (jsonb_typeof(val -> 'hm') = 'string' AND NOT (val ? 'op'))
-       OR
-       (jsonb_typeof(val -> 'op') = 'string' AND NOT (val ? 'hm'))
-     ),
+     AND NOT (val ? 'hm')
+     AND (NOT (val ? 'a') OR jsonb_typeof(val -> 'a') = 'boolean')
+     AND (NOT (val ? 'op') OR jsonb_typeof(val -> 'op') = 'string')
+     AND val - ARRAY['s', 'c', 'a', 'op', 'i', 'v', 'h']::text[] = '{}'::jsonb,
     false
   )
 $$;
@@ -36,8 +43,10 @@ $$;
 --! @internal
 --! @param val jsonb Candidate query payload.
 --! @return boolean True when `val` is `{"sv":[...]}` and every element carries
---!         string `s`, no ciphertext, and exactly one string term (`hm` XOR
---!         `op`).
+--!         a string `s`, no ciphertext, an optional string `op` (present only
+--!         on ordered path entries), and no `hm`. A containment needle is a
+--!         set of selectors — a value-selector's presence in the stored
+--!         document IS the exact value match.
 --! @note plpgsql, not LANGUAGE sql (issues #353/#354): the only caller is the
 --!   eql_v3.query_json domain CHECK, where a SQL function can never be
 --!   inlined (and the CHECK itself cannot absorb this body — it needs a
@@ -52,6 +61,7 @@ BEGIN
   RETURN COALESCE(
     jsonb_typeof(val) = 'object'
      AND jsonb_typeof(val -> 'sv') = 'array'
+     AND val - 'sv' = '{}'::jsonb
      AND NOT EXISTS (
        SELECT 1
        FROM jsonb_array_elements(
@@ -61,11 +71,9 @@ BEGIN
          jsonb_typeof(elem) = 'object'
          AND jsonb_typeof(elem -> 's') = 'string'
          AND NOT (elem ? 'c')
-         AND (
-           (jsonb_typeof(elem -> 'hm') = 'string' AND NOT (elem ? 'op'))
-           OR
-           (jsonb_typeof(elem -> 'op') = 'string' AND NOT (elem ? 'hm'))
-         )
+         AND NOT (elem ? 'hm')
+         AND (NOT (elem ? 'op') OR jsonb_typeof(elem -> 'op') = 'string')
+         AND elem - ARRAY['s', 'op']::text[] = '{}'::jsonb
        ), false)
      ),
     false
@@ -77,7 +85,13 @@ $$;
 --! @internal
 --! @param val jsonb Candidate document payload.
 --! @return boolean True when `val` is an encrypted document envelope with
---!         `v = 3`, `i`, an `sv` array, and valid sv entry elements.
+--!         `v = 3`, `i`, a string key header `h`, an `sv` array, and valid
+--!         sv entry elements. `h` carries the document's key-retrieval
+--!         material once (every entry encrypts under the document's single
+--!         data key; entry `c` values are raw AEAD output whose nonces are
+--!         derived from the entries' selectors) — it is opaque to SQL and
+--!         only ever carried/grafted, never parsed. Unknown envelope keys are
+--!         rejected; `k` and `a` remain optional compatibility fields.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -87,7 +101,9 @@ AS $$
      AND val ? 'v'
      AND val ->> 'v' = '3'
      AND val ? 'i'
+     AND jsonb_typeof(val -> 'h') = 'string'
      AND jsonb_typeof(val -> 'sv') = 'array'
+     AND val - ARRAY['v', 'k', 'i', 'h', 'sv', 'a']::text[] = '{}'::jsonb
      AND NOT EXISTS (
        SELECT 1
        FROM jsonb_array_elements(
@@ -101,17 +117,19 @@ $$;
 
 --! @brief Storage/root domain for an encrypted JSONB column.
 --!
---! CHECK: a JSON object carrying the EQL envelope (`v = 3` version and `i` index
---! metadata). Root `c` is intentionally NOT required — an sv-array root payload
---! is `{i, v, sv}` with no root ciphertext. The CHECK now also requires an `sv`
---! array, so the domain accepts only SteVec **document** payloads and rejects
---! encrypted *scalar* payloads (which carry `c`/`hm`/`ob` but no `sv`) — this is
---! what keeps `public.eql_v3_json_search` a typed document domain rather than a generic
---! encrypted envelope. The firewall in blockers.sql attaches to this domain to
---! stop native jsonb operators from reaching a column value.
+--! CHECK: a JSON object carrying the EQL envelope (`v = 3` version, `i` index
+--! metadata, and the key header `h`). Root `c` is intentionally NOT required —
+--! an sv-array root payload is `{i, v, h, sv}` with no root ciphertext (the
+--! root document ciphertext lives on the root sv entry). The CHECK also
+--! requires an `sv` array, so the domain accepts only SteVec **document**
+--! payloads and rejects encrypted *scalar* payloads (which carry `c`/`hm`/`ob`
+--! but no `sv`) — this is what keeps `public.eql_v3_json_search` a typed
+--! document domain rather than a generic encrypted envelope. The firewall in
+--! blockers.sql attaches to this domain to stop native jsonb operators from
+--! reaching a column value.
 --!
 --! @note Constructing from inline JSON uses the standard DOMAIN cast:
---!       `'{"i":{},"v":3,"sv":[...]}'::public.eql_v3_json_search`.
+--!       `'{"i":{},"v":3,"h":"...","sv":[...]}'::public.eql_v3_json_search`.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -131,11 +149,15 @@ $$;
 --! @brief Domain type for an individual sv element.
 --!
 --! A single element inside an `sv` array: a JSON object that carries a selector
---! (`s`), a ciphertext (`c`), and **exactly one** of `hm` (HMAC-256, for
---! hash-equality) or `op` (CLLW OPE, for ordered queries) — they are mutually
---! exclusive. This is the type returned by `->` and accepted by the per-entry
---! extractors `eql_v3.eq_term` / `eql_v3.ord_term`. Extra fields (`a`, root
---! `i`/`v` merged in by `->`) are allowed.
+--! (`s`) and a ciphertext (`c`), plus — for an ordered (number/string) path
+--! entry only — a string `op` (CLLW OPE, for ordered queries). Value entries
+--! (value-inclusive selectors) and non-orderable path entries are term-less
+--! `{s, c}`: exact matching is selector presence, so there is no per-value
+--! equality term (`hm` is retired and rejected). This is the type returned by
+--! `->` and accepted by the per-entry extractors `eql_v3.ope_term` /
+--! `eql_v3.ord_term`. The deprecated `eq_term(json_entry)` name aliases
+--! `ope_term`. The optional array marker `a` and root `i`/`v`/`h`
+--! metadata merged in by `->` are the only additional fields accepted.
 --!
 --! @see src/v3/json/operators.sql
 --!
@@ -165,11 +187,10 @@ BEGIN
           jsonb_typeof(VALUE) = 'object'
            AND jsonb_typeof(VALUE -> 's') = 'string'
            AND jsonb_typeof(VALUE -> 'c') = 'string'
-           AND (
-             (jsonb_typeof(VALUE -> 'hm') = 'string' AND NOT (VALUE ? 'op'))
-             OR
-             (jsonb_typeof(VALUE -> 'op') = 'string' AND NOT (VALUE ? 'hm'))
-           ),
+           AND NOT (VALUE ? 'hm')
+           AND (NOT (VALUE ? 'a') OR jsonb_typeof(VALUE -> 'a') = 'boolean')
+           AND (NOT (VALUE ? 'op') OR jsonb_typeof(VALUE -> 'op') = 'string')
+           AND VALUE - ARRAY['s', 'c', 'a', 'op', 'i', 'v', 'h']::text[] = '{}'::jsonb,
           false
         )
       );
@@ -182,13 +203,14 @@ $$;
 --! @brief Domain type for an STE-vec containment needle.
 --!
 --! A query-shaped payload `{"sv":[...]}` whose elements carry selector + index
---! term but **never** a ciphertext (`c`). Each element must carry `s` and
---! exactly one deterministic term (`hm` XOR `op`). Typing the needle this way
---! stops selector-only needles from casting and matching every row via bare
---! `jsonb @>`.
+--! term but **never** a ciphertext (`c`). Each element carries `s`, an optional
+--! `op` (ordered path entries only), and no `hm` — a containment needle is a
+--! set of selectors, and a value-selector's presence in the stored document is
+--! the exact value match. Typing the needle this way stops raw jsonb from
+--! casting and matching every row via bare `jsonb @>`.
 --!
 --! @note Construct from inline JSON via the DOMAIN cast:
---!       `'{"sv":[{"s":"<sel>","hm":"<hm>"}]}'::eql_v3.query_json`.
+--!       `'{"sv":[{"s":"<sel>"}]}'::eql_v3.query_json`.
 --! @see eql_v3.to_ste_vec_query
 --!
 --! @internal
@@ -219,10 +241,12 @@ $$;
 
 --! @brief Convert a public.eql_v3_json_search to a query_json needle.
 --!
---! Normalises each sv element down to the matching-relevant fields: `s` plus
---! exactly one of `hm` / `op`. Other fields (`c`, `a`, `i`/`v`, anything else)
---! are stripped. This is the canonical needle shape for `@>` containment.
---! Designed for use as a functional GIN index expression:
+--! Normalises each sv element down to its selector `s`. Exact and structural
+--! containment are both selector-set containment; an `op` carried by a legacy
+--! or document-derived needle is accepted at the boundary for compatibility
+--! but is not part of the containment predicate. Other fields are stripped.
+--! This is the canonical needle shape for `@>` containment and the functional
+--! GIN index expression:
 --!   `GIN (eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops)`.
 --!
 --! @param e public.eql_v3_json_search Source encrypted payload
@@ -238,9 +262,7 @@ AS $$
       (SELECT jsonb_agg(
                 jsonb_strip_nulls(
                   jsonb_build_object(
-                    's',  elem -> 's',
-                    'hm', elem -> 'hm',
-                    'op', elem -> 'op'
+                    's', elem -> 's'
                   )
                 )
               )
@@ -250,6 +272,26 @@ AS $$
   )::eql_v3.query_json
 $$;
 
+--! @brief Normalise an already query-shaped needle to selector-only form.
+--!
+--! Some producers derive a query from a complete encrypted document and may
+--! therefore carry the path entry's `op`. Containment is selector-set
+--! containment, so this overload strips `op` before comparison and keeps every
+--! public containment entry point semantically identical.
+CREATE FUNCTION eql_v3.to_ste_vec_query(e eql_v3.query_json)
+  RETURNS eql_v3.query_json
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT jsonb_build_object(
+    'sv',
+    coalesce(
+      (SELECT jsonb_agg(jsonb_build_object('s', elem -> 's'))
+       FROM jsonb_array_elements(e::jsonb -> 'sv') AS elem),
+      '[]'::jsonb
+    )
+  )::eql_v3.query_json
+$$;
+
 CREATE CAST (public.eql_v3_json_search AS eql_v3.query_json)
-  WITH FUNCTION eql_v3.to_ste_vec_query
+  WITH FUNCTION eql_v3.to_ste_vec_query(public.eql_v3_json_search)
   AS ASSIGNMENT;

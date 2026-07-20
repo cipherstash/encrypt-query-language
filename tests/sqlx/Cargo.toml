@@ -14,7 +14,10 @@ serde_json = "1"
 anyhow = "1"
 hex = "0.4"
 jsonschema = { version = "0.46.4", default-features = false }
-cipherstash-client = { version = "0.38.1", features = ["tokio"] }
+# The published client is the encryption oracle for fixtures and fresh e2e
+# queries. Pin it exactly so its SteVec envelope cannot drift independently of
+# the strict bindings and SQL contract tested in this repository.
+cipherstash-client = { version = "=0.42.0", features = ["tokio"] }
 # chrono is already in the tree transitively (cipherstash-client / ore-rs); pin
 # it as a direct dependency so the harness can name `chrono::NaiveDate` for the
 # `date` scalar (Encode/Decode/Type come from the sqlx `chrono` feature above).
@@ -26,10 +29,10 @@ chrono = { version = "0.4", default-features = false }
 rust_decimal = "1"
 paste = "1"
 eql-domains = { path = "../../crates/eql-domains" }
-# The fixture generator routes every cipherstash-client payload (v2 wire)
-# through `eql_bindings::from_v2` before staging (fixtures/v3_convert.rs), so
-# the bindings are a lib dependency now, not just a dev one (they remain a
-# dev-dependency consumer via tests/v3_jsonb_bindings_tests.rs too).
+# The fixture generator validates cipherstash-client's native v3 payloads
+# against these bindings before staging, so the bindings are a lib dependency
+# now, not just a dev one (they remain a dev-dependency consumer via
+# tests/v3_jsonb_bindings_tests.rs too).
 eql-bindings = { path = "../../crates/eql-bindings" }
 eql-tests-macros = { path = "../../crates/eql-tests-macros" }
 # proptest is a regular dependency (not dev-only): `ScalarType::arbitrary_value`
@@ -58,7 +61,7 @@ bench = ["scale"]
 # (`mise run test`); activated transitively by `bench` (above), so the
 # `bench-eql` workflow runs them. Not enabled directly anywhere else.
 scale = []
-# Opt-in to the e2e property suite (CIP-3141). It generates fresh random
+# Opt-in to the e2e property suite. It generates fresh random
 # plaintexts each run and encrypts them end-to-end through ZeroKMS via
 # cipherstash-client, so it needs the same CS_* creds as fixture generation.
 # `mise run test:sqlx` enables this (CI has the secrets). A bare `cargo test`

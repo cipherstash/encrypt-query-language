@@ -51,7 +51,7 @@ fn doubled<T: Clone>(values: &[T]) -> Vec<T> {
 /// the type's catalog fixture so the payload carries the same terms (`hm`,
 /// `ob`, `op`, plus `bf` for `text`) and the doubles cast cleanly to every
 /// comparison domain — including `_ord_ope`, whose CLLW-OPE determinism the
-/// cross-ciphertext suite pins on these rows (CIP-3348).
+/// cross-ciphertext suite pins on these rows.
 async fn generate_doubles_for<T>() -> Result<()>
 where
     T: ScalarType + FixtureValue,

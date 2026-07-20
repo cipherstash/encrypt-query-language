@@ -44,7 +44,7 @@ SELECT * FROM events ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 ### Text match — `@@`
 
 On `public.eql_v3_text_match` / `public.eql_v3_text_search` /
-`public.eql_v3_text_search_ore` (carry a `bf` bloom term). This is **probabilistic ngram-bloom matching** (`eql_v3.matches`), not SQL `LIKE`, not JSONB containment, and not the containment operators — `@>` / `<@` **raise** on these domains (CIP-3517):
+`public.eql_v3_text_search_ore` (carry a `bf` bloom term). This is **probabilistic ngram-bloom matching** (`eql_v3.matches`), not SQL `LIKE`, not JSONB containment, and not the containment operators — `@>` / `<@` **raise** on these domains:
 
 ```sql
 SELECT * FROM docs WHERE encrypted_content @@ $1::public.eql_v3_text_match;
@@ -111,7 +111,12 @@ CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 
 > The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ope` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
-The `public.eql_v3_json_search` document type extracts entry-level terms with `eql_v3.eq_term(public.eql_v3_json_entry)` and `eql_v3.ord_term(public.eql_v3_json_entry)` — see [json-support.md](./json-support.md).
+The `public.eql_v3_json_search` document type extracts its entry ordering term
+with `eql_v3.ord_term(public.eql_v3_json_entry)`. The low-level
+`eql_v3.ope_term(public.eql_v3_json_entry)` exposes the same lossy `op` bytes for
+explicit OPE-equivalence inspection only; entry equality operators are blocked.
+`eq_term(json_entry)` is retained as a deprecated compatibility alias.
+See [json-support.md](./json-support.md).
 
 ---
 

@@ -81,12 +81,10 @@
 //! follows the same Serialize-only rule for QUERY payloads — see its module
 //! doc for why it is hand-written rather than generated.
 //!
-//! The SteVec `json` family is the ONE principled exception: a single encrypted
-//! document legitimately mixes `hm` leaves (bool / root) and `op` leaves
-//! (string / number) in one `sv` array, so `SteVecEntry` must hold either term.
-//! There the untagged [`json::SteVecTerm`] (`{hm} | {op}`) is inherent to the
-//! wire, not a sniffing workaround — the "per-domain typing is possible"
-//! reasoning above simply does not apply to a heterogeneous `sv` array.
+//! The SteVec `json` family is the principled exception to flat scalar shapes:
+//! a document mixes term-less value/structural entries with number/string path
+//! entries carrying an optional `op`. Exact matching is selector presence;
+//! `op` exists only for ordering.
 //!
 //! ## Per-family caller-facing notes
 //!
@@ -109,18 +107,11 @@
 //! searchable index (even HMAC equality) would trivially leak the plaintext
 //! distribution. The payload is `{v,i,c}` only and every operator is blocked.
 //!
-//! **`json` (SteVec) is the one place `Option` and lax serde appear.**
-//! `SteVecEntry.a` is `Option<bool>` — the sv-array-membership marker, absent
-//! for non-array leaves — the sole `Option` in this module. `SteVecEntry` and
-//! `SteVecQueryEntry` both carry a `#[serde(flatten)] SteVecTerm`, and serde
-//! silently disables `#[serde(deny_unknown_fields)]` on any struct with a
-//! flattened field — so these two structs are NECESSARILY lax: they accept
-//! arbitrary extra keys, which is exactly what lets a `->`-returned entry carry
-//! the root `i`/`v` merged in. Strictness for the query/entry contract (e.g.
-//! "a query element carries no ciphertext `c`") is therefore enforced by the SQL
-//! domain CHECKs (`is_valid_ste_vec_*_payload`), not client-side. Only the two
-//! flatten-free structs — `SteVecDocument` and `SteVecQuery` — are
-//! `#[serde(deny_unknown_fields)]`.
+//! **`json` (SteVec) uses explicit optional fields.** `a` and `op` are absent
+//! when they do not apply; `i`/`v`/`h` are present only on entries extracted by
+//! SQL. Naming those fields explicitly lets `SteVecEntry` and
+//! `SteVecQueryEntry` reject retired, misplaced, and unknown wire keys in the
+//! same way as the SQL domain checks.
 //!
 //! **The document carries the `k:"sv"` form discriminator.** Unlike the scalar
 //! form (where `k` is optional — see above), the canonical `SteVecPayload`

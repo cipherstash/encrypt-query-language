@@ -1,6 +1,6 @@
 //! Inherent impls for [`DomainFamily`] — the per-type helpers `domain_name`
 //! (the installed SQL typname: family-name + `_` + domain-name, public column
-//! domains carrying the `eql_v3_` version prefix — CIP-3472) and `is_eq_only`
+//! domains carrying the `eql_v3_` version prefix) and `is_eq_only`
 //! (no `ord` domain).
 //! Definitions for [`DomainFamily`] and [`Domain`] live in `lib.rs`.
 
@@ -16,7 +16,7 @@ impl Domain {
     /// One documented exception, on the `json` family:
     ///
     /// - the containment needle (`Domain.name == "query"`) follows the
-    ///   query-operand PREFIX convention (CIP-3442): `query_json`, matching
+    ///   query-operand PREFIX convention: `query_json`, matching
     ///   the scalar `query_<name>` twins so every query-operand type sorts
     ///   apart from the column domains in alphabetical type listings.
     ///
@@ -38,7 +38,7 @@ impl Domain {
     /// The unqualified SQL type name (pg_type `typname`) of this domain as
     /// installed. Public-schema column domains carry the
     /// [`crate::PUBLIC_TYPNAME_PREFIX`] version prefix
-    /// (`eql_v3_integer_eq`, `eql_v3_json` — CIP-3472); the SteVec containment
+    /// (`eql_v3_integer_eq`, `eql_v3_json`); the SteVec containment
     /// needle (`query_json`) lives in the `eql_v3` schema, which already
     /// versions it, so it stays bare like the scalar `query_<name>` twins.
     /// The **single** site that owns the prefix decision — codegen (SQL +
@@ -58,8 +58,8 @@ impl Domain {
     /// naming convention — codegen (SQL + bindings) builds every query-domain
     /// name through this. A prefix (not the earlier `_query` suffix) so query
     /// operands sort together, apart from the column domains they twin, in
-    /// alphabetical type listings such as Supabase Studio's type picker
-    /// (CIP-3442).
+    /// alphabetical type listings such as Supabase Studio's type picker.
+    /// The encrypted-domain catalog is the source of truth for this mapping.
     pub fn query_name(&self, family_name: &str) -> String {
         format!("query_{}", self.full_name(family_name))
     }
@@ -119,7 +119,7 @@ fn capitalize(s: &str) -> String {
 impl DomainFamily {
     /// The unqualified SQL type name of `domain` as installed — see
     /// [`Domain::sql_typname`]: public-schema column domains carry the
-    /// `eql_v3_` version prefix (CIP-3472); query-operand domains stay bare
+    /// `eql_v3_` version prefix; query-operand domains stay bare
     /// (the `eql_v3` schema already versions them). For the bare
     /// family-name + `_` + domain-name join (file names, struct identifiers,
     /// matrix test names), use [`Domain::full_name`].
@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn query_name_prefixes_the_full_name() {
         // `query_` is a PREFIX so query twins sort apart from the column
-        // domains in alphabetical type listings (Supabase Studio — CIP-3442).
+        // domains in alphabetical type listings (Supabase Studio).
         let eq = Domain {
             name: "eq",
             terms: &[Term::Hm],
@@ -233,9 +233,9 @@ mod tests {
         // scalar family): the bare storage domain is `eql_v3_json`, the
         // searchable document is `eql_v3_json_search`, the entry is
         // `eql_v3_json_entry`. The containment needle is the one exception — it
-        // follows the query-operand PREFIX convention (CIP-3442), like the
+        // follows the query-operand PREFIX convention, like the
         // scalar `query_<name>` twins. The public column domains carry the
-        // version prefix (CIP-3472); the needle lives in the already-versioned
+        // version prefix; the needle lives in the already-versioned
         // `eql_v3` schema, so it stays bare.
         use crate::JSON;
         assert_eq!(JSON.domain_name(&JSON.domains[0]), "eql_v3_json_search");

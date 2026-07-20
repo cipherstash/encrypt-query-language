@@ -7,7 +7,10 @@
 //! contract; schema-file validation lives in
 //! `tests/sqlx/tests/payload_schema_tests.rs`).
 
-use eql_bindings::from_v2::{from_v2, from_v2_query, is_v3_payload, FromV2Error, TargetDomain};
+use eql_bindings::from_v2::{
+    from_v2, from_v2_query, from_v2_query_typed, from_v2_typed, is_v3_payload, FromV2Error,
+    TargetDomain,
+};
 use serde_json::{json, Value};
 
 const CIPHERTEXT: &str = "mBbL@V^%dN?0W$;g)1-JP*cmqX%JhW0ZKZ^G?lNn$CfXJH";
@@ -348,74 +351,16 @@ fn v2_query_payload_without_ciphertext_is_rejected_by_from_v2() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ste_vec_document_converts_and_preserves_entry_order() {
-    // Entry order is the decryption contract: sv[0] is the root entry whose
-    // `c` is the record ciphertext (upstream `SteVec::into_root_ciphertext`),
-    // so conversion must copy entries in order, `a` marker included. The root
-    // `k: "sv"` form discriminator is carried through — the v3 document
-    // models it (`SteVecDocument.k`, required on the wire).
-    let out = from_v2(&v2_sv(), TargetDomain::Json).unwrap();
-    assert_eq!(
-        out,
-        json!({
-            "v": 3,
-            "k": "sv",
-            "i": ident(),
-            "sv": [
-                { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
-                { "s": SELECTOR, "c": CIPHERTEXT, "a": true, "op": HEX_LONG }
-            ]
-        })
-    );
-    assert!(is_v3_payload(&out));
-}
-
-#[test]
-fn ste_vec_entry_with_both_terms_is_ambiguous() {
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "op": HEX_LONG });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(err, FromV2Error::AmbiguousTerm { entry: 1 }));
-}
-
-#[test]
-fn ste_vec_entry_with_ore_term_is_unconvertible() {
-    // A CLLW-ORE `oc` entry term has no v3 representation: v3 orders SteVec
-    // entries by the CLLW-OPE `op` term (native byte order), and ORE
-    // ciphertext bytes would silently misorder — the converter must fail
-    // closed and demand re-encryption, never pass `oc` bytes through as `op`.
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "oc": HEX_LONG });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(
-        err,
-        FromV2Error::UnconvertibleOreTerm { entry: 1 }
-    ));
-    // Even alongside a valid term: `oc` presence alone is disqualifying.
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX, "oc": HEX_LONG });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    assert!(matches!(
-        err,
-        FromV2Error::UnconvertibleOreTerm { entry: 1 }
-    ));
-}
-
-#[test]
-fn ste_vec_entry_with_neither_term_is_missing() {
-    // Term-less entry at index 1: the error must locate it (mirroring
-    // AmbiguousTerm) and name the document domain.
-    let mut v2 = v2_sv();
-    v2["sv"][1] = json!({ "s": SELECTOR, "c": CIPHERTEXT });
-    let err = from_v2(&v2, TargetDomain::Json).unwrap_err();
-    match err {
-        FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "eql_v3_json_search");
-            assert_eq!(key, "hm|op");
-            assert_eq!(entry, Some(1));
-        }
-        other => panic!("expected MissingTerm, got {other:?}"),
-    }
+fn ste_vec_document_is_unconvertible() {
+    // The v3 envelope wire format stores one key header (`h`) per document
+    // and encrypts every entry under a selector-derived nonce — neither can
+    // be derived from a v2 payload by JSON transformation (that is
+    // re-encryption). The converter fails closed regardless of how
+    // well-formed the v2 document is.
+    let err = from_v2(&v2_sv(), TargetDomain::Json).unwrap_err();
+    assert!(matches!(err, FromV2Error::UnconvertibleSteVecDocument));
+    let typed = from_v2_typed(&v2_sv(), TargetDomain::Json).unwrap_err();
+    assert!(matches!(typed, FromV2Error::UnconvertibleSteVecDocument));
 }
 
 // ---------------------------------------------------------------------------
@@ -423,56 +368,31 @@ fn ste_vec_entry_with_neither_term_is_missing() {
 // ---------------------------------------------------------------------------
 
 #[test]
-fn ste_vec_query_converts_to_v3_needle() {
-    // The v2.3 SteVecQueryPayload is `{sv:[{s, hm|op}]}` — no envelope.
-    let v2 = json!({
-        "sv": [
-            { "s": SELECTOR, "hm": HEX },
-            { "s": SELECTOR, "op": HEX_LONG }
-        ]
-    });
-    let out = from_v2_query(&v2, TargetDomain::Json).unwrap();
-    assert_eq!(out, v2);
-}
-
-#[test]
-fn ste_vec_query_normalizes_c_and_a_away() {
-    // Mirrors `eql_v3.to_ste_vec_query`: the canonical needle carries only
-    // `s` + one term, so stray `a` markers (legal on v2 query elements) and
-    // `c` (a stored-document entry re-used as a needle) are stripped.
-    let v2 = json!({
-        "v": 2,
-        "k": "sv",
-        "i": ident(),
-        "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "hm": HEX } ]
-    });
-    let out = from_v2_query(&v2, TargetDomain::Json).unwrap();
-    assert_eq!(out, json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] }));
-}
-
-#[test]
-fn ste_vec_query_entry_term_errors_match_document_rules() {
-    let both = json!({ "sv": [ { "s": SELECTOR, "hm": HEX, "op": HEX_LONG } ] });
-    assert!(matches!(
-        from_v2_query(&both, TargetDomain::Json).unwrap_err(),
-        FromV2Error::AmbiguousTerm { entry: 0 }
-    ));
-    // The query path names ITS shape (query_json, not json) and locates the
-    // entry.
-    let neither = json!({ "sv": [ { "s": SELECTOR, "hm": HEX }, { "s": SELECTOR } ] });
-    match from_v2_query(&neither, TargetDomain::Json).unwrap_err() {
-        FromV2Error::MissingTerm { domain, key, entry } => {
-            assert_eq!(domain, "query_json");
-            assert_eq!(key, "hm|op");
-            assert_eq!(entry, Some(1));
+fn ste_vec_queries_are_unconvertible() {
+    // Legacy selectors identify paths, while v3 exact matching uses selectors
+    // derived from both path and plaintext value. No legacy entry shape has
+    // enough information to construct the v3 selector.
+    for v2 in [
+        json!({ "sv": [ { "s": SELECTOR, "op": HEX_LONG } ] }),
+        json!({ "sv": [ { "s": SELECTOR, "hm": HEX } ] }),
+        json!({ "sv": [ { "s": SELECTOR } ] }),
+        json!({
+            "v": 2, "k": "sv", "i": ident(),
+            "sv": [ { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG } ]
+        }),
+    ] {
+        for err in [
+            from_v2_query(&v2, TargetDomain::Json).unwrap_err(),
+            from_v2_query_typed(&v2, TargetDomain::Json).unwrap_err(),
+        ] {
+            assert!(matches!(err, FromV2Error::UnconvertibleSteVecQuery));
         }
-        other => panic!("expected MissingTerm, got {other:?}"),
     }
 }
 
 #[test]
 fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
-    // CIP-3432: a term-bearing scalar target hoists its terms into the
+    // A term-bearing scalar target hoists its terms into the
     // enveloped term-only `<name>_query` operand — `{v:3, i, <terms>}`, dropping
     // the stored `c`/`k`. A storage-only target has no operators, so it stays
     // UnsupportedQueryTarget.
@@ -490,6 +410,33 @@ fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
         FromV2Error::UnsupportedQueryTarget { domain } => assert_eq!(domain, "eql_v3_boolean"),
         other => panic!("expected UnsupportedQueryTarget for storage-only, got {other:?}"),
     }
+}
+
+#[test]
+fn scalar_query_rejects_non_scalar_kind_when_present() {
+    let scalar = target("eql_v3_text_eq");
+    let ste_vec = json!({ "v": 2, "k": "sv", "i": ident(), "hm": HEX });
+    for err in [
+        from_v2_query(&ste_vec, scalar).unwrap_err(),
+        from_v2_query_typed(&ste_vec, scalar).unwrap_err(),
+    ] {
+        assert!(matches!(
+            err,
+            FromV2Error::KindMismatch { ref kind, .. } if kind == "sv"
+        ));
+    }
+
+    let unknown = json!({ "v": 2, "k": "future", "i": ident(), "hm": HEX });
+    assert!(matches!(
+        from_v2_query(&unknown, scalar).unwrap_err(),
+        FromV2Error::UnknownKind { found: Some(ref kind) } if kind == "future"
+    ));
+
+    let malformed = json!({ "v": 2, "k": true, "i": ident(), "hm": HEX });
+    assert!(matches!(
+        from_v2_query(&malformed, scalar).unwrap_err(),
+        FromV2Error::UnknownKind { found: None }
+    ));
 }
 
 // ---------------------------------------------------------------------------

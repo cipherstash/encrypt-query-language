@@ -8,27 +8,23 @@
 --! @brief Operators for public.eql_v3_json_entry.
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.eq,
-  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord,
-  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.eq,
-  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry,
-  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.neq,
-  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord,
-  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.neq,
-  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry,
-  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_smallint_ord, RIGHTARG = public.eql_v3_json_entry
 );
 
 CREATE OPERATOR < (
@@ -80,27 +76,23 @@ CREATE OPERATOR >= (
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.eq,
-  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope,
-  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope
 );
 
 CREATE OPERATOR = (
-  FUNCTION = eql_v3.eq,
-  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
-  COMMUTATOR = =, NEGATOR = <>, RESTRICT = eqsel, JOIN = eqjoinsel
+  FUNCTION = eql_v3_internal.eq,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.neq,
-  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope,
-  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_smallint_ord_ope
 );
 
 CREATE OPERATOR <> (
-  FUNCTION = eql_v3.neq,
-  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry,
-  COMMUTATOR = <>, NEGATOR = =, RESTRICT = neqsel, JOIN = neqjoinsel
+  FUNCTION = eql_v3_internal.neq,
+  LEFTARG = eql_v3.query_smallint_ord_ope, RIGHTARG = public.eql_v3_json_entry
 );
 
 CREATE OPERATOR < (

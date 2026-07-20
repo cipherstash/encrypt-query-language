@@ -10,7 +10,6 @@
 //! throwaway temp dir and only swap it into place after a successful build.
 
 use eql_bindings::v3;
-
 #[test]
 fn dump_v3_json_schemas() {
     let base = std::env::var("EQL_TYPES_SCHEMA_DIR").unwrap_or_else(|_| "schema".into());

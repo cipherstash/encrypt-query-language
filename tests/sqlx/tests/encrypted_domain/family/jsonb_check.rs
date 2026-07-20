@@ -74,18 +74,20 @@ async fn jsonb_entry_check_matches_validator(pool: PgPool) -> Result<()> {
     let candidates: &[Option<&str>] = &[
         // SQL NULL — accepted by both forms (STRICT / VALUE IS NULL OR).
         None,
-        // Valid: hm entry, op entry, extra fields allowed.
-        Some(r#"{"s":"sel","c":"ct","hm":"h"}"#),
-        Some(r#"{"s":"sel","c":"ct","op":"o"}"#),
-        Some(r#"{"s":"sel","c":"ct","hm":"h","a":true,"i":{},"v":3}"#),
-        // Invalid: missing s / missing c / both terms / neither term.
-        Some(r#"{"c":"ct","hm":"h"}"#),
-        Some(r#"{"s":"sel","hm":"h"}"#),
-        Some(r#"{"s":"sel","c":"ct","hm":"h","op":"o"}"#),
+        // Valid: term-less entry {s,c} (a value or bool/null/object/array
+        // leaf), op entry {s,c,op}, extra fields allowed.
         Some(r#"{"s":"sel","c":"ct"}"#),
-        // Invalid: non-string term / non-string s / wrong jsonb types.
-        Some(r#"{"s":"sel","c":"ct","hm":1}"#),
-        Some(r#"{"s":1,"c":"ct","hm":"h"}"#),
+        Some(r#"{"s":"sel","c":"ct","op":"o"}"#),
+        Some(r#"{"s":"sel","c":"ct","op":"o","a":true,"i":{},"v":3}"#),
+        // Invalid: missing s / missing c.
+        Some(r#"{"c":"ct","op":"o"}"#),
+        Some(r#"{"s":"sel","op":"o"}"#),
+        // Invalid: carries a retired `hm` term (rejected loudly, alone or with op).
+        Some(r#"{"s":"sel","c":"ct","hm":"h"}"#),
+        Some(r#"{"s":"sel","c":"ct","hm":"h","op":"o"}"#),
+        // Invalid: non-string op / non-string s / wrong jsonb types.
+        Some(r#"{"s":"sel","c":"ct","op":1}"#),
+        Some(r#"{"s":1,"c":"ct","op":"o"}"#),
         Some(r#""scalar""#),
         Some("5"),
         Some("null"),
@@ -107,21 +109,19 @@ async fn query_json_check_behaviour(pool: PgPool) -> Result<()> {
     // validator, so a validator-equivalence assertion would be tautological.
     let candidates: &[(Option<&str>, bool)] = &[
         (None, true),
-        // Valid: single- and multi-entry needles; empty sv is valid.
-        (Some(r#"{"sv":[{"s":"sel","hm":"h"}]}"#), true),
-        (
-            Some(r#"{"sv":[{"s":"a","hm":"h"},{"s":"b","op":"o"}]}"#),
-            true,
-        ),
+        // Valid: a value-selector needle {s} (presence = exact match),
+        // an op needle {s,op} (ordered path), a mixed multi-entry needle; empty sv.
+        (Some(r#"{"sv":[{"s":"sel"}]}"#), true),
+        (Some(r#"{"sv":[{"s":"sel","op":"o"}]}"#), true),
+        (Some(r#"{"sv":[{"s":"a"},{"s":"b","op":"o"}]}"#), true),
         (Some(r#"{"sv":[]}"#), true),
-        // Invalid: element carries a ciphertext / both terms / neither term /
-        // missing s.
-        (Some(r#"{"sv":[{"s":"sel","hm":"h","c":"ct"}]}"#), false),
+        // Invalid: element carries a ciphertext / a retired `hm` term / missing s.
+        (Some(r#"{"sv":[{"s":"sel","c":"ct"}]}"#), false),
+        (Some(r#"{"sv":[{"s":"sel","hm":"h"}]}"#), false),
         (Some(r#"{"sv":[{"s":"sel","hm":"h","op":"o"}]}"#), false),
-        (Some(r#"{"sv":[{"s":"sel"}]}"#), false),
-        (Some(r#"{"sv":[{"hm":"h"}]}"#), false),
+        (Some(r#"{"sv":[{"op":"o"}]}"#), false),
         // Invalid: sv not an array / missing sv / non-object roots.
-        (Some(r#"{"sv":{"s":"sel","hm":"h"}}"#), false),
+        (Some(r#"{"sv":{"s":"sel","op":"o"}}"#), false),
         (Some("{}"), false),
         (Some(r#""scalar""#), false),
         (Some("null"), false),
@@ -179,7 +179,7 @@ async fn json_storage_check_rejects_malformed(pool: PgPool) -> Result<()> {
         // Invalid: a SteVec document (`sv`, no root `c`) — belongs to
         // public.eql_v3_json_search, not the ciphertext-only storage domain.
         (
-            Some(r#"{"v":"3","i":{},"sv":[{"s":"sel","hm":"h"}]}"#),
+            Some(r#"{"v":"3","i":{},"sv":[{"s":"sel","op":"o"}]}"#),
             false,
         ),
         // Invalid: missing c / missing v / missing i / wrong version.

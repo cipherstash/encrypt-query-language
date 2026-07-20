@@ -28,7 +28,7 @@ fn is_valid_identifier(s: &str) -> bool {
 /// fixtures; `public.eql_v3_json_search` for the v3 json (SteVec document) fixture, whose
 /// generated `payload` column is the `public.eql_v3_json_search` DOMAIN so the domain CHECK
 /// runs on load; and `public.eql_v3_json` for the storage-only / encryption-only json
-/// fixture (CIP-3512), whose `payload` column is that DOMAIN so its `{v,i,c}` CHECK runs on
+/// fixture, whose `payload` column is that DOMAIN so its `{v,i,c}` CHECK runs on
 /// load. Schema-qualified tokens are allowed — each is an exact, vetted entry here, never a
 /// free-form `&str`.
 pub const ALLOWED_COLUMN_TYPES: &[&str] =

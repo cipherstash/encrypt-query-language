@@ -512,6 +512,10 @@ jobs:
         run: |
           mise run test:docs_v3_grep
 
+      - name: Assert public files contain no private issue identifiers
+        run: |
+          mise run test:public_identifiers
+
   # Every `known_failure` marker must name a real, OPEN issue, and its constant
   # must actually be referenced by a test. The Rust half of the contract is
   # self-expiring (the marker FAILS once the wrapped assertion starts passing);

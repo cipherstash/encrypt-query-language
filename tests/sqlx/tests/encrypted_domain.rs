@@ -23,7 +23,7 @@ mod text_match;
 
 // CLLW-OPE (`op` term, `*_ord_ope` domains) smoke suites: hand-built literal
 // hex payloads for the SQL surface (routing, inlining, CHECK discipline) PLUS
-// real-ciphertext fixture tests (CIP-3348 — cipherstash-client 0.38.1 emits
+// real-ciphertext fixture tests ( — cipherstash-client 0.38.1 emits
 // `op` and the generated fixtures carry it). One TOP-LEVEL module per ordered
 // scalar, named `<t>_ord_ope`, so the `test:matrix:catalog-coverage` gate's
 // dedicated-module pattern (`<t>_<seg>::*`) sees every catalog `ord_ope`
@@ -93,7 +93,7 @@ mod constraints;
 #[path = "encrypted_domain/jsonb_entry.rs"]
 mod jsonb_entry;
 
-// Property-based + edge-case tests (CIP-3141). Three suites under `property::`
+// Property-based + edge-case tests. Three suites under `property::`
 // (catalog, fixture, e2e), kept outside `scalars::` so the matrix-inventory gate
 // does not mis-read them as scalar types. See `encrypted_domain/property/mod.rs`.
 #[path = "encrypted_domain/property/mod.rs"]

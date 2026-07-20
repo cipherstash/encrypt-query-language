@@ -39,7 +39,7 @@ pub struct DomainEntry {
     /// underscore from its stored domain names.
     pub suffix: String,
     /// The installed pg_type typname: the version-prefixed unqualified SQL
-    /// name (`eql_v3_integer_eq` — CIP-3472), resolved under `public`.
+    /// name (`eql_v3_integer_eq`), resolved under `public`.
     pub typname: String,
     /// SQL operators the domain's terms support, in catalog order. Empty for
     /// the storage domain (no terms).
@@ -69,8 +69,8 @@ pub struct SteVecEntry {
     /// The bare domain name: `json_search` / `json_entry` / `query_json`.
     pub full_name: String,
     /// The installed pg_type typname: the version-prefixed name for the
-    /// public-schema column domains (`eql_v3_json_search` / `eql_v3_json_entry` —
-    /// CIP-3472); the containment needle stays `query_json` (it lives in the
+    /// public-schema column domains (`eql_v3_json_search` /
+    /// `eql_v3_json_entry`); the containment needle stays `query_json` (it lives in the
     /// already-versioned `eql_v3` schema).
     pub typname: String,
     /// The catalog domain name: `json` / `entry` / `query`.
@@ -100,28 +100,20 @@ fn term_infos(terms: &[Term]) -> Vec<TermInfo> {
 /// empty here. Until the catalog carries them, source the real hand-written
 /// extractors from `src/v3/json/{functions,operators}.sql`.
 ///
-/// Terms live on `json_entry` — the sv *element* type — ONLY: `eql_v3.eq_term`
-/// reads `coalesce(hm, op)` for `=`/`<>`, and `eql_v3.ord_term` reads `op` for
-/// `<`/`<=`/`>`/`>=`. The `json_search` document and `query_json` domains carry no
-/// term extractors (their surface is containment `@>`/`<@` and path navigation),
-/// so they return no terms. Keyed on the catalog domain name (`json`/`entry`/
-/// `query`).
+/// The sole entry term is `op`, read by `eql_v3.ord_term` for ordered
+/// comparisons. Entry equality is blocked, and `hm` is retired from the SteVec
+/// wire. The `json_search` document and `query_json` domains carry no term
+/// extractors (their surface is containment `@>`/`<@` and path navigation), so
+/// they return no terms. Keyed on the catalog domain name (`json`/`entry`/`query`).
 fn stevec_terms(name: &str) -> Vec<TermInfo> {
     if name != "entry" {
         return Vec::new();
     }
-    vec![
-        TermInfo {
-            key: "hm",
-            extractor: "eq_term",
-            ctor: "hmac_256",
-        },
-        TermInfo {
-            key: "op",
-            extractor: "ord_term",
-            ctor: "ope_cllw",
-        },
-    ]
+    vec![TermInfo {
+        key: "op",
+        extractor: "ord_term",
+        ctor: "ope_cllw",
+    }]
 }
 
 /// Build the catalog surface description from `eql_domains::CATALOG`.
@@ -255,14 +247,15 @@ mod tests {
                 .unwrap_or_else(|| panic!("{n} present"))
         };
 
-        // Term extractors live on `json_entry` (the sv element type) ONLY:
-        // `eq_term` (hm/op equality) + `ord_term` (op ordering).
+        // The sole SteVec term extractor lives on `json_entry` (the sv element
+        // type): `ord_term` reads `op`. Entry equality is blocked and `hm` is
+        // not part of the v3 SteVec wire.
         let entry_extractors: Vec<&str> = by_name("json_entry")
             .terms
             .iter()
             .map(|t| t.extractor)
             .collect();
-        assert_eq!(entry_extractors, ["eq_term", "ord_term"]);
+        assert_eq!(entry_extractors, ["ord_term"]);
 
         // The `json_search` document and `query_json` needle carry no term
         // extractors — their surface is containment (@>, <@) and path nav.

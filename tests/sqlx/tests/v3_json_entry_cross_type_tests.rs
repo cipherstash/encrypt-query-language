@@ -1,52 +1,58 @@
-//! CIP-3526 — cross-type comparison operators binding a `public.eql_v3_json_entry`
-//! leaf to the per-type query operands `eql_v3.query_<T>_ord` (the OPE-backed
-//! default ordering operand) and `eql_v3.query_<T>_ord_ope` (its explicit twin).
+//! Cross-type comparison operators binding a
+//! `public.eql_v3_json_entry` leaf to the per-type query operands
+//! `eql_v3.query_<T>_ord` (the OPE-backed default ordering operand) and
+//! `eql_v3.query_<T>_ord_ope` (its explicit twin).
 //!
-//! Equality on encrypted JSON scalar fields is served by these `_ord` operands,
-//! NOT by `query_<T>_eq`: a SteVec scalar (number/string) leaf carries only the
-//! deterministic order-preserving `op` term, never a per-value `hm` (the
-//! cipherstash-client emits `hm` only for bool/null/object/array leaves, and that
-//! `hm` is a value-independent structural term). So `=`/`<>` on a `[Ope]`-family
-//! `_ord` operand route through `ord_term` → `ope_cllw` (byte-equality on `op`,
-//! which is injective on plaintext), exactly like the range operators. The
-//! `query_<T>_eq` operand is deliberately not bound to json_entry — it would be
-//! dead surface (see v3_jsonb_operator_surface_tests.rs).
+//! This surface serves RANGES ONLY (`< <= > >=`). An extracted `json_entry` is a
+//! PATH entry (`{s, c, op?}`) — it carries no value selector — so it cannot
+//! express exact equality: the only equality it could compute is `op`
+//! byte-comparison, which is lossy for text/bigint/numeric and, even where
+//! injective, the wrong mechanism. Exact field equality is document containment on
+//! the value selector (`col @> $1::eql_v3.query_json`, where a value-selector's
+//! presence in the stored document is the exact match — tested in the jsonb
+//! containment suites). So `=`/`<>` on `(json_entry, query_<T>_ord)` are BLOCKED
+//! for EVERY family (they RAISE rather than flatten to native `jsonb = jsonb`).
 //!
-//! Proves: (1) every generated cross operator is backed by a public `eql_v3.*`
-//! wrapper (callable by name on operator-free platforms); (2) a functional index
-//! on `eql_v3.ord_term(...)` engages for both range AND equality queries in
-//! operator form; (3) operator form ≡ function form; (4) `=` matches exactly the
-//! rows whose plaintext equals the operand's, and `<>` the complement — real
-//! op-based equality against real ciphertext.
+//! Proves: (1) every RANGE cross operator is backed by a public `eql_v3.*` wrapper
+//! (callable by name on operator-free platforms), while `=`/`<>` are metadata-free
+//! `eql_v3_internal` blockers; (2) a functional index on `eql_v3.ord_term(...)`
+//! engages for range queries in operator form; (3) operator form ≡ function form
+//! for the ranges; (4) every range operator matches exactly the rows whose
+//! plaintext sorts accordingly — real op-based ordering against real ciphertext;
+//! (5) extract-surface `=`/`<>` are blocked for every family, and unserved
+//! operands (date/timestamp/text-search) raise on every operator.
 
 use anyhow::Result;
 use sqlx::PgPool;
 
+/// A structurally-valid but SYNTHETIC `hm` (64 hex = 32-byte hmac_256 shape).
+/// `query_text_ord`/`_ord_ope` are dual-term (`[Hm, Ope]`) operands — their CHECK
+/// requires `hm` because the SAME type also serves scalar `text` column equality —
+/// but a SteVec leaf carries no `hm`, and the cross-type comparison reads only `op`
+/// via `ord_term`. So an operand built from a SteVec leaf's real `op` needs a
+/// filler `hm` to pass the CHECK; its value is never read (ordering compares `op`,
+/// and the equality operators are blockers that raise before reading any term). For
+/// the Ope-only families (integer/…/numeric) the extra `hm` is simply ignored.
+const SYNTHETIC_HM: &str = "0000000000000000000000000000000000000000000000000000000000000000";
+
 use eql_tests::fixtures::v3_doc_integer::SELECTOR;
 
-/// #1 — Structural: every generated cross operator is backed by a PUBLIC
-/// `eql_v3.*` wrapper (callable by name on operator-free platforms). Creds-free.
+/// #1 — Structural: every RANGE cross operator is backed by a PUBLIC `eql_v3.*`
+/// wrapper (callable by name on operator-free platforms), while `=`/`<>` are
+/// metadata-free `eql_v3_internal` BLOCKERS (equality is document containment, not
+/// an extract op). Creds-free.
 #[sqlx::test]
-async fn json_entry_cross_operators_are_public_and_present(pool: PgPool) -> Result<()> {
-    // Expected (op, lhs, rhs) shapes for integer (representative [Ope] family):
-    // all six operators bind both `_ord` and its `_ord_ope` twin, plus the
-    // (query, json_entry) commutator. `=`/`<>` are present — they route through
-    // ord_term (op equality), not the dropped `_eq`/hm path.
-    let expected: &[(&str, &str, &str)] = &[
-        ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
-        ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
+async fn json_entry_cross_operators_are_public_ranges_and_blocked_equality(
+    pool: PgPool,
+) -> Result<()> {
+    // Range operators bind both `_ord` and its `_ord_ope` twin, plus the
+    // (query, json_entry) commutator — all backed by public wrappers.
+    let public_ranges: &[(&str, &str, &str)] = &[
         (">", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         (">=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         ("<", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
         ("<=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
-        ("=", "eql_v3.query_integer_ord", "public.eql_v3_json_entry"),
         (">", "eql_v3.query_integer_ord", "public.eql_v3_json_entry"),
-        // _ord_ope — the explicit OPE twin.
-        (
-            "=",
-            "public.eql_v3_json_entry",
-            "eql_v3.query_integer_ord_ope",
-        ),
         (
             ">",
             "public.eql_v3_json_entry",
@@ -54,6 +60,18 @@ async fn json_entry_cross_operators_are_public_and_present(pool: PgPool) -> Resu
         ),
         (
             "<=",
+            "public.eql_v3_json_entry",
+            "eql_v3.query_integer_ord_ope",
+        ),
+    ];
+    // Equality operators exist too (they must claim the exact signature to beat
+    // native jsonb flattening), but bound to metadata-free eql_v3_internal blockers.
+    let blocked_equality: &[(&str, &str, &str)] = &[
+        ("=", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
+        ("<>", "public.eql_v3_json_entry", "eql_v3.query_integer_ord"),
+        ("=", "eql_v3.query_integer_ord", "public.eql_v3_json_entry"),
+        (
+            "=",
             "public.eql_v3_json_entry",
             "eql_v3.query_integer_ord_ope",
         ),
@@ -81,18 +99,31 @@ async fn json_entry_cross_operators_are_public_and_present(pool: PgPool) -> Resu
     )
     .fetch_all(&pool)
     .await?;
-    for (op, l, r) in expected {
+    for (op, l, r) in public_ranges {
         let hit = rows
             .iter()
             .find(|(n, ll, rr, _)| n == op && ll == l && rr == r);
         let (_, _, _, backing) =
-            hit.unwrap_or_else(|| panic!("missing cross operator {op}({l},{r})"));
-        assert!(
-            backing.starts_with("eql_v3."),
-            "cross operator {op}({l},{r}) must bind a public eql_v3 wrapper, got {backing}"
+            hit.unwrap_or_else(|| panic!("missing range cross operator {op}({l},{r})"));
+        assert_eq!(
+            backing.split('.').next(),
+            Some("eql_v3"),
+            "range cross operator {op}({l},{r}) must bind a public eql_v3 wrapper, got {backing}"
         );
     }
-    // Negative: NO `query_<T>_eq` operand is bound to json_entry (dead surface).
+    for (op, l, r) in blocked_equality {
+        let hit = rows
+            .iter()
+            .find(|(n, ll, rr, _)| n == op && ll == l && rr == r);
+        let (_, _, _, backing) =
+            hit.unwrap_or_else(|| panic!("missing equality cross operator {op}({l},{r})"));
+        assert!(
+            backing.starts_with("eql_v3_internal."),
+            "equality cross operator {op}({l},{r}) must bind an eql_v3_internal blocker \
+             (equality is document containment, not an extract op), got {backing}"
+        );
+    }
+    // Negative: NO `query_<T>_eq` operand is bound to json_entry.
     assert!(
         !rows
             .iter()
@@ -173,11 +204,12 @@ async fn build_entry_table(tx: &mut sqlx::PgConnection) -> Result<()> {
     Ok(())
 }
 
-/// #2 — ACCEPTANCE: selector-with-constraint queries in operator form against a
-/// `query_integer_ord` / `_ord_ope` operand engage the ord_term functional btree
-/// — an index scan, not a seq scan. Covers the range operators AND `=` (equality
-/// via op also engages the btree). The operand is built in FIELD CONTEXT from a
-/// fixture leaf's own `op` term, so it is real ciphertext.
+/// #2 — ACCEPTANCE: range selector-with-constraint queries in operator form
+/// against a `query_integer_ord` / `_ord_ope` operand engage the ord_term
+/// functional btree — an index scan, not a seq scan. The operand is built in FIELD
+/// CONTEXT from a fixture leaf's own `op` term, so it is real ciphertext. Equality
+/// is NOT here — it is document containment (`col @> query_json`), not an extract
+/// op, and raises on this surface (see #5).
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_doc_integer")))]
 async fn json_entry_ord_cross_type_engages_index(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
@@ -188,11 +220,9 @@ async fn json_entry_ord_cross_type_engages_index(pool: PgPool) -> Result<()> {
         .await?;
 
     // Both `_ord` and its explicit `_ord_ope` twin engage the same ord_term btree
-    // (identical `[Term::Ope]` terms). `=` engages it too (equality is a btree
-    // point lookup on the op term); `<>` is deliberately excluded — an inequality
-    // predicate is not index-accelerated.
+    // (identical `[Term::Ope]` terms) for every range operator.
     for operand_ty in ["eql_v3.query_integer_ord", "eql_v3.query_integer_ord_ope"] {
-        for op in ["=", ">", ">=", "<", "<="] {
+        for op in [">", ">=", "<", "<="] {
             let q = format!(
                 "SELECT * FROM entry_x WHERE value {op} '{}'::{operand_ty}",
                 operand.replace('\'', "''")
@@ -210,10 +240,11 @@ async fn json_entry_ord_cross_type_engages_index(pool: PgPool) -> Result<()> {
     Ok(())
 }
 
-/// #3 — operator form ≡ function form (real ciphertext). For every operator,
-/// `count(*) WHERE value <op> operand` equals `count(*) WHERE eql_v3.<fn>(value,
-/// operand)`. Pins that each operator is a true alias of the function form the
-/// adapter falls back to on operator-free platforms.
+/// #3 — operator form ≡ function form (real ciphertext) for the RANGE operators.
+/// For each, `count(*) WHERE value <op> operand` equals `count(*) WHERE
+/// eql_v3.<fn>(value, operand)`. Pins that each operator is a true alias of the
+/// function form the adapter falls back to on operator-free platforms. `=`/`<>`
+/// are excluded — they are blockers (raise), not computable, on this surface.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_doc_integer")))]
 async fn json_entry_ord_cross_type_operator_equals_function(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
@@ -226,14 +257,7 @@ async fn json_entry_ord_cross_type_operator_equals_function(pool: PgPool) -> Res
     let operand = field_context_ord_operand(&mut tx, pivot_id).await?;
 
     let esc = operand.replace('\'', "''");
-    for (op, func) in [
-        ("=", "eq"),
-        ("<>", "neq"),
-        (">", "gt"),
-        (">=", "gte"),
-        ("<", "lt"),
-        ("<=", "lte"),
-    ] {
+    for (op, func) in [(">", "gt"), (">=", "gte"), ("<", "lt"), ("<=", "lte")] {
         for operand_ty in ["eql_v3.query_integer_ord", "eql_v3.query_integer_ord_ope"] {
             let via_op: i64 = sqlx::query_scalar(&format!(
                 "SELECT count(*) FROM entry_x WHERE value {op} '{esc}'::{operand_ty}"
@@ -263,66 +287,7 @@ async fn json_entry_ord_cross_type_operator_equals_function(pool: PgPool) -> Res
     Ok(())
 }
 
-/// #4 — CORRECTNESS: op-based equality matches plaintext equality. An operand
-/// built in field context from row R's `op` leaf makes `value = operand` select
-/// exactly the rows whose plaintext equals row R's (the deterministic CLLW-OPE
-/// `op` is injective on plaintext at a fixed selector), and `<>` selects the
-/// complement. This is the real end-to-end equality promise (`col -> '$.f' = $1`)
-/// against real ciphertext — not a self-needle: it asserts the FULL match set
-/// against the plaintext oracle, positive and negative.
-#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_doc_integer")))]
-async fn json_entry_eq_cross_type_matches_plaintext_equality(pool: PgPool) -> Result<()> {
-    let mut tx = pool.begin().await?;
-    let operand = field_context_ord_operand(&mut tx, 1).await?;
-    build_entry_table(&mut tx).await?;
-    let esc = operand.replace('\'', "''");
-
-    // Oracle: the ids whose plaintext equals row 1's plaintext (robust to any
-    // duplicate fixture values), and its complement.
-    let expected_eq: Vec<i64> = sqlx::query_scalar(
-        "SELECT id FROM entry_x WHERE plaintext = (SELECT plaintext FROM entry_x WHERE id = 1) \
-         ORDER BY id",
-    )
-    .fetch_all(&mut *tx)
-    .await?;
-    let expected_neq: Vec<i64> = sqlx::query_scalar(
-        "SELECT id FROM entry_x WHERE plaintext <> (SELECT plaintext FROM entry_x WHERE id = 1) \
-         ORDER BY id",
-    )
-    .fetch_all(&mut *tx)
-    .await?;
-    // Sanity: the fixture is non-degenerate (some rows match, some don't).
-    assert!(
-        expected_eq.contains(&1) && !expected_neq.is_empty(),
-        "fixture must have row 1 plus at least one differing row"
-    );
-
-    for operand_ty in ["eql_v3.query_integer_ord", "eql_v3.query_integer_ord_ope"] {
-        let matched_eq: Vec<i64> = sqlx::query_scalar(&format!(
-            "SELECT id FROM entry_x WHERE value = '{esc}'::{operand_ty} ORDER BY id"
-        ))
-        .fetch_all(&mut *tx)
-        .await?;
-        assert_eq!(
-            matched_eq, expected_eq,
-            "`value = {operand_ty}` must match exactly the plaintext-equal rows"
-        );
-
-        let matched_neq: Vec<i64> = sqlx::query_scalar(&format!(
-            "SELECT id FROM entry_x WHERE value <> '{esc}'::{operand_ty} ORDER BY id"
-        ))
-        .fetch_all(&mut *tx)
-        .await?;
-        assert_eq!(
-            matched_neq, expected_neq,
-            "`value <> {operand_ty}` must match exactly the plaintext-differing rows"
-        );
-    }
-    tx.commit().await?;
-    Ok(())
-}
-
-/// #4b — CORRECTNESS: every RANGE operator matches plaintext ordering. This is
+/// #4 — CORRECTNESS: every RANGE operator matches plaintext ordering. This is
 /// the feature's headline promise (`col -> '$.age' > $1`) stated directly: for
 /// `<` `<=` `>` `>=`, the operator's match set equals the plaintext oracle's,
 /// per operand type. #2 (index engagement) and #3 (operator ≡ function) cannot
@@ -387,55 +352,36 @@ async fn json_entry_range_cross_type_matches_plaintext_ordering(pool: PgPool) ->
 /// as a string but last as a number.
 use eql_tests::fixtures::v3_ste_vec::SEL_HELLO_OP;
 
-/// #5 — The families whose leaf encoding is LOSSY have NO equality operator, and
-/// must not grow one.
+/// #5 — Extract-surface equality is BLOCKED for EVERY family.
 ///
-/// A JSON leaf is encoded as an f64 (numbers) or a collated string (text), and
-/// neither preserves every type's values. Where it does not, `=` returns rows whose
-/// plaintext DIFFERS — reachable by ordinary use, not by client error:
-///
-/// ```text
-///   text     "cafe" == "café"     "hello" == "hello😎"     (orderize_string collates)
-///   bigint   9007199254740992 == 9007199254740993          (as_f64 rounds above 2^53)
-///   numeric  more precision than an f64 carries
-/// ```
-///
-/// (Pinned upstream by cllw-ore 0.4.2's `test_string_non_ascii_stripped`; the
-/// bigint collision is verified e2e against cipherstash-client 0.38.1, whose
-/// `impl From<&Value> for StePlaintextTerm` routes every numeric leaf through
-/// `as_f64()` BEFORE `orderable_to_u64`.)
-///
-/// Determinism is what `op` gives — equal plaintext ⇒ equal term — and that is
-/// enough for ORDERING (#6 pins it) but not for equality, which also needs
-/// injectivity. A scalar COLUMN escapes this by listing `Hm` before `Ope`, so
-/// `extractor_for_operator` routes `=` to the exact `hm`
-/// (`every_eq_capable_text_domain_resolves_eq_through_hm`). A SteVec LEAF has no
-/// `hm` to route to — cipherstash-client maps `Value::Number`/`Value::String` to
-/// `Orderable`, never `Mac` — so there is no sound equality to offer for these
-/// families, and the codegen emits none
-/// (`ScalarKind::json_leaf_equality_is_exact`).
-///
-/// `integer`/`smallint`/`real`/`double` KEEP `=` and are pinned here too — the
-/// gate must not over-broaden. See #4, which asserts integer `=` against the
-/// plaintext oracle. (`date`/`timestamp` are not in the kept list: they fail the
-/// upstream PARTICIPATION gate — JSON has no temporal type, so their operands
-/// bind nothing and every operator on them is blocked; see #7.)
+/// An extracted `json_entry` is a PATH entry (`{s, c, op?}`) carrying no value
+/// selector, so the only equality it could compute is `op` byte-comparison. That
+/// is lossy for text/bigint/numeric (`"café"` == `"cafe"`; `2^53` == `2^53+1`
+/// after `as_f64`) and, even where injective (integer/smallint inject into f64,
+/// real/double ARE f64), the WRONG mechanism: exact field equality is document
+/// containment on the value selector (`col @> $1::eql_v3.query_json`, presence =
+/// exact match), which lives on the whole document, not an extracted leaf. So
+/// `=`/`<>` do not exist as computable operators on this surface for any family —
+/// they are blocked uniformly.
 ///
 /// `=` is BLOCKED, not omitted. Omitting it would not make the query an error:
-/// `public.eql_v3_json_entry` and `eql_v3.query_text_ord` are both domains over
+/// `public.eql_v3_json_entry` and `eql_v3.query_<T>_ord` are both domains over
 /// `jsonb`, and operators resolve against the ultimate base type — so an unbound
-/// `=` falls back to native `jsonb = jsonb`, comparing whole payload objects
-/// (`{s,c,op}` vs `{v,i,hm,op}`), never matching, and returning ZERO ROWS with no
-/// error. That swaps a false positive for a silent false negative. The blocker
-/// claims the signature so the caller gets a loud "operator not supported".
+/// `=` falls back to native `jsonb = jsonb`, comparing whole payload objects,
+/// never matching, and returning ZERO ROWS with no error. The blocker claims the
+/// signature so the caller gets a loud "operator not supported" and reaches for
+/// containment instead.
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
-async fn json_entry_lossy_family_equality_is_blocked(pool: PgPool) -> Result<()> {
+async fn json_entry_extract_equality_is_blocked_for_every_family(pool: PgPool) -> Result<()> {
     let mut tx = pool.begin().await?;
 
+    // Operand from the $.hello leaf's real `op` term, plus a synthetic `hm` so the
+    // dual-term `query_text_ord` CHECK passes (see SYNTHETIC_HM). What is under test
+    // is OPERATOR RESOLUTION, not the term bytes — a blocker raises before it ever
+    // reads them.
     let operand: String = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
-                'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
-                       WHERE e ? 'hm' LIMIT 1), \
+                'hm', '{SYNTHETIC_HM}', \
                 'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
          FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
@@ -443,65 +389,54 @@ async fn json_entry_lossy_family_equality_is_blocked(pool: PgPool) -> Result<()>
     .await?;
     let esc = operand.replace('\'', "''");
 
-    sqlx::query(
-        "CREATE TEMP TABLE entry_t (id bigint, value public.eql_v3_json_entry) ON COMMIT DROP",
-    )
-    .execute(&mut *tx)
-    .await?;
-    sqlx::query(&format!(
-        "INSERT INTO entry_t(id, value) \
-         SELECT id, (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
-         FROM fixtures.v3_ste_vec"
-    ))
-    .execute(&mut *tx)
-    .await?;
+    async fn make_entry_table(tx: &mut sqlx::PgConnection) -> Result<()> {
+        sqlx::query(
+            "CREATE TEMP TABLE entry_t (id bigint, value public.eql_v3_json_entry) ON COMMIT DROP",
+        )
+        .execute(&mut *tx)
+        .await?;
+        sqlx::query(&format!(
+            "INSERT INTO entry_t(id, value) \
+             SELECT id, (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
+             FROM fixtures.v3_ste_vec"
+        ))
+        .execute(&mut *tx)
+        .await?;
+        Ok(())
+    }
+    make_entry_table(&mut tx).await?;
 
-    // `=` and `<>` must RAISE for every lossy family's operands, in both
-    // directions — never return rows, and never silently return none. The operand
-    // payload is a text one; the CHECKs of the numeric operands accept `{v,i,op}`,
-    // and what is under test is OPERATOR RESOLUTION, not the term bytes: a blocker
-    // raises before it ever reads them.
+    // `=` and `<>` must RAISE for EVERY family's `_ord`/`_ord_ope` operand, in
+    // both directions — never return rows, and never silently return none.
     for op in ["=", "<>"] {
-        for operand_ty in [
-            "eql_v3.query_text_ord",
-            "eql_v3.query_text_ord_ope",
-            "eql_v3.query_bigint_ord",
-            "eql_v3.query_bigint_ord_ope",
-            "eql_v3.query_numeric_ord",
-            "eql_v3.query_numeric_ord_ope",
+        for family in [
+            "integer", "smallint", "real", "double", "bigint", "numeric", "text",
         ] {
-            for query in [
-                format!("SELECT id FROM entry_t WHERE value {op} '{esc}'::{operand_ty}"),
-                format!("SELECT id FROM entry_t WHERE '{esc}'::{operand_ty} {op} value"),
-            ] {
-                let err = sqlx::query(&query)
-                    .fetch_all(&mut *tx)
-                    .await
-                    .expect_err(&format!(
-                        "{operand_ty}'s leaf encoding is lossy, so `{op}` on a json_entry \
-                         leaf must RAISE rather than answer. Query: {query}"
-                    ));
-                let msg = err.to_string();
-                assert!(
-                    msg.contains("is not supported for"),
-                    "expected the `operator not supported` blocker for `{op}`, got: {msg}"
-                );
-                // The failed statement poisons the transaction; restart it.
-                tx.rollback().await?;
-                tx = pool.begin().await?;
-                sqlx::query(
-                    "CREATE TEMP TABLE entry_t (id bigint, value public.eql_v3_json_entry) \
-                     ON COMMIT DROP",
-                )
-                .execute(&mut *tx)
-                .await?;
-                sqlx::query(&format!(
-                    "INSERT INTO entry_t(id, value) \
-                     SELECT id, (payload -> '{SEL_HELLO_OP}'::text)::public.eql_v3_json_entry \
-                     FROM fixtures.v3_ste_vec"
-                ))
-                .execute(&mut *tx)
-                .await?;
+            for suffix in ["ord", "ord_ope"] {
+                let operand_ty = format!("eql_v3.query_{family}_{suffix}");
+                for query in [
+                    format!("SELECT id FROM entry_t WHERE value {op} '{esc}'::{operand_ty}"),
+                    format!("SELECT id FROM entry_t WHERE '{esc}'::{operand_ty} {op} value"),
+                ] {
+                    let err = sqlx::query(&query)
+                        .fetch_all(&mut *tx)
+                        .await
+                        .expect_err(&format!(
+                            "extract-surface `{op}` on a json_entry leaf must RAISE for every \
+                             family (equality is document containment, not an extract op). \
+                             Query: {query}"
+                        ));
+                    let msg = err.to_string();
+                    assert!(
+                        msg.contains("is not supported for"),
+                        "expected the `operator not supported` blocker for `{op}` on \
+                         {operand_ty}, got: {msg}"
+                    );
+                    // The failed statement poisons the transaction; restart it.
+                    tx.rollback().await?;
+                    tx = pool.begin().await?;
+                    make_entry_table(&mut tx).await?;
+                }
             }
         }
     }
@@ -520,17 +455,12 @@ async fn json_entry_lossy_family_equality_is_blocked(pool: PgPool) -> Result<()>
          proves nothing about equality specifically"
     );
 
-    // The other half of the gate: the families whose leaf encoding IS lossless keep
-    // `=`, backed by the PUBLIC wrapper. Without this, blocking everything would
-    // pass the assertions above — over-broadening is as much a defect as
-    // under-blocking, it just fails silently as a missing feature.
-    // (date/timestamp are NOT here: JSON has no temporal type, so they fail the
-    // participation gate and every operator on their operands is blocked — #7.)
-    for operand_ty in [
-        "eql_v3.query_integer_ord",
-        "eql_v3.query_smallint_ord",
-        "eql_v3.query_real_ord",
-        "eql_v3.query_double_ord",
+    // Structural cross-check: every family's `=` operator is bound to a metadata-
+    // free eql_v3_internal blocker, not a public wrapper. (This is the flip from
+    // the previous surface, where integer/smallint/real/double kept a public
+    // `=` wrapper.)
+    for family in [
+        "integer", "smallint", "real", "double", "bigint", "numeric", "text",
     ] {
         let backing: String = sqlx::query_scalar(
             "SELECT n.nspname || '.' || p.proname \
@@ -541,13 +471,12 @@ async fn json_entry_lossy_family_equality_is_blocked(pool: PgPool) -> Result<()>
                AND o.oprleft = 'public.eql_v3_json_entry'::regtype \
                AND o.oprright = $1::regtype",
         )
-        .bind(operand_ty)
+        .bind(format!("eql_v3.query_{family}_ord"))
         .fetch_one(&mut *tx)
         .await?;
         assert_eq!(
-            backing, "eql_v3.eq",
-            "{operand_ty}'s leaf encoding is lossless, so `=` must stay bound to the \
-             public wrapper — not blocked"
+            backing, "eql_v3_internal.eq",
+            "query_{family}_ord's `=` must be a blocker — equality is document containment"
         );
     }
 
@@ -572,19 +501,20 @@ async fn json_entry_text_ord_cross_type_matches_plaintext_ordering(pool: PgPool)
     let mut tx = pool.begin().await?;
 
     // Pivot on row 2 ("world-2"), where string and numeric order disagree. Row 1
-    // ("world-1") would NOT discriminate — it is the minimum under both orders.
+    // ("world-1") would NOT discriminate — it is the minimum under both orders. The
+    // operand carries the real $.hello `op` plus a synthetic `hm` (query_text_ord
+    // is dual-term; ordering reads only `op` via ord_term — see SYNTHETIC_HM).
     let operand: String = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
-                'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
-                       WHERE e ? 'hm' LIMIT 1), \
+                'hm', '{SYNTHETIC_HM}', \
                 'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
          FROM fixtures.v3_ste_vec WHERE id = 2"
     ))
     .fetch_one(&mut *tx)
     .await?;
     assert!(
-        !operand.contains("\"hm\": null") && !operand.contains("\"op\": null"),
-        "operand must carry real hm/op terms from the fixture, got: {operand}"
+        !operand.contains("\"op\": null"),
+        "operand must carry a real op term from the $.hello leaf, got: {operand}"
     );
 
     sqlx::query(
@@ -677,12 +607,11 @@ async fn json_entry_text_ord_cross_type_matches_plaintext_ordering(pool: PgPool)
 async fn json_entry_unserved_operand_operators_raise(pool: PgPool) -> Result<()> {
     // A temporal operand payload never exists in the wild (the client refuses to
     // mint one), so what is under test is OPERATOR RESOLUTION — the blocker
-    // raises before reading any term. The ste_vec text-leaf operand `{v,i,hm,op}`
-    // satisfies the `{v,i,op}` CHECK of `query_{date,timestamp}_ord{,_ope}`.
+    // raises before reading any term. The ste_vec text-leaf operand `{v,i,op}`
+    // (SteVec entries carry no `hm`) satisfies the `{v,i,op}` CHECK of
+    // `query_{date,timestamp}_ord{,_ope}`.
     let temporal_operand: String = sqlx::query_scalar(&format!(
         "SELECT jsonb_build_object('v', '3', 'i', (payload::jsonb -> 'i'), \
-                'hm', (SELECT e -> 'hm' FROM jsonb_array_elements(payload::jsonb -> 'sv') e \
-                       WHERE e ? 'hm' LIMIT 1), \
                 'op', (payload -> '{SEL_HELLO_OP}'::text)::jsonb -> 'op')::text \
          FROM fixtures.v3_ste_vec WHERE id = 1"
     ))

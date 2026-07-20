@@ -11,12 +11,12 @@ use serde::Deserialize;
 
 /// The PostgreSQL schema every user-COLUMN domain in this module inhabits.
 /// The `query_<name>` operand twins are NOT column types and live in `eql_v3`
-/// instead (CIP-3442) — dropping the EQL-owned schema can never drop an
+/// instead — dropping the EQL-owned schema can never drop an
 /// application column, and a query operand is never an application column.
 pub const SQL_SCHEMA: &str = "public";
 
 /// The version prefix every public-schema column domain's typname carries
-/// (`eql_v3_integer_eq`, `eql_v3_json_search`, … — CIP-3472). Mirrors
+/// (`eql_v3_integer_eq`, `eql_v3_json_search`, …). Mirrors
 /// `eql_domains::PUBLIC_TYPNAME_PREFIX` (a dev-dependency here, so the
 /// literal is repeated); parity with the catalog is pinned exhaustively by
 /// `tests/catalog_parity.rs`. Query-operand domains (`query_<name>`,

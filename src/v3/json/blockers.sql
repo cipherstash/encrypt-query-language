@@ -6,8 +6,9 @@
 --! @brief Native-jsonb firewall for public.eql_v3_json_search.
 --!
 --! public.eql_v3_json_search SUPPORTS @> <@ -> ->> (see operators.sql). Comparisons
---! = <> < <= > >= are supported on public.eql_v3_json_entry only, not on the root
---! document domain.
+--! Ordered comparisons < <= > >= are supported on public.eql_v3_json_entry;
+--! entry equality = <> is blocked because path entries carry no exact value
+--! selector. Root-document comparisons are also blocked.
 --! Every OTHER native jsonb operator reachable via domain fallback against the
 --! base type jsonb is BLOCKED here so an encrypted column can never silently
 --! route to plaintext-jsonb semantics. The blocked set is KNOWN_JSONB_OPERATORS
@@ -434,6 +435,53 @@ CREATE OPERATOR >= (
 CREATE OPERATOR >= (
   FUNCTION = eql_v3_internal.jsonb_blocked_compare_jsonb_json,
   LEFTARG = jsonb,
+  RIGHTARG = public.eql_v3_json_search
+);
+
+------------------------------------------------------------------------------
+-- Dropped single-entry containment blockers.
+------------------------------------------------------------------------------
+
+--! @brief Block document containment against an extracted path entry.
+--! @param a public.eql_v3_json_search Encrypted document.
+--! @param b public.eql_v3_json_entry Extracted path entry.
+--! @return boolean Never returns; always raises 'operator not supported'.
+--! @note An extracted path entry carries no value selector, so this signature
+--!       cannot express exact equality. It is explicitly claimed to prevent
+--!       PostgreSQL flattening both domains to native jsonb containment.
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_contains_entry(a public.eql_v3_json_search, b public.eql_v3_json_entry)
+RETURNS boolean
+IMMUTABLE PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$
+BEGIN
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('public.eql_v3_json_search', '@>');
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OPERATOR @> (
+  FUNCTION = eql_v3_internal.jsonb_blocked_contains_entry,
+  LEFTARG = public.eql_v3_json_search,
+  RIGHTARG = public.eql_v3_json_entry
+);
+
+--! @brief Block reverse containment from an extracted path entry.
+--! @param a public.eql_v3_json_entry Extracted path entry.
+--! @param b public.eql_v3_json_search Encrypted document.
+--! @return boolean Never returns; always raises 'operator not supported'.
+CREATE FUNCTION eql_v3_internal.jsonb_blocked_entry_contained(a public.eql_v3_json_entry, b public.eql_v3_json_search)
+RETURNS boolean
+IMMUTABLE PARALLEL SAFE
+SET search_path = pg_catalog, extensions, public
+AS $$
+BEGIN
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('public.eql_v3_json_entry', '<@');
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OPERATOR <@ (
+  FUNCTION = eql_v3_internal.jsonb_blocked_entry_contained,
+  LEFTARG = public.eql_v3_json_entry,
   RIGHTARG = public.eql_v3_json_search
 );
 

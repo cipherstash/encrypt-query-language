@@ -453,20 +453,19 @@ macro_rules! scalar_matrix {
 
 /// Reduced behaviour matrix for a SteVec **entry** view type (e.g.
 /// `JsonbEntryInteger`). Runs only the leaf drivers that are surface-agnostic
-/// once routed through the access-path seam: correctness (d,d only),
-/// supported_null, order_by(+nulls/+using), count, index_engages, and — once
+/// once routed through the access-path seam: range correctness (d,d only),
+/// ordering NULL propagation, order_by(+nulls/+using), count, index_engages, and — once
 /// `src/v3/json/aggregates.sql` exists — aggregate(+group_by/+parallel).
 /// Containment / blockers / payload_check / path-op / native-absent /
 /// planner-metadata stay in the hand-written `v3_jsonb_tests` suite — they have
 /// no scalar analogue or assert document-specific surface.
-/// `ord_routes_through_ordering_term` and scalar `ore_injectivity` are also excluded: they
-/// are scalar-term invariants and are not semantically correct for
-/// `jsonb_entry` (entry equality routes through `eq_term`, not ORE).
+/// `ord_routes_through_ordering_term` and scalar `ore_injectivity` are also
+/// excluded: they are scalar-term invariants. Entry `=` / `<>` are fail-loud
+/// blockers because an extracted path entry carries no exact value selector.
 ///
 /// The single `(entry, Ord)` "domain" is variant-independent — `jsonb_entry`
-/// has one domain. Equality reduces through `eql_v3.eq_term`; ordering, index,
-/// count-distinct, and aggregates reduce through `eql_v3.ord_term` via the
-/// `JsonbEntryInteger` extractor overrides.
+/// has one domain. Ordering, count-distinct, and aggregates reduce through
+/// `eql_v3.ord_term` via the `JsonbEntryInteger` extractor override.
 #[macro_export]
 macro_rules! jsonb_entry_matrix {
     (
@@ -478,7 +477,7 @@ macro_rules! jsonb_entry_matrix {
             case = __scalar_matrix_correctness_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
-            ops_list = [(eq, "="), (neq, "<>"), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            ops_list = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
             pivots_list = [
                 (min, <$scalar as $crate::scalar_domains::OrderedScalar>::min_pivot()),
                 (max, <$scalar as $crate::scalar_domains::OrderedScalar>::max_pivot()),
@@ -489,7 +488,7 @@ macro_rules! jsonb_entry_matrix {
             case = __scalar_matrix_supported_null_case,
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
             domains = [(entry, Ord)],
-            ops_list = [(eq, "="), (neq, "<>"), (lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
+            ops_list = [(lt, "<"), (lte, "<="), (gt, ">"), (gte, ">=")],
         }
         $crate::__scalar_matrix_order_by_outer! {
             suite = $suite, scalar = $scalar, script = $eql_type, script_path = "../../fixtures",
@@ -1513,7 +1512,7 @@ macro_rules! __scalar_matrix_planner_metadata_case {
                     sqlx::query_as(&sql).fetch_all(&pool).await?;
 
                 // 5 arg shapes per operator: the 3 storage shapes — (d,d),
-                // (d,jsonb), (jsonb,d) — plus the 2 CIP-3432 query-operand shapes
+                // (d,jsonb), (jsonb,d) — plus the 2  query-operand shapes
                 // — (d, query_d), (query_d, d). Every term-bearing domain the
                 // planner-metadata suite runs on has a `query_<name>` twin, so
                 // the count is uniformly ops x 5.
@@ -1954,7 +1953,7 @@ macro_rules! __scalar_matrix_fixture_shape {
                             ("bf array", "payload->'bf' IS NULL OR jsonb_typeof(payload->'bf') <> 'array'"),
                         );
                     }
-                    // Flipped tripwire (CIP-3348): cipherstash-client 0.38.1
+                    // Flipped tripwire: cipherstash-client 0.38.1
                     // emits the scalar CLLW-OPE term, the fixtures declare the
                     // `ope` index, and the conversion routes `op` through to
                     // every `_ord_ope`-capable payload. `op` must now be
@@ -1995,19 +1994,19 @@ macro_rules! __scalar_matrix_fixture_shape {
                     } else {
                         // A non-Ope family's fixture must NOT carry `op` —
                         // its index set never declares `ope`, so a stray key
-                        // means the conversion targets drifted (CIP-3348).
+                        // means the conversion targets drifted.
                         let with_op: i64 = sqlx::query_scalar(&format!(
                             "SELECT COUNT(*) FROM {table} WHERE payload ? 'op'",
                         )).fetch_one(&pool).await?;
                         anyhow::ensure!(with_op == 0,
                             "fixture payload carries an `op` term but the catalog family \
-                             declares no Ope domain — conversion targets drifted (CIP-3348)");
+                             declares no Ope domain — conversion targets drifted");
                     }
                 }
 
                 // Every eql_v3 domain CHECK pins v = '3' (the #340 envelope
                 // bump); the generator converts the pinned client's v2
-                // output through eql_bindings::from_v2, which also drops the
+                // output through the client's v3 assembler, which drops the
                 // v2 `k` form discriminator — a payload carrying `k` (or the
                 // old version) means raw client output bypassed the seam.
                 let mismatched_version: i64 = sqlx::query_scalar(&format!(

@@ -77,7 +77,7 @@ pub struct DomainBlock {
     pub nonempty_array_keys: Vec<String>,
     // sql_str-escaped keys the payload must NOT carry. Empty for storage domains;
     // `['c']` for a query-operand twin, whose CHECK forbids the ciphertext (a
-    // query operand is index-terms-only — CIP-3432). The template renders a
+    // query operand is index-terms-only). The template renders a
     // `NOT (VALUE ? k)` clause per key.
     pub forbidden_keys: Vec<String>,
     // sql_str-escaped one-line human description rendered as `COMMENT ON DOMAIN`.
@@ -137,7 +137,7 @@ pub struct TypesContext {
 /// Build the per-domain block data (port of `render_domain_block`'s value logic,
 /// minus comment prose and the CHECK skeleton — those are template-resident).
 pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
-    // Public-schema domains carry the eql_v3_ version prefix (CIP-3472);
+    // Public-schema domains carry the eql_v3_ version prefix;
     // the catalog name stays bare.
     let name = public_typname(&domain.full_name(family_name));
 
@@ -166,7 +166,7 @@ pub fn domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
 
 /// The query-operand twin block for a term-bearing domain: `public.query_<name>`,
 /// keys = envelope-minus-`c` (`v`/`i`) + the domain's terms, with `c` FORBIDDEN
-/// (a query operand carries no ciphertext — CIP-3432). Same non-empty-array term
+/// (a query operand carries no ciphertext). Same non-empty-array term
 /// rule as the storage block.
 pub fn query_domain_block(family_name: &str, domain: &Domain) -> DomainBlock {
     let name = domain.query_name(family_name);
@@ -363,7 +363,7 @@ pub struct AggregatesContext {
 }
 
 /// Context for `ore_fallback.sql` — the cross-family capability-detection file
-/// (CIP-3468) that poisons every ORE-carrying domain when the ORE operator
+/// that poisons every ORE-carrying domain when the ORE operator
 /// class could not be installed (non-superuser installer, e.g. cloud Supabase).
 #[derive(serde::Serialize)]
 pub struct OreFallbackContext {
@@ -386,7 +386,7 @@ pub struct OreFallbackEntry {
 
 /// The bare pg_type typname of a public-schema encrypted domain: the catalog
 /// name carrying the [`eql_domains::PUBLIC_TYPNAME_PREFIX`] version prefix,
-/// e.g. `eql_v3_integer_eq` (CIP-3472). The prefix keeps EQL domains from
+/// e.g. `eql_v3_integer_eq`. The prefix keeps EQL domains from
 /// shadowing PostgreSQL built-in type names (`integer`, `text`, `json`, …)
 /// and gives each EQL version a distinct column-type namespace so multiple
 /// versions can coexist in one database. Catalog names stay bare — the prefix
@@ -408,7 +408,7 @@ pub fn domain_name(name: &str) -> String {
 /// (not `public`) — they are never valid column types, so the
 /// application-columns-survive-schema-drop rationale behind `domain_name`
 /// does not apply, and keeping them out of `public` keeps the column-type
-/// namespace to actual column types (CIP-3442).
+/// namespace to actual column types.
 pub fn query_domain_name(name: &str) -> String {
     format!("{SCHEMA}.{name}")
 }

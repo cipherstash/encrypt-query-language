@@ -7,15 +7,16 @@
 //! plaintexts through a Proxy-mediated Postgres connection. That whole loop
 //! existed only because the Proxy was the encryption oracle.
 //!
-//! `cipherstash-client` (0.38.1, the first release that emits the scalar
-//! CLLW-OPE `op` term — CIP-3348) exposes the same surface natively. This module
-//! owns the bootstrap — `build_cipher()` builds a `ScopedCipher<AutoStrategy>` —
-//! and the batched helper `encrypt_store()` that wraps `eql::encrypt_eql` and
-//! returns the resulting EQL payloads as `serde_json::Value`s ready to bind
-//! into a `jsonb` column. The pinned client emits the **v2** wire; every
-//! payload is routed through `eql_bindings::from_v2` (see the sibling
-//! `v3_convert` module) before it leaves `encrypt_store`, so the fixtures
-//! carry the v3 envelope the `eql_v3` domain CHECKs require. A
+//! `cipherstash-client` exposes the same surface natively. This module owns
+//! the bootstrap — `build_cipher()` builds a `ScopedCipher<AutoStrategy>` —
+//! and the batched helper `encrypt_store()` that wraps `eql::encrypt_eql_v3`
+//! and returns the resulting EQL payloads as `serde_json::Value`s ready to
+//! bind into a `jsonb` column. The client (the value-selector
+//! branch) emits the **v3** wire natively — scalar payloads `{v, i, c,
+//! terms…}` with no `k`, and SteVec documents whose entries are `{s, c, a?,
+//! op?}` plus the appended presence-only value entries — so the retired
+//! `from_v2` conversion hop (the old `v3_convert` module) is gone: fixtures
+//! carry exactly what the client's own v3 assembler produces. A
 //! fixture-generator process makes exactly one `encrypt_store` call, so the
 //! cipher is built once per process by construction — no static cache, no
 //! cross-runtime hazard.
@@ -29,14 +30,14 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use cipherstash_client::encryption::{QueryOp, ScopedCipher};
+use cipherstash_client::encryption::{DecryptOptions, QueryOp, ScopedCipher};
 use cipherstash_client::eql::{
-    encrypt_eql, EqlCiphertext, EqlEncryptOpts, EqlOperation, EqlOutput, Identifier,
+    encrypt_eql_v3, EqlCiphertextV3, EqlEncryptOpts, EqlOperation, EqlOutputV3, Identifier,
     PreparedPlaintext,
 };
 use cipherstash_client::schema::column::{ArrayIndexMode, Index, IndexType, SteVecMode};
 use cipherstash_client::schema::{ColumnConfig, ColumnType};
-use cipherstash_client::zerokms::{EnvKeyProvider, ZeroKMSBuilder};
+use cipherstash_client::zerokms::{EnvKeyProvider, RecordWithNonce, ZeroKMSBuilder};
 use cipherstash_client::AutoStrategy;
 
 use super::eql_plaintext::{Cast, EqlPlaintext};
@@ -133,12 +134,10 @@ fn index_type_for(kind: IndexKind) -> IndexType {
         // No `Index::new_ste_vec()` constructor exists — SteVec is a struct
         // variant. `mode: SteVecMode::Compat` yields CLLW-OPE ordering terms
         // — the ones the v3 `eql_v3.ord_term` extractor consumes (order-
-        // preserving under native byte comparison). The pinned 0.38.1 client
-        // serializes Compat-mode OPE bytes under the v2.3 `oc` key (the v2.3
-        // schema has no sv-level `op`); the fixture converter remaps them to
-        // `op` — see `ste_vec_oc_to_op` in v3_convert.rs. NOT
-        // `SteVecMode::Standard`: Standard emits CLLW-*ORE* terms, which do
-        // not order under byte comparison and have no v3 representation.
+        // preserving under native byte comparison). The client's v3 assembler
+        // emits Compat-mode OPE bytes under the sv-level `op` key directly.
+        // NOT `SteVecMode::Standard`: Standard emits CLLW-*ORE* terms, which
+        // do not order under byte comparison and have no v3 representation.
         // `ArrayIndexMode::default()` (NONE) + no term filters keep the
         // document index minimal.
         IndexKind::SteVec => IndexType::SteVec {
@@ -163,12 +162,11 @@ fn index_type_for(kind: IndexKind) -> IndexType {
 /// `PreparedPlaintext` is `value.to_plaintext()`; the config, identifier,
 /// and `EqlOperation::Store` are shared across the batch.
 ///
-/// Uses `EqlOperation::Store`, which yields a full v2 storage payload
-/// (`{"k": "ct", "v": 2, "i": …, "c": …, "hm": …, "ob": …}`) — the pinned
-/// client still speaks the v2 wire. Every payload is then routed through
-/// `eql_bindings::from_v2` (see [`super::v3_convert`]) before it is
-/// returned, so callers only ever see v3 payloads that satisfy the
-/// `v = '3'` domain CHECKs. `EqlEncryptOpts::default()` uses the cipher's
+/// Uses `EqlOperation::Store`, which yields a full v3 storage payload
+/// (`{"v": 3, "i": …, "c": …, terms…}` for scalars; `{v, k: "sv", i, sv}`
+/// for SteVec documents) straight from the client's v3 assembler, so
+/// callers only ever see payloads that satisfy the `v = '3'` domain
+/// CHECKs. `EqlEncryptOpts::default()` uses the cipher's
 /// default keyset, no lock context, no service token, no index filter —
 /// the same defaults Proxy uses for column-config-driven inserts.
 ///
@@ -208,7 +206,7 @@ pub async fn encrypt_store<T: EqlPlaintext>(
         .collect();
 
     let opts = EqlEncryptOpts::default();
-    let outputs = encrypt_eql(cipher, prepared, &opts)
+    let outputs = encrypt_eql_v3(cipher, prepared, &opts)
         .await
         .with_context(|| {
             format!(
@@ -219,39 +217,35 @@ pub async fn encrypt_store<T: EqlPlaintext>(
 
     if outputs.len() != values.len() {
         return Err(anyhow!(
-            "encrypt_eql returned {} outputs for {} inputs",
+            "encrypt_eql_v3 returned {} outputs for {} inputs",
             outputs.len(),
             values.len()
         ));
     }
 
-    let v2_payloads: Vec<serde_json::Value> = outputs
+    // The client's own v3 assembler is the source of truth for the envelope
+    // the `eql_v3` domain CHECKs accept — no EQL-side conversion.
+    outputs
         .into_iter()
         .map(|output| {
-            let ciphertext: EqlCiphertext = match output {
-                EqlOutput::Store(ct) => ct,
-                EqlOutput::Query(_) => {
-                    // EqlOperation::Store always yields EqlOutput::Store;
+            let ciphertext: EqlCiphertextV3 = match output {
+                EqlOutputV3::Store(ct) => ct,
+                EqlOutputV3::Query(_) => {
+                    // EqlOperation::Store always yields EqlOutputV3::Store;
                     // treating the other arm as unreachable would hide a
                     // future API drift.
                     return Err(anyhow!(
-                        "encrypt_eql returned a Query output for an EqlOperation::Store input"
+                        "encrypt_eql_v3 returned a Query output for an EqlOperation::Store input"
                     ));
                 }
             };
-            serde_json::to_value(&ciphertext).context("serialising EqlCiphertext to JSON")
+            serde_json::to_value(&ciphertext).context("serialising EqlCiphertextV3 to JSON")
         })
-        .collect::<Result<_>>()?;
-
-    // The pinned client emits the v2 wire; the v3 domain CHECKs require
-    // v = '3'. Convert fail-closed through eql_bindings::from_v2 so no raw
-    // v2 payload can ever reach a written fixture (CIP-3347).
-    super::v3_convert::to_v3_payloads(v2_payloads, T::KIND, indexes)
-        .context("converting encrypted payloads to the v3 envelope")
+        .collect::<Result<_>>()
 }
 
 /// Encrypt one value as a **SteVec query operand** — the query-side counterpart
-/// to [`encrypt_store`], returning the raw v2 query payload.
+/// to [`encrypt_store`], returning the raw v3 query payload.
 ///
 /// `EqlOperation::Query(&IndexType, QueryOp)` carries the `IndexType`
 /// explicitly, and the query path in `to_encryption_targets` DISCARDS the
@@ -285,22 +279,22 @@ async fn encrypt_ste_vec_query<T: EqlPlaintext>(
     )];
 
     let opts = EqlEncryptOpts::default();
-    let mut outputs = encrypt_eql(cipher, prepared, &opts)
+    let mut outputs = encrypt_eql_v3(cipher, prepared, &opts)
         .await
         .with_context(|| format!("encrypting a SteVec query operand for {table}.{column}"))?;
 
     match outputs.pop() {
-        Some(EqlOutput::Query(payload)) => {
-            serde_json::to_value(&payload).context("serialising EqlQueryPayload to JSON")
+        Some(EqlOutputV3::Query(payload)) => {
+            serde_json::to_value(&payload).context("serialising EqlQueryPayloadV3 to JSON")
         }
-        Some(EqlOutput::Store(_)) => Err(anyhow!(
-            "encrypt_eql returned a Store output for an EqlOperation::Query input"
+        Some(EqlOutputV3::Store(_)) => Err(anyhow!(
+            "encrypt_eql_v3 returned a Store output for an EqlOperation::Query input"
         )),
-        None => Err(anyhow!("encrypt_eql returned no output for one input")),
+        None => Err(anyhow!("encrypt_eql_v3 returned no output for one input")),
     }
 }
 
-/// Pull a required string field out of a v2 SteVec query payload.
+/// Pull a required string field out of a v3 SteVec query payload.
 fn query_payload_str(payload: &serde_json::Value, key: &str) -> Result<String> {
     payload
         .get(key)
@@ -321,20 +315,22 @@ fn query_payload_str(payload: &serde_json::Value, key: &str) -> Result<String> {
 pub async fn ste_vec_query_selector(table: &str, column: &str, path: &str) -> Result<String> {
     let payload =
         encrypt_ste_vec_query(table, column, &path.to_owned(), QueryOp::SteVecSelector).await?;
-    query_payload_str(&payload, "s")
+    // The v3 selector query payload is the bare tokenized-selector hex string.
+    payload
+        .as_str()
+        .map(str::to_owned)
+        .ok_or_else(|| anyhow!("v3 selector payload must be a bare string; got {payload}"))
 }
 
 /// The CLLW-OPE **term** for a scalar value, as the hex string a v3 query
-/// operand carries under `op`.
-///
-/// The client emits it under the v2.3 `oc` key; v3 names the same bytes `op`
-/// (the same remap `ste_vec_oc_to_op` performs for stored leaves — that shim
-/// only walks `sv` arrays, so a top-level query term is remapped here).
+/// operand carries under `op` (the fixture SteVec index is pinned to
+/// `SteVecMode::Compat`, so the ordering primitive is CLLW-OPE and the v3
+/// assembler emits it under `op` directly).
 ///
 /// The term encodes the PLAINTEXT and the column, never the field: `op` terms
-/// carry no selector (only `hm` terms do). Field scoping is the caller's `->`
-/// extraction, not a property of this term — so one term is comparable against
-/// whichever leaf the caller extracts.
+/// carry no selector. Field scoping is the caller's `->` extraction, not a
+/// property of this term — so one term is comparable against whichever leaf
+/// the caller extracts.
 ///
 /// `QueryOp::SteVecTerm` accepts strings and numbers only; a bool/null/object
 /// plaintext has no orderable term and errors here rather than silently
@@ -345,7 +341,118 @@ pub async fn ste_vec_query_term<T: EqlPlaintext>(
     value: &T,
 ) -> Result<String> {
     let payload = encrypt_ste_vec_query(table, column, value, QueryOp::SteVecTerm).await?;
-    query_payload_str(&payload, "oc")
+    query_payload_str(&payload, "op")
+}
+
+/// A complete `query_json` containment needle for an exact value at a JSON path
+/// (`"$.number"`, `2`): `{"sv":[{"s":"<value_selector>"}]}`.
+///
+/// Derived from the client (`QueryOp::SteVecValueSelector` →
+/// `generate_value_selector`, a MAC over the index key + prefix + path +
+/// canonical(value)), so a value-selector's PRESENCE in the stored document is an
+/// exact, injective match — the equality mechanism that replaced the lossy `op`
+/// comparison. This is what a client binds for encrypted-JSON field
+/// equality: `col @> $1::eql_v3.query_json`. Numbers canonicalise (jsonb numeric
+/// equality: `2` and `2.0` share a selector), so, unlike [`ste_vec_query_term`], a
+/// numeric value need not be pre-cast to a float.
+pub async fn ste_vec_query_value_selector(
+    table: &str,
+    column: &str,
+    path: &str,
+    value: &serde_json::Value,
+) -> Result<serde_json::Value> {
+    let input = serde_json::json!({ "path": path, "value": value });
+    let payload =
+        encrypt_ste_vec_query(table, column, &input, QueryOp::SteVecValueSelector).await?;
+    // Unlike a path selector (a bare string), an exact-value selector is already
+    // assembled by cipherstash-client into the complete term-less containment
+    // needle expected by eql_v3.query_json.
+    let entries = payload
+        .get("sv")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| {
+            anyhow!("v3 value-selector payload must contain an `sv` array; got {payload}")
+        })?;
+    anyhow::ensure!(
+        entries.len() == 1
+            && entries[0]
+                .get("s")
+                .and_then(serde_json::Value::as_str)
+                .is_some()
+            && entries[0].as_object().is_some_and(|entry| entry.len() == 1),
+        "v3 value-selector payload must be one term-less `s` entry; got {payload}",
+    );
+    Ok(payload)
+}
+
+/// Reassemble and decrypt SQL-extracted v3 SteVec entries independently.
+///
+/// Each input must be the self-contained shape returned by the SQL `->`
+/// extractor: `{v, i, h, s, c, a?, op?}`. The helper reconstructs the client's
+/// typed v3 envelope solely to decode the opaque header/ciphertext fields, then
+/// binds each ciphertext to its stored selector through
+/// `KeyHeader::record_with_selector`. Per-entry authentication failures remain
+/// per-item errors so tests can assert that a valid extraction decrypts while a
+/// ciphertext graft fails in the same batch.
+pub async fn decrypt_ste_vec_entries_fallible(
+    entries: &[serde_json::Value],
+) -> Result<Vec<std::result::Result<Vec<u8>, String>>> {
+    fn record(entry: &serde_json::Value) -> Result<RecordWithNonce> {
+        let obj = entry
+            .as_object()
+            .ok_or_else(|| anyhow!("extracted SteVec entry must be an object; got {entry}"))?;
+        let required = |key: &str| {
+            obj.get(key)
+                .cloned()
+                .ok_or_else(|| anyhow!("extracted SteVec entry has no `{key}`; got {entry}"))
+        };
+
+        let mut wire_entry = obj.clone();
+        for key in ["v", "i", "h"] {
+            wire_entry.remove(key);
+        }
+        let wire = serde_json::json!({
+            "v": required("v")?,
+            "k": "sv",
+            "i": required("i")?,
+            "h": required("h")?,
+            "sv": [serde_json::Value::Object(wire_entry)],
+        });
+        let parsed: EqlCiphertextV3 = serde_json::from_value(wire)
+            .context("parsing the SQL-extracted entry as a typed v3 SteVec envelope")?;
+        let EqlCiphertextV3::SteVec(mut document) = parsed else {
+            return Err(anyhow!(
+                "reconstructed entry did not parse as a SteVec document"
+            ));
+        };
+        let entry = document
+            .ste_vec
+            .pop()
+            .ok_or_else(|| anyhow!("reconstructed SteVec document has no entry"))?;
+        let selector: [u8; 16] = hex::decode(&entry.selector)
+            .context("decoding the extracted entry selector")?
+            .try_into()
+            .map_err(|bytes: Vec<u8>| {
+                anyhow!(
+                    "extracted selector must decode to 16 bytes, got {}",
+                    bytes.len()
+                )
+            })?;
+        Ok(document
+            .key_header
+            .record_with_selector(entry.ciphertext, selector))
+    }
+
+    let records = entries.iter().map(record).collect::<Result<Vec<_>>>()?;
+    let cipher = build_cipher().await?;
+    let decrypted = cipher
+        .decrypt_fallible(records, &DecryptOptions::default())
+        .await
+        .context("decrypting SQL-extracted SteVec entries")?;
+    Ok(decrypted
+        .into_iter()
+        .map(|result| result.map_err(|error| error.to_string()))
+        .collect())
 }
 
 #[cfg(test)]
@@ -452,17 +559,17 @@ mod live_tests {
     const INT_INDEXES: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore];
 
     /// The full ordered-integer index set including `Ope`, which drives the
-    /// scalar CLLW-OPE `op` term (cipherstash-client 0.38.1+, CIP-3348).
+    /// scalar CLLW-OPE `op` term (cipherstash-client 0.38.1+).
     const INT_INDEXES_WITH_OPE: &[IndexKind] = &[IndexKind::Unique, IndexKind::Ore, IndexKind::Ope];
 
     /// Assert the well-formed v3 Store shape: the payload is a JSON object
     /// with non-null `v`, `c`, `hm`, `ob`, and `i` fields, `v = 3`, and no
-    /// `k` discriminator (dropped by the from_v2 conversion). Mirrors the
+    /// `k` discriminator (the v3 assembler never emits one). Mirrors the
     /// per-key assertions in the generated `scalars::integer` matrix suite
     /// (emitted from the `scalar_types!` list in `scalar_types.rs`).
     ///
     /// The `op` (CLLW-OPE) key is pinned in BOTH directions against the
-    /// index set that produced the payload (CIP-3348): an `ope`-indexed
+    /// index set that produced the payload: an `ope`-indexed
     /// column MUST carry a hex-string `op` term, and a column without the
     /// `ope` index MUST NOT — a stray `op` on a non-ope column means the
     /// client started emitting the term unconditionally and the fixture
@@ -475,10 +582,9 @@ mod live_tests {
                 "payload must carry a non-null `{key}` field; got {payload}"
             );
         }
-        // `v` is the EQL payload-format version. The client emits the v2
-        // wire; encrypt_store converts through eql_bindings::from_v2, so
-        // the observable output declares the v3 envelope and no longer
-        // carries the v2 `k` form discriminator.
+        // `v` is the EQL payload-format version. The client's v3 assembler
+        // emits the v3 envelope directly: scalar payloads carry no `k` form
+        // discriminator.
         assert_eq!(
             obj.get("v").and_then(Value::as_i64),
             Some(3),
@@ -492,7 +598,7 @@ mod live_tests {
             let op = obj.get("op").and_then(Value::as_str).unwrap_or_else(|| {
                 panic!(
                     "an ope-indexed payload must carry a string `op` (CLLW-OPE) \
-                     term (CIP-3348); got {payload}"
+                     term; got {payload}"
                 )
             });
             assert!(
@@ -505,8 +611,8 @@ mod live_tests {
             assert!(
                 !obj.contains_key("op"),
                 "a payload without the ope index must NOT carry an `op` term — \
-                 the client emits CLLW-OPE only for ope-indexed columns \
-                 (CIP-3348); got {payload}"
+                 the client emits CLLW-OPE only for ope-indexed columns; \
+                 got {payload}"
             );
         }
     }
@@ -524,10 +630,9 @@ mod live_tests {
     #[tokio::test]
     #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
     async fn encrypt_store_with_ope_index_emits_the_op_term() {
-        // CIP-3348: cipherstash-client 0.38.1 emits the scalar CLLW-OPE
-        // term for `ope`-indexed columns; from_v2 routes it through to the
-        // `_ord_ope`-capable v3 payload as a single hex string (NOT an
-        // array like `ob`).
+        // The client emits the scalar CLLW-OPE term for
+        // `ope`-indexed columns on the `_ord_ope`-capable v3 payload as a
+        // single hex string (NOT an array like `ob`).
         let out = encrypt_store(
             "live_ope",
             "payload",
@@ -545,7 +650,7 @@ mod live_tests {
     #[tokio::test]
     #[ignore = "live ZeroKMS — run via `cargo test --features fixture-gen -- --ignored`"]
     async fn encrypt_store_ope_term_is_deterministic_for_equal_plaintexts() {
-        // CLLW-OPE determinism is load-bearing (CIP-3348): the integer
+        // CLLW-OPE determinism is load-bearing: the integer
         // families route `=`/`<>` through `op`, so two independent
         // encryptions of one plaintext MUST yield byte-identical `op` hex
         // strings — a randomized term would make op-routed equality

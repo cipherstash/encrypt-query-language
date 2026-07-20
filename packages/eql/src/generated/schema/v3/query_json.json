@@ -1,11 +1,7 @@
 {
   "$defs": {
-    "Hmac256": {
-      "description": "HMAC-SHA-256 equality term — the `hm` wire key. Backs the `_eq` domains\n(`=`, `<>`). SQL-side constructor: `eql_v3_internal.hmac_256`.",
-      "type": "string"
-    },
     "OpeCllw": {
-      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the\ndefault ordering domain), `_ord_ope`, and `text_search` domains, their\n`query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered entries\nof a SteVec document (exactly one of `hm` (equality) XOR `op` (ordering)\nper entry — enforced by the SQL domain CHECK): a hex-encoded CLLW OPE\nciphertext, sortable via native bytea comparison after hex-decode —\nunlike `ob` (block-ORE) it needs no custom comparator. Extracted by\n`eql_v3.ord_term` (scalar domains and the `public.jsonb_entry` overload\nalike); SQL-side constructor: `eql_v3_internal.ope_cllw`.",
+      "description": "CLLW-OPE order term — the `op` wire key. Backs the scalar `_ord` (the\ndefault ordering domain), `_ord_ope`, and `text_search` domains, their\n`query_` operands (`=` `<>` `<` `<=` `>` `>=`), and the ordered\n(number/string) path entries of a SteVec document (the only per-entry\nterm — `hm` is retired; exact matching is the value-inclusive selector):\na hex-encoded CLLW OPE ciphertext, sortable via native bytea comparison\nafter hex-decode — unlike `ob` (block-ORE) it needs no custom comparator.\nExtracted by `eql_v3.ord_term` (scalar domains and the\n`public.eql_v3_json_entry` overload alike); SQL-side constructor:\n`eql_v3_internal.ope_cllw`.",
       "type": "string"
     },
     "Selector": {
@@ -13,32 +9,19 @@
       "type": "string"
     },
     "SteVecQueryEntry": {
-      "anyOf": [
-        {
-          "properties": {
-            "hm": {
-              "$ref": "#/$defs/Hmac256"
-            }
-          },
-          "required": [
-            "hm"
-          ],
-          "type": "object"
-        },
-        {
-          "properties": {
-            "op": {
-              "$ref": "#/$defs/OpeCllw"
-            }
-          },
-          "required": [
-            "op"
-          ],
-          "type": "object"
-        }
-      ],
-      "description": "One element of a SteVec containment needle: a selector plus one term, and\n(per the SQL CHECK) no ciphertext. LAX for the same flatten reason as\n`SteVecEntry`; the \"no `c`\" contract is enforced by `is_valid_ste_vec_query_payload`.",
+      "additionalProperties": false,
+      "description": "One element of a SteVec containment needle: a selector plus — for ordered\npath entries only — the `op` ordering term; value-selector and structural\nentries are selector-only (matched on presence), and (per the SQL CHECK)\nno element carries a ciphertext. Unknown fields are rejected so the Rust\nparser and published JSON Schema enforce the same boundary as PostgreSQL.",
       "properties": {
+        "op": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OpeCllw"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "s": {
           "$ref": "#/$defs/Selector"
         }

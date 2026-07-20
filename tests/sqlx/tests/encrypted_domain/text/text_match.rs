@@ -1,7 +1,7 @@
 //! Fuzzy-match coverage for `public.eql_v3_text_match` — separate from the
 //! ordered matrix because `@@` is asymmetric/probabilistic, not a total order.
 //! `@@` (`eql_v3.matches`) is bloom n-gram token matching, NOT containment
-//! (CIP-3517): `col @@ needle` reduces to `match_term(col) @> match_term(needle)`
+//!: `col @@ needle` reduces to `match_term(col) @> match_term(needle)`
 //! on the extracted bloom terms. Asserts against the generated `eql_v3_text`
 //! fixtures (which carry `bf`). The containment operators `@>`/`<@` now RAISE on
 //! this domain (covered in `text_smoke`).
@@ -72,7 +72,7 @@ async fn disjoint_value_does_not_match(pool: PgPool) -> anyhow::Result<()> {
 #[sqlx::test(fixtures(path = "../../../fixtures", scripts("eql_v3_text")))]
 async fn match_term_uses_functional_index(pool: PgPool) -> anyhow::Result<()> {
     // Explicit extractor form `match_term(col) @> match_term(needle)` — the raw
-    // bloom array-containment the GIN index supports (unchanged by CIP-3517; the
+    // bloom array-containment the GIN index supports (unchanged by ; the
     // public `@@` operator reduces to exactly this). Forces `enable_seqscan = off`
     // so this is an index-VALIDITY proof on the small fixture (not a
     // cost-preference one), and uses the node-type-aware `assert_index_scan_uses`
