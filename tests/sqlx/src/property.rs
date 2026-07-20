@@ -1,4 +1,4 @@
-//! Shared substrate for the encrypted-domain property tests (CIP-3141).
+//! Shared substrate for the encrypted-domain property tests.
 //!
 //! `assert_eq_oracle` / `assert_ord_oracle` take a set of
 //! `(plaintext, payload_json)` rows and check SQL operator results against the
@@ -59,8 +59,19 @@ pub struct Row<T> {
     pub payload_json: String,
 }
 
+/// One equality-oracle result row for a pair: the storage operators
+/// `(eq, neq)` followed by the  query-operand operators
+/// `(eq_q, neq_q, eq_qc)`.
+type EqRow = (
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+    Option<bool>,
+);
+
 /// One ordering-oracle result row for a pair: the storage operators
-/// `(lt, lte, gt, gte, ord_term_lt)` followed by the CIP-3432 query-operand
+/// `(lt, lte, gt, gte, ord_term_lt)` followed by the  query-operand
 /// operators `(lt_q, lte_q, gt_q, gte_q)`.
 type OrdRow = (
     Option<bool>,
@@ -88,9 +99,9 @@ fn jsonb(payload_json: &str) -> String {
 
 /// Cast a JSON text literal into a QUERY-operand value: strip the ciphertext
 /// `c` (a query operand carries index terms only) and cast to the domain's
-/// `query_<name>` twin (prefix naming — CIP-3442). This is exactly what a
+/// `query_<name>` twin (prefix naming). This is exactly what a
 /// client sends — the stored envelope minus `c` — and the RHS the
-/// `(storage, query_<name>)` query operators consume (CIP-3432).
+/// `(storage, query_<name>)` query operators consume.
 fn query_cast(payload_json: &str, domain: &str) -> String {
     let mut v: serde_json::Value =
         serde_json::from_str(payload_json).expect("payload_json is valid JSON");
@@ -99,9 +110,9 @@ fn query_cast(payload_json: &str, domain: &str) -> String {
     }
     // `domain` is schema-qualified (`public.eql_v3_integer_eq`); the twin joins
     // `query_` to the BARE catalog name — the `eql_v3_` version prefix
-    // (CIP-3472) applies to public-schema column types only — and lives in the
-    // eql_v3 schema, not `public` (query operands are never column types —
-    // CIP-3442): `eql_v3.query_integer_eq`.
+    // applies to public-schema column types only — and lives in the
+    // eql_v3 schema, not `public` (query operands are never column types):
+    // `eql_v3.query_integer_eq`.
     let bare = match domain.rsplit_once('.') {
         Some((_, name)) => name,
         None => domain,
@@ -127,7 +138,7 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
             let want = a.plaintext == b.plaintext;
             let a_dom = cast(&a.payload_json, &domain);
             let b_dom = cast(&b.payload_json, &domain);
-            // CIP-3432: the SAME pair also exercises the term-only query operand
+            // The same pair also exercises the term-only query operand
             // (the stored payload minus its ciphertext `c`) through the
             // `(storage, query_<name>)` operators, in both directions — folded
             // into this one round trip so query coverage adds no DB load.
@@ -137,16 +148,11 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
                 "SELECT ({a_dom}) = ({b_dom}), ({a_dom}) <> ({b_dom}), \
                         ({a_dom}) = ({b_qry}), ({a_dom}) <> ({b_qry}), ({a_qry}) = ({b_dom})"
             );
-            let (eq, neq, eq_q, neq_q, eq_qc): (
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-                Option<bool>,
-            ) = sqlx::query_as(&sql)
-                .fetch_one(pool)
-                .await
-                .with_context(|| format!("eq-oracle pair query: {sql}"))?;
+            let (eq, neq, eq_q, neq_q, eq_qc): EqRow =
+                sqlx::query_as(&sql)
+                    .fetch_one(pool)
+                    .await
+                    .with_context(|| format!("eq-oracle pair query: {sql}"))?;
             anyhow::ensure!(
                 eq == Some(want),
                 "eq mismatch on {domain}: plaintext {:?}=={:?} is {want}, SQL `=` returned {eq:?}",
@@ -206,7 +212,7 @@ pub async fn assert_ord_oracle<T: ScalarType>(
         for b in rows {
             let a_cast = cast(&a.payload_json, &domain);
             let b_cast = cast(&b.payload_json, &domain);
-            // CIP-3432: the term-only query operand for `b` (payload minus `c`),
+            // The term-only query operand for `b` (payload minus `c`) is
             // exercised through `(storage, query_<name>)` ordering in the SAME
             // round trip (no added DB load).
             let b_qry = query_cast(&b.payload_json, &domain);
@@ -275,7 +281,7 @@ pub enum Overload {
     DomainDomain,
     DomainJsonb,
     JsonbDomain,
-    /// CIP-3432: the RHS is the term-only query operand (`query_<domain>`, the
+    /// The RHS is the term-only query operand (`query_<domain>`, the
     /// payload minus `c`) — the `(storage, query_<name>)` function overload. The
     /// facet that reaches `query_text_search`, which the operator oracle (which
     /// runs text via `_eq`/`_ord`/`_ord_ore`, not `_search`) never touches.
@@ -554,7 +560,7 @@ pub async fn assert_extractor_oracle<T: ScalarType>(
 /// admits false positives and the plaintext oracle is substring, not equality,
 /// so this is curated rather than a random property: three fixtures with known
 /// n-gram relationships (`haystack` ⊇ `needle`, `disjoint` shares none). Asserts
-/// `eql_v3.matches` (the `@@` fuzzy match, CIP-3517) respects
+/// `eql_v3.matches` (the `@@` fuzzy match) respects
 /// **left-matches-right** (`match_term(a) @> match_term(b)`, a's bloom ⊇ b's) and
 /// that `match_term` yields a non-empty `bf` array. Operands are the payload
 /// JSON literals cast to `domain` (`public.eql_v3_text_match`).
@@ -568,7 +574,7 @@ pub async fn assert_match_smoke(
     let haystack = cast(haystack_json, domain);
     let needle = cast(needle_json, domain);
     let disjoint = cast(disjoint_json, domain);
-    // CIP-3432: the term-only query operands (bloom `bf`, no ciphertext `c`),
+    // Term-only query operands carry bloom `bf` but no ciphertext `c` and are
     // consumed by the `(text_match, query_text_match)` match operators.
     let needle_q = query_cast(needle_json, domain);
     let disjoint_q = query_cast(disjoint_json, domain);
@@ -594,17 +600,17 @@ pub async fn assert_match_smoke(
             false,
         ),
         (
-            "matches(haystack, needle_query) [CIP-3432]",
+            "matches(haystack, needle_query)",
             format!("eql_v3.matches({haystack}, {needle_q})"),
             true,
         ),
         (
-            "matches(haystack, disjoint_query) [CIP-3432]",
+            "matches(haystack, disjoint_query)",
             format!("eql_v3.matches({haystack}, {disjoint_q})"),
             false,
         ),
         (
-            "matches(needle_query, haystack) [CIP-3432]",
+            "matches(needle_query, haystack)",
             format!("eql_v3.matches({needle_q}, {haystack})"),
             false,
         ),

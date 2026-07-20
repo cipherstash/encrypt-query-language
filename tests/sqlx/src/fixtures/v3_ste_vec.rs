@@ -25,6 +25,31 @@ use super::spec::FixtureSpec;
 /// `v3_ste_vec.sql`, SQLx ref `scripts("v3_ste_vec")`.
 const NAME: &str = "v3_ste_vec";
 
+/// The `$.hello` **string** leaf's `op` selector, pinned from the generated
+/// fixture. THE one shared copy — every suite that names this selector imports
+/// it from here (`eql_tests::fixtures::v3_ste_vec::SEL_HELLO_OP`), so a fixture
+/// or keyset regeneration is a single edit. The selector is a deterministic
+/// MAC of (column context, JSONPath), so it changes only on a keyset change,
+/// not per regeneration.
+///
+/// History: an earlier copy of this constant named `$.number` — the fixture's
+/// INTEGER leaf — while claiming `$.hello`, and survived because the suites
+/// that used it were equality-only (the fixture pairs `number = i` with
+/// `hello = "world-i"` 1:1, so both leaves induce identical equality
+/// partitions). Only ORDER separates the leaves, which
+/// `v3_json_entry_cross_type_tests::json_entry_text_ord_cross_type_matches_plaintext_ordering`
+/// now pins — and duplication is exactly how the mis-pin escaped notice, hence
+/// the single shared copy.
+///
+/// To re-derive rather than trust this hex: `ste_vec_query_selector(…, "$.hello")`
+/// asks cipherstash-client directly (see the `proptest-e2e` suite
+/// `v3_json_entry_query_operand_e2e_tests`, which needs no constant at all).
+/// Creds-free, the fixture's term LENGTHS distinguish the two leaves: a string
+/// `op` is `8 * (len + 1) + 1` bits, so `$.hello` is 132 hex chars for
+/// `"world-1"`..`"world-9"` and 148 for `"world-10"`, while `$.number` is a
+/// fixed-width 65-bit number term — 132 on every row.
+pub const SEL_HELLO_OP: &str = "b325a0c77b130af97b805c12ff853ab3";
+
 /// The canonical `payload` column type — the `public.eql_v3_json_search` DOMAIN, so the
 /// domain CHECK runs when the fixture loads.
 const PAYLOAD_TYPE: &str = "public.eql_v3_json_search";
@@ -36,18 +61,30 @@ const ROW_COUNT: i64 = 10;
 /// The ten plaintext documents — the source of truth for the fixture.
 ///
 /// `hello` VARIES across all rows (10 distinct values → 10 distinct `$.hello`
-/// `op` leaves) so the W1 containment oracle (`fwd == expected`, where
-/// `expected` = rows whose `$.hello` op equals the row-1 self-needle) and the
-/// D11 OPE-btree test have real discrimination — a constant `$.hello` would
-/// make `expected == ROW_COUNT` and silently hollow the oracle. `number` also
-/// varies (its own `$.number` op). `nested` is a constant object so `$` and
-/// `$.nested` carry stable `hm` leaves across all rows (LB2 / LB4).
+/// `op` leaves and value selectors) so exact containment can isolate one row
+/// and the D11 OPE-btree test has real discrimination. `number` also
+/// varies (its own `$.number` op). `accented` and `large` carry the two known
+/// collision pairs from the retired OPE-equality path, while `empty` pins the
+/// genuine empty-string leaf against the value-entry sentinel. `nested` is a
+/// constant object so its structural and value selectors are stable across
+/// all rows.
 fn documents() -> Vec<Value> {
     (1..=ROW_COUNT)
         .map(|i| {
             json!({
                 "hello": format!("world-{i}"),
                 "number": i,
+                "accented": match i {
+                    1 => "café".to_string(),
+                    2 => "cafe".to_string(),
+                    _ => format!("accented-{i}"),
+                },
+                "large": match i {
+                    1 => 9_007_199_254_740_993_i64,
+                    2 => 9_007_199_254_740_992_i64,
+                    _ => i,
+                },
+                "empty": "",
                 "nested": { "deep": "constant" },
             })
         })
@@ -82,12 +119,18 @@ mod tests {
         let hellos: std::collections::HashSet<&str> =
             docs.iter().map(|d| d["hello"].as_str().unwrap()).collect();
         assert_eq!(hellos.len(), 10, "$.hello must be distinct across all rows");
-        // `nested` is a constant object so `$.nested` carries a stable hm leaf.
+        // `nested` is constant, and every row carries a genuine empty-string
+        // leaf so its path entry cannot be confused with a value-entry sentinel.
         assert!(docs
             .iter()
             .all(|d| d["nested"] == json!({ "deep": "constant" })));
+        assert!(docs.iter().all(|d| d["empty"] == json!("")));
         let numbers: Vec<i64> = docs.iter().map(|d| d["number"].as_i64().unwrap()).collect();
         assert_eq!(numbers, (1..=10).collect::<Vec<_>>());
+        assert_eq!(docs[0]["accented"], json!("café"));
+        assert_eq!(docs[1]["accented"], json!("cafe"));
+        assert_eq!(docs[0]["large"], json!(9_007_199_254_740_993_i64));
+        assert_eq!(docs[1]["large"], json!(9_007_199_254_740_992_i64));
     }
 
     #[test]

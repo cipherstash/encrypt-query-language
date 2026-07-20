@@ -1,4 +1,4 @@
-//! e2e suite (CIP-3141): property tests over freshly generated values encrypted
+//! e2e suite: property tests over freshly generated values encrypted
 //! end-to-end through ZeroKMS each run. Gated behind `proptest-e2e` (declared in
 //! property/mod.rs) — needs CS_* creds, which `mise run test:sqlx` enables for
 //! CI/local full SQLx runs.

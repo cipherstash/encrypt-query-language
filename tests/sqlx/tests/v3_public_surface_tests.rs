@@ -94,11 +94,11 @@ async fn public_surface(pool: &PgPool) -> Result<Vec<String>> {
 /// the hand-written JSON/JSONB column domains. These MUST live in `public`
 /// (never `eql_v3` or `eql_v3_internal`) so application tables using them
 /// survive EQL schema uninstall. The query-operand domains are deliberately
-/// NOT here — they are never column types and live in `eql_v3` (CIP-3442);
+/// NOT here — they are never column types and live in `eql_v3`;
 /// see [`query_domain_names`].
 fn user_domain_names() -> Vec<String> {
     // Installed typnames: the catalog join carrying the eql_v3_ version
-    // prefix (CIP-3472) — resolved through the same DomainFamily::domain_name
+    // prefix — resolved through the same DomainFamily::domain_name
     // the SQL surface is generated through.
     let mut names = Vec::new();
     for family in eql_domains::scalar_families() {
@@ -119,7 +119,7 @@ fn user_domain_names() -> Vec<String> {
 /// scalar domain plus the jsonb containment needle. These MUST live in
 /// `eql_v3` (never `public`) — a query operand is not a column type, so it
 /// stays out of the column-type namespace and is uninstalled with the EQL
-/// surface (CIP-3442).
+/// surface.
 fn query_domain_names() -> Vec<String> {
     let mut names: Vec<String> = eql_domains::scalar_families()
         .flat_map(|f| {
@@ -274,8 +274,8 @@ async fn user_column_domains_absent_from_eql_owned_schemas(pool: PgPool) -> Resu
 /// #2 — Placement invariant (mirror): every query-operand domain lives in
 /// `eql_v3` as a jsonb-backed domain, and none leaks into `public`. A query
 /// operand is never a column type, so it is versioned and uninstalled with
-/// the EQL surface instead of sharing the column domains' `public` home
-/// (CIP-3442).
+/// the EQL surface instead of sharing the column domains' `public` home.
+/// The expected type set is derived from the encrypted-domain catalog.
 #[sqlx::test]
 async fn query_operand_domains_are_eql_v3_jsonb_domains(pool: PgPool) -> Result<()> {
     let installed: Vec<(String, String, String)> = sqlx::query_as(

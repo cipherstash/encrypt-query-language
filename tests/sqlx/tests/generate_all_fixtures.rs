@@ -40,7 +40,7 @@ async fn generate_all() -> anyhow::Result<()> {
     eql_tests::fixtures::v3_ste_vec::generate().await?;
     eprintln!("Regenerated v3_ste_vec.");
 
-    // The storage-only / encryption-only json fixture (CIP-3512) — a
+    // The storage-only / encryption-only json fixture — a
     // hand-written `FixtureSpec<serde_json::Value>` with NO index, so each
     // document encrypts to a plain `{v, i, c}` envelope for the storage-only
     // `public.eql_v3_json` domain. Same pipeline, no SteVec index.

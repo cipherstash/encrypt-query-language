@@ -22,7 +22,7 @@ pub enum IndexKind {
     /// `ope` — drives ordering (and, for the integer families, `=` / `<>`)
     /// via the CLLW-OPE term (`op`): a single hex-encoded order-preserving
     /// ciphertext, natively bytea-sortable after hex-decode. Emitted by
-    /// cipherstash-client 0.38.1+ (CIP-3348).
+    /// cipherstash-client 0.38.1+.
     Ope,
     /// `match` — drives `LIKE` / `ILIKE` via the bloom filter.
     Match,

@@ -576,34 +576,43 @@ fn from_v2_scalar_outputs_validate_against_published_v3_schemas() {
 }
 
 #[test]
-fn from_v2_ste_vec_output_validates_against_published_v3_schema() {
-    let v2 = json!({
-        "v": 2,
+fn native_v3_ste_vec_document_validates_against_published_v3_schema() {
+    // A v2 SteVec DOCUMENT is no longer convertible to v3 (the envelope wire
+    // format — key header + selector-derived nonces — is re-encryption, not
+    // a JSON transform), so this validates a NATIVE v3 envelope document
+    // (the shape encrypt_eql_v3 emits) against the committed schema.
+    let doc = json!({
+        "v": 3,
         "k": "sv",
         "i": ident(),
+        "h": "mp_base85_key_header",
         "sv": [
-            { "s": SELECTOR, "c": CIPHERTEXT, "hm": HEX },
+            { "s": SELECTOR, "c": CIPHERTEXT },
             { "s": SELECTOR, "a": true, "c": CIPHERTEXT, "op": HEX_LONG }
         ]
     });
-    assert_converts_to_valid_v3(&v2, "eql_v3_json_search");
+    assert_valid(
+        &load_v3_schema("eql_v3_json_search"),
+        &doc,
+        "native v3 SteVec document",
+    );
 }
 
 #[test]
-fn from_v2_query_output_validates_against_published_v3_schema() {
+fn from_v2_ste_vec_query_fails_closed() {
     use eql_bindings::from_v2::{from_v2_query, TargetDomain};
+    // Legacy selectors do not include the plaintext value, so no legacy
+    // SteVec query can be transformed into a v3 exact-match query.
     let v2 = json!({
         "sv": [
-            { "s": SELECTOR, "hm": HEX },
+            { "s": SELECTOR },
             { "s": SELECTOR, "op": HEX_LONG }
         ]
     });
-    let out = from_v2_query(&v2, TargetDomain::Json).expect("query conversion must succeed");
-    assert_valid(
-        &load_v3_schema("query_json"),
-        &out,
-        "from_v2_query output for query_json",
-    );
+    assert!(matches!(
+        from_v2_query(&v2, TargetDomain::Json).unwrap_err(),
+        eql_bindings::from_v2::FromV2Error::UnconvertibleSteVecQuery
+    ));
 }
 
 #[test]

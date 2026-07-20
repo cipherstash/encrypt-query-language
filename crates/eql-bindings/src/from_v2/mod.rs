@@ -1,6 +1,6 @@
 //! # `from_v2` — EQL v2.3 → v3 wire conversion
 //!
-//! Converts the EQL v2.3 payloads cipherstash-client emits (reference
+//! Converts scalar EQL v2.3 payloads cipherstash-client emits (reference
 //! contract: `docs/reference/schema/eql-payload-v2.3.schema.json`) into v3
 //! payloads for the `eql_v3` domains. Consumers: protect-ffi (which knows the
 //! column configuration at runtime), the benches (which know per-table
@@ -38,22 +38,12 @@
 //!   cipherstash-client emits `op` for OPE-ordered columns ahead of the v3
 //!   envelope, and the `_ord_ope` targets require it.
 //!
-//! **SteVec** (v2 `k: "sv"` → [`TargetDomain::Json`]): keeps the root `k`
-//! (the v3 document models the `"sv"` form discriminator — required on the
-//! wire), sets `v: 3`, keeps `i`; per entry keeps `s`, `c`, the optional
-//! array-membership marker `a` (the v3 [`crate::v3::json::SteVecEntry`]
-//! retains it), and exactly one of `hm` XOR `op`
-//! ([`FromV2Error::AmbiguousTerm`] / [`FromV2Error::MissingTerm`] on
-//! both/neither). Like scalar `op`, the sv-level `op` term predates the
-//! v2.3 schema file: cipherstash-client emits it for OPE-mode SteVec columns
-//! ahead of the v3 envelope. A CLLW-*ORE* `oc` entry term is
-//! [`FromV2Error::UnconvertibleOreTerm`] — v3 orders SteVec entries by the
-//! CLLW-OPE `op` term (native byte order), ORE ciphertext bytes would
-//! silently misorder, and whether older Compat-mode `oc` bytes are really
-//! OPE cannot be determined from the payload alone. Fail closed;
-//! re-encryption is the only conversion. v3 sv entries carry no per-entry
-//! `v`/`i`/`k` — the envelope lives only at the root `{v, k, i, sv}`,
-//! exactly the [`crate::v3::json::SteVecDocument`] shape.
+//! **SteVec documents** (v2 `k: "sv"` → [`TargetDomain::Json`]) are not
+//! convertible. V3 stores one key header per document and encrypts entries
+//! with selector-derived nonces; neither can be produced by a JSON rewrite.
+//! [`from_v2`] and [`from_v2_typed`] therefore return
+//! [`FromV2Error::UnconvertibleSteVecDocument`]. Re-encryption through a
+//! v3-emitting client is required.
 //!
 //! Every converted payload is validated by a final strict parse through the
 //! target's binding struct (`deny_unknown_fields` + [`crate::SchemaVersion`])
@@ -67,15 +57,17 @@
 //!
 //! ## Query payloads
 //!
-//! [`from_v2_query`] covers both query shapes. The jsonb containment needle
-//! (`{sv: [{s, hm|op}]}` → [`crate::v3::json::SteVecQuery`]) normalizes
-//! entries down to `s` + one term exactly as the SQL cast
-//! `eql_v3.to_ste_vec_query` does (stray `a` markers and `c` ciphertexts are
-//! stripped). A term-bearing scalar target hoists the target's required terms
+//! [`from_v2_query`] converts scalar query shapes only. A legacy SteVec
+//! containment needle cannot be converted: its path selector plus `hm`/`op`
+//! equality term does not contain the plaintext needed to derive v3's
+//! value-inclusive selector. JSON targets fail with
+//! [`FromV2Error::UnconvertibleSteVecQuery`]. A term-bearing scalar target
+//! hoists the target's required terms
 //! into the enveloped term-only operand `{v: 3, i, <terms>}` for its
 //! `query_<name>` domain — the query counterpart of the stored conversion,
-//! dropping `c`/`k` (CIP-3432). A STORAGE-ONLY scalar target (no terms, no
-//! operators) has no query operand and returns
+//! dropping `c`/`k`. A query operand may omit `k`; when present it must be
+//! `"ct"`, so a mislabeled SteVec or unknown form fails closed. A STORAGE-ONLY
+//! scalar target (no terms, no operators) has no query operand and returns
 //! [`FromV2Error::UnsupportedQueryTarget`].
 //!
 //! Query conversion has the same entry-point split as the stored-payload
@@ -85,16 +77,8 @@
 //! serialization is byte-identical to the `Value` [`from_v2_query`] returns).
 //! One shared conversion path, one strict parse either way.
 //!
-//! ## Decryption root: `sv[0]`
-//!
-//! The record ciphertext of a SteVec document — the `c` downstream decrypt
-//! must hand to cipherstash-client — is carried by the FIRST `sv` entry
-//! (`sv[0].c`, the root-selector entry). This mirrors upstream
-//! `SteVec::into_root_ciphertext` and is exactly how v2 consumers treated
-//! `sv[0].c` (see protect-ffi's `encrypted_record_from_mp_base85`). The v3
-//! SQL surface does not re-state this invariant (its CHECKs validate shape,
-//! not entry order), so conversion preserves `sv` entry order verbatim —
-//! reordering entries would silently break decryption.
+//! Native v3 SteVec documents and queries are intentionally outside this
+//! module: use cipherstash-client's v3 encryption APIs to produce them.
 
 mod error;
 mod target;
@@ -159,7 +143,7 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     let kind = obj.get("k").and_then(Value::as_str);
     match (kind, target) {
         (Some("ct"), TargetDomain::Scalar(t)) => convert_scalar(obj, t),
-        (Some("sv"), TargetDomain::Json) => convert_ste_vec(obj),
+        (Some("sv"), TargetDomain::Json) => Err(FromV2Error::UnconvertibleSteVecDocument),
         (Some(kind @ ("ct" | "sv")), _) => Err(FromV2Error::KindMismatch {
             kind: kind.into(),
             target: target.describe().into(),
@@ -172,11 +156,9 @@ fn convert(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
 
 /// Convert an EQL v2.3 QUERY payload into the v3 query operand for `target`.
 ///
-/// [`TargetDomain::Json`]: the v2 containment needle (`{sv: [{s, hm|op}]}`, the
-/// v2.3 `SteVecQueryPayload`) converts to the [`crate::v3::json::SteVecQuery`]
-/// shape — entries normalized to `s` + exactly one term (mirroring
-/// `eql_v3.to_ste_vec_query`; stray `a`/`c` keys are stripped, so a stored
-/// document payload can also be normalized into a needle), `i` dropped.
+/// [`TargetDomain::Json`] fails with
+/// [`FromV2Error::UnconvertibleSteVecQuery`]: a legacy equality term cannot be
+/// transformed into v3's value-inclusive selector without plaintext.
 ///
 /// A term-bearing [`TargetDomain::Scalar`]: the target's required terms are
 /// hoisted into the enveloped term-only operand `{v: 3, i, <terms>}` for its
@@ -217,14 +199,12 @@ pub fn from_v2_query_typed(v2: &Value, target: TargetDomain) -> Result<QueryPayl
 }
 
 /// The unqualified query-operand domain a target converts into: the scalar
-/// twin `query_<name>`, or `query_json` for the hand-written SteVec needle —
-/// both on the query-operand PREFIX convention (CIP-3442). (Replaces the old
-/// single `QUERY_DOMAIN` constant now that scalar query shapes exist.)
+/// twin `query_<name>`, or `query_json` for the hand-written SteVec needle.
 fn query_domain_name(target: TargetDomain) -> String {
     match target {
         TargetDomain::Json => "query_json".to_string(),
         // The query twin joins `query_` to the BARE domain name: the stored
-        // domain's `eql_v3_` version prefix (CIP-3472) applies to public-schema
+        // domain's `eql_v3_` version prefix applies to public-schema
         // column types only — query operands live in the already-versioned
         // `eql_v3` schema, so `eql_v3_text_eq` twins `query_text_eq`.
         TargetDomain::Scalar(t) => {
@@ -260,7 +240,7 @@ fn parse_query(domain: &str, out: &Value) -> Result<QueryPayload, FromV2Error> {
 /// parse-and-keep in [`from_v2_query_typed`]).
 fn convert_query(v2: &Value, target: TargetDomain) -> Result<Value, FromV2Error> {
     match target {
-        TargetDomain::Json => convert_ste_vec_query(v2),
+        TargetDomain::Json => Err(FromV2Error::UnconvertibleSteVecQuery),
         TargetDomain::Scalar(t) => convert_scalar_query(v2, t),
     }
 }
@@ -285,6 +265,22 @@ fn convert_scalar_query(v2: &Value, target: ScalarTarget) -> Result<Value, FromV
         if v.as_u64() != Some(V2_WIRE_VERSION) {
             return Err(FromV2Error::UnsupportedVersion { found: v.as_u64() });
         }
+    }
+    match obj.get("k") {
+        None => {}
+        Some(Value::String(kind)) if kind == "ct" => {}
+        Some(Value::String(kind)) if kind == "sv" => {
+            return Err(FromV2Error::KindMismatch {
+                kind: "sv".into(),
+                target: target.domain().into(),
+            });
+        }
+        Some(Value::String(kind)) => {
+            return Err(FromV2Error::UnknownKind {
+                found: Some(kind.clone()),
+            });
+        }
+        Some(_) => return Err(FromV2Error::UnknownKind { found: None }),
     }
     let mut out = Map::new();
     out.insert("v".into(), json!(crate::EQL_SCHEMA_VERSION));
@@ -417,133 +413,4 @@ fn convert_bloom(bf: &Value) -> Result<Value, FromV2Error> {
         out.push(Value::from(reinterpreted));
     }
     Ok(Value::Array(out))
-}
-
-/// v2 `k: "sv"` → SteVec document `{v: 3, k: "sv", i, sv: [{s, c, a?, hm|op}]}`.
-/// Entry order is preserved verbatim — `sv[0]` is the decryption root (see
-/// the module docs).
-fn convert_ste_vec(obj: &Map<String, Value>) -> Result<Value, FromV2Error> {
-    let mut out = Map::new();
-    out.insert("v".into(), json!(crate::EQL_SCHEMA_VERSION));
-    // The root `k: "sv"` form discriminator is carried through: the v3
-    // document models it ([`crate::v3::json::SteVecDocument`]'s `k`,
-    // required on the wire). `from_v2` already dispatched on `k == "sv"`, so
-    // emitting the literal is exact.
-    out.insert("k".into(), json!("sv"));
-    if let Some(i) = obj.get("i") {
-        out.insert("i".into(), i.clone());
-        // Absent `i` fails the entry point's final strict parse.
-    }
-    let sv = obj
-        .get("sv")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("`sv` must be an array of entries"))?;
-    let entries = sv
-        .iter()
-        .enumerate()
-        .map(|(idx, entry)| convert_entry(idx, entry, EntryShape::Document))
-        .collect::<Result<Vec<_>, _>>()?;
-    out.insert("sv".into(), Value::Array(entries));
-    Ok(Value::Object(out))
-}
-
-/// v2 query needle `{sv: [{s, hm|op, …}]}` → v3 `SteVecQuery` shape. Like the
-/// stored-payload converters, does NOT run the final strict parse — that is
-/// the entry points' job, exactly once.
-fn convert_ste_vec_query(v2: &Value) -> Result<Value, FromV2Error> {
-    let obj = v2
-        .as_object()
-        .ok_or_else(|| invalid("a query payload must be a JSON object"))?;
-    // The v2.3 SteVecQueryPayload carries no envelope, but tolerate one:
-    // a versioned input must be v2, and a kind-discriminated one must be sv.
-    if let Some(v) = obj.get("v") {
-        if v.as_u64() != Some(V2_WIRE_VERSION) {
-            return Err(FromV2Error::UnsupportedVersion { found: v.as_u64() });
-        }
-    }
-    match obj.get("k").and_then(Value::as_str) {
-        None | Some("sv") => {}
-        Some(kind) => {
-            return Err(FromV2Error::KindMismatch {
-                kind: kind.into(),
-                target: "eql_v3_json_search".into(),
-            })
-        }
-    }
-    let sv = obj
-        .get("sv")
-        .and_then(Value::as_array)
-        .ok_or_else(|| invalid("`sv` must be an array of query entries"))?;
-    let entries = sv
-        .iter()
-        .enumerate()
-        .map(|(idx, entry)| convert_entry(idx, entry, EntryShape::Query))
-        .collect::<Result<Vec<_>, _>>()?;
-    Ok(json!({ "sv": entries }))
-}
-
-/// Which keys an sv entry keeps after conversion.
-#[derive(Clone, Copy)]
-enum EntryShape {
-    /// Document entry: `s`, `c`, optional `a`, one term.
-    Document,
-    /// Query entry: `s` + one term only (the `eql_v3.to_ste_vec_query`
-    /// normalization — `a`/`c` are stripped).
-    Query,
-}
-
-impl EntryShape {
-    /// The keys the converted entry keeps beyond its term.
-    fn kept_keys(self) -> &'static [&'static str] {
-        match self {
-            Self::Document => &["s", "c", "a"],
-            Self::Query => &["s"],
-        }
-    }
-
-    /// The (unqualified) SQL domain this entry shape belongs to, for error
-    /// context.
-    fn domain(self) -> &'static str {
-        match self {
-            Self::Document => "eql_v3_json_search",
-            Self::Query => "query_json",
-        }
-    }
-}
-
-/// Convert one v2 sv element: copy the shape's keys and exactly one of
-/// `hm` XOR `op`. A CLLW-ORE `oc` term is unconvertible (see
-/// [`FromV2Error::UnconvertibleOreTerm`]) — fail loudly rather than emit a
-/// term v3 would misorder.
-fn convert_entry(idx: usize, entry: &Value, shape: EntryShape) -> Result<Value, FromV2Error> {
-    let obj = entry
-        .as_object()
-        .ok_or_else(|| invalid("`sv` entries must be JSON objects"))?;
-    if obj.contains_key("oc") {
-        return Err(FromV2Error::UnconvertibleOreTerm { entry: idx });
-    }
-    let mut out = Map::new();
-    for &key in shape.kept_keys() {
-        if let Some(v) = obj.get(key) {
-            out.insert(key.into(), v.clone());
-        }
-        // A missing `s`/`c` fails the final document/query validation.
-    }
-    match (obj.get("hm"), obj.get("op")) {
-        (Some(_), Some(_)) => return Err(FromV2Error::AmbiguousTerm { entry: idx }),
-        (Some(hm), None) => {
-            out.insert("hm".into(), hm.clone());
-        }
-        (None, Some(op)) => {
-            out.insert("op".into(), op.clone());
-        }
-        (None, None) => {
-            return Err(FromV2Error::MissingTerm {
-                domain: shape.domain().into(),
-                key: "hm|op".into(),
-                entry: Some(idx),
-            })
-        }
-    }
-    Ok(Value::Object(out))
 }

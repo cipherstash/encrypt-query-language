@@ -3,7 +3,7 @@
 /**
  * Bloom-filter match term — the `bf` wire key. Backs the fuzzy-match `@@`
  * (`eql_v3.matches`) surface on the `_match` domains; the containment operators
- * `@>`/`<@` survive only as internal blockers that raise (CIP-3517).
+ * `@>`/`<@` survive only as internal blockers that raise.
  *
  * **Signed** i16, not u16: EQL stores the filter as PostgreSQL `smallint[]`,
  * and filters sized above 32768 emit upper-half bit positions as negative

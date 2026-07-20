@@ -17,10 +17,6 @@ jsonb_entry::matrix_jsonb_entry_<T>_entry_aggregate_parallel_safe
 jsonb_entry::matrix_jsonb_entry_<T>_entry_count_distinct_extractor
 jsonb_entry::matrix_jsonb_entry_<T>_entry_count_path_cast
 jsonb_entry::matrix_jsonb_entry_<T>_entry_count_typed_column
-jsonb_entry::matrix_jsonb_entry_<T>_entry_eq_pivot_max_correctness
-jsonb_entry::matrix_jsonb_entry_<T>_entry_eq_pivot_mid_correctness
-jsonb_entry::matrix_jsonb_entry_<T>_entry_eq_pivot_min_correctness
-jsonb_entry::matrix_jsonb_entry_<T>_entry_eq_supported_null
 jsonb_entry::matrix_jsonb_entry_<T>_entry_gt_pivot_max_correctness
 jsonb_entry::matrix_jsonb_entry_<T>_entry_gt_pivot_mid_correctness
 jsonb_entry::matrix_jsonb_entry_<T>_entry_gt_pivot_min_correctness
@@ -37,10 +33,6 @@ jsonb_entry::matrix_jsonb_entry_<T>_entry_lte_pivot_max_correctness
 jsonb_entry::matrix_jsonb_entry_<T>_entry_lte_pivot_mid_correctness
 jsonb_entry::matrix_jsonb_entry_<T>_entry_lte_pivot_min_correctness
 jsonb_entry::matrix_jsonb_entry_<T>_entry_lte_supported_null
-jsonb_entry::matrix_jsonb_entry_<T>_entry_neq_pivot_max_correctness
-jsonb_entry::matrix_jsonb_entry_<T>_entry_neq_pivot_mid_correctness
-jsonb_entry::matrix_jsonb_entry_<T>_entry_neq_pivot_min_correctness
-jsonb_entry::matrix_jsonb_entry_<T>_entry_neq_supported_null
 jsonb_entry::matrix_jsonb_entry_<T>_entry_order_by_asc_no_where
 jsonb_entry::matrix_jsonb_entry_<T>_entry_order_by_asc_nulls_first
 jsonb_entry::matrix_jsonb_entry_<T>_entry_order_by_asc_nulls_last

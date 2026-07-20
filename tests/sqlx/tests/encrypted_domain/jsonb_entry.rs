@@ -1,6 +1,6 @@
 //! Behaviour matrix for SteVec jsonb-entry comparisons, reusing the scalar
 //! matrix generators via `jsonb_entry_matrix!`. Covers the positive behaviours
-//! (correctness / ordering / NULL / ORDER BY / COUNT / index engagement, plus
+//! (range correctness / ordering / NULL / ORDER BY / COUNT / index engagement, plus
 //! entry-specific fixture-shape and CLLW-OPE injectivity tests) that the
 //! hand-written `v3_jsonb_tests` suite does not. Document-specific behaviours
 //! (containment / path query / array ops / the operator-surface guard) remain
@@ -135,8 +135,8 @@ async fn jsonb_entry_integer_selector_matches_fixture(pool: sqlx::PgPool) -> any
 
 // ----------------------------------------------------------------------------
 // CLLW-OPE injectivity. Distinct plaintexts must produce distinct ord_term
-// terms. Compares `eql_v3.ord_term(...)` outputs directly — NOT entry `=`, which
-// tests `eq_term`, not ORE.
+// terms. Compares `eql_v3.ord_term(...)` outputs directly; entry equality is a
+// fail-loud blocker and is not part of the ordering surface.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::Result<()> {
@@ -168,8 +168,7 @@ async fn jsonb_entry_integer_ord_ope_injectivity(pool: sqlx::PgPool) -> anyhow::
 // VALIDITY ONLY: forces `enable_seqscan = off` on the ~17-row fixture, so a
 // green assertion proves the index is USABLE, not that the planner would PREFER
 // it at scale (mirrors the scalar index-engagement caveat). Equality is
-// excluded: entry `=` reduces through `eql_v3.eq_term`, not `ord_term`, so the
-// ord_term btree cannot serve it.
+// excluded because entry `=` is a fail-loud blocker.
 // ----------------------------------------------------------------------------
 #[sqlx::test(fixtures(path = "../../fixtures", scripts("v3_doc_integer")))]
 async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result<()> {
@@ -219,7 +218,7 @@ async fn jsonb_entry_integer_index_engages(pool: sqlx::PgPool) -> anyhow::Result
 // ord_term(state)` would be NULL whenever the running extremum is op-less —
 // pinning a wrong result when the FIRST aggregated row (the STRICT seed) is
 // op-less. The min/max sfuncs explicitly skip op-less entries. This feeds a
-// forged hm-only (op-less) entry in the SEED position alongside real op-carrying
+// forged term-less (op-less) entry in the SEED position alongside real op-carrying
 // entries and asserts the extremum is the correct ORDERABLE entry, never the
 // op-less seed. The whole-suite matrix never exercises this (every v3_doc_integer
 // entry carries op).
@@ -230,8 +229,9 @@ async fn jsonb_entry_integer_aggregate_ignores_op_less_entries(
 ) -> anyhow::Result<()> {
     let sel = SELECTOR;
     // A valid public.eql_v3_json_entry that is NOT orderable: string s, string c,
-    // exactly one of hm/op — here `hm`, so `eql_v3.ord_term(entry)` is NULL.
-    let op_less = r#"{"s":"forged","c":"x","hm":"00"}"#;
+    // no `op` term (a term-less value/structural entry — the shape a bool/null/
+    // object/array leaf or a value entry takes), so `eql_v3.ord_term(entry)` is NULL.
+    let op_less = r#"{"s":"forged","c":"x"}"#;
 
     let mut sorted: Vec<i32> = <JsonbEntryInteger as ScalarType>::fixture_values()
         .iter()

@@ -1,4 +1,4 @@
-//! Catalog suite (CIP-3141): property-based invariants over the scalar/term catalog.
+//! Catalog suite: property-based invariants over the scalar/term catalog.
 //!
 //! Pure Rust — no database, no encryption, no creds. These run in the lean
 //! `cargo test -p eql-domains` path (fork CI). They assert the *catalog* is

@@ -14,7 +14,7 @@
 --!
 --! @note The public operator is `@@` (fuzzy bloom-token matching), NOT the
 --!   containment operators `@>`/`<@`: the match is a probabilistic, one-sided
---!   n-gram token match, not containment (CIP-3517). `@>`/`<@` on the text match
+--!   n-gram token match, not containment. `@>`/`<@` on the text match
 --!   domains now raise. Internally the `@@` wrapper still reduces to the base
 --!   type's `@>` for GIN indexability.
 --! @note Self-contained: references no eql_v2 symbol.

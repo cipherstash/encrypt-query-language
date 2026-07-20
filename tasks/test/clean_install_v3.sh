@@ -75,15 +75,15 @@ echo "==> smoke: v3 searchable encrypted-JSON (SteVec) surface"
 "${RUN[@]}" <<'SQL'
 CREATE TABLE v3_json_smoke (id int PRIMARY KEY, e public.eql_v3_json_search);
 INSERT INTO v3_json_smoke VALUES
-  (1, '{"i":{"t":"v3_json_smoke","c":"e"},"v":3,"sv":[{"s":"sel","c":"ciphertext","hm":"00"}]}'::public.eql_v3_json_search);
+  (1, '{"k":"sv","i":{"t":"v3_json_smoke","c":"e"},"v":3,"h":"key-header","sv":[{"s":"sel","c":"ciphertext"}]}'::public.eql_v3_json_search);
 
 -- Supported typed accessors and containment.
-SELECT (e -> 'sel'::text)::jsonb ->> 'hm' FROM v3_json_smoke WHERE id = 1;
+SELECT (e -> 'sel'::text)::jsonb ->> 'c' FROM v3_json_smoke WHERE id = 1;
 SELECT e ->> 'sel'::text FROM v3_json_smoke WHERE id = 1;
 SELECT count(*) FROM v3_json_smoke
-WHERE e @> '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.query_json;
+WHERE e @> '{"sv":[{"s":"sel"}]}'::eql_v3.query_json;
 SELECT count(*) FROM v3_json_smoke
-WHERE '{"sv":[{"s":"sel","hm":"00"}]}'::eql_v3.query_json <@ e;
+WHERE '{"sv":[{"s":"sel"}]}'::eql_v3.query_json <@ e;
 
 -- Documented GIN expression installs cleanly in a v3-only database.
 CREATE INDEX v3_json_smoke_gin

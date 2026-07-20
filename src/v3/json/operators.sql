@@ -1,6 +1,7 @@
 -- REQUIRE: src/v3/schema.sql
 -- REQUIRE: src/v3/json/types.sql
 -- REQUIRE: src/v3/json/functions.sql
+-- REQUIRE: src/v3/scalars/functions.sql
 -- REQUIRE: src/v3/sem/ope_cllw/types.sql
 
 --! @file v3/json/operators.sql
@@ -13,9 +14,9 @@
 --! @brief -> operator with text selector.
 --!
 --! Returns the sv entry whose `s` equals @p selector, with root `i`/`v` merged
---! in. Inlinable: `WHERE col -> 'sel' = $1` reduces structurally to
---! `eql_v3.eq_term(col -> 'sel') = eql_v3.eq_term($1)` and matches a functional
---! index on `eql_v3.eq_term(col -> 'sel')`.
+--! in. Inlinable: range predicates reduce structurally through
+--! `eql_v3.ord_term(col -> 'sel')` and match a functional btree index on that
+--! expression. Exact equality is document containment on a value selector.
 --!
 --! @warning The selector operand MUST carry a known type — a text-typed
 --!   parameter (`$1`, the Proxy interface) or an explicit cast (`col -> 'sel'::%text`).
@@ -156,7 +157,8 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b eql_v3.query_json)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb @> b::jsonb
+  SELECT eql_v3.to_ste_vec_query(a)::jsonb
+       @> eql_v3.to_ste_vec_query(b)::jsonb
 $$;
 
 CREATE OPERATOR @>(
@@ -165,38 +167,16 @@ CREATE OPERATOR @>(
   RIGHTARG=eql_v3.query_json
 );
 
---! @brief @> contains operator with a single jsonb_entry needle.
---!
---! Wraps the entry into a single-element sv array (stripping `c`) and reduces
---! to the same `to_ste_vec_query(a)::jsonb @> needle::jsonb` form.
---!
---! @param a public.eql_v3_json_search Container.
---! @param b public.eql_v3_json_entry Single entry.
---! @return boolean True if a contains an sv entry matching b.
-CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_entry)
-RETURNS boolean
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb
-       @> jsonb_build_object(
-            'sv',
-            jsonb_build_array(
-              jsonb_strip_nulls(
-                jsonb_build_object(
-                  's',  b -> 's',
-                  'hm', b -> 'hm',
-                  'op', b -> 'op'
-                )
-              )
-            )
-          )
-$$;
-
-CREATE OPERATOR @>(
-  FUNCTION=eql_v3."@>",
-  LEFTARG=public.eql_v3_json_search,
-  RIGHTARG=public.eql_v3_json_entry
-);
+-- NOTE: there is deliberately NO computable `@>`(json_search, json_entry)
+-- single-entry containment operator. `blockers.sql` claims the signature and
+-- raises rather than allowing native-jsonb fallback. An extracted `json_entry` is a PATH entry
+-- ({s,c,op?}) and carries no value selector, so it can only ever match
+-- structurally ("the document has a node at this path") — value-blind for
+-- bool/null/object/array and op-lossy for number/string. Exact field equality is
+-- document containment on the value selector: `col @> $1::eql_v3.query_json`,
+-- where a value-selector's presence in the stored document IS the exact match.
+-- Routing all value equality through that one exact mechanism is why the
+-- structural single-entry behavior (and its `<@` reverse) was blocked.
 
 ------------------------------------------------------------------------------
 -- <@ contained-by (reverse of @>)
@@ -210,7 +190,8 @@ CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ste_vec_contains(b, a)
+  SELECT eql_v3.to_ste_vec_query(b)::jsonb
+       @> eql_v3.to_ste_vec_query(a)::jsonb
 $$;
 
 CREATE OPERATOR <@(
@@ -236,67 +217,56 @@ CREATE OPERATOR <@(
   RIGHTARG=public.eql_v3_json_search
 );
 
---! @brief <@ contained-by operator with a jsonb_entry LHS.
---! @param a public.eql_v3_json_entry Single entry.
---! @param b public.eql_v3_json_search Container.
---! @return boolean True if b contains a.
-CREATE FUNCTION eql_v3."<@"(a public.eql_v3_json_entry, b public.eql_v3_json_search)
-RETURNS boolean
-LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
-AS $$
-  SELECT eql_v3."@>"(b, a)
-$$;
-
-CREATE OPERATOR <@(
-  FUNCTION=eql_v3."<@",
-  LEFTARG=public.eql_v3_json_entry,
-  RIGHTARG=public.eql_v3_json_search
-);
+-- NOTE: `<@`(json_entry, json_search) is likewise a fail-loud blocker — it is
+-- the reverse of the blocked single-entry `@>` behavior. See the note above.
 
 ------------------------------------------------------------------------------
 -- jsonb_entry comparisons
 ------------------------------------------------------------------------------
 
---! @brief Equality on jsonb_entry via eq_term (hm-or-op byte equality).
+--! @brief Block equality between two extracted jsonb entries.
+--! @note An extracted entry is a path entry and carries no value selector.
+--!       Comparing its deterministic `op` bytes would be lossy for
+--!       `bigint`/`numeric`/`text`; exact equality is document containment on a
+--!       value-selector needle. This blocker is deliberately non-STRICT so a
+--!       NULL operand cannot bypass the error.
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
---! @return boolean True if the entries are equal
+--! @return boolean Never returns; always raises 'operator not supported'.
 CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b public.eql_v3_json_entry)
   RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+  IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
-  SELECT eql_v3.eq_term(a) = eql_v3.eq_term(b)
-$$;
+BEGIN
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('public.eql_v3_json_entry', '=');
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OPERATOR = (
   FUNCTION = eql_v3.eq,
   LEFTARG  = public.eql_v3_json_entry,
-  RIGHTARG = public.eql_v3_json_entry,
-  COMMUTATOR = =,
-  NEGATOR  = <>,
-  RESTRICT = eqsel,
-  JOIN     = eqjoinsel
+  RIGHTARG = public.eql_v3_json_entry
 );
 
---! @brief Inequality on jsonb_entry via eq_term.
+--! @brief Block inequality between two extracted jsonb entries.
 --! @param a public.eql_v3_json_entry Left operand
 --! @param b public.eql_v3_json_entry Right operand
---! @return boolean True if the entries are not equal
+--! @return boolean Never returns; always raises 'operator not supported'.
 CREATE FUNCTION eql_v3.neq(a public.eql_v3_json_entry, b public.eql_v3_json_entry)
   RETURNS boolean
-  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+  IMMUTABLE PARALLEL SAFE
+  SET search_path = pg_catalog, extensions, public
 AS $$
-  SELECT eql_v3.eq_term(a) <> eql_v3.eq_term(b)
-$$;
+BEGIN
+  RETURN eql_v3_internal.encrypted_domain_unsupported_bool('public.eql_v3_json_entry', '<>');
+END;
+$$ LANGUAGE plpgsql;
 
 CREATE OPERATOR <> (
   FUNCTION = eql_v3.neq,
   LEFTARG  = public.eql_v3_json_entry,
-  RIGHTARG = public.eql_v3_json_entry,
-  COMMUTATOR = <>,
-  NEGATOR  = =,
-  RESTRICT = neqsel,
-  JOIN     = neqjoinsel
+  RIGHTARG = public.eql_v3_json_entry
 );
 
 --! @brief Less-than on jsonb_entry via the CLLW OPE term (native bytea order).

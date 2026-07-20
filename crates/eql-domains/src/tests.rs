@@ -784,6 +784,52 @@ mod catalog_tests {
     }
 
     #[test]
+    fn has_native_json_leaf_gates_the_json_entry_seam_by_json_type_system() {
+        use crate::ScalarKind;
+
+        // The PARTICIPATION gate for the json_entry cross surface.
+        // The question is about JSON's own type system (RFC 8259), not about
+        // encodings: does a JSON document hold this kind's values AS themselves?
+
+        // JSON numbers and strings — yes. Note this is independent of the
+        // equality gate above: I64/Numeric/Text participate (their leaves exist)
+        // even though their leaf equality is lossy.
+        for kind in [
+            ScalarKind::I16,
+            ScalarKind::I32,
+            ScalarKind::I64,
+            ScalarKind::F32,
+            ScalarKind::F64,
+            ScalarKind::Numeric,
+            ScalarKind::Text,
+        ] {
+            assert!(
+                kind.has_native_json_leaf(),
+                "{kind:?} is a native JSON scalar and must participate"
+            );
+        }
+        // JSON booleans exist too — Bool is honestly `true`, but never reaches
+        // the seam because boolean is storage-only (no Ope-carrying operand).
+        assert!(ScalarKind::Bool.has_native_json_leaf());
+
+        // JSON has NO date/timestamp type: those values marshal into ISO-8601
+        // STRINGS, so a "date leaf" is a text leaf and the text surface owns it.
+        // Mechanically pinned e2e: cipherstash-client refuses to build a SteVec
+        // query term from a temporal plaintext (OrderableTerm::try_from returns
+        // Err(invalid_type) for NaiveDate/Timestamp, 0.38.1), so a
+        // json_entry <-> query_date_ord operator could never see a real operand.
+        for kind in [ScalarKind::Date, ScalarKind::Timestamp] {
+            assert!(
+                !kind.has_native_json_leaf(),
+                "{kind:?} has no native JSON representation — dates marshal to \
+                 strings, and the text surface owns string leaves"
+            );
+        }
+        // A document is not a scalar leaf; containment serves it.
+        assert!(!ScalarKind::Jsonb.has_native_json_leaf());
+    }
+
+    #[test]
     fn domain_by_name_finds_declared_names() {
         let text = scalar("text");
         assert_eq!(
@@ -1310,7 +1356,7 @@ mod invariant_tests {
         for s in CATALOG {
             for d in s.domains {
                 // The one documented exception: the json containment needle
-                // follows the query-operand PREFIX convention (CIP-3442):
+                // follows the query-operand PREFIX convention:
                 // `query_<family>`, matching the scalar `query_<name>` twins —
                 // see `Domain::full_name`. (Every other json domain — bare
                 // storage, `_search` document, `_entry` — follows the standard
@@ -1321,7 +1367,7 @@ mod invariant_tests {
                 }
                 // Pin the bare join rule on `full_name` (the installed
                 // `domain_name` additionally carries the `eql_v3_` version
-                // prefix — CIP-3472 — pinned separately below).
+                // prefix, which is pinned separately below).
                 let name = d.full_name(s.name);
                 assert!(
                     name == s.name || name.starts_with(&format!("{}_", s.name)),

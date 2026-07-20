@@ -174,21 +174,12 @@ SELECT eql_v3.eq_term(encrypted_email), count(*)
 
 Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payload (1–2 KB per row) as the hash key. PostgreSQL estimates a hash table far larger than the default `work_mem` (4 MB), refuses `HashAggregate`, and falls back to `GroupAggregate` — sorting kilobyte-sized rows and spilling to disk. The `eql_v3.eq_term(col)` key is a small deterministic term, so the hash table fits in `work_mem` and the planner picks `HashAggregate` reliably — without any deployment-wide tuning. If you cannot rewrite the query (an ORM grouping the raw column), bumping `work_mem` to fit the estimated hash table is the rescue knob, but the extractor form is the design.
 
-### Field-level equality index (ste_vec elements)
+### Field-level ordering index (ste_vec elements)
 
-For `GROUP BY` / `DISTINCT` / equality on a value extracted from an `public.eql_v3_json_search` document — e.g. `doc -> 'email'` — index the extractor applied to the selector. The extracted entry is an `public.eql_v3_json_entry`, and `=` on it inlines to `eql_v3.eq_term(a) = eql_v3.eq_term(b)`:
-
-```sql
-CREATE INDEX users_data_email_eq
-  ON users USING hash (eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text));
-ANALYZE users;
-
-SELECT count(*) FROM users
-  GROUP BY eql_v3.eq_term(data_encrypted -> '<selector-for-email>'::text);
-
-SELECT * FROM users
-  WHERE data_encrypted -> '<selector-for-email>'::text = $1::public.eql_v3_json_entry;
-```
+Entry-to-entry `=` / `<>` and exact `GROUP BY` / `DISTINCT` on extracted
+encrypted-JSON fields are not supported. An extracted path entry carries no
+value selector, and its `op` ordering bytes are lossy for some scalar types.
+Use document containment with the GIN index below for exact field equality.
 
 For ordered field-level access, index `eql_v3.ord_term(doc -> '<selector>'::text)` (a btree) and write `ORDER BY eql_v3.ord_term(doc -> '<selector>'::text)` — the same sort-key rule as above. The extracted CLLW-OPE term is a bytea domain that orders under the DEFAULT btree operator class, so this index needs no superuser-installed operator class (it works on Supabase / managed Postgres). The `<selector>` value is the deterministic selector hash the crypto layer emits in each `sv` element's `s` field, not a plaintext JSONPath. The operand on `->` must be typed (`-> '<sel>'::text`); a bare untyped literal falls through to native `jsonb ->`.
 
@@ -207,7 +198,7 @@ SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_json;
 -- Bitmap Index Scan on orders_data_gin
 ```
 
-The needle must be typed — `$1::eql_v3.query_json`, another `public.eql_v3_json_search`, or an `public.eql_v3_json_entry`. A bare untyped literal falls through to native `jsonb @>`.
+The needle must be typed — `$1::eql_v3.query_json` or another `public.eql_v3_json_search`. A bare untyped literal falls through to native `jsonb @>`.
 
 ### GIN vs B-tree / hash
 

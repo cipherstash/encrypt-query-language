@@ -18,6 +18,49 @@ const V3_ORE_OPCLASS: &str = "src/v3/sem/ore_block_256/operator_class.sql";
 /// layout is spelled out — keeps `types_path`/`scalar_path` and the REQUIRE
 /// vecs from drifting if the surface ever relocates again.
 const V3_SCALARS_DIR: &str = "src/v3/scalars";
+/// REQUIRE edge for the hand-written json domain types (the json_entry domain).
+const V3_JSON_TYPES: &str = "src/v3/json/types.sql";
+/// REQUIRE edge for the hand-written json functions (the json_entry extractors
+/// `eq_term`/`ord_term`). No cycle: json/* never REQUIREs src/v3/scalars/*.
+const V3_JSON_FUNCTIONS: &str = "src/v3/json/functions.sql";
+/// The catalog name of the `json` family's SteVec leaf domain. The three SteVec
+/// domains are disambiguated by `Domain.name` (there is no distinct `Shape`), so
+/// selecting the leaf is necessarily by name — the same way `dump.rs` resolves
+/// them. Only the name is spelled here; the SQL type name is DERIVED below.
+const JSON_ENTRY_DOMAIN: &str = "entry";
+
+/// The fixed cross type: the extracted SteVec leaf, `public.eql_v3_json_entry`.
+///
+/// Derived from the catalog (`eql_domains::JSON`) via `Domain::full_name` +
+/// `domain_name`, never spelled out — a literal would silently survive a catalog
+/// rename (cf. #398 `jsonb` → `json`) or a `PUBLIC_TYPNAME_PREFIX` bump: codegen
+/// would keep emitting the stale type, `codegen:parity` would still pass
+/// (deterministic, just wrong), and the break would only surface at install time
+/// as "type does not exist". Every other renderer constructs domain names this
+/// way; this one must too.
+fn json_entry_type() -> String {
+    let entry = eql_domains::JSON
+        .domains
+        .iter()
+        .find(|d| d.name == JSON_ENTRY_DOMAIN)
+        .expect("catalog json family declares the SteVec `entry` domain");
+    domain_name(&entry.full_name(eql_domains::JSON.name))
+}
+
+/// The generated file stem for a family's json_entry cross surface, e.g.
+/// `json_entry_integer`. One place the stem is spelled, mirroring why
+/// `V3_SCALARS_DIR` / `types_path` / `query_types_path` exist.
+fn json_entry_stem(family_name: &str) -> String {
+    format!("json_entry_{family_name}")
+}
+
+/// REQUIRE path for a family's generated json_entry cross functions file.
+fn json_entry_functions_path(family_name: &str) -> String {
+    scalar_path(
+        family_name,
+        &format!("{}_functions.sql", json_entry_stem(family_name)),
+    )
+}
 
 /// REQUIRE path for a generated file `file` under a family's scalar dir.
 fn scalar_path(family_name: &str, file: &str) -> String {
@@ -65,7 +108,7 @@ pub fn render_types_file(spec: &DomainFamily) -> String {
 
 /// Body for query_<T>_types.sql: a `public.query_<name>` operand domain per
 /// TERM-BEARING domain — the index-terms-only twin (no `c`) whose operators
-/// consume a query operand (CIP-3432). Storage-only domains have no operators,
+/// consume a query operand. Storage-only domains have no operators,
 /// so no query twin.
 pub fn render_query_types_file(spec: &DomainFamily) -> String {
     use crate::context::{environment, query_domain_block, TypesContext};
@@ -205,7 +248,7 @@ fn query_types_path(family_name: &str) -> String {
     scalar_path(family_name, &format!("query_{family_name}_types.sql"))
 }
 
-/// Body for a term-bearing domain's query_<name>_functions.sql (CIP-3432): the
+/// Body for a term-bearing domain's query_<name>_functions.sql: the
 /// query-operand extractor OVERLOADS (the same extractors, on
 /// `eql_v3.query_<name>`) plus the comparison WRAPPERS binding the storage
 /// domain to its query twin — for the domain's SUPPORTED operators only, in
@@ -283,7 +326,7 @@ pub fn render_query_functions_file(family_name: &str, domain: &Domain) -> String
         .expect("render query functions.sql")
 }
 
-/// Body for a term-bearing domain's query_<name>_operators.sql (CIP-3432): a
+/// Body for a term-bearing domain's query_<name>_operators.sql: a
 /// `CREATE OPERATOR` binding `(storage_domain, query_<name>)` for every
 /// supported operator, plus its `(query_<name>, storage_domain)` commutator, so
 /// `col <op> $1::eql_v3.query_<name>` resolves to the query wrapper.
@@ -322,6 +365,418 @@ pub fn render_query_operators_file(family_name: &str, domain: &Domain) -> String
         .unwrap()
         .render(&ctx)
         .expect("render query operators.sql")
+}
+
+/// The term `public.eql_v3_json_entry` can serve, and the single source every
+/// other decision in this surface derives from: `Term::Ope` — the deterministic
+/// CLLW-OPE `op` term. A SteVec scalar (number/string) leaf emits exactly this
+/// term (cipherstash-client `ste_plaintext_term.rs`: `Number`/`String` →
+/// `Orderable` → `op`; only `Bool`/`Null`/`Object`/`Array` → a value-independent
+/// structural `hm`).
+///
+/// `op` is deterministic, so byte-comparison on it is always a valid ORDERING —
+/// which is all this seam uses it for. Equality does not live on the extract
+/// surface at all: exact field equality is document containment on the
+/// value selector (`col @> query_json`). See [`json_entry_cross_operators`].
+const JSON_ENTRY_TERM: Term = Term::Ope;
+
+/// The query operands a family binds to `public.eql_v3_json_entry`: every domain
+/// carrying [`JSON_ENTRY_TERM`], in catalog order — provided the family's values
+/// exist in JSON **as themselves**.
+///
+/// Capability-driven, not name-driven — the catalog's terms declare what a domain
+/// can do, and this surface honours that (the same principle `is_ord_capable` and
+/// `render_ore_fallback_file`'s `Term::Ore` filter follow). A family with no
+/// Ope-carrying domain (boolean is storage-only; json has no scalar operands)
+/// yields an empty list and emits no cross files, and an Ore-only domain
+/// (`_ord_ore`) is excluded by construction — `json_entry` cannot produce a
+/// block-ORE term. It also means the invariant "every bound operand provides
+/// `ord_term`" is unrepresentable rather than asserted.
+///
+/// **The participation gate**
+/// ([`eql_domains::ScalarKind::has_native_json_leaf`]) excludes `date` and
+/// `timestamp` wholesale: JSON has no date/timestamp type — those values are
+/// marshaled into ISO-8601 STRINGS, so a "date leaf" is a text leaf and the TEXT
+/// surface owns it (ordering via `query_text_ord`; equality via `@>`
+/// containment). Consistently, no client can build a temporal SteVec query term
+/// (`OrderableTerm::try_from(&Plaintext)` refuses `NaiveDate`/`Timestamp`), so a
+/// `(json_entry, query_date_ord)` wrapper could never see a real operand. Their
+/// Ope-carrying operands are BLOCKED, not merely omitted — see
+/// [`json_entry_cross_blocked_domains`].
+///
+/// `_eq` is excluded for free (it carries only `Term::Hm`): a SteVec path entry
+/// carries neither that per-value `hm` nor its exact value selector, so a
+/// `(json_entry, query_<T>_eq)` operator has no compatible equality term.
+///
+/// A `Term::Bloom`-bearing operand (text's `_search`) is excluded even though it
+/// carries `Ope`: **SteVec has no match/bloom capability** — a leaf carries no
+/// `match_term`, so `search` offers nothing over `_ord` while its domain CHECK
+/// demands a `bf` the seam never reads and the caller would have to manufacture.
+/// Binding it is the mirror of the `_eq` mistake: `_eq` matches nothing, `search`
+/// matches but taxes the caller for an inert term. It too is blocked, not
+/// omitted.
+///
+/// **Why excluded Ope-carrying operands get blockers.** `json_entry` and every
+/// `query_<T>_<d>` are domains over `jsonb`, and PostgreSQL's operator resolution
+/// flattens a domain to its base type, so an unclaimed `json_entry <op>
+/// query_date_ord` would resolve to native `jsonb <op> jsonb` and answer silently
+/// (`=` compares whole envelopes; `<` orders JSON objects — ZERO ROWS, no error).
+/// Only an EXACT `(json_entry, query_<T>_<d>)` operator beats that flattening — a
+/// `(json_entry, jsonb)` catch-all does not, because `jsonb <op> jsonb` is itself
+/// an exact match once both sides flatten. The Ope-carrying excluded operands are
+/// precisely the ones this seam's docs put in a caller's hands, so each gets an
+/// exact-signature blocker.
+///
+/// Domain-x-domain pairs OUTSIDE the Ope set (`json_entry = query_integer_eq`,
+/// `eql_v3_integer_eq = eql_v3_text_ord`, …) still flatten silently — a
+/// project-wide property of the domain-over-jsonb design (the scalar surface's
+/// blockers all target `(domain, native-type)` signatures), tracked separately.
+fn json_entry_cross_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
+    // `expect`, not a permissive default, for the same reason as
+    // `json_entry_cross_operators`: an unknown kind must fail the build loudly
+    // rather than silently bind (or unbind) a family.
+    let kind = eql_domains::kind_for(spec.name)
+        .unwrap_or_else(|| panic!("catalog family `{}` declares no ScalarKind", spec.name));
+    if !kind.has_native_json_leaf() {
+        return Vec::new();
+    }
+    spec.domains
+        .iter()
+        .filter(|d| d.terms.contains(&JSON_ENTRY_TERM))
+        .filter(|d| !d.terms.contains(&Term::Bloom))
+        .collect()
+}
+
+/// The Ope-carrying operands this seam does NOT serve — the complement of
+/// [`json_entry_cross_domains`] within the family's `Ope`-bearing domains.
+/// **Blocked, never merely omitted** (the same rule
+/// [`json_entry_cross_blocked_operators`] applies per-operator on served
+/// operands, applied per-operand): each pair gets an exact-signature blocker for
+/// every operator [`JSON_ENTRY_TERM`] provides, in both directions, so the
+/// comparison raises instead of flattening to native `jsonb <op> jsonb`.
+///
+/// Two sources, both principled:
+/// - a family failing the participation gate (`date`/`timestamp` — no native
+///   JSON leaf) contributes ALL its Ope-carrying operands;
+/// - a participating family contributes its `Term::Bloom`-bearing operands
+///   (text's `_search` — SteVec has no match/bloom capability).
+///
+/// These are exactly the operand types a caller could plausibly reach for on
+/// this seam (they carry the one term it serves), so silent-wrong is not an
+/// acceptable failure mode for them.
+fn json_entry_cross_blocked_domains(spec: &DomainFamily) -> Vec<&'static Domain> {
+    let served = json_entry_cross_domains(spec);
+    spec.domains
+        .iter()
+        .filter(|d| d.terms.contains(&JSON_ENTRY_TERM))
+        .filter(|d| !served.iter().any(|s| s.name == d.name))
+        .collect()
+}
+
+/// The operators this surface emits for a family's bound operands: the ORDERING
+/// operators [`JSON_ENTRY_TERM`] provides (`<` `<=` `>` `>=`). Equality (`=` `<>`)
+/// is deliberately excluded for EVERY family.
+///
+/// Derived from the term rather than from the operand's full term list, because
+/// `json_entry` can only ever serve that one term. `Term::operators_for_terms`
+/// over a domain's OWN terms would over-emit: text's `search` domain is
+/// `[Hm, Ope, Bloom]`, so its supported set includes `@@` (Bloom) — which
+/// `json_entry` has no `match_term` for, and which would render as a nonsensical
+/// `ord_term(a) @@ ord_term(b)`. Asking the term what it provides keeps the
+/// emitted set honest for every operand shape, present and future.
+///
+/// **Why equality never lives on the extract surface.** An extracted
+/// `json_entry` is a PATH entry (`{s, c, op?}`); it carries no value selector, so
+/// the only equality it could compute is `op` byte-comparison. `op` is
+/// deterministic (a sound ordering for every kind) but not injective on every one
+/// (`2^53`/`2^53+1` collide for `bigint`, `"café"`/`"cafe"` for `text`), and even
+/// where injective it is the WRONG mechanism: exact field equality is document
+/// containment on the value selector (`col @> $1::eql_v3.query_json`, where the
+/// value-selector's *presence* in the stored document is the exact match). That
+/// surface is the whole document, not an extracted leaf, so equality simply is not
+/// an operation this seam can express. `=`/`<>` are therefore subtracted from
+/// every family's served set and BLOCKED by [`json_entry_cross_blocked_operators`]
+/// — a bare `json_entry = query_<T>_ord` must raise, not fall through to native
+/// `jsonb = jsonb` (which compares whole envelopes and silently returns zero rows).
+fn json_entry_cross_operators(spec: &DomainFamily) -> Vec<&'static str> {
+    // Assert the family declares a kind — fail the build LOUDLY on an unknown one,
+    // matching `json_entry_cross_domains`. The emitted set no longer BRANCHES on
+    // the kind (equality left the extract surface in the new design), but keeping the
+    // loud-fail contract at the seam that decides the operators is cheap insurance.
+    eql_domains::kind_for(spec.name)
+        .unwrap_or_else(|| panic!("catalog family `{}` declares no ScalarKind", spec.name));
+    // Ranges only — subtract the equality operators for every family (see above).
+    let mut ops = Term::operators_for_terms(&[JSON_ENTRY_TERM]);
+    ops.retain(|op| !Term::Hm.operators().contains(op));
+    ops
+}
+
+/// The operators [`JSON_ENTRY_TERM`] provides that a family's SERVED operands must
+/// not answer — the complement of [`json_entry_cross_operators`]. **Blocked, never
+/// merely omitted.**
+///
+/// `public.eql_v3_json_entry` and `eql_v3.query_<T>_<d>` are both domains over
+/// `jsonb`, and an operator resolves against the ultimate base type. So leaving `=`
+/// unbound does not make `json_entry = query_text_ord` a planner error — it falls
+/// back to native `jsonb = jsonb`, compares whole payload objects, never matches,
+/// and returns ZERO ROWS with no error. A blocker claims the exact signature so the
+/// operator resolves to a `RAISE` instead.
+///
+/// This covers a SERVED operand's unsound operators (text's `=`), where the exact
+/// signature beats the base-type flattening. Operands the seam does not serve at
+/// all are NOT covered — see the caveat on [`json_entry_cross_domains`].
+fn json_entry_cross_blocked_operators(spec: &DomainFamily) -> Vec<&'static str> {
+    let supported = json_entry_cross_operators(spec);
+    Term::operators_for_terms(&[JSON_ENTRY_TERM])
+        .into_iter()
+        .filter(|op| !supported.contains(op))
+        .collect()
+}
+
+/// The extractor this surface uses on BOTH operands: [`JSON_ENTRY_TERM`]'s own
+/// (`ord_term` → `ope_cllw`), asked of the `Term` rather than spelled out, so an
+/// extractor rename stays a single catalog-side change.
+///
+/// Used for every operator rather than resolving per-operator through
+/// `Term::extractor_for_operator`. That generic rule picks the first capable term
+/// in the operand's list, so on a dual-term `[Hm, Ope]` operand (text's `_ord`)
+/// it routes `=`/`<>` through `eq_term` — the per-value HMAC a SteVec scalar leaf
+/// never carries. That rule is right for a scalar column and wrong for this seam:
+/// `json_entry` serves exactly one term, so the extractor is a property of the
+/// SEAM, not of the operator. Since [`json_entry_cross_operators`] already limits
+/// the emitted set to what this term provides, the pairing is total.
+fn json_entry_extractor() -> &'static str {
+    JSON_ENTRY_TERM.extractor()
+}
+
+/// Body for a family's json_entry_<T>_functions.sql: comparison
+/// WRAPPERS binding the fixed `public.eql_v3_json_entry` leaf to the family's
+/// `_ord` / `_ord_ope` query operands, for every operator json_entry can serve
+/// through `ord_term` → ope_cllw (op byte-comparison, which covers ordering and
+/// equality), in both directions. Reuses the `functions.sql` template +
+/// `wrapper_entry`: the left operand is the fixed json_entry type instead of the
+/// family's storage domain, and no operand is `jsonb`, so each wrapper compares
+/// `ord_term(a)` to `ord_term(b)` with no cast. Emits wrappers for the operators
+/// this family's `op` term can serve soundly, plus BLOCKERS for the rest — see
+/// [`json_entry_cross_blocked_operators`] for why omission is not an option.
+///
+/// `blocked_domains` (see [`json_entry_cross_blocked_domains`]) get blockers for
+/// EVERY operator [`JSON_ENTRY_TERM`] provides, both directions — an unserved
+/// Ope-carrying operand must raise, never flatten to `jsonb <op> jsonb`.
+pub fn render_json_entry_cross_functions(
+    spec: &DomainFamily,
+    domains: &[&Domain],
+    blocked_domains: &[&Domain],
+) -> String {
+    use crate::consts::sql_str;
+    use crate::context::{
+        environment, query_domain_name, unsupported_entry, wrapper_entry, FunctionsContext,
+        SqlParam,
+    };
+
+    let family_name = spec.name;
+    let json_entry = json_entry_type();
+    let extractor = json_entry_extractor();
+    let supported = json_entry_cross_operators(spec);
+    let blocked = json_entry_cross_blocked_operators(spec);
+    let mut requires = vec![
+        V3_SCHEMA.to_string(),
+        V3_JSON_TYPES.to_string(),
+        V3_JSON_FUNCTIONS.to_string(),
+        query_types_path(family_name),
+    ];
+    let mut entries = Vec::new();
+
+    for d in domains {
+        let query_dom = query_domain_name(&d.query_name(family_name));
+        // The query-side extractor overload (ord_term on the query operand) lives
+        // in the query domain's functions file.
+        requires.push(scalar_path(
+            family_name,
+            &format!("{}_functions.sql", d.query_name(family_name)),
+        ));
+        for op in OPERATORS {
+            let symbol = op.symbol.as_str();
+            if supported.contains(&symbol) {
+                // (json_entry, query) and its (query, json_entry) commutator. `dom`
+                // (first arg of wrapper_entry) only drives the jsonb→domain cast in
+                // extract_arg, which never fires here (neither operand is jsonb), so
+                // the json_entry type is a safe placeholder.
+                entries.push(wrapper_entry(
+                    &json_entry,
+                    op,
+                    &json_entry,
+                    &query_dom,
+                    extractor,
+                ));
+                entries.push(wrapper_entry(
+                    &json_entry,
+                    op,
+                    &query_dom,
+                    &json_entry,
+                    extractor,
+                ));
+            } else if blocked.contains(&symbol) {
+                // Both directions, so neither can fall through to `jsonb = jsonb`.
+                entries.push(unsupported_entry(
+                    op,
+                    [
+                        SqlParam {
+                            name: "a",
+                            ty: json_entry.clone(),
+                        },
+                        SqlParam {
+                            name: "b",
+                            ty: query_dom.clone(),
+                        },
+                    ],
+                    "boolean",
+                ));
+                entries.push(unsupported_entry(
+                    op,
+                    [
+                        SqlParam {
+                            name: "a",
+                            ty: query_dom.clone(),
+                        },
+                        SqlParam {
+                            name: "b",
+                            ty: json_entry.clone(),
+                        },
+                    ],
+                    "boolean",
+                ));
+            }
+        }
+    }
+
+    // Unserved Ope-carrying operands: blockers for EVERY operator the term
+    // provides, both directions (no wrapper exists to fall back on). Only the
+    // operand TYPE is needed for the signature — no extractor call, so no
+    // REQUIRE on the operand's functions file.
+    let all_ops = Term::operators_for_terms(&[JSON_ENTRY_TERM]);
+    for d in blocked_domains {
+        let query_dom = query_domain_name(&d.query_name(family_name));
+        for op in OPERATORS {
+            if !all_ops.contains(&op.symbol.as_str()) {
+                continue;
+            }
+            entries.push(unsupported_entry(
+                op,
+                [
+                    SqlParam {
+                        name: "a",
+                        ty: json_entry.clone(),
+                    },
+                    SqlParam {
+                        name: "b",
+                        ty: query_dom.clone(),
+                    },
+                ],
+                "boolean",
+            ));
+            entries.push(unsupported_entry(
+                op,
+                [
+                    SqlParam {
+                        name: "a",
+                        ty: query_dom.clone(),
+                    },
+                    SqlParam {
+                        name: "b",
+                        ty: json_entry.clone(),
+                    },
+                ],
+                "boolean",
+            ));
+        }
+    }
+
+    let ctx = FunctionsContext {
+        requires,
+        family_name: family_name.to_string(),
+        name: json_entry_stem(family_name),
+        domain_lit: sql_str(&json_entry),
+        dom: json_entry,
+        entries,
+    };
+    environment()
+        .get_template("functions.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render json_entry cross functions")
+}
+
+/// Body for a family's json_entry_<T>_operators.sql: a CREATE
+/// OPERATOR binding `(public.eql_v3_json_entry, query_<T>_<d>)` and its
+/// `(query_<T>_<d>, public.eql_v3_json_entry)` commutator for every operator
+/// [`JSON_ENTRY_TERM`] provides — bound to the public WRAPPER where the family's
+/// `op` term serves it soundly (supported = true → COMMUTATOR/NEGATOR/RESTRICT/
+/// JOIN metadata), and to the BLOCKER where it does not (supported = false → no
+/// metadata; the operator resolves to a `RAISE` instead of falling through to
+/// native `jsonb = jsonb`). `blocked_domains` bind every operator to a blocker.
+pub fn render_json_entry_cross_operators(
+    spec: &DomainFamily,
+    domains: &[&Domain],
+    blocked_domains: &[&Domain],
+) -> String {
+    use crate::context::{environment, operator_entry, query_domain_name, OperatorsContext};
+
+    let family_name = spec.name;
+    let json_entry = json_entry_type();
+    // The SAME sets the functions renderer uses — both call
+    // `json_entry_cross_operators` / `_blocked_operators`, so `supported` here
+    // (which claims a public wrapper backs the operator, per `operator_entry`'s
+    // contract) cannot drift from the wrappers/blockers actually emitted.
+    let supported = json_entry_cross_operators(spec);
+    let blocked = json_entry_cross_blocked_operators(spec);
+    let mut operators = Vec::new();
+    for d in domains {
+        let query_dom = query_domain_name(&d.query_name(family_name));
+        for op in OPERATORS {
+            let symbol = op.symbol.as_str();
+            let is_supported = if supported.contains(&symbol) {
+                true
+            } else if blocked.contains(&symbol) {
+                false
+            } else {
+                continue;
+            };
+            operators.push(operator_entry(op, &json_entry, &query_dom, is_supported));
+            operators.push(operator_entry(op, &query_dom, &json_entry, is_supported));
+        }
+    }
+    // Unserved Ope-carrying operands: every operator resolves to its blocker
+    // (mirrors the blocker entries `render_json_entry_cross_functions` emits).
+    let all_ops = Term::operators_for_terms(&[JSON_ENTRY_TERM]);
+    for d in blocked_domains {
+        let query_dom = query_domain_name(&d.query_name(family_name));
+        for op in OPERATORS {
+            if !all_ops.contains(&op.symbol.as_str()) {
+                continue;
+            }
+            operators.push(operator_entry(op, &json_entry, &query_dom, false));
+            operators.push(operator_entry(op, &query_dom, &json_entry, false));
+        }
+    }
+
+    let ctx = OperatorsContext {
+        requires: vec![
+            V3_SCHEMA.to_string(),
+            V3_JSON_TYPES.to_string(),
+            query_types_path(family_name),
+            json_entry_functions_path(family_name),
+        ],
+        family_name: family_name.to_string(),
+        name: json_entry_stem(family_name),
+        dom: json_entry,
+        operators,
+    };
+    environment()
+        .get_template("operators.sql")
+        .unwrap()
+        .render(&ctx)
+        .expect("render json_entry cross operators")
 }
 
 /// Body for a domain's _aggregates.sql, or None if not ord-capable.
@@ -392,7 +847,7 @@ fn ore_alternatives(spec: &DomainFamily, qualify: &dyn Fn(&Domain) -> String) ->
     }
 }
 
-/// Body for the cross-family `src/v3/scalars/ore_fallback.sql` (CIP-3468).
+/// Body for the cross-family `src/v3/scalars/ore_fallback.sql`.
 ///
 /// The rendered DO block runs after the ORE opclass creation attempt
 /// (`V3_ORE_OPCLASS`). If the default btree opclass for
@@ -491,7 +946,7 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
             out_dir.join(format!("{name}_operators.sql")),
             render_operators_file(family_name, d),
         ));
-        // Query-operand surface (CIP-3432): extractor overloads + wrappers +
+        // Query-operand surface: extractor overloads + wrappers +
         // operators binding the storage domain to its `query_<name>` twin. Only
         // term-bearing domains have a query twin (storage-only = no operators).
         if !d.terms.is_empty() {
@@ -508,6 +963,27 @@ pub fn render_type(spec: &DomainFamily, out_dir: &Path) -> Vec<(PathBuf, String)
         if let Some(agg) = render_aggregates_file(family_name, d) {
             rendered.push((out_dir.join(format!("{name}_aggregates.sql")), agg));
         }
+    }
+    // json_entry cross-type operators: bind the fixed
+    // public.eql_v3_json_entry leaf to every query operand this family declares
+    // that carries the term json_entry can serve (Term::Ope) AND whose values
+    // exist in JSON as themselves. Ope-carrying operands the seam does not serve
+    // (date/timestamp — no native JSON leaf; text's Bloom-bearing `search`) get
+    // blocker-only files so the pair raises instead of flattening to native
+    // `jsonb <op> jsonb`. Both lists empty for boolean (storage-only) and json
+    // (no scalar operands) → no cross files.
+    let cross_domains = json_entry_cross_domains(spec);
+    let cross_blocked = json_entry_cross_blocked_domains(spec);
+    if !(cross_domains.is_empty() && cross_blocked.is_empty()) {
+        let stem = json_entry_stem(family_name);
+        rendered.push((
+            out_dir.join(format!("{stem}_functions.sql")),
+            render_json_entry_cross_functions(spec, &cross_domains, &cross_blocked),
+        ));
+        rendered.push((
+            out_dir.join(format!("{stem}_operators.sql")),
+            render_json_entry_cross_operators(spec, &cross_domains, &cross_blocked),
+        ));
     }
     rendered
 }
@@ -558,7 +1034,7 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         all_written.extend(written.iter().cloned());
     }
 
-    // Cross-family ORE capability-detection fallback (CIP-3468). Depth-1 under
+    // Cross-family ORE capability-detection fallback. Depth-1 under
     // src/v3/scalars (it spans families, so it belongs to no type dir), written
     // after every per-family surface so all its REQUIRE targets exist.
     let fallback_path = scalars_root.join("ore_fallback.sql");
@@ -737,9 +1213,13 @@ mod tests {
         assert!(names.contains(&"integer_ord_ore_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_aggregates.sql".to_string()));
         assert!(names.contains(&"integer_ord_ope_aggregates.sql".to_string()));
+        // Query-operand + json_entry cross-type files for the term-bearing domains.
+        assert!(names.contains(&"json_entry_integer_functions.sql".to_string()));
+        assert!(names.contains(&"json_entry_integer_operators.sql".to_string()));
         // 1 types + 1 query_types + 2 per domain (5) + 2 query per term-bearing
-        // domain (4) + 3 ord-capable aggregates = 1+1+10+8+3.
-        assert_eq!(written.len(), 23);
+        // domain (4) + 3 ord-capable aggregates = 1+1+10+8+3 = 23, plus the 2
+        // json_entry cross files.
+        assert_eq!(written.len(), 25);
         for p in &written {
             assert!(fs::read_to_string(p)
                 .unwrap()
@@ -1235,6 +1715,21 @@ mod tests {
         );
     }
 
+    #[test]
+    fn storage_only_and_json_families_emit_no_json_entry_cross_files() {
+        for family in ["boolean", "json"] {
+            let rendered = render_type(spec(family), std::path::Path::new("out"));
+            assert!(
+                !rendered.iter().any(|(p, _)| p
+                    .file_name()
+                    .unwrap()
+                    .to_string_lossy()
+                    .starts_with("json_entry_")),
+                "{family} must emit no json_entry cross files"
+            );
+        }
+    }
+
     // --- Coarsened footgun invariant guards (whole-file scans) ---
 
     #[test]
@@ -1469,5 +1964,468 @@ mod tests {
         assert!(!fallback.exists(), "clean_all removes ore_fallback.sql");
         assert!(removed.contains(&fallback));
         assert!(hand.exists(), "hand-written depth-1 functions.sql survives");
+    }
+
+    // --- json_entry <-> query_<T> cross-type operator surface ---
+
+    #[test]
+    fn json_entry_cross_domains_selects_every_ope_carrying_operand() {
+        // Selection is by CAPABILITY: every domain carrying Term::Ope, whatever it
+        // is named. integer declares exactly two.
+        let names: Vec<&str> = json_entry_cross_domains(spec("integer"))
+            .iter()
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(names, vec!["ord", "ord_ope"]);
+        assert!(
+            json_entry_cross_blocked_domains(spec("integer")).is_empty(),
+            "integer serves every Ope-carrying operand — nothing to block"
+        );
+        // text declares a THIRD Ope-carrying operand — `search` [Hm, Ope, Bloom] —
+        // and it does NOT bind: SteVec has no match/bloom capability, so `search`
+        // offers nothing over `_ord` while its CHECK demands a `bf` the seam never
+        // reads. Binding it would tax the caller for an inert term. It is BLOCKED,
+        // not merely omitted (see json_entry_bloom_operand_is_blocked_not_bound).
+        let text: Vec<&str> = json_entry_cross_domains(spec("text"))
+            .iter()
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(text, vec!["ord", "ord_ope"]);
+        let text_blocked: Vec<&str> = json_entry_cross_blocked_domains(spec("text"))
+            .iter()
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(text_blocked, vec!["search"]);
+        // Excluded BY CONSTRUCTION, no name list needed:
+        //   `_eq`        [Hm]              — no Ope; a SteVec scalar leaf has no
+        //                                    per-value `hm`, so it'd be dead surface.
+        //   `_ord_ore`   [Hm, Ore]         — block-ORE; json_entry cannot produce it.
+        //   `_search_ore`[Hm, Ore, Bloom]  — likewise.
+        //   `_match`     [Bloom]           — Bloom only.
+        //   `_search`    [Hm, Ope, Bloom]  — carries Ope, but Bloom-bearing.
+        for excluded in ["eq", "ord_ore", "match", "search_ore", "search"] {
+            assert!(
+                !text.contains(&excluded),
+                "{excluded} must not bind json_entry"
+            );
+        }
+        // date/timestamp fail the PARTICIPATION gate wholesale: JSON has no
+        // date/timestamp type — those values marshal into ISO-8601 strings, so a
+        // "date leaf" IS a text leaf and the text surface owns it. Their
+        // Ope-carrying operands land in the blocked list instead (coderdan's
+        // review call on PR #410).
+        for temporal in ["date", "timestamp"] {
+            assert!(
+                json_entry_cross_domains(spec(temporal)).is_empty(),
+                "{temporal} has no native JSON leaf — it must not bind json_entry"
+            );
+            let blocked: Vec<&str> = json_entry_cross_blocked_domains(spec(temporal))
+                .iter()
+                .map(|d| d.name)
+                .collect();
+            assert_eq!(
+                blocked,
+                vec!["ord", "ord_ope"],
+                "{temporal}'s Ope operands must be blocked, not merely omitted"
+            );
+        }
+        // boolean (storage-only) and json (no scalar operands) contribute nothing
+        // to either list.
+        assert!(json_entry_cross_domains(spec("boolean")).is_empty());
+        assert!(json_entry_cross_domains(spec("json")).is_empty());
+        assert!(json_entry_cross_blocked_domains(spec("boolean")).is_empty());
+        assert!(json_entry_cross_blocked_domains(spec("json")).is_empty());
+    }
+
+    #[test]
+    fn json_entry_cross_operator_set_is_exactly_what_the_term_provides() {
+        // The emitted set is Term::Ope's operators MINUS equality, not the operand's
+        // own term list — otherwise text's `search` [Hm, Ope, Bloom] would drag in
+        // `@@`, which json_entry has no match_term for and which would render as a
+        // nonsensical `ord_term(a) @@ ord_term(b)`. Equality is excluded for EVERY
+        // family: it lives on the document-containment surface
+        // (`col @> query_json`, value-selector presence), never on an extracted leaf.
+        let ops = json_entry_cross_operators(spec("integer"));
+        assert_eq!(ops, vec!["<", "<=", ">", ">="]);
+        for excluded in ["=", "<>", "@@", "@>"] {
+            assert!(
+                !ops.contains(&excluded),
+                "{excluded} must never reach the extract surface"
+            );
+        }
+        // And the extractor is the term's own, not a spelled-out literal.
+        assert_eq!(json_entry_extractor(), Term::Ope.extractor());
+    }
+
+    #[test]
+    fn json_entry_never_serves_equality_on_the_extract_surface() {
+        // equality is not an extract operation for ANY family. An
+        // extracted json_entry is a PATH entry ({s,c,op?}) carrying no value
+        // selector, so the only equality it could offer is `op` byte-comparison —
+        // lossy for text/bigint/numeric (café==cafe, 2^53==2^53+1) and, even where
+        // injective (integer/smallint inject into f64, real/double ARE f64), the
+        // WRONG mechanism. Exact field equality is document containment
+        // (`col @> query_json`, value-selector presence). So every participating
+        // family serves ordering only; `=`/`<>` are subtracted here and BLOCKED by
+        // the renderer (see json_entry_cross_functions_* and _operators_*).
+        for family in [
+            "integer", "smallint", "real", "double", "bigint", "numeric", "text",
+        ] {
+            let ops = json_entry_cross_operators(spec(family));
+            assert_eq!(
+                ops,
+                vec!["<", "<=", ">", ">="],
+                "{family} must serve ordering only on the extract surface"
+            );
+            for eq_op in Term::Hm.operators() {
+                assert!(
+                    !ops.contains(eq_op),
+                    "{family} must not serve `{eq_op}` on an extracted leaf — equality \
+                     is document containment (query_json), never an extract op"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn json_entry_bloom_operand_is_blocked_not_bound() {
+        // coderdan's review point: SteVec has no match/bloom capability, so
+        // `search` is not served. And per this surface's own rule — blocked,
+        // never merely omitted — it cannot simply be left unbound either:
+        // `json_entry <op> query_text_search` would flatten to native
+        // `jsonb <op> jsonb` and answer silently (zero rows, no error). Every
+        // operator on the pair resolves to a blocker instead.
+        let text: Vec<&str> = json_entry_cross_domains(spec("text"))
+            .iter()
+            .map(|d| d.name)
+            .collect();
+        assert_eq!(text, vec!["ord", "ord_ope"]);
+        let s = spec("text");
+        let served = json_entry_cross_domains(s);
+        let blocked = json_entry_cross_blocked_domains(s);
+        let sql = render_json_entry_cross_functions(s, &served, &blocked);
+        assert!(
+            sql.contains(
+                "CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_text_search)"
+            ),
+            "search must get a per-pair blocker, not silent jsonb fallback"
+        );
+        assert!(
+            !sql.contains("eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_text_search)")
+                || sql.contains(
+                    "eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_text_search)"
+                ),
+            "search must never get a public WRAPPER"
+        );
+        let ops_sql = render_json_entry_cross_operators(s, &served, &blocked);
+        // search: 6 operators × 2 directions, all backed by internal blockers.
+        assert_eq!(
+            ops_sql
+                .matches("RIGHTARG = eql_v3.query_text_search")
+                .count(),
+            6
+        );
+        assert_eq!(
+            ops_sql
+                .matches("LEFTARG = eql_v3.query_text_search")
+                .count(),
+            6
+        );
+        // No wrapper backs any search pair: every search operator's FUNCTION is
+        // eql_v3_internal (metadata-free), and the wrapper-backed count is
+        // unchanged from the served operands alone.
+        let served_only_ops = render_json_entry_cross_operators(s, &served, &[]);
+        assert_eq!(
+            ops_sql.matches("FUNCTION = eql_v3.").count(),
+            served_only_ops.matches("FUNCTION = eql_v3.").count(),
+            "blocked operands must add no public-wrapper-backed operators"
+        );
+    }
+
+    #[test]
+    fn json_entry_type_is_derived_from_the_catalog() {
+        // Not a hardcoded literal: a catalog rename or PUBLIC_TYPNAME_PREFIX bump
+        // must flow through rather than silently drift (cf. #398 jsonb -> json).
+        assert_eq!(json_entry_type(), "public.eql_v3_json_entry");
+        assert_eq!(json_entry_stem("integer"), "json_entry_integer");
+        assert_eq!(
+            json_entry_functions_path("integer"),
+            "src/v3/scalars/integer/json_entry_integer_functions.sql"
+        );
+    }
+
+    #[test]
+    fn json_entry_cross_functions_bind_json_entry_to_query_operands() {
+        let s = spec("integer");
+        let domains = json_entry_cross_domains(s);
+        let sql =
+            render_json_entry_cross_functions(s, &domains, &json_entry_cross_blocked_domains(s));
+
+        // integer's ord/ord_ope are [Ope]-only. The extract surface serves ORDERING
+        // through ord_term — 4 ops × 2 operands × 2 dirs = 16 wrappers — plus
+        // equality BLOCKERS — =,<> × 2 operands × 2 dirs = 8 — for 24 functions.
+        // Equality is never an extract op; it is document containment.
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 24);
+        // Ordering IS a public wrapper through ord_term, both operands, both dirs.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_integer_ord_ope)"
+        ));
+        // ordering commutator (query on the left).
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.gte(a eql_v3.query_integer_ord, b public.eql_v3_json_entry)"
+        ));
+        // Equality is a BLOCKER, never a public wrapper — and never op-equality.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
+        ));
+        assert!(
+            !sql.contains(
+                "CREATE FUNCTION eql_v3.eq(a public.eql_v3_json_entry, b eql_v3.query_integer_ord)"
+            ),
+            "equality must not be a public wrapper on the extract surface"
+        );
+        assert!(
+            !sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"),
+            "op-equality is gone — equality is document containment, not an extract op"
+        );
+        // The dropped `_eq` operand never appears, and no hmac equality route
+        // is used for an extracted entry.
+        assert!(!sql.contains("query_integer_eq"));
+        assert!(!sql.contains("eql_v3.eq_term"));
+        // Footguns: ordering wrappers are inlinable LANGUAGE sql, unpinned; the eq
+        // blockers are LANGUAGE plpgsql (never inlinable, so the RAISE survives).
+        assert!(!sql.contains("SET search_path"));
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            16
+        );
+        assert_eq!(sql.matches("LANGUAGE plpgsql").count(), 8);
+        // REQUIRE edges pull in both sides (no cycle: the cross file's json deps —
+        // json/types.sql + json/functions.sql — are themselves scalar-free; see D3).
+        assert!(sql.contains("-- REQUIRE: src/v3/json/types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/json/functions.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_types.sql"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_ord_functions.sql"));
+        assert!(
+            sql.contains("-- REQUIRE: src/v3/scalars/integer/query_integer_ord_ope_functions.sql")
+        );
+        // The dropped `_eq` operand's functions file is NOT required.
+        assert!(!sql.contains("query_integer_eq_functions.sql"));
+    }
+
+    #[test]
+    fn json_entry_cross_operators_carry_planner_metadata() {
+        let s = spec("integer");
+        let domains = json_entry_cross_domains(s);
+        let sql =
+            render_json_entry_cross_operators(s, &domains, &json_entry_cross_blocked_domains(s));
+        assert_eq!(sql.matches("CREATE OPERATOR").count(), 24);
+        // Ordering operators are PUBLIC wrappers carrying commutator/negator/
+        // selectivity metadata (operator-free platforms call the wrapper directly).
+        assert!(sql.contains("FUNCTION = eql_v3.lt,"));
+        assert!(sql.contains(
+            "COMMUTATOR = >, NEGATOR = >=, RESTRICT = scalarltsel, JOIN = scalarltjoinsel"
+        ));
+        assert!(
+            sql.contains("LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord")
+        );
+        assert!(sql.contains(
+            "LEFTARG = public.eql_v3_json_entry, RIGHTARG = eql_v3.query_integer_ord_ope"
+        ));
+        // Equality operators are BLOCKERS: backed by eql_v3_internal, metadata-free
+        // (equality is document containment, not an extract op).
+        assert!(sql.contains("FUNCTION = eql_v3_internal.eq,"));
+        assert!(sql.contains("FUNCTION = eql_v3_internal.neq,"));
+        assert!(
+            !sql.contains("RESTRICT = eqsel"),
+            "no eqsel-carrying operator — equality is blocked on the extract surface"
+        );
+        // The dropped `_eq` operand never appears.
+        assert!(!sql.contains("query_integer_eq"));
+        assert!(sql.contains("-- REQUIRE: src/v3/scalars/integer/json_entry_integer_functions.sql"));
+    }
+
+    #[test]
+    fn json_entry_cross_functions_text_emits_ordering_only_never_equality() {
+        // text is the dual-term [Hm, Ope] operand shape. Like every family, it emits
+        // ORDERING ONLY on the extract surface. `op` is deterministic, so
+        // `ord_term(a) < …` is a sound collated order — the same one the scalar
+        // `text_ord` domain already ships. Equality is not an extract op at all: it
+        // is document containment (`col @> query_json`, value-selector presence).
+        // Emitting a public `=` wrapper here would compare `op` — which additionally
+        // needs INJECTIVITY that text lacks (cllw-ore's `orderize_string` collates
+        // `"café"` and `"cafe"` to the same bytes) — so `=` is BLOCKED instead. This
+        // test pins the blocker path for the dual-term operand; the equivalent for a
+        // [Ope]-only operand is json_entry_cross_functions_bind_json_entry_to_query_operands.
+        let s = spec("text");
+        let domains = json_entry_cross_domains(s);
+        assert_eq!(
+            domains.iter().map(|d| d.name).collect::<Vec<_>>(),
+            vec!["ord", "ord_ope"],
+            "Bloom-bearing `search` must not bind — SteVec has no match capability"
+        );
+        let blocked_domains = json_entry_cross_blocked_domains(s);
+        let sql = render_json_entry_cross_functions(s, &domains, &blocked_domains);
+
+        // Ordering IS emitted, through ord_term.
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.lt(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+        assert!(sql.contains("SELECT eql_v3.ord_term(a) < eql_v3.ord_term(b)"));
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3.gte(a public.eql_v3_json_entry, b eql_v3.query_text_ord)"
+        ));
+
+        // Equality is NOT emitted as a public wrapper, in either direction. This is
+        // the false-positive gate; if it regresses, `-> '$.email' = $1` starts
+        // matching rows with different plaintext.
+        for fun in ["eql_v3.eq(", "eql_v3.neq("] {
+            assert!(
+                !sql.contains(fun),
+                "text json_entry must emit no equality wrapper, found `{fun}`"
+            );
+        }
+        assert!(
+            !sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"),
+            "op-equality on text is a FALSE POSITIVE (orderize_string collates)"
+        );
+
+        // Equality IS emitted as a BLOCKER. Omitting it would not make `=` an
+        // error: both operands are domains over jsonb, so an unbound `=` falls
+        // back to native `jsonb = jsonb` — whole-payload comparison that never
+        // matches and returns zero rows silently. The blocker claims the signature
+        // so the operator raises instead.
+        for blocker in [
+            "CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)",
+            "CREATE FUNCTION eql_v3_internal.eq(a eql_v3.query_text_ord, b public.eql_v3_json_entry)",
+            "CREATE FUNCTION eql_v3_internal.neq(a public.eql_v3_json_entry, b eql_v3.query_text_ord)",
+        ] {
+            assert!(sql.contains(blocker), "missing blocker: {blocker}");
+        }
+        assert!(
+            sql.contains("RAISE EXCEPTION 'operator % is not supported for %'"),
+            "the blocker must raise, not return NULL"
+        );
+        // Never STRICT, never LANGUAGE sql — a STRICT blocker returns NULL on a
+        // NULL arg without running the body, and a LANGUAGE sql body is inlinable
+        // and can be elided when the planner proves the result unused. Either way
+        // the RAISE goes missing and the false positive comes back as a silent NULL.
+        assert!(
+            !sql.contains("RETURNS boolean IMMUTABLE STRICT PARALLEL SAFE\nAS $$ BEGIN RAISE"),
+            "blockers must not be STRICT"
+        );
+        assert!(sql.contains("END; $$\nLANGUAGE plpgsql;"));
+
+        // The eq_term/hm route never appears for the entry side either — a leaf has
+        // no hm, so this would be dead surface rather than a fix.
+        assert!(!sql.contains("eql_v3.eq_term"));
+        assert!(
+            !sql.contains("eql_v3.matches"),
+            "Bloom @@ must not be emitted"
+        );
+        // Served: 2 operands × 2 dirs × (4 ordering wrappers + 2 equality
+        // blockers) = 24. Blocked operand (`search`): 6 operators × 2 dirs = 12
+        // blockers. Total 36, of which exactly the 16 ordering wrappers are
+        // inlinable LANGUAGE sql — the rest are plpgsql blockers.
+        assert_eq!(sql.matches("CREATE FUNCTION").count(), 36);
+        assert_eq!(
+            sql.matches("LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE")
+                .count(),
+            16
+        );
+        assert_eq!(sql.matches("LANGUAGE plpgsql;").count(), 20);
+        // The Bloom-bearing `search` operand appears ONLY in blocker signatures
+        // (eql_v3_internal), never in a public wrapper.
+        for wrapper in ["eq", "neq", "lt", "lte", "gt", "gte"] {
+            assert!(
+                !sql.contains(&format!(
+                    "CREATE FUNCTION eql_v3.{wrapper}(a public.eql_v3_json_entry, b eql_v3.query_text_search)"
+                )),
+                "search must never get a public `{wrapper}` wrapper"
+            );
+        }
+        assert!(sql.contains(
+            "CREATE FUNCTION eql_v3_internal.lt(a public.eql_v3_json_entry, b eql_v3.query_text_search)"
+        ));
+        // Ore / eq / match operands never appear at all.
+        assert!(!sql.contains("match_term"));
+        assert!(!sql.contains("query_text_match"));
+        assert!(!sql.contains("query_text_eq"));
+        assert!(!sql.contains("query_text_ord_ore"));
+    }
+
+    #[test]
+    fn json_entry_temporal_families_are_blocked_not_bound() {
+        // coderdan (PR #410): date/timestamp are not valid JSON values — JSON has
+        // no temporal type, and in practice those values are marshaled into
+        // ISO-8601 STRINGS. A "date leaf" is therefore a TEXT leaf: ordering is
+        // served by query_text_ord (ISO-8601 string order IS chronological
+        // order), equality by `@>` containment. Binding query_date_ord to
+        // json_entry would be dead surface — cipherstash-client refuses to build
+        // a SteVec query term from a temporal plaintext
+        // (OrderableTerm::try_from(&Plaintext) => Err for NaiveDate/Timestamp),
+        // so no real operand could ever reach the comparison.
+        //
+        // Per this surface's rule — blocked, never merely omitted — the pairs
+        // still get exact-signature blockers: unclaimed, `json_entry <op>
+        // query_date_ord` would flatten to native `jsonb <op> jsonb` and answer
+        // silently. (It is also the one cast that would walk around the text
+        // equality block: a date leaf and a text leaf are byte-identically
+        // encoded, so `= query_date_ord` on a string leaf would be collated
+        // equality by the back door.)
+        for family in ["date", "timestamp"] {
+            let s = spec(family);
+            let served = json_entry_cross_domains(s);
+            let blocked = json_entry_cross_blocked_domains(s);
+            assert!(served.is_empty(), "{family} must serve no operand");
+            let sql = render_json_entry_cross_functions(s, &served, &blocked);
+            // 2 operands (ord, ord_ope) × 6 operators × 2 directions = 24
+            // blockers, no wrappers.
+            assert_eq!(sql.matches("CREATE FUNCTION").count(), 24, "{family}");
+            assert_eq!(
+                sql.matches("CREATE FUNCTION eql_v3_internal.").count(),
+                24,
+                "{family}: every function must be an internal blocker"
+            );
+            assert!(
+                sql.contains(&format!(
+                    "CREATE FUNCTION eql_v3_internal.eq(a public.eql_v3_json_entry, b eql_v3.query_{family}_ord)"
+                )),
+                "{family}: = must resolve to a blocker"
+            );
+            assert!(
+                sql.contains(&format!(
+                    "CREATE FUNCTION eql_v3_internal.lt(a eql_v3.query_{family}_ord_ope, b public.eql_v3_json_entry)"
+                )),
+                "{family}: both directions must be claimed"
+            );
+            // Blocker hygiene: plpgsql, never STRICT, always raises.
+            assert_eq!(sql.matches("LANGUAGE plpgsql;").count(), 24, "{family}");
+            assert!(
+                !sql.contains("STRICT"),
+                "{family}: blockers must not be STRICT"
+            );
+            assert!(sql.contains("RAISE EXCEPTION 'operator % is not supported for %'"));
+            // No wrapper, no extractor call — nothing for a caller to invoke.
+            assert!(!sql.contains("eql_v3.ord_term"), "{family}");
+            assert!(!sql.contains("LANGUAGE sql"), "{family}");
+
+            let ops_sql = render_json_entry_cross_operators(s, &served, &blocked);
+            assert_eq!(ops_sql.matches("CREATE OPERATOR").count(), 24, "{family}");
+            assert_eq!(
+                ops_sql.matches("FUNCTION = eql_v3_internal.").count(),
+                24,
+                "{family}: every operator must resolve to its blocker"
+            );
+            assert!(
+                !ops_sql.contains("COMMUTATOR"),
+                "{family}: blocked operators carry no planner metadata"
+            );
+        }
     }
 }

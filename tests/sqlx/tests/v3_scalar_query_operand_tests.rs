@@ -1,4 +1,4 @@
-//! CIP-3432 conformance: a term-only query operand (`eql_v3.query_<name>` — the
+//!  conformance: a term-only query operand (`eql_v3.query_<name>` — the
 //! index terms only, NO ciphertext `c`) matches stored rows through the
 //! generated query operators, using FRESH ZeroKMS encryption for both the
 //! stored values AND the query value.

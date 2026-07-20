@@ -107,7 +107,7 @@ def load_domains(catalog_path: Path) -> list:
                 # v3 user domains live in the `public` schema (public-domain
                 # migration on eql_v3); the dump's `typname` is the installed
                 # unqualified name, carrying the eql_v3_ version prefix
-                # (CIP-3472).
+                #.
                 "name": f"public.{dom['typname']}",
                 "type": token,
                 "variant": suffix.lstrip("_"),
@@ -120,7 +120,7 @@ def load_domains(catalog_path: Path) -> list:
     # SteVec (jsonb) family: hand-written SQL, catalog inventory only. The
     # column-type domains (`json`, `jsonb_entry`) live in `public`; the
     # containment needle (`query_jsonb`) is a query operand, never a column
-    # type, and lives in `eql_v3` (CIP-3442). Extractor functions are eql_v3.
+    # type, and lives in `eql_v3`. Extractor functions are eql_v3.
     for entry in catalog.get("stevec", []):
         schema = "eql_v3" if entry["full_name"].startswith("query_") else "public"
         domains.append({
