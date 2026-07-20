@@ -256,9 +256,9 @@ macro_rules! ope_ord_fixture_smoke {
                 $domain
             );
 
-            // : the term-only query operand — the pivot payload minus
-            // its ciphertext `c`, cast to `query_<domain>` (prefix naming —
-            // ). Every predicate must match the SAME oracle through the
+            // The term-only query operand is the pivot payload minus its
+            // ciphertext `c`, cast to `query_<domain>` (prefix naming). Every
+            // predicate must match the same oracle through the
             // `(storage, query_<domain>)` operators as through the
             // full-envelope operand.
             let pivot_query_cast = {

@@ -136,8 +136,7 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb
-       @> eql_v3.to_ste_vec_query(b)::jsonb
+  SELECT eql_v3.ste_vec_contains(a, b)
 $$;
 
 CREATE OPERATOR @>(

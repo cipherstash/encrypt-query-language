@@ -61,18 +61,30 @@ const ROW_COUNT: i64 = 10;
 /// The ten plaintext documents — the source of truth for the fixture.
 ///
 /// `hello` VARIES across all rows (10 distinct values → 10 distinct `$.hello`
-/// `op` leaves) so the W1 containment oracle (`fwd == expected`, where
-/// `expected` = rows whose `$.hello` op equals the row-1 self-needle) and the
-/// D11 OPE-btree test have real discrimination — a constant `$.hello` would
-/// make `expected == ROW_COUNT` and silently hollow the oracle. `number` also
-/// varies (its own `$.number` op). `nested` is a constant object so `$` and
-/// `$.nested` carry stable `hm` leaves across all rows (LB2 / LB4).
+/// `op` leaves and value selectors) so exact containment can isolate one row
+/// and the D11 OPE-btree test has real discrimination. `number` also
+/// varies (its own `$.number` op). `accented` and `large` carry the two known
+/// collision pairs from the retired OPE-equality path, while `empty` pins the
+/// genuine empty-string leaf against the value-entry sentinel. `nested` is a
+/// constant object so its structural and value selectors are stable across
+/// all rows.
 fn documents() -> Vec<Value> {
     (1..=ROW_COUNT)
         .map(|i| {
             json!({
                 "hello": format!("world-{i}"),
                 "number": i,
+                "accented": match i {
+                    1 => "café".to_string(),
+                    2 => "cafe".to_string(),
+                    _ => format!("accented-{i}"),
+                },
+                "large": match i {
+                    1 => 9_007_199_254_740_993_i64,
+                    2 => 9_007_199_254_740_992_i64,
+                    _ => i,
+                },
+                "empty": "",
                 "nested": { "deep": "constant" },
             })
         })
@@ -107,12 +119,18 @@ mod tests {
         let hellos: std::collections::HashSet<&str> =
             docs.iter().map(|d| d["hello"].as_str().unwrap()).collect();
         assert_eq!(hellos.len(), 10, "$.hello must be distinct across all rows");
-        // `nested` is a constant object so `$.nested` carries a stable hm leaf.
+        // `nested` is constant, and every row carries a genuine empty-string
+        // leaf so its path entry cannot be confused with a value-entry sentinel.
         assert!(docs
             .iter()
             .all(|d| d["nested"] == json!({ "deep": "constant" })));
+        assert!(docs.iter().all(|d| d["empty"] == json!("")));
         let numbers: Vec<i64> = docs.iter().map(|d| d["number"].as_i64().unwrap()).collect();
         assert_eq!(numbers, (1..=10).collect::<Vec<_>>());
+        assert_eq!(docs[0]["accented"], json!("café"));
+        assert_eq!(docs[1]["accented"], json!("cafe"));
+        assert_eq!(docs[0]["large"], json!(9_007_199_254_740_993_i64));
+        assert_eq!(docs[1]["large"], json!(9_007_199_254_740_992_i64));
     }
 
     #[test]

@@ -8091,7 +8091,8 @@ $$;
 --!         material once (every entry encrypts under the document's single
 --!         data key; entry `c` values are raw AEAD output whose nonces are
 --!         derived from the entries' selectors) — it is opaque to SQL and
---!         only ever carried/grafted, never parsed.
+--!         only ever carried/grafted, never parsed. Unknown envelope keys are
+--!         rejected; `k` and `a` remain optional compatibility fields.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -8103,6 +8104,7 @@ AS $$
      AND val ? 'i'
      AND jsonb_typeof(val -> 'h') = 'string'
      AND jsonb_typeof(val -> 'sv') = 'array'
+     AND val - ARRAY['v', 'k', 'i', 'h', 'sv', 'a']::text[] = '{}'::jsonb
      AND NOT EXISTS (
        SELECT 1
        FROM jsonb_array_elements(
@@ -8153,8 +8155,9 @@ $$;
 --! (value-inclusive selectors) and non-orderable path entries are term-less
 --! `{s, c}`: exact matching is selector presence, so there is no per-value
 --! equality term (`hm` is retired and rejected). This is the type returned by
---! `->` and accepted by the per-entry extractors `eql_v3.eq_term` /
---! `eql_v3.ord_term`. The optional array marker `a` and root `i`/`v`/`h`
+--! `->` and accepted by the per-entry extractors `eql_v3.ope_term` /
+--! `eql_v3.ord_term`. The deprecated `eq_term(json_entry)` name aliases
+--! `ope_term`. The optional array marker `a` and root `i`/`v`/`h`
 --! metadata merged in by `->` are the only additional fields accepted.
 --!
 --! @see src/v3/json/operators.sql
@@ -8387,10 +8390,10 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Equality-term extractor (the deterministic `op` term)
+-- Raw OPE-term extractor
 ------------------------------------------------------------------------------
 
---! @brief Low-level deterministic `op` byte extractor for a json entry.
+--! @brief Low-level deterministic OPE byte extractor for a json entry.
 --!
 --! Returns the bytea of the entry's deterministic `op` (CLLW OPE) term, or NULL
 --! for a term-less entry (a value entry, or a bool/null/structural path entry —
@@ -8409,12 +8412,28 @@ $$;
 --!
 --! @param entry public.eql_v3_json_entry
 --! @return bytea Decoded `op` bytes (NULL if the entry has no `op`, or is NULL).
-CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
+CREATE FUNCTION eql_v3.ope_term(entry public.eql_v3_json_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT decode(entry ->> 'op', 'hex')
 $$;
+
+--! @brief Deprecated compatibility alias for eql_v3.ope_term(json_entry).
+--! @deprecated Use eql_v3.ope_term for raw OPE-equivalence inspection, or
+--!             eql_v3.ord_term for ordered comparisons. This term is not an
+--!             exact equality representation.
+--! @param entry public.eql_v3_json_entry
+--! @return bytea Decoded `op` bytes (NULL when the entry has no `op`).
+CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
+  RETURNS bytea
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT eql_v3.ope_term(entry)
+$$;
+
+COMMENT ON FUNCTION eql_v3.eq_term(public.eql_v3_json_entry) IS
+  'DEPRECATED: use eql_v3.ope_term(json_entry); OPE bytes are not exact equality terms';
 
 ------------------------------------------------------------------------------
 -- CLLW OPE per-entry overload (converged with the scalar ord_term)
@@ -58536,8 +58555,7 @@ CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_se
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.to_ste_vec_query(a)::jsonb
-       @> eql_v3.to_ste_vec_query(b)::jsonb
+  SELECT eql_v3.ste_vec_contains(a, b)
 $$;
 
 CREATE OPERATOR @>(

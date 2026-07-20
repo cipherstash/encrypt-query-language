@@ -90,7 +90,8 @@ $$;
 --!         material once (every entry encrypts under the document's single
 --!         data key; entry `c` values are raw AEAD output whose nonces are
 --!         derived from the entries' selectors) — it is opaque to SQL and
---!         only ever carried/grafted, never parsed.
+--!         only ever carried/grafted, never parsed. Unknown envelope keys are
+--!         rejected; `k` and `a` remain optional compatibility fields.
 CREATE OR REPLACE FUNCTION public.eql_v3_is_valid_ste_vec_document_payload(val jsonb)
   RETURNS boolean
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
@@ -102,6 +103,7 @@ AS $$
      AND val ? 'i'
      AND jsonb_typeof(val -> 'h') = 'string'
      AND jsonb_typeof(val -> 'sv') = 'array'
+     AND val - ARRAY['v', 'k', 'i', 'h', 'sv', 'a']::text[] = '{}'::jsonb
      AND NOT EXISTS (
        SELECT 1
        FROM jsonb_array_elements(
@@ -152,8 +154,9 @@ $$;
 --! (value-inclusive selectors) and non-orderable path entries are term-less
 --! `{s, c}`: exact matching is selector presence, so there is no per-value
 --! equality term (`hm` is retired and rejected). This is the type returned by
---! `->` and accepted by the per-entry extractors `eql_v3.eq_term` /
---! `eql_v3.ord_term`. The optional array marker `a` and root `i`/`v`/`h`
+--! `->` and accepted by the per-entry extractors `eql_v3.ope_term` /
+--! `eql_v3.ord_term`. The deprecated `eq_term(json_entry)` name aliases
+--! `ope_term`. The optional array marker `a` and root `i`/`v`/`h`
 --! metadata merged in by `->` are the only additional fields accepted.
 --!
 --! @see src/v3/json/operators.sql

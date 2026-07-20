@@ -193,7 +193,7 @@ cargo test --no-default-features --test encrypted_domain -- --list \
 `ope_tests.txt` pins the test-name set for the nine CLLW-OPE suites
 (`tests/encrypted_domain/ope/`) — the `<t>_ord_ope::…` modules covering every
 catalog `_ord_ope` domain (literal-payload SQL-surface smoke tests plus the
-real-ciphertext fixture tests added with ). Like
+real-ciphertext fixture tests). Like
 `matrix_jsonb_entry_tests.txt` it is a deliberate **sibling** of the scalar
 matrix inventory, **not** folded into it: the ope suites live as top-level
 modules (outside `scalars::`, so the type-discovery step does not mis-read

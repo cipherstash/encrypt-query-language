@@ -111,8 +111,8 @@ fn query_cast(payload_json: &str, domain: &str) -> String {
     // `domain` is schema-qualified (`public.eql_v3_integer_eq`); the twin joins
     // `query_` to the BARE catalog name — the `eql_v3_` version prefix
     // applies to public-schema column types only — and lives in the
-    // eql_v3 schema, not `public` (query operands are never column types —
-    // ): `eql_v3.query_integer_eq`.
+    // eql_v3 schema, not `public` (query operands are never column types):
+    // `eql_v3.query_integer_eq`.
     let bare = match domain.rsplit_once('.') {
         Some((_, name)) => name,
         None => domain,
@@ -138,7 +138,7 @@ pub async fn assert_eq_oracle<T: ScalarType>(pool: &PgPool, rows: &[Row<T>]) -> 
             let want = a.plaintext == b.plaintext;
             let a_dom = cast(&a.payload_json, &domain);
             let b_dom = cast(&b.payload_json, &domain);
-            // : the SAME pair also exercises the term-only query operand
+            // The same pair also exercises the term-only query operand
             // (the stored payload minus its ciphertext `c`) through the
             // `(storage, query_<name>)` operators, in both directions — folded
             // into this one round trip so query coverage adds no DB load.
@@ -212,7 +212,7 @@ pub async fn assert_ord_oracle<T: ScalarType>(
         for b in rows {
             let a_cast = cast(&a.payload_json, &domain);
             let b_cast = cast(&b.payload_json, &domain);
-            // : the term-only query operand for `b` (payload minus `c`),
+            // The term-only query operand for `b` (payload minus `c`) is
             // exercised through `(storage, query_<name>)` ordering in the SAME
             // round trip (no added DB load).
             let b_qry = query_cast(&b.payload_json, &domain);
@@ -281,7 +281,7 @@ pub enum Overload {
     DomainDomain,
     DomainJsonb,
     JsonbDomain,
-    /// : the RHS is the term-only query operand (`query_<domain>`, the
+    /// The RHS is the term-only query operand (`query_<domain>`, the
     /// payload minus `c`) — the `(storage, query_<name>)` function overload. The
     /// facet that reaches `query_text_search`, which the operator oracle (which
     /// runs text via `_eq`/`_ord`/`_ord_ore`, not `_search`) never touches.
@@ -574,7 +574,7 @@ pub async fn assert_match_smoke(
     let haystack = cast(haystack_json, domain);
     let needle = cast(needle_json, domain);
     let disjoint = cast(disjoint_json, domain);
-    // : the term-only query operands (bloom `bf`, no ciphertext `c`),
+    // Term-only query operands carry bloom `bf` but no ciphertext `c` and are
     // consumed by the `(text_match, query_text_match)` match operators.
     let needle_q = query_cast(needle_json, domain);
     let disjoint_q = query_cast(disjoint_json, domain);
@@ -600,17 +600,17 @@ pub async fn assert_match_smoke(
             false,
         ),
         (
-            "matches(haystack, needle_query) []",
+            "matches(haystack, needle_query)",
             format!("eql_v3.matches({haystack}, {needle_q})"),
             true,
         ),
         (
-            "matches(haystack, disjoint_query) []",
+            "matches(haystack, disjoint_query)",
             format!("eql_v3.matches({haystack}, {disjoint_q})"),
             false,
         ),
         (
-            "matches(needle_query, haystack) []",
+            "matches(needle_query, haystack)",
             format!("eql_v3.matches({needle_q}, {haystack})"),
             false,
         ),

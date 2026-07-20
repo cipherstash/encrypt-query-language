@@ -64,8 +64,10 @@ accepted for the selectors. Two further properties come for free:
 
 - **s↔c binding**: in GCM-SIV the nonce feeds the authentication tag, and
   decrypt re-derives it from the stored `s`. A ciphertext grafted onto a
-  different selector within the same document fails to decrypt. Today (shared
-  nonce) ciphertexts are freely permutable across a document's entries.
+  different selector within the same document fails to decrypt. Before this
+  change, the shared nonce left ciphertexts freely permutable across a
+  document. The residual wildcard case above shares the same selector, so
+  swapping equal sibling ciphertexts there is intentionally indistinguishable.
 - **Fail-soft truncation**: a 12-byte collision between two distinct 16-byte
   selectors is a 96-bit birthday event across ~2N entries — negligible — and
   even then GCM-SIV only degrades to determinism for that colliding pair.
@@ -252,7 +254,9 @@ re-fetching the parent document. The alternative (bare entries + a separate
 `eql_v3.key_header(col)` accessor forcing callers to select two expressions)
 breaks that contract for every downstream consumer and is rejected.
 
-**Term extractors (`eq_term`, `ord_term`)** — read `op` only. Untouched. The
+**Term extractors (`ope_term`, `ord_term`)** — read `op` only. `ope_term` is
+the raw-byte inspection name; `eq_term(json_entry)` remains a deprecated
+compatibility alias because OPE bytes are not exact equality terms. The
 grafted `h` on an entry flowing into `ord_term` is dead weight measured in
 nanoseconds of jsonb concat; functional indexes on
 `eql_v3.ord_term(col -> 'sel')` are unaffected.

@@ -1206,6 +1206,7 @@ function eql_v3.neq(a public.eql_v3_timestamp_ord_ope, b public.eql_v3_timestamp
 function eql_v3.neq(a public.eql_v3_timestamp_ord_ore, b eql_v3.query_timestamp_ord_ore)
 function eql_v3.neq(a public.eql_v3_timestamp_ord_ore, b jsonb)
 function eql_v3.neq(a public.eql_v3_timestamp_ord_ore, b public.eql_v3_timestamp_ord_ore)
+function eql_v3.ope_term(entry public.eql_v3_json_entry)
 function eql_v3.ord_term(a eql_v3.query_bigint_ord)
 function eql_v3.ord_term(a eql_v3.query_bigint_ord_ope)
 function eql_v3.ord_term(a eql_v3.query_date_ord)

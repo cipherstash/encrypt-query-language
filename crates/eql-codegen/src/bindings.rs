@@ -861,7 +861,7 @@ mod tests {
 
     #[test]
     fn query_twins_drop_c_and_name_query_domains() {
-        // : every term-bearing capability domain gets a `<Name>Query`
+        // Every term-bearing capability domain gets a `<Name>Query`
         // twin = the storage struct minus `c`, on the `eql_v3.query_<name>`
         // domain (prefix naming). Storage-only domains (no
         // operators) get no twin.
@@ -1112,7 +1112,7 @@ mod tests {
 
     #[test]
     fn query_payload_enum_spans_query_twins_and_stevec_needle() {
-        // : QueryPayload is now generated — one variant per term-bearing
+        // QueryPayload is generated with one variant per term-bearing
         // scalar query twin (`query_<name>`) plus the SteVec needle
         // (`query_jsonb`), in query_payload_domains() order (scalars, then
         // SteVec). Serialize-only + untagged + no export derives, like

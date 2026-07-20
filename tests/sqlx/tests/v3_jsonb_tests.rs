@@ -423,28 +423,29 @@ async fn v3_jsonb_containment_ignores_op(pool: PgPool) -> anyhow::Result<()> {
 
 #[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
 async fn v3_jsonb_containment_mixed(pool: PgPool) -> anyhow::Result<()> {
-    // Mixed needle: a constant value selector plus an op-bearing path selector.
-    // Both selectors occur in every row; the ordering term is ignored.
+    // Mixed needle: a constant value selector plus a row-1-specific value
+    // selector carrying an irrelevant op. An OR implementation would match all
+    // rows through the constant selector; correct AND/subset containment must
+    // return only row 1. The ordering term is ignored.
     let op: String = sqlx::query_scalar(&format!(
         "SELECT (payload ->> '{SEL_HELLO_OP}'::text)::jsonb ->> 'op' FROM fixtures.v3_ste_vec WHERE id = 1"
     ))
     .fetch_one(&pool)
     .await?;
-    let sel = constant_selector(&pool).await?;
+    let constant = constant_selector(&pool).await?;
+    let row_specific = row_value_selector(&pool, 1).await?;
     // A value-selector element (`{s}`) + an op element (`{s, op}`).
-    let n = format!(r#"{{"sv":[{{"s":"{sel}"}},{{"s":"{SEL_HELLO_OP}","op":"{op}"}}]}}"#);
+    let n = format!(r#"{{"sv":[{{"s":"{constant}"}},{{"s":"{row_specific}","op":"{op}"}}]}}"#);
 
-    let hits: i64 = sqlx::query_scalar(&format!(
-        "SELECT count(*) FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_json"
+    let hits: Vec<i64> = sqlx::query_scalar(&format!(
+        "SELECT id FROM fixtures.v3_ste_vec WHERE payload @> '{n}'::eql_v3.query_json ORDER BY id"
     ))
-    .fetch_one(&pool)
+    .fetch_all(&pool)
     .await?;
-    let total: i64 = sqlx::query_scalar("SELECT count(*) FROM fixtures.v3_ste_vec")
-        .fetch_one(&pool)
-        .await?;
     assert_eq!(
-        hits, total,
-        "the mixed needle must match by selector presence, independently of op"
+        hits,
+        vec![1],
+        "every selector in a mixed needle is required, independently of op"
     );
     Ok(())
 }
@@ -617,6 +618,21 @@ async fn v3_jsonb_ord_ope_term_entry_branches(pool: PgPool) -> anyhow::Result<()
     assert!(
         term.is_some(),
         "ord_term must be non-NULL for an op-bearing entry"
+    );
+    let raw: Option<Vec<u8>> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.ope_term('{with_op}'::public.eql_v3_json_entry)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    let legacy: Option<Vec<u8>> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.eq_term('{with_op}'::public.eql_v3_json_entry)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(raw, term, "ope_term exposes the same raw bytes as ord_term");
+    assert_eq!(
+        legacy, raw,
+        "the deprecated eq_term(json_entry) alias must remain compatible"
     );
 
     let term_less = value_entry("00000000000000000000000000000001");
@@ -1159,6 +1175,7 @@ v3_jsonb_payload_reject!(
         "{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[{\"s\":\"x\",\"c\":1}]}", // bad entry c
         "{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"hm\":\"00\"}]}", // hm retired
         "{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[{\"s\":\"x\",\"c\":\"y\",\"op\":1}]}", // bad entry op
+        "{\"i\":{},\"v\":3,\"h\":\"kh\",\"sv\":[],\"bogus\":true}", // unknown root fields
     ]
 );
 

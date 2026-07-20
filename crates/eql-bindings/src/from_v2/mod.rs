@@ -65,8 +65,9 @@
 //! hoists the target's required terms
 //! into the enveloped term-only operand `{v: 3, i, <terms>}` for its
 //! `query_<name>` domain — the query counterpart of the stored conversion,
-//! dropping `c`/`k`. A STORAGE-ONLY scalar target (no terms, no
-//! operators) has no query operand and returns
+//! dropping `c`/`k`. A query operand may omit `k`; when present it must be
+//! `"ct"`, so a mislabeled SteVec or unknown form fails closed. A STORAGE-ONLY
+//! scalar target (no terms, no operators) has no query operand and returns
 //! [`FromV2Error::UnsupportedQueryTarget`].
 //!
 //! Query conversion has the same entry-point split as the stored-payload
@@ -264,6 +265,22 @@ fn convert_scalar_query(v2: &Value, target: ScalarTarget) -> Result<Value, FromV
         if v.as_u64() != Some(V2_WIRE_VERSION) {
             return Err(FromV2Error::UnsupportedVersion { found: v.as_u64() });
         }
+    }
+    match obj.get("k") {
+        None => {}
+        Some(Value::String(kind)) if kind == "ct" => {}
+        Some(Value::String(kind)) if kind == "sv" => {
+            return Err(FromV2Error::KindMismatch {
+                kind: "sv".into(),
+                target: target.domain().into(),
+            });
+        }
+        Some(Value::String(kind)) => {
+            return Err(FromV2Error::UnknownKind {
+                found: Some(kind.clone()),
+            });
+        }
+        Some(_) => return Err(FromV2Error::UnknownKind { found: None }),
     }
     let mut out = Map::new();
     out.insert("v".into(), json!(crate::EQL_SCHEMA_VERSION));

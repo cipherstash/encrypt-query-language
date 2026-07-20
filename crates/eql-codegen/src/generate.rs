@@ -2192,8 +2192,8 @@ mod tests {
             !sql.contains("SELECT eql_v3.ord_term(a) = eql_v3.ord_term(b)"),
             "op-equality is gone — equality is document containment, not an extract op"
         );
-        // The dropped `_eq` operand never appears, and the entry `eq_term`/hmac_256
-        // route is never used.
+        // The dropped `_eq` operand never appears, and no hmac equality route
+        // is used for an extracted entry.
         assert!(!sql.contains("query_integer_eq"));
         assert!(!sql.contains("eql_v3.eq_term"));
         // Footguns: ordering wrappers are inlinable LANGUAGE sql, unpinned; the eq

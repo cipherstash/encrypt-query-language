@@ -96,10 +96,10 @@ AS $$
 $$;
 
 ------------------------------------------------------------------------------
--- Equality-term extractor (the deterministic `op` term)
+-- Raw OPE-term extractor
 ------------------------------------------------------------------------------
 
---! @brief Low-level deterministic `op` byte extractor for a json entry.
+--! @brief Low-level deterministic OPE byte extractor for a json entry.
 --!
 --! Returns the bytea of the entry's deterministic `op` (CLLW OPE) term, or NULL
 --! for a term-less entry (a value entry, or a bool/null/structural path entry —
@@ -118,12 +118,28 @@ $$;
 --!
 --! @param entry public.eql_v3_json_entry
 --! @return bytea Decoded `op` bytes (NULL if the entry has no `op`, or is NULL).
-CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
+CREATE FUNCTION eql_v3.ope_term(entry public.eql_v3_json_entry)
   RETURNS bytea
   LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
 AS $$
   SELECT decode(entry ->> 'op', 'hex')
 $$;
+
+--! @brief Deprecated compatibility alias for eql_v3.ope_term(json_entry).
+--! @deprecated Use eql_v3.ope_term for raw OPE-equivalence inspection, or
+--!             eql_v3.ord_term for ordered comparisons. This term is not an
+--!             exact equality representation.
+--! @param entry public.eql_v3_json_entry
+--! @return bytea Decoded `op` bytes (NULL when the entry has no `op`).
+CREATE FUNCTION eql_v3.eq_term(entry public.eql_v3_json_entry)
+  RETURNS bytea
+  LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
+AS $$
+  SELECT eql_v3.ope_term(entry)
+$$;
+
+COMMENT ON FUNCTION eql_v3.eq_term(public.eql_v3_json_entry) IS
+  'DEPRECATED: use eql_v3.ope_term(json_entry); OPE bytes are not exact equality terms';
 
 ------------------------------------------------------------------------------
 -- CLLW OPE per-entry overload (converged with the scalar ord_term)

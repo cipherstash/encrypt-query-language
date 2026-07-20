@@ -30,14 +30,14 @@ use std::borrow::Cow;
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context, Result};
-use cipherstash_client::encryption::{QueryOp, ScopedCipher};
+use cipherstash_client::encryption::{DecryptOptions, QueryOp, ScopedCipher};
 use cipherstash_client::eql::{
     encrypt_eql_v3, EqlCiphertextV3, EqlEncryptOpts, EqlOperation, EqlOutputV3, Identifier,
     PreparedPlaintext,
 };
 use cipherstash_client::schema::column::{ArrayIndexMode, Index, IndexType, SteVecMode};
 use cipherstash_client::schema::{ColumnConfig, ColumnType};
-use cipherstash_client::zerokms::{EnvKeyProvider, ZeroKMSBuilder};
+use cipherstash_client::zerokms::{EnvKeyProvider, RecordWithNonce, ZeroKMSBuilder};
 use cipherstash_client::AutoStrategy;
 
 use super::eql_plaintext::{Cast, EqlPlaintext};
@@ -294,7 +294,7 @@ async fn encrypt_ste_vec_query<T: EqlPlaintext>(
     }
 }
 
-/// Pull a required string field out of a v2 SteVec query payload.
+/// Pull a required string field out of a v3 SteVec query payload.
 fn query_payload_str(payload: &serde_json::Value, key: &str) -> Result<String> {
     payload
         .get(key)
@@ -328,9 +328,9 @@ pub async fn ste_vec_query_selector(table: &str, column: &str, path: &str) -> Re
 /// assembler emits it under `op` directly).
 ///
 /// The term encodes the PLAINTEXT and the column, never the field: `op` terms
-/// carry no selector (only `hm` terms do). Field scoping is the caller's `->`
-/// extraction, not a property of this term — so one term is comparable against
-/// whichever leaf the caller extracts.
+/// carry no selector. Field scoping is the caller's `->` extraction, not a
+/// property of this term — so one term is comparable against whichever leaf
+/// the caller extracts.
 ///
 /// `QueryOp::SteVecTerm` accepts strings and numbers only; a bool/null/object
 /// plaintext has no orderable term and errors here rather than silently
@@ -383,6 +383,76 @@ pub async fn ste_vec_query_value_selector(
         "v3 value-selector payload must be one term-less `s` entry; got {payload}",
     );
     Ok(payload)
+}
+
+/// Reassemble and decrypt SQL-extracted v3 SteVec entries independently.
+///
+/// Each input must be the self-contained shape returned by the SQL `->`
+/// extractor: `{v, i, h, s, c, a?, op?}`. The helper reconstructs the client's
+/// typed v3 envelope solely to decode the opaque header/ciphertext fields, then
+/// binds each ciphertext to its stored selector through
+/// `KeyHeader::record_with_selector`. Per-entry authentication failures remain
+/// per-item errors so tests can assert that a valid extraction decrypts while a
+/// ciphertext graft fails in the same batch.
+pub async fn decrypt_ste_vec_entries_fallible(
+    entries: &[serde_json::Value],
+) -> Result<Vec<std::result::Result<Vec<u8>, String>>> {
+    fn record(entry: &serde_json::Value) -> Result<RecordWithNonce> {
+        let obj = entry
+            .as_object()
+            .ok_or_else(|| anyhow!("extracted SteVec entry must be an object; got {entry}"))?;
+        let required = |key: &str| {
+            obj.get(key)
+                .cloned()
+                .ok_or_else(|| anyhow!("extracted SteVec entry has no `{key}`; got {entry}"))
+        };
+
+        let mut wire_entry = obj.clone();
+        for key in ["v", "i", "h"] {
+            wire_entry.remove(key);
+        }
+        let wire = serde_json::json!({
+            "v": required("v")?,
+            "k": "sv",
+            "i": required("i")?,
+            "h": required("h")?,
+            "sv": [serde_json::Value::Object(wire_entry)],
+        });
+        let parsed: EqlCiphertextV3 = serde_json::from_value(wire)
+            .context("parsing the SQL-extracted entry as a typed v3 SteVec envelope")?;
+        let EqlCiphertextV3::SteVec(mut document) = parsed else {
+            return Err(anyhow!(
+                "reconstructed entry did not parse as a SteVec document"
+            ));
+        };
+        let entry = document
+            .ste_vec
+            .pop()
+            .ok_or_else(|| anyhow!("reconstructed SteVec document has no entry"))?;
+        let selector: [u8; 16] = hex::decode(&entry.selector)
+            .context("decoding the extracted entry selector")?
+            .try_into()
+            .map_err(|bytes: Vec<u8>| {
+                anyhow!(
+                    "extracted selector must decode to 16 bytes, got {}",
+                    bytes.len()
+                )
+            })?;
+        Ok(document
+            .key_header
+            .record_with_selector(entry.ciphertext, selector))
+    }
+
+    let records = entries.iter().map(record).collect::<Result<Vec<_>>>()?;
+    let cipher = build_cipher().await?;
+    let decrypted = cipher
+        .decrypt_fallible(records, &DecryptOptions::default())
+        .await
+        .context("decrypting SQL-extracted SteVec entries")?;
+    Ok(decrypted
+        .into_iter()
+        .map(|result| result.map_err(|error| error.to_string()))
+        .collect())
 }
 
 #[cfg(test)]
@@ -541,8 +611,8 @@ mod live_tests {
             assert!(
                 !obj.contains_key("op"),
                 "a payload without the ope index must NOT carry an `op` term — \
-                 the client emits CLLW-OPE only for ope-indexed columns \
-                ; got {payload}"
+                 the client emits CLLW-OPE only for ope-indexed columns; \
+                 got {payload}"
             );
         }
     }

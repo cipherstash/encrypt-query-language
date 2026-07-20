@@ -72,6 +72,13 @@ This is the encrypted equivalent of the plaintext `jsonb_column @> '{"top":{"nes
 SELECT * FROM examples WHERE encrypted_json @> $1::eql_v3.query_json;
 ```
 
+> **Trust boundary:** PostgreSQL can verify only selector presence; it cannot
+> recover the plaintext or prove that a selector represents the path/value a
+> caller claims. Exact equality therefore depends on CipherStash Client or
+> CipherStash Proxy generating the `query_json` needle for the correct column,
+> path, type, and canonical value. Hand-crafted or untrusted needles are opaque
+> selector-set queries, not database-validated plaintext predicates.
+
 For large tables, back containment with a GIN index. The typed `@>` overload inlines to a native `jsonb @>` over `eql_v3.to_ste_vec_query(col)::jsonb`, so a GIN index on the same expression engages:
 
 ```sql
@@ -214,7 +221,7 @@ separate equality-indexed scalar column when server-side grouping is required.
 
 ### Entry comparison / aggregate
 
-- **`eql_v3.eq_term(entry public.eql_v3_json_entry)`** — low-level access to the deterministic `op` bytes; `NULL` for a term-less leaf. It does not back an equality operator and is lossy for `text` / `bigint` / `numeric`; use only for deliberate OPE-equivalence bucketing, never exact equality.
+- **`eql_v3.ope_term(entry public.eql_v3_json_entry)`** — low-level access to the deterministic `op` bytes; `NULL` for a term-less leaf. It does not back an equality operator and is lossy for `text` / `bigint` / `numeric`; use only for deliberate OPE-equivalence bucketing, never exact equality. The old `eq_term(json_entry)` name remains only as a deprecated compatibility alias.
 - **`eql_v3.ord_term(entry public.eql_v3_json_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
 - **`eql_v3.min(public.eql_v3_json_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 

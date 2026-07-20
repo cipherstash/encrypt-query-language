@@ -412,6 +412,33 @@ fn scalar_query_hoists_terms_and_storage_only_is_unsupported() {
     }
 }
 
+#[test]
+fn scalar_query_rejects_non_scalar_kind_when_present() {
+    let scalar = target("eql_v3_text_eq");
+    let ste_vec = json!({ "v": 2, "k": "sv", "i": ident(), "hm": HEX });
+    for err in [
+        from_v2_query(&ste_vec, scalar).unwrap_err(),
+        from_v2_query_typed(&ste_vec, scalar).unwrap_err(),
+    ] {
+        assert!(matches!(
+            err,
+            FromV2Error::KindMismatch { ref kind, .. } if kind == "sv"
+        ));
+    }
+
+    let unknown = json!({ "v": 2, "k": "future", "i": ident(), "hm": HEX });
+    assert!(matches!(
+        from_v2_query(&unknown, scalar).unwrap_err(),
+        FromV2Error::UnknownKind { found: Some(ref kind) } if kind == "future"
+    ));
+
+    let malformed = json!({ "v": 2, "k": true, "i": ident(), "hm": HEX });
+    assert!(matches!(
+        from_v2_query(&malformed, scalar).unwrap_err(),
+        FromV2Error::UnknownKind { found: None }
+    ));
+}
+
 // ---------------------------------------------------------------------------
 // is_v3_payload
 // ---------------------------------------------------------------------------

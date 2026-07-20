@@ -318,7 +318,7 @@ async fn v3_jsonb_surface_entry_mixed_shapes_absent(pool: PgPool) -> anyhow::Res
 }
 
 // ============================================================================
-// : cross-type operators binding json_entry to per-type query operands
+// Cross-type operators binding json_entry to per-type query operands
 // ARE present (positive intent, complementing the "no illegal mixed shapes"
 // negative guard above).
 // ============================================================================

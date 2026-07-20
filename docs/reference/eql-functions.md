@@ -113,8 +113,9 @@ CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 
 The `public.eql_v3_json_search` document type extracts its entry ordering term
 with `eql_v3.ord_term(public.eql_v3_json_entry)`. The low-level
-`eql_v3.eq_term(public.eql_v3_json_entry)` exposes the same lossy `op` bytes for
+`eql_v3.ope_term(public.eql_v3_json_entry)` exposes the same lossy `op` bytes for
 explicit OPE-equivalence inspection only; entry equality operators are blocked.
+`eq_term(json_entry)` is retained as a deprecated compatibility alias.
 See [json-support.md](./json-support.md).
 
 ---
