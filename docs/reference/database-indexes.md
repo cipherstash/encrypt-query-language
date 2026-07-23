@@ -23,7 +23,8 @@ The model is simple and uniform across every encrypted-domain type: **index a fu
 Each capability has one canonical functional-index recipe. Type the column as the domain variant that carries the term (see [SQL support matrix](./sql-support.md)), then index the matching extractor:
 
 ```sql
--- Equality (hash index on the eq_term extractor) — public.<T>_eq / _ord / text_search
+-- Equality (hash index on the eq_term extractor) — the hm-carrying domains:
+-- public.<T>_eq / text_ord / text_ord_ore / text_search / text_search_ore
 CREATE INDEX users_email_eq
   ON users USING hash (eql_v3.eq_term(encrypted_email));
 
@@ -45,6 +46,8 @@ ANALYZE users;
 > ```sql
 > CREATE INDEX events_at_ord_ore ON events USING btree (eql_v3.ord_term_ore(encrypted_at));
 > ```
+
+> **Equality on the ordering domains splits on term injectivity.** The numeric-and-time ordering terms (OPE and ORE alike) are **injective** — distinct plaintexts produce distinct terms — so equality can ride the ordering term: those `_ord` / `_ord_ore` domains carry no `hm`, there is **no `eq_term` overload** for them, and `eql_v3.eq` inlines to an ordering-term comparison (`ord_term(a) = ord_term(b)`). One ordering btree serves `=`, range, and `ORDER BY` — do not create an `eq_term` index on a numeric `_ord` column; the overload does not exist. Text ordering terms are **non-injective** and cannot be relied on for equality, so the text ordering domains (`text_ord`, `text_ord_ore`, and the `text_search` variants) also carry `hm` and answer `=` via `eq_term` — give those columns an equality index alongside the ordering one.
 
 ### When to Create Indexes
 
@@ -78,7 +81,7 @@ For PostgreSQL to use a functional index on an encrypted column, **all** of thes
 
 Capability travels in the payload, chosen by the encryption client and reflected in the column's domain variant:
 
-- **Equality** needs an `hm` (hmac_256) term — `public.<T>_eq`, `public.<T>_ord`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
+- **Equality** needs the domain's equality-serving term. On the `hm`-carrying domains (`public.<T>_eq`, `public.eql_v3_text_ord`, `public.eql_v3_text_ord_ore`, `public.eql_v3_text_search`, `public.eql_v3_text_search_ore`) that is `hm` (hmac_256), driven through `eql_v3.eq_term`. On the numeric-and-time `_ord` / `_ord_ore` domains it is the **ordering term itself** (`op` / `ob`) — injective for those types, so `eql_v3.eq` compares ordering terms and the ordering index serves equality (see [Creating Indexes](#creating-indexes)).
 - **Range / ordering** needs an ordering term — `op` (ope_cllw) on `public.<T>_ord` / `_ord_ope` / `public.eql_v3_text_search`, or `ob` (ore_block_256) on `public.<T>_ord_ore` / `public.eql_v3_text_search_ore`.
 - **Text match** (`@@`) needs a `bf` (bloom_filter) term — `public.eql_v3_text_match`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
 
@@ -107,7 +110,7 @@ WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
 
 ### Equality Queries
 
-A column typed `public.<T>_eq` (or `_ord`, or `text_search`) with a hash index on `eql_v3.eq_term(col)`:
+A column typed as an `hm`-carrying domain (`public.<T>_eq`, `text_ord`, `text_ord_ore`, or a `text_search` variant) with a hash index on `eql_v3.eq_term(col)`:
 
 ```sql
 CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
@@ -116,6 +119,14 @@ ANALYZE users;
 SELECT * FROM users WHERE encrypted_email = $1;
 -- Index Scan using users_email_eq
 --   Index Cond: (eql_v3.eq_term(encrypted_email) = eql_v3.eq_term($1))
+```
+
+On a numeric-and-time `_ord` / `_ord_ore` column there is no `eq_term` — `=` inlines to the ordering extractor instead, so the same equality predicate engages the ordering btree from the [range recipe below](#range-queries-and-order-by):
+
+```sql
+SELECT * FROM events WHERE encrypted_at = $1;
+-- Index Scan using events_at_ord
+--   Index Cond: (eql_v3.ord_term(encrypted_at) = eql_v3.ord_term($1))
 ```
 
 ### Range Queries and ORDER BY
@@ -297,7 +308,7 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
 
 **Index not being used:**
 
-1. **Verify the value carries the term.** Equality needs `hm`, range needs `op` (or `ob` on an `_ord_ore` column), containment needs `bf`:
+1. **Verify the value carries the term.** Equality needs `hm` on the `hm`-carrying domains (the ordering term serves it on numeric-and-time `_ord` / `_ord_ore`), range needs `op` (or `ob` on an `_ord_ore` column), containment needs `bf`:
    ```sql
    SELECT encrypted_email::jsonb ? 'hm' AS has_hmac,
           encrypted_email::jsonb ? 'ob' AS has_ore_block,
@@ -308,7 +319,7 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
 3. **Recreate the index** if the column's terms changed after the index was built.
 4. **Run `ANALYZE`** — very small tables may still choose a sequential scan, which is correct.
 
-**`=` returns zero rows on a column without `hm`:** equality requires the value to carry an `hm` term — type the column as `_eq` / `_ord` / `text_search` and confirm the client is emitting the term.
+**`=` returns zero rows:** equality requires the value to carry the domain's equality-serving term — `hm` on the `hm`-carrying domains (`_eq`, `text_ord`, `text_ord_ore`, the `text_search` variants), the ordering term (`op` / `ob`) on the numeric-and-time `_ord` / `_ord_ore` domains. Confirm the column's domain variant and that the client is emitting the term.
 
 ---
 
