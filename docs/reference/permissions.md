@@ -47,7 +47,7 @@ superuser check:
 | --- | --- | --- |
 | Self-hosted / containerised PostgreSQL (superuser) | ✅ | stock behaviour |
 | Aurora PostgreSQL (13+, and 12.12.0+) | ✅ — delegated to `rds_superuser` | [Aurora release notes 12.12.0](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraPostgreSQLReleaseNotes/AuroraPostgreSQL.Updates.html): "Added support for the rds_superuser role to execute CREATE OPERATOR CLASS…" |
-| RDS for PostgreSQL (non-Aurora) | unverified — no documented delegation; run the probe below | absence from the [RDS release notes](https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/Welcome.html) and the `rds_superuser` privilege list |
+| RDS for PostgreSQL (non-Aurora) | ✅ — the master user can | verified in production CipherStash deployments running ORE with the custom operator class on RDS (AWS does not release-note the delegation the way it does for Aurora — confirm on your instance with the probe below if in doubt) |
 | Cloud-hosted Supabase | ❌ — the `postgres` role cannot | [supabase/supautils#72](https://github.com/supabase/supautils/issues/72) (open feature request; "must be superuser to create an operator family") |
 | Google Cloud SQL | ❌ | ["Unsupported features"](https://cloud.google.com/sql/docs/postgres/features): "Any feature that requires SUPERUSER" (opclasses are not among the exceptions) |
 | Azure Database for PostgreSQL Flexible Server | ❌ (admin is `NOSUPERUSER`; no documented carve-out) | [Azure security docs](https://learn.microsoft.com/en-us/azure/postgresql/security/security-access-control) |
