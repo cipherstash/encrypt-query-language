@@ -38,7 +38,7 @@ ALTER TABLE users  ADD COLUMN encrypted_name  public.eql_v3_text_match;
 ALTER TABLE users  ADD COLUMN encrypted_profile public.eql_v3_json_search;
 ```
 
-The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@>` token containment, `public.eql_v3_json_search` for encrypted JSON. The bare `eql_v3.<T>` variant is storage/decryption only.
+The variant fixes the column's searchable surface: `_eq` for `=`, `_ord` for ordering/range, `text_match` for `@@` token matching, `public.eql_v3_json_search` for encrypted JSON. The bare `public.eql_v3_<T>` variant is storage/decryption only.
 
 ## 2. Configure searchable encryption in the client
 
@@ -47,7 +47,7 @@ Tell the encryption client which columns to encrypt and which index terms to emi
 - **CipherStash Stack** — define the columns and indexes in the schema. See the [CipherStash Stack schema reference](https://cipherstash.com/docs/stack/cipherstash/encryption/schema).
 - **CipherStash Proxy** — configure the encrypted columns in the Proxy's mapping config. See [CipherStash Proxy](https://github.com/cipherstash/proxy).
 
-The terms the client emits (`hm` for equality, `ob` for ordering, `bf` for match, ste_vec for JSON) must match the column's domain variant from step 1 — e.g. configure an equality index for a column typed `public.eql_v3_text_eq`.
+The terms the client emits (`hm` for equality, `op` for ordering — `ob` on the `_ord_ore` variants, `bf` for match, ste_vec for JSON) must match the column's domain variant from step 1 — e.g. configure an equality index for a column typed `public.eql_v3_text_eq`.
 
 ## 3. Create functional indexes
 
@@ -67,7 +67,7 @@ Run writes and reads through CipherStash Proxy. On insert, the Proxy encrypts th
 ```sql
 -- Through the Proxy: the plaintext is encrypted on the way in
 INSERT INTO users (encrypted_email)
-VALUES ('{"v":2,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}');
+VALUES ('{"v":3,"k":"pt","p":"test@example.com","i":{"t":"users","c":"encrypted_email"}}');
 
 -- Through the Proxy: the ciphertext is decrypted on the way out
 SELECT encrypted_email FROM users;
@@ -84,7 +84,7 @@ Type the query operand (the Proxy supplies typed parameters automatically; in ha
 ```sql
 SELECT * FROM users WHERE encrypted_email = $1;
 -- operator-free form (e.g. Supabase):
-SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.eql_v3_text_eq);
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.query_text_eq);
 ```
 
 **Range / ordering** (`public.eql_v3_timestamp_ord`):
@@ -93,10 +93,10 @@ SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.eql_v3_text_eq);
 SELECT * FROM events WHERE encrypted_at < $1 ORDER BY eql_v3.ord_term(encrypted_at) DESC;
 ```
 
-**Full-text match** (`public.eql_v3_text_match`) — bloom-filter token containment, not `LIKE`:
+**Full-text match** (`public.eql_v3_text_match`) — bloom-filter token matching (`@@`), not `LIKE` (and not the containment operators, which raise on this domain):
 
 ```sql
-SELECT * FROM users WHERE encrypted_name @> $1::public.eql_v3_text_match;
+SELECT * FROM users WHERE encrypted_name @@ $1::eql_v3.query_text_match;
 ```
 
 **Encrypted JSON** (`public.eql_v3_json_search`) — containment and field access; see [EQL with JSON and JSONB](../reference/json-support.md):
@@ -118,7 +118,7 @@ SELECT encrypted_profile -> 'email_selector'::text FROM users;
 
 ## Troubleshooting
 
-**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand (`$1::public.eql_v3_text_eq`, `$1::eql_v3.query_json`) — the Proxy does this automatically.
+**Operator resolves to native `jsonb` / returns `NULL` instead of searching.** The query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to `jsonb`. Type the operand with the matching query-operand domain (`$1::eql_v3.query_text_eq`, `$1::eql_v3.query_json`) — the Proxy does this automatically.
 
 **`=` returns no rows.** The column's values do not carry an `hm` equality term. Confirm the client is configured to emit the right term for the column's variant (step 2), and that data was written through the Proxy after configuring it.
 

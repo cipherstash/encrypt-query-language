@@ -8,6 +8,7 @@ EQL encrypts, decrypts, and searches JSON / JSONB documents using structured enc
 - [Typed operands (important)](#typed-operands-important)
 - [Querying `public.eql_v3_json_search`](#querying-publiceql_v3_json_search)
   - [Containment queries (`@>`, `<@`)](#containment-queries--)
+  - [Selector-with-constraint range queries](#selector-with-constraint-range-queries-index-accelerated)
   - [Field extraction (`jsonb_path_query`)](#field-extraction-jsonb_path_query)
   - [JSON path operators (`->`, `->>`)](#json-path-operators----)
   - [Array operations](#array-operations)
@@ -42,13 +43,15 @@ Always give the operand a known type:
 
 ```sql
 -- ✅ correct — typed operand resolves to the eql_v3 operator
-WHERE doc -> 'email'::text = $1
 WHERE doc @> $1::eql_v3.query_json
+WHERE doc -> 'age_selector'::text > $1::eql_v3.query_integer_ord
 WHERE doc -> $1            -- a text parameter (the CipherStash Proxy interface)
 
 -- ⚠ wrong — bare untyped literal resolves to native jsonb -> text, returns NULL
 WHERE doc -> 'email'
 ```
+
+(Note there is no entry-level `=` — exact field equality goes through containment; see [Grouping data](#grouping-data) for why, and the range example above for what extracted entries *do* support.)
 
 This is **intrinsic to the domain type-kind**, not a bug: the only way to remove it would be to make `public.eql_v3_json_search` a base type (losing free `jsonb` interop). The CipherStash Proxy always passes typed parameters, so applications routing through the Proxy are unaffected; the caveat matters only for hand-written ad-hoc SQL.
 
@@ -83,7 +86,7 @@ For large tables, back containment with a GIN index. The typed `@>` overload inl
 
 ```sql
 CREATE INDEX examples_json_gin
-  ON examples USING gin (eql_v3.to_ste_vec_query(encrypted_json)::jsonb jsonb_path_ops);
+  ON examples USING gin ((eql_v3.to_ste_vec_query(encrypted_json)::jsonb) jsonb_path_ops);
 ANALYZE examples;
 
 SELECT * FROM examples WHERE encrypted_json @> $1::eql_v3.query_json;
@@ -108,7 +111,7 @@ SELECT eql_v3.jsonb_path_exists(encrypted_json, 'abc123def456...') FROM examples
 
 ### JSON path operators (`->`, `->>`)
 
-`->` returns the matched entry as an `public.eql_v3_json_entry`; `->>` returns it serialized as `text` (ciphertext JSON, not decrypted plaintext). The selector operand must be typed:
+`->` returns the matched entry as a `public.eql_v3_json_entry`; `->>` returns it serialized as `text` (ciphertext JSON, not decrypted plaintext). The selector operand must be typed:
 
 ```sql
 -- Field access by selector (returns public.eql_v3_json_entry)
@@ -205,6 +208,8 @@ separate equality-indexed scalar column when server-side grouping is required.
 
 - **`eql_v3.ste_vec(val jsonb) RETURNS jsonb[]`** — extracts the ste_vec index array from an encrypted payload.
 - **`eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search) RETURNS boolean`** — true if every selector in `b` is present in `a` (selector-subset containment); backs the `@>` operator.
+- **`eql_v3.jsonb_contains(a jsonb, b jsonb)` / `eql_v3.jsonb_contained_by(a jsonb, b jsonb)`** — function-form containment entrypoints for platforms that cannot type an operator call (Supabase PostgREST RPC, for example); same result as `@>` / `<@` (a parity test pins this).
+- **`eql_v3.jsonb_array(val jsonb) RETURNS jsonb[]`** — function-form array accessor for the same platforms.
 - **`eql_v3.to_ste_vec_query(val public.eql_v3_json_search) RETURNS eql_v3.query_json`** — the GIN-indexable query shape `@>` inlines to.
 - **`eql_v3.meta_data(val jsonb)`** — envelope accessor: returns `{i, v, h}` (the key header `h` included so an extracted entry can be decrypted). **`eql_v3.ciphertext(val jsonb)`** — returns the `c` field; on the ste_vec surface `c` is raw AEAD output, decryptable only together with the entry's `s` and the document `h`. **`eql_v3.selector(val jsonb)` / `(entry public.eql_v3_json_entry)`** — selector accessor.
 
@@ -225,11 +230,13 @@ separate equality-indexed scalar column when server-side grouping is required.
 - **`eql_v3.ord_term(entry public.eql_v3_json_entry)`** — ordering term (backs `<` … `>=`); returns SQL `NULL` when the leaf carries no `op` term.
 - **`eql_v3.min(public.eql_v3_json_entry)` / `eql_v3.max(...)`** — MIN / MAX over an extracted ordered leaf.
 
-For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`eql_v3.to_ste_vec_query(col)::jsonb jsonb_path_ops`).
+For GIN-indexable JSONB containment, see [GIN Indexes for JSONB Containment](./database-indexes.md#gin-indexes-for-jsonb-containment) (`USING gin ((eql_v3.to_ste_vec_query(col)::jsonb) jsonb_path_ops)`).
 
 ### Blocked operators
 
-The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, root-document `=` `<>` `<` `<=` `>` `>=`, single-entry containment, and entry-to-entry `=` / `<>` are **blocked** — they `RAISE` rather than running plaintext-jsonb or lossy ordering-term equality semantics. Use document containment for exact equality and extracted-entry ordering only for ranges.
+The native `jsonb` operators `?`, `?|`, `?&`, `@?`, `@@`, `#>`, `#>>`, `-`, `#-`, `||`, root-document `=` `<>` `<` `<=` `>` `>=`, single-entry containment, containment against a native `jsonb` operand (`doc @> jsonb` and every other operand mix, both directions), and entry-to-entry `=` / `<>` are **blocked** — they `RAISE` rather than running plaintext-jsonb or lossy ordering-term equality semantics. Use document containment for exact equality and extracted-entry ordering only for ranges.
+
+> **`eql_v3_json_search` vs `eql_v3_json`:** this page is about the *queryable* document domain. A sibling `public.eql_v3_json` domain also exists — **storage only**, every operator a blocker. Use it for encrypted JSON you never query in the database; use `eql_v3_json_search` when you need containment/selector queries.
 
 ## How ste_vec indexing works
 

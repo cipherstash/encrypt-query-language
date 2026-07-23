@@ -11,6 +11,7 @@ A reference for the functions and operators EQL exposes for querying encrypted d
 - [Index Term Extraction](#index-term-extraction)
 - [Encrypted JSON (`public.eql_v3_json_search`)](#encrypted-json-publiceql_v3_json_search)
 - [Aggregate Functions](#aggregate-functions)
+- [Diagnostics](#diagnostics)
 
 ---
 
@@ -20,21 +21,23 @@ EQL overloads standard PostgreSQL operators on the encrypted-domain types. Type 
 
 ### Equality — `=` `<>`
 
-On `public.<T>_eq`, `public.<T>_ord` / `_ord_ore`, and `public.eql_v3_text_search` (carry an `hm` term):
+On `public.<T>_eq`, `public.<T>_ord` / `_ord_ope` / `_ord_ore`, and `public.eql_v3_text_search` / `_search_ore`. Equality compares the `hm` term where the domain carries one (the `_eq` domains and the text ordering/search domains) and otherwise compares the ordering term directly — the numeric-and-time ordering terms are injective, so those domains carry no `hm` and `eql_v3.eq` inlines to an ordering-term comparison:
 
 ```sql
 SELECT * FROM users WHERE encrypted_email = $1;
-SELECT * FROM users WHERE encrypted_email = $1::public.eql_v3_text_eq;
+SELECT * FROM users WHERE encrypted_email = $1::eql_v3.query_text_eq;
 SELECT * FROM users WHERE encrypted_email <> $1;
 ```
 
+(Explicit casts use the **query-operand** domain `eql_v3.query_<T>_<variant>` — query payloads are term-only and fail the storage domain's CHECK, which requires the ciphertext key `c`.)
+
 ### Range — `<` `<=` `>` `>=`
 
-On `public.<T>_ord` / `_ord_ope` / `_ord_ore` and `public.eql_v3_text_search` (carry an ordering term):
+On `public.<T>_ord` / `_ord_ope` / `_ord_ore` and `public.eql_v3_text_search` / `_search_ore` (carry an ordering term):
 
 ```sql
-SELECT * FROM events WHERE encrypted_at <  $1::public.eql_v3_timestamp_ord;
-SELECT * FROM events WHERE encrypted_at >= $1::public.eql_v3_timestamp_ord;
+SELECT * FROM events WHERE encrypted_at <  $1::eql_v3.query_timestamp_ord;
+SELECT * FROM events WHERE encrypted_at >= $1::eql_v3.query_timestamp_ord;
 
 -- Ordering (write the sort key as the extractor to engage the index — see Database Indexes)
 -- `encrypted_at` is a `timestamp_ord` column, so its extractor is `ord_term`.
@@ -47,7 +50,7 @@ On `public.eql_v3_text_match` / `public.eql_v3_text_search` /
 `public.eql_v3_text_search_ore` (carry a `bf` bloom term). This is **probabilistic ngram-bloom matching** (`eql_v3.matches`), not SQL `LIKE`, not JSONB containment, and not the containment operators — `@>` / `<@` **raise** on these domains:
 
 ```sql
-SELECT * FROM docs WHERE encrypted_content @@ $1::public.eql_v3_text_match;
+SELECT * FROM docs WHERE encrypted_content @@ $1::eql_v3.query_text_match;
 ```
 
 `LIKE` / `ILIKE` (`~~` / `~~*`) are **not** part of the `eql_v3` surface — use `@@`.
@@ -63,9 +66,9 @@ SELECT * FROM docs WHERE encrypted_content @@ $1::public.eql_v3_text_match;
 For environments that cannot use custom operators (e.g. some managed platforms), each operator has a function form, generated per domain variant. They take the same domain types as the operators above:
 
 ```sql
-eql_v3.eq(a, b)   -- =        (on _eq / _ord / text_search)
+eql_v3.eq(a, b)   -- =        (on _eq / _ord / _ord_ope / _ord_ore / text_search / text_search_ore)
 eql_v3.neq(a, b)  -- <>
-eql_v3.lt(a, b)   -- <        (on _ord / _ord_ore / text_search)
+eql_v3.lt(a, b)   -- <        (on _ord / _ord_ope / _ord_ore / text_search / text_search_ore)
 eql_v3.lte(a, b)  -- <=
 eql_v3.gt(a, b)   -- >
 eql_v3.gte(a, b)  -- >=
@@ -77,8 +80,8 @@ JSON document containment has its own function forms (`eql_v3.jsonb_contains` / 
 **Example:**
 
 ```sql
-SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::public.eql_v3_text_eq);
-SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::public.eql_v3_timestamp_ord);
+SELECT * FROM users WHERE eql_v3.eq(encrypted_email, $1::eql_v3.query_text_eq);
+SELECT * FROM events WHERE eql_v3.lt(encrypted_at, $1::eql_v3.query_timestamp_ord);
 ```
 
 There are no `like` / `ilike` function forms — text matching is `eql_v3.matches` (`@@`) on a `text_match` value.
@@ -122,7 +125,7 @@ See [json-support.md](./json-support.md).
 
 ## Encrypted JSON (`public.eql_v3_json_search`)
 
-The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements` / `_elements_text`, `eql_v3.to_ste_vec_query`, `eql_v3.ste_vec_contains`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**.
+The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements`, `eql_v3.to_ste_vec_query`, `eql_v3.ste_vec_contains`, the envelope accessors `eql_v3.meta_data` / `eql_v3.ciphertext` / `eql_v3.selector`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**. (`eql_v3.jsonb_array_elements_text` was removed in 3.0 — a bare-ciphertext stream is no longer independently decryptable; use `eql_v3.jsonb_array_elements`.)
 
 ---
 
@@ -130,7 +133,7 @@ The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3
 
 ### `eql_v3.min()` / `eql_v3.max()` (per-domain)
 
-Returns the minimum or maximum encrypted value on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`public.<T>_ord`, `public.<T>_ord_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
+Returns the minimum or maximum encrypted value on an ordered encrypted-domain column. Defined per ord-capable variant of every scalar type (`public.<T>_ord`, `public.<T>_ord_ope`, `public.<T>_ord_ore`, plus `public.eql_v3_text_search` / `_search_ore`); the input type selects the aggregate via PostgreSQL's overload resolution.
 
 ```sql
 -- integer — generated for every ordered variant of every scalar type.
@@ -158,6 +161,13 @@ SELECT eql_v3.min(price_jsonb::public.eql_v3_integer_ord) FROM products;
 `SUM` / `AVG` and other arithmetic aggregates are **not** supported on encrypted columns (they would require homomorphic encryption) — decrypt at the application boundary. `MIN` / `MAX` only need comparator-revealing terms.
 
 **See also:** [SQL support matrix](./sql-support.md) for the per-variant capability table.
+
+---
+
+## Diagnostics
+
+- **`eql_v3.version() RETURNS text`** — the installed EQL release version, baked in at build time. First check when behaviour doesn't match the docs: `SELECT eql_v3.version();`
+- **`eql_v3.lints() RETURNS SETOF record (severity, category, object_name, message)`** — installation self-checks (missing opclass, misconfigured objects, …): `SELECT * FROM eql_v3.lints();`
 
 ---
 

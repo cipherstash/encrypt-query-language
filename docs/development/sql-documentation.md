@@ -35,14 +35,14 @@ prefix (not plain `--`). Coverage and required tags are checked by `mise run doc
 --! bare-form queries.
 --!
 --! @param a public.eql_v3_integer_eq Encrypted value carrying an `hm` term
---! @return eql_v3.hmac_256 The equality index term
+--! @return eql_v3_internal.hmac_256 The equality index term
 --!
 --! @example
 --! CREATE INDEX ON users USING hash (eql_v3.eq_term(salary_eq));
 --!
 --! @see eql_v3.ord_term
 CREATE FUNCTION eql_v3.eq_term(a public.eql_v3_integer_eq)
-  RETURNS eql_v3.hmac_256
+  RETURNS eql_v3_internal.hmac_256
 AS $$ ... $$;
 ```
 
@@ -88,9 +88,9 @@ CREATE OPERATOR = (
 ```sql
 --! @brief Encrypted-domain type for an equality-searchable integer column
 --!
---! A `jsonb`-backed domain in the `eql_v3` schema. The `CHECK` requires the
+--! A `jsonb`-backed domain in the `public` schema. The `CHECK` requires the
 --! envelope keys (`v`, `i`, `c`), the equality term (`hm`), and pins the
---! payload version (`VALUE->>'v' = '2'`).
+--! payload version (`VALUE->>'v' = '3'`).
 --!
 --! @see eql_v3.eq_term
 CREATE DOMAIN public.eql_v3_integer_eq AS jsonb
@@ -104,7 +104,7 @@ CREATE DOMAIN public.eql_v3_integer_eq AS jsonb
 --! @param $1 public.eql_v3_integer_ord Accumulated state
 --! @param $2 public.eql_v3_integer_ord New value
 --! @return public.eql_v3_integer_ord Updated state
-CREATE FUNCTION eql_v3.min_sfunc(public.eql_v3_integer_ord, public.eql_v3_integer_ord)
+CREATE FUNCTION eql_v3_internal.min_sfunc(public.eql_v3_integer_ord, public.eql_v3_integer_ord)
   RETURNS public.eql_v3_integer_ord
 AS $$ ... $$;
 
@@ -119,10 +119,12 @@ AS $$ ... $$;
 --! @example
 --! SELECT eql_v3.min(price_encrypted) FROM products;
 --!
---! @see eql_v3.min_sfunc
+--! @see eql_v3_internal.min_sfunc
 CREATE AGGREGATE eql_v3.min(public.eql_v3_integer_ord) (
-  SFUNC = eql_v3.min_sfunc,
-  STYPE = public.eql_v3_integer_ord
+  SFUNC = eql_v3_internal.min_sfunc,
+  STYPE = public.eql_v3_integer_ord,
+  COMBINEFUNC = eql_v3_internal.min_sfunc,
+  PARALLEL = safe
 );
 ```
 
@@ -186,8 +188,11 @@ CREATE FUNCTION eql_v3."[operator]"(...)
 --!
 --! @see eql_v3.eq_term
 --! @note This is a transient type used only during query execution
---! @note Encrypted-domain types are jsonb-backed — always `AS jsonb`, never domain-over-domain
-CREATE DOMAIN eql_v3.[type_name] AS jsonb;
+--! @note SEM index-term types live in `eql_v3_internal` and are backed by whatever
+--!   base type the term needs (`hmac_256 AS text`, `ope_cllw AS bytea`) — never
+--!   domain-over-domain. (Encrypted-domain *column* types are the jsonb-backed
+--!   `public.eql_v3_*` domains.)
+CREATE DOMAIN eql_v3_internal.[type_name] AS [base_type];
 ```
 
 ### Template: Aggregate Function

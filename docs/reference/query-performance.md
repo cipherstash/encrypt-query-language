@@ -7,7 +7,7 @@ Getting EQL-encrypted queries competitive with plain PostgreSQL comes down to on
 - [Creating indexes](./database-indexes.md#creating-indexes) — the `eql_v3.eq_term` / `ord_term` / `match_term` recipes (no operator class on a column).
 - [How index engagement works](./database-indexes.md#how-index-engagement-works) — extractor inlining and structural matching.
 - [Range queries and the `ORDER BY` sort-key trap](./database-indexes.md#range-queries-and-order-by) — write `ORDER BY` against the column's ordering extractor (`eql_v3.ord_term(col)` on `_ord`) to avoid a Sort node.
-- [`GROUP BY` / `DISTINCT`](./database-indexes.md#group-by--distinct) — group on `eql_v3.eq_term(col)`, not the raw column, to stay inside `work_mem`.
+- [`GROUP BY` / `DISTINCT`](./database-indexes.md#group-by--distinct) — group on the column's extractor, not the raw column, to stay inside `work_mem` (`eql_v3.eq_term(col)` on `hm`-carrying domains; `eql_v3.ord_term(col)` on the numeric-and-time ordering domains, which have no `eq_term`).
 - [GIN indexes for JSONB containment](./database-indexes.md#gin-indexes-for-jsonb-containment) — `public.eql_v3_json_search` document search.
 - [Building indexes on large tables](./database-indexes.md#performance-building-indexes-on-large-tables) — `maintenance_work_mem`, btree-vs-hash build scaling, the de-TOAST floor.
 - [Diagnosing queries with `EXPLAIN`](./database-indexes.md#diagnosing-queries-with-explain).

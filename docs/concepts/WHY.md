@@ -22,7 +22,7 @@ EQL enables encryption in use without significant changes to your application co
 A variety of searchable encryption techniques are available, including:
 
 - **Matching** - Equality or partial matches
-- **Ordering** - comparison operations using order revealing encryption
+- **Ordering** - comparison operations using order-preserving encryption (CLLW-OPE by default; block-ORE as an opt-in variant)
 - **Uniqueness** - enforcing unique constraints
 - **Containment** - containment queries using structured encryption
 
