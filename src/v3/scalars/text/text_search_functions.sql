@@ -406,24 +406,24 @@ LANGUAGE plpgsql;
 --! @param b public.eql_v3_text_search
 --! @return boolean
 CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search, b public.eql_v3_text_search)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) $$;
+RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) AND (cardinality(eql_v3.match_term(b)) > 0 OR cardinality(eql_v3.match_term(a)) = 0) $$;
 
 --! @brief Operator wrapper for public.eql_v3_text_search.
 --! @param a public.eql_v3_text_search
 --! @param b jsonb
 --! @return boolean
 CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_search, b jsonb)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.eql_v3_text_search) $$;
+RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$ SELECT eql_v3.match_term(a) @> eql_v3.match_term(b::public.eql_v3_text_search) AND (cardinality(eql_v3.match_term(b::public.eql_v3_text_search)) > 0 OR cardinality(eql_v3.match_term(a)) = 0) $$;
 
 --! @brief Operator wrapper for public.eql_v3_text_search.
 --! @param a jsonb
 --! @param b public.eql_v3_text_search
 --! @return boolean
 CREATE FUNCTION eql_v3.matches(a jsonb, b public.eql_v3_text_search)
-RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE
-AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search) @> eql_v3.match_term(b) $$;
+RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE
+AS $$ SELECT eql_v3.match_term(a::public.eql_v3_text_search) @> eql_v3.match_term(b) AND (cardinality(eql_v3.match_term(b)) > 0 OR cardinality(eql_v3.match_term(a::public.eql_v3_text_search)) = 0) $$;
 
 --! @brief Unsupported operator blocker for public.eql_v3_text_search.
 --!

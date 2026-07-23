@@ -61,41 +61,53 @@ async fn text_match_containment_operators_are_blocked(pool: PgPool) -> anyhow::R
 }
 
 #[sqlx::test]
-async fn empty_bloom_has_empty_set_semantics(pool: PgPool) -> anyhow::Result<()> {
-    // A value too short to tokenize (e.g. the empty string) yields an empty
-    // bloom filter (`bf: []`). Matching then follows empty-set semantics:
-    // everything matches the empty needle; the empty filter matches nothing. Uses
-    // literal payloads so the assertion is deterministic and independent of how
-    // the encryptor renders a `bf` for a degenerate plaintext.
+async fn empty_bloom_needle_uses_like_semantics(pool: PgPool) -> anyhow::Result<()> {
+    // A value too short to tokenize (e.g. the empty string) yields an empty bloom
+    // filter (`bf: []`). An empty NEEDLE follows `LIKE ''` semantics, NOT
+    // empty-set containment: it matches only a value whose own bloom is also
+    // empty, never every row (CIP-3606). Uses literal payloads so the assertion
+    // is deterministic; the real-ciphertext counterparts (a `bf: []` from an
+    // actual sub-trigram encryption) live in `text_match::empty_*`.
     const NON_EMPTY: &str =
         "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[1,2,3]}'::jsonb::public.eql_v3_text_match";
     const EMPTY: &str =
         "'{\"v\":\"3\",\"i\":{},\"c\":\"x\",\"bf\":[]}'::jsonb::public.eql_v3_text_match";
 
-    let everything_matches_empty: bool =
+    // non-empty value vs empty needle: `'catty' LIKE ''` → false (was the bug:
+    // vacuous containment returned true and matched every row).
+    let non_empty_vs_empty: bool =
         sqlx::query_scalar(&format!("SELECT ({NON_EMPTY}) @@ ({EMPTY})"))
             .fetch_one(&pool)
             .await?;
     assert!(
-        everything_matches_empty,
-        "every filter must match the empty needle"
+        !non_empty_vs_empty,
+        "a populated value must not match an empty needle"
     );
 
-    let empty_matches_nothing: bool =
+    // empty value vs empty needle: `'' LIKE ''` → true.
+    let empty_vs_empty: bool = sqlx::query_scalar(&format!("SELECT ({EMPTY}) @@ ({EMPTY})"))
+        .fetch_one(&pool)
+        .await?;
+    assert!(empty_vs_empty, "an empty value must match an empty needle");
+
+    // empty value vs non-empty needle: `'' LIKE 'cat'` → false.
+    let empty_vs_non_empty: bool =
         sqlx::query_scalar(&format!("SELECT ({EMPTY}) @@ ({NON_EMPTY})"))
             .fetch_one(&pool)
             .await?;
     assert!(
-        !empty_matches_nothing,
-        "empty filter must not match a non-empty needle"
+        !empty_vs_non_empty,
+        "an empty filter must not match a non-empty needle"
     );
     Ok(())
 }
 
 #[sqlx::test]
 async fn match_null_propagates(pool: PgPool) -> anyhow::Result<()> {
-    // `eql_v3.matches` is STRICT, so a NULL operand yields NULL (three-valued
-    // logic) rather than false or an error.
+    // A NULL operand yields NULL (three-valued logic) rather than false or an
+    // error. `eql_v3.matches` is deliberately NOT declared STRICT (that would
+    // block inlining of its empty-needle guard and lose the GIN index); the NULL
+    // propagates through the body's containment + guard on its own.
     const BF: &str = r#"{"v":"3","i":{},"c":"x","bf":[1,2,3]}"#;
     let sql =
         "SELECT ($1::jsonb::public.eql_v3_text_match) @@ ($2::jsonb::public.eql_v3_text_match)";

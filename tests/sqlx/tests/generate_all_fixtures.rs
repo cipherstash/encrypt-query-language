@@ -74,6 +74,16 @@ async fn generate_all() -> anyhow::Result<()> {
     eql_tests::fixtures::v3_text_empty::generate().await?;
     eprintln!("Regenerated v3_text_empty.");
 
+    // The empty-bloom fuzzy-match fixture (`"pq"`, `"aardvark"`). Not a CATALOG
+    // scalar — `eql-domains::TEXT_FIXTURES` carries no sub-trigram string (min 3
+    // chars), so no catalog value yields an empty bloom (`bf: []`) — so it rides
+    // the same pipeline as a hand-written `FixtureSpec<String>`. Gives the
+    // CIP-3606 empty-needle guard in `eql_v3.matches` a generated real-ciphertext
+    // home.
+    eprintln!("Generating fixture v3_text_empty_bloom (empty bloom filter)...");
+    eql_tests::fixtures::v3_text_empty_bloom::generate().await?;
+    eprintln!("Regenerated v3_text_empty_bloom.");
+
     // Per-type "doubles" fixtures (each plaintext encrypted twice) for the
     // credential-free cross-ciphertext-equality test. Non-catalog (the catalog
     // fixture is the curated set exactly), generated through the same pipeline.

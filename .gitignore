@@ -231,6 +231,7 @@ tests/sqlx/fixtures/v3_json_storage.sql
 tests/sqlx/fixtures/v3_doc_integer.sql
 tests/sqlx/fixtures/v3_numeric_collision.sql
 tests/sqlx/fixtures/v3_text_empty.sql
+tests/sqlx/fixtures/v3_text_empty_bloom.sql
 
 # Large generated test data files
 tests/ste_vec_vast.sql

@@ -63,6 +63,13 @@ pub mod v3_numeric_collision;
 // min / max over `text_ord`) a generated real-ciphertext home.
 pub mod v3_text_empty;
 
+// The empty-bloom fuzzy-match fixture (`"pq"`, `"aardvark"`). Not a CATALOG
+// scalar — `eql-domains::TEXT_FIXTURES` has no sub-trigram value, so no catalog
+// value produces an empty bloom (`bf: []`) — so it is hand-written and
+// registered here directly (like the other `v3_` fixtures). Gives the CIP-3606
+// empty-needle guard in `eql_v3.matches` a generated real-ciphertext home.
+pub mod v3_text_empty_bloom;
+
 // Per-type "doubles" fixtures (each plaintext encrypted twice) for the
 // cross-ciphertext-equality test. Non-catalog, like `v3_numeric_collision`.
 pub mod eql_doubles;
