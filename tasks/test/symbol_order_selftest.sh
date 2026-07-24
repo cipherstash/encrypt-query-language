@@ -50,10 +50,11 @@ if bash tasks/test/verify_symbol_order_v3.sh "$tmp/domain_bad.txt" 2>/dev/null; 
 fi
 echo "ok: domain-form type used before definition rejected"
 
-# CREATE DOMAIN eql_v3.* form (the query-operand domains CIP-3442 moved out of
-# `public`: eql_v3.query_<T>_<cap> and eql_v3.query_jsonb). Pins the domain-capture
-# branch's eql_v3 arm. Without it the whole surface's 39 query domains read as
-# "defined nowhere" — the regression that reddened every build-dependent CI job.
+# CREATE DOMAIN eql_v3.* form. Query operands live in `eql_v3`, not `public`,
+# because a query operand is never a column type: eql_v3.query_<T>_<cap> and
+# eql_v3.query_json. Pins the domain-capture branch's eql_v3 arm. Without it
+# every query domain on the surface reads as "defined nowhere" — the regression
+# that reddened every build-dependent CI job.
 printf 'CREATE DOMAIN eql_v3.query_integer_eq AS jsonb;\n' > "$tmp/q.sql"
 printf 'CREATE FUNCTION eql_v3.eq(a public.integer_eq, b eql_v3.query_integer_eq) ...\n' > "$tmp/qf.sql"
 printf '%s\n%s\n' "$tmp/q.sql" "$tmp/qf.sql" > "$tmp/qdomain_good.txt"

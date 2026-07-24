@@ -114,10 +114,11 @@ awk -v allowfile="$ALLOW" '
       # NOT `CREATE TYPE`. Capturing only `public.` here would leave the three
       # most-referenced foundational types (~165 refs) reporting "defined
       # nowhere" — a real gap, not an allowlist case. `eql_v3.` owns the
-      # query-operand domains (`eql_v3.query_<T>_<cap>`, `eql_v3.query_jsonb`),
-      # which CIP-3442 moved out of `public`: omitting the schema here leaves all
-      # 39 of them reporting "defined nowhere". Only `public.` domains feed
-      # isdomain[] (that gates which `public.*` REFERENCES are checked).
+      # query-operand domains (`eql_v3.query_<T>_<cap>`, `eql_v3.query_json`),
+      # which live outside `public` because a query operand is never a column
+      # type: omitting the schema here leaves every one of them reporting
+      # "defined nowhere". Only `public.` domains feed isdomain[] (that gates
+      # which `public.*` REFERENCES are checked).
       # Test eql_v3_internal FIRST in both the alternation and the arms below, so
       # the `eql_v3` prefix cannot shadow it.
       if (match(line, /CREATE[ \t]+DOMAIN[ \t]+(eql_v3_internal|eql_v3|public)\.[a-z0-9_]+/)) {
