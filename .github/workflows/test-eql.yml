@@ -409,6 +409,12 @@ jobs:
         run: mise run clean && mise run --force build
       - name: Assert eql_v3 is self-contained
         run: mise run test:self_contained_v3
+      - name: Assert the installer contains every ordered file
+        run: mise run test:installer_complete
+      - name: Symbol-order cross-check (v3)
+        run: mise run test:symbol_order_v3
+      - name: Build-ordering helper unit tests
+        run: mise run test:build_ordering_helpers
 
   matrix-coverage:
     name: "Matrix coverage inventory"

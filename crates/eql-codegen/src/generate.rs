@@ -1087,6 +1087,9 @@ pub fn generate_all(out_root: &Path) -> Result<i32, WriteError> {
         }
     }
 
+    // No ordering manifest is emitted here. The installer order is derived by
+    // `eql-codegen order` from a single walk of the whole src/v3 surface, so the
+    // generator has no say in — and cannot disagree with — what gets ordered.
     let names: Vec<&str> = eql_domains::families_with_scalar_domains()
         .map(|s| s.name)
         .collect();

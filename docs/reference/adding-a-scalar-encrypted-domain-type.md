@@ -56,6 +56,17 @@ To add a scalar type `<T>` (e.g. `bigint`), with Rust type `<R>` (e.g. `i64`):
    no per-type codegen task. The generated `*_{types,functions,operators,aggregates}.sql`
    are committed in place under `src/v3/scalars/<T>/` — regenerate and commit the
    SQL diff alongside the catalog change.
+   - **Ordering is resolved by the codegen — you do nothing.** `eql-codegen order`
+     walks the whole `src/v3` surface once and topologically sorts it from the
+     `-- REQUIRE:` edges every file declares (name-sorted tie-break, cycle- and
+     dangling-target-checked); `tasks/build.sh` concatenates the files in that
+     order. Generated and hand-written files are ordered together — there is no
+     separate generated block, so a generated file cannot fall between the two.
+     Adding a catalog row needs no `-- REQUIRE:` edits to any generated file: the
+     renderers emit each file's edges. Only hand-written files under `src/v3/`
+     (SEM types, `jsonb/`, `schema.sql`, `crypto.sql`, `common.sql`,
+     `scalars/functions.sql`, `lint/lints.sql`, `*_extensions.sql`) carry
+     authored `-- REQUIRE:` edges.
    - The catalog row ALSO drives the **Rust payload bindings**: `eql-codegen
      bindings` (run first by `mise run types:generate`) regenerates the
      committed `crates/eql-bindings/src/v3/<family>.rs` struct + `DomainType`

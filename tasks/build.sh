@@ -1,18 +1,34 @@
 #!/usr/bin/env bash
 #MISE description="Build SQL into single release file"
 #MISE alias="b"
-#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs"]
-#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql"]
+#MISE sources=["src/v3/**/*.sql", "src/v3/version.template", "tasks/pin_search_path_v3.sql", "tasks/uninstall-v3.sql", "crates/eql-domains/src/**/*.rs", "crates/eql-codegen/src/**/*.rs", "Cargo.toml", "Cargo.lock", "crates/eql-codegen/Cargo.toml", "crates/eql-domains/Cargo.toml", "tasks/build/ordering.sh", "tasks/test/verify_symbol_order_v3.sh", "tasks/test/verify_installer_complete.sh", "tasks/test/symbol_order_allowlist.txt"]
+#MISE outputs=["release/cipherstash-encrypt.sql","release/cipherstash-encrypt-uninstall.sql","src/deps-ordered-v3.txt"]
 #USAGE flag "--version <version>" help="Specify release version of EQL" default="DEV"
 
 #!/bin/bash
 
 set -euo pipefail
 
+# ordering.sh shapes the installer (strip_require_lines), and the two verify
+# scripts below gate it. All four are in #MISE sources: a cache hit skips this
+# script entirely, gates included, so an edit to any of them must invalidate the
+# build rather than re-serve an installer built by the old logic.
+#
+# The Cargo manifests and Cargo.lock are sources for the same reason: the two
+# `cargo run` steps below render this artefact, and eql-codegen's own deps decide
+# what they render — minijinja templates the SQL, prettyplease (=0.2.37) formats
+# the bindings. A dep bump changes the output with no .rs file touched.
+source tasks/build/ordering.sh
+
+# A failed `eql-codegen order` leaves its temp behind; don't strand it.
+trap 'rm -f src/deps-ordered-v3.txt.tmp' EXIT
+
 # Regenerate encrypted-domain SQL from the Rust catalog before building.
-# Generated files (src/v3/scalars/<T>/<T>_*.sql) are gitignored; the
-# catalog at crates/eql-domains/src (eql-domains::CATALOG) is the source of
-# truth, rendered by the eql-codegen binary.
+# The generated files (src/v3/scalars/<T>/<T>_*.sql) are COMMITTED in place and
+# drift-gated by `mise run codegen:parity`; only src/v3/version.sql and the
+# src/deps-ordered-v3.txt build intermediate are gitignored. The catalog at
+# crates/eql-domains/src (eql-domains::CATALOG) is the source of truth, rendered
+# by the eql-codegen binary.
 #
 # eql-codegen owns orphan removal: it writes every current file first (each via
 # an atomic temp+rename), then prunes stale generated SQL across ALL
@@ -25,95 +41,59 @@ set -euo pipefail
 #
 # The plaintext fixture lists are not generated — the SQLx tests read them
 # straight from the catalog (eql_domains::INT4_VALUES / …).
-cargo run -p eql-codegen
-
-# Fail loudly if any file referenced in a tsorted dep list doesn't exist.
-# Without this, `xargs cat` would print `cat: foo.sql: No such file or directory`
-# and continue — silently producing an incomplete release artefact.
-verify_deps_exist() {
-  local dep_file=$1
-  local missing=0
-  while IFS= read -r f; do
-    if [[ ! -f "$f" ]]; then
-      echo "ERROR: $dep_file references missing file: $f" >&2
-      missing=1
-    fi
-  done < "$dep_file"
-  if [[ $missing -ne 0 ]]; then
-    echo "ERROR: dependency graph references missing files (see above). Check -- REQUIRE: directives." >&2
-    exit 1
-  fi
-}
-
-# Fail loudly if any v3 REQUIRE edge points OUTSIDE src/v3. The v3-only build
-# must be self-contained (no eql_v2 coupling); a stray `-- REQUIRE: src/...`
-# edge to a non-v3 file would silently pull eql_v2 SQL into the v3 artefact (or
-# tsort would drop it), breaking self-containment. Each line in deps-v3.txt is
-# "<file> <dep>"; self-edges (file == dep) are skipped, every other dep target
-# must start with src/v3/.
-verify_v3_self_contained() {
-  local dep_file=$1
-  local offending=0
-  while IFS=' ' read -r src dep; do
-    [[ -z "$dep" ]] && continue
-    [[ "$src" == "$dep" ]] && continue
-    if [[ "$dep" != src/v3/* ]]; then
-      echo "ERROR: v3 REQUIRE edge points outside src/v3: $src -- REQUIRE: $dep" >&2
-      offending=1
-    fi
-  done < "$dep_file"
-  if [[ $offending -ne 0 ]]; then
-    echo "ERROR: v3-only build is not self-contained — a -- REQUIRE: target lives outside src/v3 (see above)." >&2
-    exit 1
-  fi
-}
+cargo run -q -p eql-codegen
 
 mkdir -p release
 
 rm -f release/cipherstash-encrypt.sql
 rm -f release/cipherstash-encrypt-uninstall.sql
-
-rm -f src/deps-v3.txt
-rm -f src/deps-ordered-v3.txt
+rm -f src/deps-ordered-v3.txt src/deps-ordered-v3.txt.tmp
 rm -f src/v3/version.sql
 
 
-# Bake the release version into eql_v3.version() (and the eql_v3 schema
-# comment) before the glob below picks it up. The version is supplied via
-# `mise run build --version <semver>` (the `usage_version` env var mise derives
-# from the #USAGE flag); local builds with no flag fall back to DEV. The
-# generated src/v3/version.sql is gitignored, like the other generated v3 SQL.
+# Bake the release version into eql_v3.version() (and the eql_v3 schema comment).
+# The version is supplied via `mise run build --version <semver>` (the
+# `usage_version` env var mise derives from the #USAGE flag); local builds with
+# no flag fall back to DEV. The generated src/v3/version.sql is gitignored.
+#
+# This MUST precede `eql-codegen order` below: the ordering walks the surface on
+# disk, so version.sql has to exist to be ordered into the installer.
 RELEASE_VERSION=${usage_version:-DEV}
 sed "s/\$RELEASE_VERSION/$RELEASE_VERSION/g" src/v3/version.template > src/v3/version.sql
 
 
-# The self-contained eql_v3 surface — schema, SEM types, scalar domains —
-# globbed from src/v3 ONLY. This is the sole EQL artifact: it owns no eql_v2
-# dependency (CI-gated by verify_v3_self_contained below + test:self_contained_v3),
-# and it is written under the canonical release name now that the combined v2
-# build that previously produced that name is gone.
-find src/v3 -type f -path "*.sql" ! -path "*_test.sql" | while IFS= read -r sql_file; do
-    echo "$sql_file"
+# Resolve the install order of the whole eql_v3 surface — schema, SEM types,
+# hand-written jsonb, generated scalars, version.sql — in ONE walk of src/v3,
+# topologically sorted from the `-- REQUIRE:` edges every file declares.
+#
+# `eql-codegen order` is the sole enumeration of the surface, and it fails the
+# build on a missing REQUIRE target, on an edge leaving src/v3 (self-containment,
+# also gated by test:self_contained_v3), and on a dependency cycle. It replaces a
+# two-block scheme — shell-globbed hand-written files, plus a codegen manifest of
+# the generated ones — whose two enumerations could disagree about a file and
+# silently drop it from the installer. Ordering what you walk makes that
+# unrepresentable; `install_order_contains_every_v3_sql_file` in the codegen
+# crate's parity tests pins the invariant.
+#
+# Written via a temp file so an aborted order leaves no truncated list behind for
+# the downstream tasks (test:self_contained_v3, test:symbol_order_v3) to read.
+cargo run -q -p eql-codegen -- order > src/deps-ordered-v3.txt.tmp
+mv src/deps-ordered-v3.txt.tmp src/deps-ordered-v3.txt
 
-    echo "$sql_file $sql_file" >> src/deps-v3.txt
+bash tasks/test/verify_symbol_order_v3.sh src/deps-ordered-v3.txt
 
-    while IFS= read -r line; do
-        if [[ "$line" == *"-- REQUIRE:"* ]]; then
-            deps=${line#*-- REQUIRE: }
-            for dep in $deps; do
-                echo "$sql_file $dep" >> src/deps-v3.txt
-            done
-        fi
-    done < "$sql_file"
-done
-
-verify_v3_self_contained src/deps-v3.txt
-
-cat src/deps-v3.txt | tsort | tac > src/deps-ordered-v3.txt
-verify_deps_exist src/deps-ordered-v3.txt
-
-cat src/deps-ordered-v3.txt | xargs cat | grep -v REQUIRE >> release/cipherstash-encrypt.sql
+: > release/cipherstash-encrypt.sql
+while IFS= read -r f; do
+  strip_require_lines "$f" >> release/cipherstash-encrypt.sql
+done < src/deps-ordered-v3.txt
 cat tasks/pin_search_path_v3.sql >> release/cipherstash-encrypt.sql
+
+# `eql-codegen order` guarantees the ORDER contains every file on disk. This gate
+# closes the layer below — that the concat loop above actually emitted each ordered
+# file's body. 93 of the ~244 v3 files are leaves (required by nothing, defining
+# nothing another file references), so dropping one yields an installer that applies
+# cleanly and passes the symbol checker while silently shipping less than it should.
+bash tasks/test/verify_installer_complete.sh src/deps-ordered-v3.txt release/cipherstash-encrypt.sql
 
 cat tasks/uninstall-v3.sql >> release/cipherstash-encrypt-uninstall.sql
 

@@ -37,7 +37,7 @@ This project uses `mise` for task management. Common commands:
   - `cipherstash-encrypt.sql` - The sole installer: the self-contained `eql_v3` surface, globbed from `src/v3` only (no `eql_v2`; installable into a DB with no `eql_v2` present)
   - `cipherstash-encrypt-uninstall.sql` - Matching uninstaller
 
-There are no longer separate Main / Supabase / Protect / v3-only build variants. The combined `eql_v2` build that previously produced multiple artefacts has been removed; the v3 surface now ships as one self-contained installer under the canonical `cipherstash-encrypt.sql` name (`tasks/build.sh` globs `src/v3` only). Because the surface owns no `eql_v2` dependency, it is already Supabase / managed-Postgres compatible (functional indexes over extractors, no superuser-only operator classes) without a dedicated subset build. Self-containment — no `-- REQUIRE:` edge pointing outside `src/v3`, no `eql_v2.<symbol>` anywhere in the surface — is enforced at build time by `verify_v3_self_contained` in `tasks/build.sh` and CI-gated by `mise run test:self_contained_v3`.
+There are no longer separate Main / Supabase / Protect / v3-only build variants. The combined `eql_v2` build that previously produced multiple artefacts has been removed; the v3 surface now ships as one self-contained installer under the canonical `cipherstash-encrypt.sql` name (`eql-codegen order` walks `src/v3` only). Because the surface owns no `eql_v2` dependency, it is already Supabase / managed-Postgres compatible (functional indexes over extractors, no superuser-only operator classes) without a dedicated subset build. Self-containment — no `-- REQUIRE:` edge pointing outside `src/v3`, no `eql_v2.<symbol>` anywhere in the surface — is enforced at build time by `surface_order`'s `OutsideSurface` error (`crates/eql-codegen/src/ordering.rs`) and CI-gated by `mise run test:self_contained_v3`.
 
 ## Project Architecture
 
@@ -189,7 +189,7 @@ HTML output is also generated in `docs/api/html/` for local preview only.
 
 - SQL files are modular - put operator wrappers in `operators.sql`, implementation in `functions.sql`
 - All SQL files must have `-- REQUIRE:` dependency declarations
-- Build system uses `tsort` to resolve dependency order
+- Build system resolves dependency order with `cargo run -p eql-codegen -- order`, which walks the whole `src/v3` surface once and topologically sorts it from the `-- REQUIRE:` edges. Dangling targets, edges leaving `src/v3`, and cycles all fail the build.
 - **Documentation**: All functions/types must have Doxygen comments (see Documentation Standards above)
 
 ### Function Language Choice (SQL vs PL/pgSQL)
