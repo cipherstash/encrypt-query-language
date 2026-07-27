@@ -1,3 +1,4 @@
+aggregate eql_v3.grouped_value(jsonb)
 aggregate eql_v3.max(public.eql_v3_bigint_ord)
 aggregate eql_v3.max(public.eql_v3_bigint_ord_ope)
 aggregate eql_v3.max(public.eql_v3_bigint_ord_ore)
