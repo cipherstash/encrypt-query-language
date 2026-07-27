@@ -24,7 +24,7 @@ Each capability has one canonical functional-index recipe. Type the column as th
 
 ```sql
 -- Equality (hash index on the eq_term extractor) — the hm-carrying domains:
--- public.<T>_eq / text_ord / text_ord_ore / text_search / text_search_ore
+-- public.<T>_eq / text_ord / text_ord_ope / text_ord_ore / text_search / text_search_ore
 CREATE INDEX users_email_eq
   ON users USING hash (eql_v3.eq_term(encrypted_email));
 
@@ -32,7 +32,7 @@ CREATE INDEX users_email_eq
 CREATE INDEX events_at_ord
   ON events USING btree (eql_v3.ord_term(encrypted_at));
 
--- Text match (bloom-filter fuzzy match `@@` — GIN on the match_term extractor) — public.eql_v3_text_match / text_search
+-- Text match (bloom-filter fuzzy match `@@` — GIN on the match_term extractor) — public.eql_v3_text_match / text_search / text_search_ore
 CREATE INDEX users_name_match
   ON users USING gin (eql_v3.match_term(encrypted_name));
 
@@ -41,13 +41,13 @@ ANALYZE users;
 
 > **No operator class on a column or domain.** `eql_v3` deliberately does **not** ship an `encrypted_operator_class`. Operators resolve against the domain's `jsonb` base type, so an opclass on the column would bypass the encrypted surface. Always index through the extractor. (This also means no superuser is required to *query* — functional indexes work on Supabase and managed PostgreSQL.)
 
-> **ORE requires a superuser *install*; OPE does not.** The `ord_term` btree recipe above needs nothing installed: the default `_ord` domains order via CLLW-OPE, and `eql_v3.ord_term` returns a `bytea`-backed type whose *native* btree operator class the planner already has. The block-ORE domains (`_ord_ore`, `text_search_ore`) instead depend on the operator class the installer creates for the ORE term type — and `CREATE OPERATOR CLASS` requires superuser. On platforms whose installer role is not superuser (cloud-hosted Supabase, most managed Postgres), the installer detects this and **disables the ORE-carrying domains** (`_ord_ore`, `text_search_ore`, and their `eql_v3.query_*` twins): using one raises `feature_not_supported` with a `HINT` naming the alternatives (see [U-003](../upgrading/v3.0.md#u-003-non-superuser-installs-disable-the-ore-backed-domains)). On a superuser install, index an `_ord_ore` column through its own extractor:
+> **ORE requires an *install* privilege; OPE does not.** The `ord_term` btree recipe above needs nothing installed: the default `_ord` domains order via CLLW-OPE, and `eql_v3.ord_term` returns a `bytea`-backed type whose *native* btree operator class the planner already has. The block-ORE domains (`_ord_ore`, `text_search_ore`) instead depend on the operator class the installer creates for the ORE term type — and `CREATE OPERATOR CLASS` is superuser-gated in stock PostgreSQL. Whether a managed platform allows it is per-platform, not a blanket rule: AWS RDS and Aurora PostgreSQL allow it for the master user, while cloud-hosted Supabase, Cloud SQL, and Azure Flexible Server refuse it (see [Install privileges](./permissions.md#install-privileges) for the details and sources). Where the install role can't create the opclass, the installer detects this and **disables the ORE-carrying domains** (`_ord_ore`, `text_search_ore`, and their `eql_v3.query_*` twins): using one raises `feature_not_supported` with a `HINT` naming the alternatives (see [U-003](../upgrading/v3.0.md#u-003-non-superuser-installs-disable-the-ore-backed-domains)). Where the opclass installed, index an `_ord_ore` column through its own extractor:
 >
 > ```sql
 > CREATE INDEX events_at_ord_ore ON events USING btree (eql_v3.ord_term_ore(encrypted_at));
 > ```
 
-> **Equality on the ordering domains splits on term injectivity.** The numeric-and-time ordering terms (OPE and ORE alike) are **injective** — distinct plaintexts produce distinct terms — so equality can ride the ordering term: those `_ord` / `_ord_ore` domains carry no `hm`, there is **no `eq_term` overload** for them, and `eql_v3.eq` inlines to an ordering-term comparison (`ord_term(a) = ord_term(b)`). One ordering btree serves `=`, range, and `ORDER BY` — do not create an `eq_term` index on a numeric `_ord` column; the overload does not exist. Text ordering terms are **non-injective** and cannot be relied on for equality, so the text ordering domains (`text_ord`, `text_ord_ore`, and the `text_search` variants) also carry `hm` and answer `=` via `eq_term` — give those columns an equality index alongside the ordering one.
+> **Equality on the ordering domains splits on term injectivity.** The numeric-and-time ordering terms (OPE and ORE alike) are **injective** — distinct plaintexts produce distinct terms — so equality can ride the ordering term: those `_ord` / `_ord_ope` / `_ord_ore` domains carry no `hm`, there is **no `eq_term` overload** for them, and `eql_v3.eq` inlines to an ordering-term comparison (`ord_term(a) = ord_term(b)`). One ordering btree serves `=`, range, and `ORDER BY` — do not create an `eq_term` index on a numeric `_ord` column; the overload does not exist. Text ordering terms are **non-injective** and cannot be relied on for equality, so the text ordering domains (`text_ord`, `text_ord_ope`, `text_ord_ore`, and the `text_search` variants) also carry `hm` and answer `=` via `eq_term` — give those columns an equality index alongside the ordering one.
 
 ### When to Create Indexes
 
@@ -55,7 +55,7 @@ Create indexes on encrypted columns when:
 
 - The table has a significant number of rows (typically > 1000).
 - You frequently query the column by the matching operator.
-- The column is typed as a variant that carries the required term (`_eq` for equality, `_ord` for range/ordering, `text_match` for bloom fuzzy match `@@`).
+- The column is typed as a variant that carries the required term (`_eq` for equality, `_ord` for range/ordering, `text_match` for bloom fuzzy match `@@`). On the numeric-and-time `_ord` domains the ordering variant serves `=` too — no `_eq` twin needed; see the injectivity note above.
 
 ---
 
@@ -81,7 +81,7 @@ For PostgreSQL to use a functional index on an encrypted column, **all** of thes
 
 Capability travels in the payload, chosen by the encryption client and reflected in the column's domain variant:
 
-- **Equality** needs the domain's equality-serving term. On the `hm`-carrying domains (`public.<T>_eq`, `public.eql_v3_text_ord`, `public.eql_v3_text_ord_ore`, `public.eql_v3_text_search`, `public.eql_v3_text_search_ore`) that is `hm` (hmac_256), driven through `eql_v3.eq_term`. On the numeric-and-time `_ord` / `_ord_ore` domains it is the **ordering term itself** (`op` / `ob`) — injective for those types, so `eql_v3.eq` compares ordering terms and the ordering index serves equality (see [Creating Indexes](#creating-indexes)).
+- **Equality** needs the domain's equality-serving term. On the `hm`-carrying domains (`public.<T>_eq`, `public.eql_v3_text_ord`, `public.eql_v3_text_ord_ope`, `public.eql_v3_text_ord_ore`, `public.eql_v3_text_search`, `public.eql_v3_text_search_ore`) that is `hm` (hmac_256), driven through `eql_v3.eq_term`. On the numeric-and-time `_ord` / `_ord_ope` / `_ord_ore` domains it is the **ordering term itself** (`op` / `ob`) — injective for those types, so `eql_v3.eq` compares ordering terms and the ordering index serves equality (see [Creating Indexes](#creating-indexes)).
 - **Range / ordering** needs an ordering term — `op` (ope_cllw) on `public.<T>_ord` / `_ord_ope` / `public.eql_v3_text_search`, or `ob` (ore_block_256) on `public.<T>_ord_ore` / `public.eql_v3_text_search_ore`.
 - **Text match** (`@@`) needs a `bf` (bloom_filter) term — `public.eql_v3_text_match`, `public.eql_v3_text_search`, or `public.eql_v3_text_search_ore`.
 
@@ -98,11 +98,13 @@ The comparison value must resolve to the encrypted operator, not the native `jso
 ```sql
 -- ✓ resolves the encrypted operator → uses the index
 WHERE encrypted_email = $1;
-WHERE encrypted_email = $1::public.eql_v3_text_eq;
+WHERE encrypted_email = $1::eql_v3.query_text_eq;
 
 -- ✗ a bare jsonb literal falls through to native jsonb semantics
 WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
 ```
+
+Cast an explicit operand to the matching **query-operand domain** (`eql_v3.query_<T>_<variant>`), not the column's storage domain: query payloads are term-only, and the storage domains' CHECK requires the ciphertext key `c` that query payloads deliberately omit.
 
 ---
 
@@ -110,7 +112,7 @@ WHERE encrypted_email = '{"hm":"abc"}'::jsonb;
 
 ### Equality Queries
 
-A column typed as an `hm`-carrying domain (`public.<T>_eq`, `text_ord`, `text_ord_ore`, or a `text_search` variant) with a hash index on `eql_v3.eq_term(col)`:
+A column typed as an `hm`-carrying domain (`public.<T>_eq`, `text_ord`, `text_ord_ope`, `text_ord_ore`, or a `text_search` variant) with a hash index on `eql_v3.eq_term(col)`:
 
 ```sql
 CREATE INDEX users_email_eq ON users USING hash (eql_v3.eq_term(encrypted_email));
@@ -121,7 +123,7 @@ SELECT * FROM users WHERE encrypted_email = $1;
 --   Index Cond: (eql_v3.eq_term(encrypted_email) = eql_v3.eq_term($1))
 ```
 
-On a numeric-and-time `_ord` / `_ord_ore` column there is no `eq_term` — `=` inlines to the ordering extractor instead, so the same equality predicate engages the ordering btree from the [range recipe below](#range-queries-and-order-by):
+On a numeric-and-time `_ord` / `_ord_ope` / `_ord_ore` column there is no `eq_term` — `=` inlines to the ordering extractor instead, so the same equality predicate engages the ordering btree from the [range recipe below](#range-queries-and-order-by):
 
 ```sql
 SELECT * FROM events WHERE encrypted_at = $1;
@@ -140,7 +142,7 @@ ANALYZE events;
 
 `eql_v3.ord_term` returns `eql_v3_internal.ope_cllw`, a domain over `bytea`, so this btree resolves to `bytea_ops` — PostgreSQL's **default** operator class for the base type. Nothing to install, no privilege needed, and the opfamily already contains the `<` `<=` `>` `>=` the planner needs.
 
-> **Why this matters on managed PostgreSQL.** The `_ord_ore` path depends on a hand-written btree operator class for the `eql_v3_internal.ore_block_256` *composite*, created by a `DO` block that is silently skipped when the installing role is not superuser. If that opclass is absent, `CREATE INDEX … btree (eql_v3.ord_term_ore(col))` does **not** fail — PostgreSQL binds `record_ops` instead. The index builds, occupies space, and never engages, because the ORE comparison operators are not members of `record_ops`. A silently useless index is worse than a rejected one. `_ord` has no such failure mode.
+> **Why this matters on managed PostgreSQL.** The `_ord_ore` path depends on a hand-written btree operator class for the `eql_v3_internal.ore_block_256` *composite*, created by a `DO` block that is skipped (with only a `NOTICE`, which most migration tooling swallows) when the installing role cannot create operator classes. If that opclass is absent, `CREATE INDEX … btree (eql_v3.ord_term_ore(col))` does **not** fail — PostgreSQL binds `record_ops` instead. The index builds, occupies space, and never engages, because the ORE comparison operators are not members of `record_ops`. A silently useless index is worse than a rejected one. `_ord` has no such failure mode.
 >
 > Check which opclass an existing index actually bound:
 >
@@ -185,6 +187,8 @@ SELECT eql_v3.eq_term(encrypted_email), count(*)
 
 Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payload (1–2 KB per row) as the hash key. PostgreSQL estimates a hash table far larger than the default `work_mem` (4 MB), refuses `HashAggregate`, and falls back to `GroupAggregate` — sorting kilobyte-sized rows and spilling to disk. The `eql_v3.eq_term(col)` key is a small deterministic term, so the hash table fits in `work_mem` and the planner picks `HashAggregate` reliably — without any deployment-wide tuning. If you cannot rewrite the query (an ORM grouping the raw column), bumping `work_mem` to fit the estimated hash table is the rescue knob, but the extractor form is the design.
 
+Pick the extractor the domain actually has: `eq_term` exists only on the `hm`-carrying domains. On a numeric-and-time `_ord` / `_ord_ope` / `_ord_ore` column, group on the ordering extractor instead — `GROUP BY eql_v3.ord_term(col)` (or `ord_term_ore(col)`). The ordering term is injective for those types, so it is an exact grouping key, and the column's ordering btree covers it.
+
 ### Field-level ordering index (ste_vec elements)
 
 Entry-to-entry `=` / `<>` and exact `GROUP BY` / `DISTINCT` on extracted
@@ -202,7 +206,7 @@ For document-level containment (`@>`) on `public.eql_v3_json_search` columns, us
 
 ```sql
 CREATE INDEX orders_data_gin
-  ON orders USING gin (eql_v3.to_ste_vec_query(data_encrypted)::jsonb jsonb_path_ops);
+  ON orders USING gin ((eql_v3.to_ste_vec_query(data_encrypted)::jsonb) jsonb_path_ops);
 ANALYZE orders;
 
 SELECT * FROM orders WHERE data_encrypted @> $1::eql_v3.query_json;
@@ -248,7 +252,7 @@ It is the single highest-leverage knob for build time. On a managed deployment w
 
 ### Index type decides whether the build scales
 
-For *query* performance the access method is settled by capability (`hash` for equality, `btree` for ORE, `GIN` for bloom / ste_vec). For *build* performance at scale they are not equivalent:
+For *query* performance the access method is settled by capability (`hash` or `btree` on `eq_term` for equality, `btree` on the ordering extractor — OPE and ORE alike, `GIN` for bloom / ste_vec). For *build* performance at scale they are not equivalent:
 
 | Access method | Build algorithm                                   | Scales past cache? | Parallel build? |
 | ------------- | ------------------------------------------------- | ------------------ | --------------- |
@@ -258,7 +262,7 @@ For *query* performance the access method is settled by capability (`hash` for e
 
 A hash build scatters consecutive heap rows to random buckets; once the index outgrows `shared_buffers` + OS cache it becomes random-I/O-bound and cannot be parallelised. A btree build sorts first, then writes sequentially across parallel workers.
 
-**For equality functional indexes on large tables, prefer `btree` over `hash`.** `eql_v3.eq_term(col)` — and the field-level `eql_v3.eq_term(col -> '<selector>'::text)` — return small deterministic terms; a btree on them serves `=` exactly as well as a hash index, with no query-side cost, and the build goes from pathological to routine:
+**For equality functional indexes on large tables, prefer `btree` over `hash`.** `eql_v3.eq_term(col)` returns a small deterministic term; a btree on it serves `=` exactly as well as a hash index, with no query-side cost, and the build goes from pathological to routine:
 
 ```sql
 CREATE INDEX … USING btree (eql_v3.eq_term(col));   -- large tables
@@ -297,7 +301,7 @@ The first move on a slow EQL query is `EXPLAIN (COSTS OFF)`. Look for:
 - **`Bitmap Index Scan on <your-index>`** — same, for set-style predicates (`@>`). ✓
 - **`Index Cond:`** referencing the extractor (`eql_v3.eq_term(…)`, `eql_v3.ord_term(…)`) — the inlined predicate matched the index. ✓
 - **`Seq Scan`** — no index used. Investigate.
-- **`Filter:` showing the raw operator** (`col < '…'`) — inlining did not happen. Usual causes: a pinned `search_path` on a customised function (`\df+` shows `proconfig`), a `plpgsql` body where a `sql` one is expected, or the planner judging another plan cheaper.
+- **`Filter:` showing the raw operator** (`col < '…'`) — inlining did not happen. Usual causes: a pinned `search_path` on a customised function (`\sf <function>` shows any `SET search_path` clause), a `plpgsql` body where a `sql` one is expected, or the planner judging another plan cheaper.
 - **`Sort` node above an Index Scan** — natural-form `ORDER BY`; expected for that shape. Switch the sort key to the column's ordering extractor to eliminate it.
 
 Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings.
@@ -311,11 +315,12 @@ Once a plan looks right, repeat with `EXPLAIN ANALYZE` to measure actual timings
 1. **Verify the value carries the term.** Equality needs `hm` on the `hm`-carrying domains (the ordering term serves it on numeric-and-time `_ord` / `_ord_ore`), range needs `op` (or `ob` on an `_ord_ore` column), containment needs `bf`:
    ```sql
    SELECT encrypted_email::jsonb ? 'hm' AS has_hmac,
+          encrypted_email::jsonb ? 'op' AS has_ope,
           encrypted_email::jsonb ? 'ob' AS has_ore_block,
           encrypted_email::jsonb ? 'bf' AS has_bloom
    FROM users LIMIT 1;
    ```
-2. **Verify the operand is typed** (`$1::public.eql_v3_text_eq`, not `$1::jsonb`).
+2. **Verify the operand is typed** (`$1::eql_v3.query_text_eq`, not `$1::jsonb` — and not the storage domain `public.eql_v3_text_eq`, whose CHECK requires the ciphertext key query payloads omit).
 3. **Recreate the index** if the column's terms changed after the index was built.
 4. **Run `ANALYZE`** — very small tables may still choose a sequential scan, which is correct.
 

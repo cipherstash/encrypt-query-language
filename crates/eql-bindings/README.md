@@ -33,8 +33,9 @@ Shared wire fields are reusable newtypes in
 | Newtype | Wire key | Inner | Backs |
 |---------|----------|-------|-------|
 | `Ciphertext` | `c` | `String` | every domain (envelope) |
-| `Hmac256` | `hm` | `String` | `_eq` domains |
-| `OreBlock256` | `ob` | `Vec<String>` | `_ord` / `_ord_ore` domains |
+| `Hmac256` | `hm` | `String` | `_eq` domains + the text ordering/search domains |
+| `OpeCllw` | `op` | `String` | `_ord` / `_ord_ope` domains, `text_search` |
+| `OreBlock256` | `ob` | `Vec<String>` | `_ord_ore` domains, `text_search_ore` |
 | `BloomFilter` | `bf` | `Vec<i16>` (signed!) | `_match` domains |
 
 Note "v3" names the SQL schema generation (`eql_v3.*`); the JSON envelope

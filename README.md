@@ -21,6 +21,9 @@ Store encrypted data alongside your existing data:
   - [Local development (fastest)](#local-development-fastest)
   - [Install into an existing database](#install-into-an-existing-database)
   - [dbdev](#dbdev)
+- [EQL Components](#eql-components)
+  - [Release artifacts](#release-artifacts)
+- [Database Permissions](#database-permissions)
 - [Getting started](#getting-started)
   - [Enable encrypted columns](#enable-encrypted-columns)
 - [Encrypt configuration](#encrypt-configuration)
@@ -72,7 +75,8 @@ EQL installs the following components into the `eql_v3` schema:
 | --------------------------------------------------- | ------------- | ------------------------------------------------------------------- |
 | `eql_v3`                                            | Schema        | Holds EQL operators, term extractors, comparison wrappers, and aggregates |
 | `public.<T>`, `public.<T>_eq`, `public.<T>_ord`     | Domain types  | Per-scalar encrypted columns (one family per scalar: `integer`, `text`, `timestamp`, …) |
-| `public.eql_v3_json`                                       | Domain type   | Encrypted JSON (structured-encryption) documents                    |
+| `public.eql_v3_json_search`                                | Domain type   | Searchable encrypted JSON (structured-encryption) documents          |
+| `public.eql_v3_json`                                       | Domain type   | Encrypted JSON, storage-only (no query surface)                      |
 | `eql_v3.eq_term` / `ord_term` / `match_term`        | Functions     | Index-term extractors for functional indexes                        |
 
 
@@ -80,14 +84,14 @@ EQL installs the following components into the `eql_v3` schema:
 
 The `eql_v3` schema holds the operators, term extractors, comparison wrappers, and `MIN` / `MAX` aggregates for the encrypted-domain types. The encrypted-domain types themselves live in `public` (see below), and the internal SEM index-term types live in `eql_v3_internal`.
 
-Encrypted columns are typed as `public` domains (e.g. `public.eql_v3_text_eq`, `public.eql_v3_json`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
+Encrypted columns are typed as `public` domains (e.g. `public.eql_v3_text_eq`, `public.eql_v3_json_search`), and the searchable surface available on a column is fixed by its domain **variant** — there is no database-side configuration state. Storage-only variants (`public.eql_v3_text`, `public.eql_v3_json`, …) carry no query surface at all; the searchable JSON domain is `public.eql_v3_json_search`. Which index terms a value carries is decided by the encryption client (CipherStash Stack / CipherStash Proxy).
 
-The domain types deliberately live in `public`, not `eql_v3`, so application tables survive an EQL uninstall: `DROP SCHEMA eql_v3 CASCADE` removes the operators, extractors, and aggregates but leaves the `public`-typed columns (and their data) intact. Re-running the install script is idempotent.
+The domain types deliberately live in `public`, not `eql_v3`, so application tables survive an EQL uninstall: `DROP SCHEMA eql_v3 CASCADE` removes the operators, extractors, and aggregates but leaves the `public`-typed columns (and their data) intact. Re-running the install script is safe for columns and data — but note it begins with that same `DROP SCHEMA eql_v3 CASCADE`, which also **cascade-drops any functional indexes** built on the `eql_v3` extractors. After a re-install or upgrade, re-create your encrypted-column indexes and `ANALYZE` (see [Database Indexes](docs/reference/database-indexes.md)).
 
 
 ### Release artifacts
 
-EQL v3 prereleases can ship three artifacts under one identity: the SQL + docs
+EQL v3 releases ship three artifacts under one identity: the SQL + docs
 GitHub release, the Rust `eql-bindings` crate, and the TypeScript
 `@cipherstash/eql` npm package. The language packages bundle the exact SQL
 installer they were generated against.
@@ -95,69 +99,23 @@ installer they were generated against.
 
 ## Database Permissions
 
-EQL requires specific database privileges to install and operate correctly. The permissions needed depend on your deployment pattern.
+The canonical reference is **[EQL permissions & grants](docs/reference/permissions.md)** — install privileges (including the one superuser-gated component, the ORE operator class, and which managed platforms allow it), the per-query-path grant matrix, and the operator-free function equivalents. The short version:
 
-### Default Permissions (Recommended)
-
-For most use cases, grant the following permissions to the database user that will install and use EQL:
-
-```sql
--- Database-level permissions
-GRANT CREATE ON DATABASE your_database TO your_eql_user;
-
--- Schema permissions
-GRANT USAGE ON SCHEMA public TO your_eql_user;
-GRANT CREATE ON SCHEMA public TO your_eql_user;
-
--- User table permissions (for encrypted column constraints)
-GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_eql_user;
--- Or grant ALTER on specific tables that will have encrypted columns:
--- GRANT ALTER ON TABLE your_table TO your_eql_user;
-```
-
-**Why these permissions are needed:**
-
-- **CREATE ON DATABASE**: Required to create the `eql_v3` schema, domain types, and functions during installation
-- **CREATE ON SCHEMA public**: Required to add encrypted columns (typed as `public` domains) to tables in the public schema
-- **ALTER on user tables**: encrypted-domain `CHECK` constraints are validated on the user tables
-
-### Splitting Read and Write Access
-
-A common production pattern separates setup/migration permissions from runtime permissions:
-
-#### Setup/Migration User (Write Access)
-
-Use during database migrations and EQL installation:
+- **Installing** needs `CREATE` on the database plus `CREATE`/`USAGE` on `public` — no superuser, except for the optional block-ORE operator class. Altering the tables that receive encrypted columns requires table *ownership* (PostgreSQL has no grantable `ALTER` table privilege).
+- **The installer issues no `GRANT`s.** Access to `eql_v3` / `eql_v3_internal` is strictly opt-in per role.
+- **A runtime role** that queries encrypted columns typically needs:
 
 ```sql
--- All default permissions above, plus:
-GRANT CREATE ON DATABASE your_database TO your_migration_user;
-GRANT CREATE ON SCHEMA public TO your_migration_user;
-GRANT ALTER ON ALL TABLES IN SCHEMA public TO your_migration_user;
-```
-
-#### Runtime User (Read Access)
-
-Use for application queries in production:
-
-```sql
--- EQL schema usage (resolves the encrypted operators / extractors)
 GRANT USAGE ON SCHEMA eql_v3 TO your_app_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3 TO your_app_user;
-
--- eql_v3_internal holds the implementation the public eql_v3 operators dispatch
--- into. Grant it the same way as eql_v3 — explicitly, per runtime role.
+-- The public operators inline into eql_v3_internal, so query roles need it too:
 GRANT USAGE ON SCHEMA eql_v3_internal TO your_app_user;
 GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3_internal TO your_app_user;
-
 -- User table access (normal application permissions)
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE your_tables TO your_app_user;
 ```
 
-**Migration Workflow:**
-1. Use the migration user to install EQL and add encrypted columns
-2. Use the runtime user for normal application operations
-3. Schema changes (adding/removing encrypted columns) require the migration user
+See [permissions.md](docs/reference/permissions.md) for the pgcrypto-schema grant the ORE variants additionally need, and for narrowing grants per query path.
 
 
 ### dbdev
@@ -173,7 +131,7 @@ Once EQL is installed in your PostgreSQL database, you can start using encrypted
 
 ### Enable encrypted columns
 
-Define encrypted columns using a `public` encrypted-domain type. Type the column as the **variant** for the capability you need — `public.eql_v3_text_eq` for equality, `public.<T>_ord` for range/ordering, `public.eql_v3_text_match` for full-text, `public.eql_v3_json` for encrypted JSON. Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
+Define encrypted columns using a `public` encrypted-domain type. Type the column as the **variant** for the capability you need — `public.eql_v3_text_eq` for equality, `public.<T>_ord` for range/ordering, `public.eql_v3_text_match` for full-text, `public.eql_v3_json_search` for searchable encrypted JSON (`public.eql_v3_json` is the storage-only flavour). Each is stored as `jsonb` with a `CHECK` constraint that validates the encrypted payload.
 
 **Example:**
 
@@ -202,7 +160,7 @@ In order to enable searchable encryption, you will need to configure your Cipher
 
 ## Performance
 
-Query latency for searchable-encryption operations stays low across data set sizes. The numbers below are query-only medians (no decryption) from a full benchmark run against EQL 2.3 on PostgreSQL 17, across four row-count tiers.
+Query latency for searchable-encryption operations stays low across data set sizes. The numbers below are query-only medians (no decryption) from a full benchmark run against EQL 2.3 on PostgreSQL 17, across four row-count tiers. (The JSON rows predate the 3.0 ste_vec redesign — field equality is now value-selector containment — so treat them as indicative, not current.)
 
 | Family | Scenario | 10k | 100k | 1M | 10M |
 |---|---|--:|--:|--:|--:|
@@ -314,7 +272,7 @@ To upgrade to the latest version of EQL, you can simply run the install script a
    ```
 
 > [!NOTE]
-> The install script will not remove any existing configurations, so you can safely run it multiple times.
+> Re-running the install script is safe for your columns and data (the domain types live in `public` and survive). It does, however, begin with `DROP SCHEMA eql_v3 CASCADE`, which cascade-drops any **functional indexes** built on the `eql_v3` extractors — re-create them and `ANALYZE` after every upgrade (see [Database Indexes](docs/reference/database-indexes.md)).
 
 #### Using dbdev?
 
@@ -326,11 +284,11 @@ Follow the instructions in the [dbdev documentation](https://database.dev/cipher
 
 **A query returns no rows / silently runs native `jsonb` semantics**
 - **Cause**: the query operand was an untyped literal, so PostgreSQL flattened the `eql_v3` domain to its `jsonb` base type and resolved the native operator
-- **Solution**: type the operand — `WHERE col = $1::public.eql_v3_text_eq` (CipherStash Proxy supplies typed parameters automatically)
+- **Solution**: type the operand with the matching query-operand domain — `WHERE col = $1::eql_v3.query_text_eq` (CipherStash Proxy supplies typed parameters automatically)
 
 **Error: "operator not supported" (raised)**
 - **Cause**: the operator is blocked for the column's domain variant (e.g. `<` on an `_eq` column, or `LIKE` on any encrypted column)
-- **Solution**: type the column as a variant that carries the required term (see the [SQL support matrix](docs/reference/sql-support.md)); use `@>` rather than `LIKE` for text match
+- **Solution**: type the column as a variant that carries the required term (see the [SQL support matrix](docs/reference/sql-support.md)); use `@@` rather than `LIKE` for text match
 
 **`=` returns no rows on a populated column**
 - **Cause**: the column's values do not carry an `hm` equality term

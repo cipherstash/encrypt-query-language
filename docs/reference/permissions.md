@@ -18,6 +18,67 @@ Two consequences follow from standard PostgreSQL behaviour:
 
 A deployment that exposes EQL to non-owner roles must grant access explicitly.
 
+## Install privileges
+
+Installing EQL v3 requires only `CREATE` on the target database and schemas —
+**no superuser** — with one exception: the block-ORE btree operator
+class/family (`eql_v3_internal.ore_block_256_operator_class`). `CREATE
+OPERATOR CLASS` / `CREATE OPERATOR FAMILY` are superuser-gated commands in
+stock PostgreSQL (every supported version — the [`CREATE OPERATOR
+CLASS`](https://www.postgresql.org/docs/current/sql-createopclass.html) page:
+"Presently, the creating user must be a superuser"), and the privilege is not
+grantable.
+
+The installer handles this gracefully: the opclass is created inside a `DO`
+block that catches `insufficient_privilege` (SQLSTATE 42501) and skips with a
+`NOTICE`, after which the ORE-backed domains (`_ord_ore`, `text_search_ore`,
+and their `eql_v3.query_*` twins) are **disabled** — using one raises
+`feature_not_supported` with a `HINT` naming the alternatives (see
+[U-003](../upgrading/v3.0.md#u-003-non-superuser-installs-disable-the-ore-backed-domains)).
+Everything else — the domains, operators, extractors, aggregates, and every
+functional-index recipe except the ORE one — installs and works without
+superuser.
+
+Whether a managed platform allows the opclass is **per-platform**, decided by
+whether its admin role passes (or the vendor's engine delegates) that
+superuser check:
+
+| Platform | ORE opclass installable? | Source |
+| --- | --- | --- |
+| Self-hosted / containerised PostgreSQL (superuser) | ✅ | stock behaviour |
+| Aurora PostgreSQL (13+, and 12.12.0+) | ✅ — delegated to `rds_superuser` | [Aurora release notes 12.12.0](https://docs.aws.amazon.com/AmazonRDS/latest/AuroraPostgreSQLReleaseNotes/AuroraPostgreSQL.Updates.html): "Added support for the rds_superuser role to execute CREATE OPERATOR CLASS…" |
+| RDS for PostgreSQL (non-Aurora) | ✅ — the master user can | verified in production CipherStash deployments running ORE with the custom operator class on RDS (AWS does not release-note the delegation the way it does for Aurora — confirm on your instance with the probe below if in doubt) |
+| Cloud-hosted Supabase | ❌ — the `postgres` role cannot | [supabase/supautils#72](https://github.com/supabase/supautils/issues/72) (open feature request; "must be superuser to create an operator family") |
+| Google Cloud SQL | ❌ | ["Unsupported features"](https://cloud.google.com/sql/docs/postgres/features): "Any feature that requires SUPERUSER" (opclasses are not among the exceptions) |
+| Azure Database for PostgreSQL Flexible Server | ❌ (admin is `NOSUPERUSER`; no documented carve-out) | [Azure security docs](https://learn.microsoft.com/en-us/azure/postgresql/security/security-access-control) |
+
+To check any role/platform directly:
+
+```sql
+DO $$ BEGIN
+  CREATE OPERATOR FAMILY _priv_probe USING btree;
+  DROP OPERATOR FAMILY _priv_probe USING btree;
+  RAISE NOTICE 'this role can create operator classes/families';
+EXCEPTION WHEN insufficient_privilege THEN
+  RAISE NOTICE 'this role cannot create operator classes/families (SQLSTATE 42501)';
+END $$;
+```
+
+> **This is a different mechanism from the extension restriction.** Custom
+> *extensions* are impossible on managed platforms because `CREATE EXTENSION`
+> needs the extension's files on a filesystem customers cannot touch — vendors
+> ship a vetted set and may restrict it further (e.g. RDS's
+> `rds.allowed_extensions`). The EQL opclass ships **no files**: it is pure
+> catalog DDL whose support functions ride on pgcrypto (on every platform's
+> supported/trusted list). Only the superuser gate above decides it —
+> extension allow-lists are never the reason.
+
+If a database was **installed with the opclass and later loses it** (or an
+`_ord_ore` column otherwise exists without it), note that `CREATE INDEX …
+btree (eql_v3.ord_term_ore(col))` still succeeds by silently binding
+`record_ops` — an index that never engages. See [the detection
+query](./database-indexes.md#range-queries-and-order-by) in the indexes guide.
+
 ## Granting access (the opt-in step)
 
 For an application role (for example a Supabase `authenticated` / `anon` role, or
@@ -36,7 +97,8 @@ GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA eql_v3_internal TO app_role;
 
 -- pgcrypto (Supabase installs it here). The ORE comparison behind ordering and
 -- MIN/MAX calls pgcrypto `encrypt()`, so ordered/aggregated queries need USAGE
--- on its schema. If pgcrypto lives elsewhere, grant USAGE on that schema instead.
+-- on its schema. (The installer accepts pgcrypto only in `extensions` or in
+-- `public`; `public` needs no grant.)
 GRANT USAGE ON SCHEMA extensions TO app_role;
 
 -- Optionally keep future functions granted:
@@ -58,8 +120,7 @@ needs `USAGE` on it anyway. The exact requirement is path-dependent:
 | Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
 | `MIN` / `MAX` aggregates | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
 | jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
-| Cast/write raw JSON → `public.eql_v3_json_search` | ✅ | ✅ | — |
-| Cast/write raw JSON → a scalar domain (`public.eql_v3_integer`…) | ✅ | — | — |
+| Cast/write raw JSON → `public.eql_v3_json_search` or a scalar domain (`public.eql_v3_integer`…) | — | — | — |
 | Cast a query operand → `eql_v3.query_<name>` / `eql_v3.query_json` | ✅ | — | — |
 
 Why the internal grant is needed even though you only call public objects:
@@ -79,15 +140,19 @@ Why the internal grant is needed even though you only call public objects:
   installer places in the `extensions` schema — hence the `USAGE` there. The
   CLLW-OPE variants (`_ord`, `_ord_ope`, `text_search`) compare native `bytea`
   and need no `extensions` grant.
-- **Casting raw jsonb to `public.eql_v3_json_search` or `eql_v3.query_json`** fires a
-  domain `CHECK` that calls an `eql_v3_internal.is_valid_*` validator. (Scalar
-  domain CHECKs — and, since issue #354, the `public.eql_v3_json_entry` CHECK — are
-  pure structural jsonb tests, so casting to those domains needs no internal
-  grant.)
+- **Casting raw jsonb to `public.eql_v3_json_search`** fires a domain `CHECK`
+  that calls the `public.eql_v3_is_valid_ste_vec_*` validators — deliberately
+  kept in `public` so application table columns survive an EQL schema
+  uninstall — so it needs **no** schema grant at all. (Scalar domain CHECKs —
+  and, since issue #354, the `public.eql_v3_json_entry` CHECK — are pure
+  structural jsonb tests, likewise grant-free. Casting to the
+  `eql_v3.query_*` operand domains needs `USAGE` on `eql_v3` only because the
+  domains themselves live there.)
 
 The hand-written jsonb containment **read** path (`eql_v3.ste_vec_contains` and
-the `@>` / `<@` operators over it) is `plpgsql` — never inlined — so it runs under
-the public `eql_v3` grant alone.
+the `@>` / `<@` operators over it) stays within `eql_v3` / `public` — the array
+variant is `plpgsql` (never inlined) and the typed variant inlines only `eql_v3`
+calls — so it runs under the public `eql_v3` grant alone.
 
 This behaviour is gated by `tests/sqlx/tests/v3_privilege_tests.rs`. So the
 public **function equivalents** (below) change *how* you invoke a supported

@@ -16,7 +16,7 @@ gates guarantee the derived artifacts never drift from it.
 ```mermaid
 flowchart TD
     subgraph SOT["① SOURCE OF TRUTH — crates/eql-domains"]
-        CAT["CATALOG: &[DomainFamily]<br/>(11 families: 10 scalar + jsonb)"]
+        CAT["CATALOG: &[DomainFamily]<br/>(11 families: 10 scalar + json)"]
         FIX["FIXTURES: &[TypeFixtures]<br/>(plaintext value lists)"]
         TERM["Term enum impls<br/>(Hm / Ore / Bloom / Ope capabilities)"]
         CAT -.compile-time parity guard.- FIX
@@ -70,13 +70,17 @@ Everything starts in `crates/eql-domains/src/lib.rs`:
 
 ```rust
 pub const CATALOG: &[DomainFamily] = &[
-    INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSONB,
+    INTEGER, SMALLINT, BIGINT, DATE, TIMESTAMP, NUMERIC, TEXT, BOOLEAN, REAL, DOUBLE, JSON,
 ];
 ```
 
 Order is **load-bearing** — it drives generation order, inventory order, and snapshot order.
-Ten of the eleven rows are `Shape::Scalar` families; the eleventh, `JSONB`, is the hand-written
-SteVec family (see §2.3). Scalar-only consumers iterate `scalar_families()`, which filters `JSONB` out.
+Ten of the eleven rows are `Shape::Scalar` families; the eleventh, `JSON`, is a **mixed** family —
+three hand-written `Shape::SteVec` domains plus one generated `Shape::Scalar` storage domain
+(`public.eql_v3_json`, rendered into `src/v3/scalars/json/` like any other storage-only domain; see §2.3).
+Scalar-only consumers iterate `scalar_families()`, which filters `JSON` out wholesale (`is_scalar()`
+is an `.all()`); the SQL/bindings generators instead iterate `families_with_scalar_domains()` and so
+do render that storage domain.
 
 ### 2.1 The data model
 
@@ -89,6 +93,7 @@ classDiagram
     class Domain {
         +name: &str        // "", "eq", "ord", "ord_ore", "ord_ope", "match", "search"
         +terms: &[Term]
+        +shape: Shape      // Scalar | SteVec
     }
     class Term {
         <<enum>>
@@ -165,7 +170,7 @@ one of three catalog shapes. The invariant test `every_type_uses_a_known_domain_
 iterates `scalar_families()`, not the full `CATALOG`, and accepts these current shapes
 plus two known-but-unused shapes (`eq-only` and `ordered+match`) so future scalar rows
 fail loudly if they drift into an unreviewed shape. The eleventh `CATALOG` family,
-`jsonb`, is not scalar-shaped at all — see the note after the family table below.
+`json`, is not scalar-shaped at all — see the note after the family table below.
 
 ```mermaid
 flowchart LR
@@ -191,7 +196,7 @@ flowchart LR
 | `text` | Text | text-search (equality always routes through `Hm` — ORE is not equality-lossless for text) |
 | `boolean` | Bool | storage-only (2-value cardinality leak → no searchable index) |
 
-**`jsonb` sits outside this classification.** It carries four domains. Three are
+**`json` sits outside this classification.** It carries four domains. Three are
 `Shape::SteVec` — `public.eql_v3_json_search` (document), `public.eql_v3_json_entry`
 (one `sv` leaf), `eql_v3.query_json` (containment needle) — each with an empty flat
 `terms` list: capability lives *structurally* inside the payload (per-`sv`-leaf `hm`
@@ -200,15 +205,15 @@ storage-only domain, `public.eql_v3_json` (bare `name: ""`, ciphertext-only `{v,
 no index terms). `Domain.name` (`"search"`/`"entry"`/`"query"`, and `""` for the storage
 domain) disambiguates which one a given domain is — see `Domain::rust_struct_name`.
 `scalar_families()` filters `CATALOG` down to families whose domains are *all*
-`Shape::Scalar`, so `jsonb` never reaches `every_type_uses_a_known_domain_shape`, the
+`Shape::Scalar`, so `json` never reaches `every_type_uses_a_known_domain_shape`, the
 ordered-scalar materializer (§3), or the scalar SQLx matrix. Its three SteVec domains are
 hand-written under `src/v3/json/` and their Rust structs in
 `crates/eql-bindings/src/v3/json.rs`; the generated storage domain's SQL is rendered into
 `src/v3/scalars/json/` and its struct into `crates/eql-bindings/src/v3/json_storage.rs`
 (via `families_with_scalar_domains()`) — for the SteVec domains, only inventory membership
 and `CATALOG` order are catalog-driven. This is also why the class diagram in §2.1 lists
-`Jsonb` as a `ScalarKind` variant even though `jsonb` is not a `Shape::Scalar` family:
-`ScalarKind` and `Shape` are independent axes, and `JSONB_FIXTURES`
+`Jsonb` as a `ScalarKind` variant even though `json` is not a `Shape::Scalar` family:
+`ScalarKind` and `Shape` are independent axes, and `JSON_FIXTURES`
 (`crates/eql-domains/src/fixtures/record.rs`) needs a `ScalarKind` purely for the
 `FIXTURES`/`CATALOG` parity machinery.
 
@@ -279,17 +284,25 @@ discipline; `eql-codegen clean` exposes just the marker-aware SQL removal step.
 
 ### 3.1 SQL generation (`generate.rs` + `context.rs` + minijinja templates)
 
-Per family, four renderers emit into `src/v3/scalars/<family>/`:
+Per family, the renderers emit three surfaces into `src/v3/scalars/<family>/`: the
+**column-domain** surface (types/functions/operators/aggregates), the **query-operand**
+surface (`query_*` — one term-only `eql_v3.query_<T>_<dom>` twin per term-bearing
+domain), and the **`json_entry` cross** surface (comparisons between the extracted
+SteVec leaf `public.eql_v3_json_entry` and the family's query operands):
 
 ```mermaid
 flowchart TD
     F["DomainFamily"] --> T["render_types_file<br/>→ &lt;T&gt;_types.sql"]
+    F --> QT["render_query_types_file<br/>→ query_&lt;T&gt;_types.sql"]
     F --> PERDOM{"for each Domain"}
     PERDOM --> FN["render_functions_file<br/>→ &lt;T&gt;_&lt;dom&gt;_functions.sql"]
     PERDOM --> OP["render_operators_file<br/>→ &lt;T&gt;_&lt;dom&gt;_operators.sql"]
     PERDOM --> AG{"ORE-capable?"}
     AG -->|yes| AGG["render_aggregates_file<br/>→ &lt;T&gt;_&lt;dom&gt;_aggregates.sql<br/>(min/max)"]
     AG -->|no| SKIP["(no aggregates)"]
+    PERDOM --> QD{"term-bearing?"}
+    QD -->|yes| QFO["render_query_functions_file /<br/>render_query_operators_file<br/>→ query_&lt;T&gt;_&lt;dom&gt;_{functions,operators}.sql"]
+    F --> JE["json_entry cross renderers<br/>→ json_entry_&lt;T&gt;_{functions,operators}.sql<br/>(families with an Ope-bearing domain)"]
 ```
 
 Each `*_functions.sql` mixes three entry kinds, selected per operator:
@@ -355,7 +368,7 @@ distinctions become visible — e.g. `text_ord` lists `v i c hm op` (dual-term) 
 ```text
 src/v3/scalars/
 ├── functions.sql          ← hand-written shared blocker helper (COMMITTED)
-├── integer/               (14 generated files)
+├── integer/               (25 generated files)
 │   ├── integer_types.sql              (generated, committed)
 │   ├── integer_functions.sql          (storage-only blockers)
 │   ├── integer_operators.sql          (storage-only operator blockers)
@@ -369,7 +382,18 @@ src/v3/scalars/
 │   ├── integer_ord_aggregates.sql     (min/max)
 │   ├── integer_ord_ope_functions.sql
 │   ├── integer_ord_ope_operators.sql
-│   └── integer_ord_ope_aggregates.sql (min/max)
+│   ├── integer_ord_ope_aggregates.sql (min/max)
+│   ├── query_integer_types.sql        (eql_v3.query_* operand domains, term-only)
+│   ├── query_integer_eq_functions.sql       ┐
+│   ├── query_integer_eq_operators.sql       │ one functions/operators pair
+│   ├── query_integer_ord_functions.sql      │ per term-bearing domain
+│   ├── query_integer_ord_operators.sql      │
+│   ├── query_integer_ord_ore_functions.sql  │
+│   ├── query_integer_ord_ore_operators.sql  │
+│   ├── query_integer_ord_ope_functions.sql  │
+│   ├── query_integer_ord_ope_operators.sql  ┘
+│   ├── json_entry_integer_functions.sql (json_entry ↔ query-operand cross surface)
+│   └── json_entry_integer_operators.sql
 │   (integer_extensions.sql ← hand-written, COMMITTED, only if present)
 └── ...
 ```
@@ -388,13 +412,16 @@ flowchart TD
         MOD["mod.rs<br/>module doc: float-NaN + bool caveats"]
         DT["domain_type.rs<br/>DomainType trait"]
         TR["terms.rs<br/>Ciphertext/Hmac256/<br/>OreBlock256/BloomFilter"]
+        JSRS["json.rs<br/>SteVec payload types"]
         LIB["lib.rs<br/>SchemaVersion/Identifier"]
     end
-    subgraph gen["GENERATED (@generated)"]
-        I4["integer.rs / text.rs / ... (10 files)"]
+    subgraph gen["GENERATED (@generated) — 14 files"]
+        I4["integer.rs / text.rs / ... (10 family files)<br/>+ json_storage.rs"]
+        PAY["payload.rs / query_payload.rs<br/>DomainPayload / QueryPayload enums"]
         INV["inventory.rs — all()"]
     end
     DT --> I4
+    DT --> PAY
     TR --> I4
     LIB --> I4
     MOD --> gen
@@ -440,17 +467,17 @@ operator blocked).
 
 ```mermaid
 flowchart LR
-    RS["Rust structs<br/>#[derive(TS, JsonSchema)]"] -->|ts-rs export<br/>via cargo test -p eql-bindings| TS["crates/eql-bindings/bindings/v3/IntegerEq.ts<br/>(63 files)"]
-    RS -->|schemars via tests/export.rs<br/>injects $id| JS["crates/eql-bindings/schema/v3/integer_eq.json<br/>(51 files)"]
+    RS["Rust structs<br/>#[derive(TS, JsonSchema)]"] -->|ts-rs export<br/>via cargo test -p eql-bindings| TS["crates/eql-bindings/bindings/v3/IntegerEq.ts<br/>(104 files)"]
+    RS -->|schemars via tests/export.rs<br/>injects $id| JS["crates/eql-bindings/schema/v3/integer_eq.json<br/>(92 files)"]
 ```
 
 - **TypeScript:** one `.ts` per domain, importing co-located term types; newtypes become
-  primitive aliases (`export type Ciphertext = string;`, `export type SchemaVersion = 2;`).
+  primitive aliases (`export type Ciphertext = string;`, `export type SchemaVersion = 3;`).
   Doc comments survive from Rust.
 - **JSON Schema:** JSON Schema 2020-12 (schemars 1.x), `additionalProperties: false`,
   `$id` injected at export (`https://schemas.cipherstash.com/eql/v3/integer_eq.json`), term
   types as reusable `$defs`. `BloomFilter` and `SchemaVersion` have **manual** `JsonSchema`
-  impls (bounded `i16[]`, `const: 2`) that derives can't express.
+  impls (bounded `i16[]`, `const: 3`) that derives can't express.
 
 > **Per-field vs per-struct docs:** there are *no* per-field docs on generated structs.
 > Per-term semantics live on the shared term newtypes in `terms.rs` (flowing into TS term

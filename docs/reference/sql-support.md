@@ -15,9 +15,9 @@ The capability of a column is fixed by the **domain variant you type it as**. Th
 
 Each scalar type `<T>` is a family of `jsonb`-backed domains in `public`. The catalog scalar tokens that ship today are:
 
-`smallint`, `integer`, `bigint`, `numeric`, `real`, `double`, `date`, `timestamp`, `text`, `boolean`.
+`smallint`, `integer`, `bigint`, `numeric`, `real`, `double`, `date`, `timestamp`, `text`, `boolean`, `json` (the bare `public.eql_v3_json` scalar domain is storage-only, like `boolean` — the *queryable* JSON document domain is `public.eql_v3_json_search`, [below](#publiceql_v3_json_search-structured-encryption-for-json)).
 
-(See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md) for how the family is generated.) The domains live in the `public` schema, so they survive `DROP SCHEMA eql_v3 CASCADE` — dropping `eql_v3` removes the operators, extractors, and aggregates but leaves the `public`-typed columns and their data intact. Their extracted index-term types are the self-contained `eql_v3_internal` SEM types (`eql_v3_internal.hmac_256`, `eql_v3_internal.ore_block_256`, `eql_v3_internal.bloom_filter`).
+(See [Adding a Scalar Encrypted-Domain Type](./adding-a-scalar-encrypted-domain-type.md) for how the family is generated.) The domains live in the `public` schema, so they survive `DROP SCHEMA eql_v3 CASCADE` — dropping `eql_v3` removes the query operators, extractors, and aggregates (the blockers, bound to `eql_v3_internal` functions, survive) but leaves the `public`-typed columns and their data intact. Their extracted index-term types are the self-contained `eql_v3_internal` SEM types (`eql_v3_internal.hmac_256`, `eql_v3_internal.ope_cllw`, `eql_v3_internal.ore_block_256`, `eql_v3_internal.bloom_filter`).
 
 Every scalar generates a storage-only variant plus the query variants its capabilities allow:
 
@@ -35,14 +35,14 @@ Every scalar generates a storage-only variant plus the query variants its capabi
 
 Notes:
 
-- The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.eql_v3_integer_ord`) when you need to query.
+- The bare `public.<T>` variant carries no index term and **blocks every comparison operator** — it is storage / decryption only. Type the column as `_eq` or `_ord` (or cast at the call site, e.g. `col::public.eql_v3_integer_ord` — this succeeds only if the stored payloads already carry the `op` term; otherwise the domain CHECK raises) when you need to query.
 - `_ord` and `_ord_ope` are **twins**: byte-identical surfaces backed by the CLLW-OPE term. `op` is a hex-encoded, order-preserving ciphertext compared by native bytea ordering after hex-decode (no custom comparison protocol, and `eql_v3_internal.ope_cllw` is a domain over `bytea`, so a functional btree on `eql_v3.ord_term(col)` uses the default operator class and needs no superuser). `_ord` is the recommended name; `_ord_ope` documents the scheme explicitly.
-- `_ord_ore` exposes the **same ordered surface** backed by the block-ORE term (`ob`) instead, compared by the custom N-block protocol. Use it when you specifically need block-ORE. Caveat: its btree operator class is created by a superuser-only `DO` block that is **silently skipped** without that privilege. When it is missing, `CREATE INDEX … btree (eql_v3.ord_term_ore(col))` still *succeeds* — PostgreSQL falls back to `record_ops` on the composite — but that opfamily does not contain the ORE comparison operators, so the index never engages and the ordering it stores is not the ORE ordering. Verify with `\d+` that the index opclass is `ore_block_256_operator_class`, not `record_ops`.
-- On `text_ord` / `text_ord_ope` / `text_ord_ore`, `=` / `<>` route through `hm` (exact HMAC) — ordering terms over text are not equality-lossless.
+- `_ord_ore` exposes the **same ordered surface** backed by the block-ORE term (`ob`) instead, compared by the custom N-block protocol. Use it when you specifically need block-ORE. Caveat: its btree operator class is created by a superuser-gated `DO` block that is **skipped (with only a `NOTICE`)** without that privilege. When it is missing, `CREATE INDEX … btree (eql_v3.ord_term_ore(col))` still *succeeds* — PostgreSQL falls back to `record_ops` on the composite — but that opfamily does not contain the ORE comparison operators, so the index never engages and the ordering it stores is not the ORE ordering. Verify with `\d+` that the index opclass is `ore_block_256_operator_class`, not `record_ops`.
+- For `<T> = text`, the ordering variants carry **more** than the table's generic cells say: `text_ord` / `text_ord_ope` carry `hm` **+** `op`, and `text_ord_ore` carries `hm` **+** `ob`, each with an `eql_v3.eq_term(col)` extractor alongside the ordering one. `=` / `<>` route through `hm` (exact HMAC) — ordering terms over text are not equality-lossless, unlike the numeric-and-time types where the injective ordering term serves equality directly.
 - `text_ord` accepts the empty string (its `op` term is well-formed and sorts first). `text_ord_ore` **rejects** it: encrypting `""` yields an empty ORE term (`ob: []`) that the domain CHECK refuses.
 - `=` / `<>` is the only searchable surface for `_eq`. On `_ord` variants the equality operators are available too (alongside the ordered ones).
 - `boolean` is **storage-only** by design — a two-value column has too little cardinality for any searchable index to be safe, so it ships only `public.eql_v3_boolean` (no `_eq` / `_ord`).
-- `LIKE` / `ILIKE` (`~~` / `~~*`) and the native JSONB operators are **blocked on every scalar domain variant** — they are meaningless on a scalar payload. Text matching is the bloom-filter `@@` (`eql_v3.matches`) on `text_match`, not `LIKE`.
+- `LIKE` / `ILIKE` (`~~` / `~~*`) do not work on any scalar domain variant — but unlike the other ❌ cells they fail at operator *resolution* (PostgreSQL's "operator does not exist"), since no `~~` blocker is defined, rather than with the EQL "operator not supported" exception. Text matching is the bloom-filter `@@` (`eql_v3.matches`) on `text_match`, not `LIKE`.
 - `MIN` / `MAX` are exposed only on the ordered variants, as `eql_v3.min(public.<T>_ord)` / `eql_v3.max(...)` (and likewise on `_ord_ope` / `_ord_ore`) — see [EQL Functions Reference](./eql-functions.md#eql_v3min--eql_v3max-per-domain).
 
 ---
@@ -82,16 +82,17 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 | `WHERE col IN (…)`                   | desugars to `=`                                                                         | `_eq`, `_ord`, `text_search`, `text_search_ore` |
 | `ORDER BY col`                       | meaningful only with an ordering term                                                   | `_ord`, `text_search`, `text_search_ore` |
 | `GROUP BY col` / `DISTINCT`          | needs an equality term                                                                  | `_eq`, `_ord`, `text_search`, `text_search_ore` |
-| `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.eql_v3_integer_ord)`) | `_ord` |
+| `MIN(col)` / `MAX(col)`              | `eql_v3.min(public.<T>_ord)` / `max` — type the column as `_ord` or cast at the call site (`eql_v3.min(col::public.eql_v3_integer_ord)`) | `_ord`, `text_search`, `text_search_ore` |
 | `COUNT(col)` / `COUNT(DISTINCT col)` | plain `COUNT(col)` needs no term; `DISTINCT` needs an equality term                     | any / `_eq` for `DISTINCT` |
-| `JOIN … ON lhs.col = rhs.col`        | both sides must share the same keyset and a matching variant                            | `_eq`, `_ord`, `text_search` |
+| `JOIN … ON lhs.col = rhs.col`        | both sides must share the same keyset and a matching variant                            | `_eq`, `_ord`, `text_search`, `text_search_ore` |
 
 Notes:
 
+- **`_ord` in the "requires" column is shorthand for all three ordering variants** — `_ord`, its explicit twin `_ord_ope`, and the block-ORE `_ord_ore`. Every row that lists `_ord` holds for all three (they share the operator surface, and `eql_v3.min` / `max` are generated for each); `_ord_ope` and `_ord_ore` are spelled out in the domain-variant table above.
 - **Cross-column / cross-table comparisons** (joins, `IN (subquery)`, set-operation dedup) require both sides to have been encrypted with the *same* keyset and a matching variant.
 - **`ORDER BY`** without an ordering term will not produce a meaningful order — type the column as an `_ord` variant when ordering matters.
 - **Aggregates beyond `MIN` / `MAX`** (`SUM`, `AVG`, …) are not supported on encrypted values — decrypt at the application boundary and aggregate client-side.
-- **Parameter binding**: CipherStash Proxy rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter (`$1::public.eql_v3_integer_ord`) so the encrypted operator resolves rather than the native `jsonb` one.
+- **Parameter binding**: [CipherStash Proxy](https://github.com/cipherstash/proxy) rewrites bound parameters so the encrypted operator and any functional indexes are selected. When bypassing the proxy, type the parameter with the matching **query-operand domain** — `$1::eql_v3.query_integer_ord`, `$1::eql_v3.query_text_eq`, … — so the encrypted operator resolves rather than the native `jsonb` one. Every queryable variant has an `eql_v3.query_<T>_<variant>` twin, and query payloads must use it: they are term-only (no ciphertext), so casting one to the *storage* domain (`public.eql_v3_integer_ord`) fails its CHECK, and a bare uncast literal is ambiguous between the query and `jsonb` overloads and will not resolve.
 
 ---
 
@@ -148,7 +149,7 @@ Exact equality is always value-selector presence (`@>`), injective for every typ
 | extracted-leaf `<` `<=` `>` `>=` | `eql_v3.ord_term(public.eql_v3_json_entry)`       | ordered comparison on an extracted String / Number leaf. |
 | `MIN` / `MAX` of extracted leaf  | `eql_v3.min(public.eql_v3_json_entry)` / `max`         | over an extracted ordered leaf. |
 | `eql_v3.jsonb_path_query(doc, sel)` | path query                                      | set-returning; yields encrypted entries. Also `jsonb_path_query_first`, `jsonb_path_exists`. |
-| `eql_v3.jsonb_array_length/elements/elements_text(doc)` | array helpers                  | length / set-returning elements / element text. |
+| `eql_v3.jsonb_array_length/elements(doc)` | array helpers                  | length / set-returning encrypted elements. (`jsonb_array_elements_text` was removed in 3.0 — a bare-ciphertext stream is no longer independently decryptable.) |
 
 > **Typed operands (important).** The selector / needle operand must carry a **known type** — a typed parameter (`$1`, which the Proxy supplies) or an explicit cast (`doc -> 'sel'::text`, `$1::eql_v3.query_json`). A bare untyped literal (`doc -> 'sel'`) resolves to the **native `jsonb` operator** (PostgreSQL reduces the `public.eql_v3_json_search` domain to its `jsonb` base type for an unknown-typed RHS) and silently returns native jsonb semantics instead of the encrypted operator.
 
