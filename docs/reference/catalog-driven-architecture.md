@@ -75,8 +75,12 @@ pub const CATALOG: &[DomainFamily] = &[
 ```
 
 Order is **load-bearing** — it drives generation order, inventory order, and snapshot order.
-Ten of the eleven rows are `Shape::Scalar` families; the eleventh, `JSON`, is the hand-written
-SteVec family (see §2.3). Scalar-only consumers iterate `scalar_families()`, which filters `JSON` out.
+Ten of the eleven rows are `Shape::Scalar` families; the eleventh, `JSON`, is a **mixed** family —
+three hand-written `Shape::SteVec` domains plus one generated `Shape::Scalar` storage domain
+(`public.eql_v3_json`, rendered into `src/v3/scalars/json/` like any other storage-only domain; see §2.3).
+Scalar-only consumers iterate `scalar_families()`, which filters `JSON` out wholesale (`is_scalar()`
+is an `.all()`); the SQL/bindings generators instead iterate `families_with_scalar_domains()` and so
+do render that storage domain.
 
 ### 2.1 The data model
 

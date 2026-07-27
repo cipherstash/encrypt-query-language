@@ -88,6 +88,7 @@ This matrix covers higher-level SQL constructs. As above, ✅ requires the colum
 
 Notes:
 
+- **`_ord` in the "requires" column is shorthand for all three ordering variants** — `_ord`, its explicit twin `_ord_ope`, and the block-ORE `_ord_ore`. Every row that lists `_ord` holds for all three (they share the operator surface, and `eql_v3.min` / `max` are generated for each); `_ord_ope` and `_ord_ore` are spelled out in the domain-variant table above.
 - **Cross-column / cross-table comparisons** (joins, `IN (subquery)`, set-operation dedup) require both sides to have been encrypted with the *same* keyset and a matching variant.
 - **`ORDER BY`** without an ordering term will not produce a meaningful order — type the column as an `_ord` variant when ordering matters.
 - **Aggregates beyond `MIN` / `MAX`** (`SUM`, `AVG`, …) are not supported on encrypted values — decrypt at the application boundary and aggregate client-side.
