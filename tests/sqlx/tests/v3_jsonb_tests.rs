@@ -1411,6 +1411,106 @@ async fn v3_jsonb_array_length_non_array_raises(pool: PgPool) -> anyhow::Result<
 }
 
 // ============================================================================
+// D10a — Arrays reached THROUGH a path query.
+//
+// `array_doc()` above is a document that *is* an array, so the array functions
+// receive the array document directly. That is not how a client encounters an
+// array: an array is a FIELD of a document, and its elements are flattened into
+// the parent's `sv` as sibling entries that share one array-item selector and
+// carry `a:true`. Reaching them means `jsonb_path_query(parent, item_selector)`,
+// and the array functions are applied to THAT.
+//
+// These tests pin that composition. eql_v2 supported it —
+// `eql_v2.jsonb_path_query` aggregated array-flagged matches into a single row
+// carrying an inner `sv` (`jsonb_build_object('sv', jsonb_agg(elem), 'a', 1)`),
+// which is the array document `jsonb_array_length` needs. The v3 port dropped
+// that aggregation and returns one row per matching entry instead.
+// ============================================================================
+
+/// A document with an array FIELD, shaped the way the client stores one: the
+/// two elements of the array are flattened into the parent's `sv` as sibling
+/// entries sharing the array-item selector `ar` and flagged `a:true`, alongside
+/// an ordinary scalar field `nm`.
+fn document_with_array_field() -> String {
+    r#"{"i":{},"v":3,"h":"kh","sv":[{"s":"nm","c":"n"},{"s":"ar","c":"x","a":true},{"s":"ar","c":"y","a":true}]}"#
+        .to_string()
+}
+
+/// A path query that matches several array-flagged entries describes ONE array,
+/// so it yields ONE row — the array document — not a row per element.
+#[sqlx::test]
+async fn v3_jsonb_path_query_aggregates_array_entries(pool: PgPool) -> anyhow::Result<()> {
+    let d = document_with_array_field();
+
+    let rows: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'ar')"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        rows, 1,
+        "a path query onto an array yields one array document, not one row per element"
+    );
+
+    // A non-array selector is unaffected: still exactly one row.
+    let scalar_rows: i64 = sqlx::query_scalar(&format!(
+        "SELECT count(*) FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'nm')"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(scalar_rows, 1, "a scalar path query still yields one row");
+
+    Ok(())
+}
+
+/// The user-visible consequence: counting an array reached through a path query.
+#[sqlx::test]
+async fn v3_jsonb_array_length_through_path_query(pool: PgPool) -> anyhow::Result<()> {
+    let d = document_with_array_field();
+
+    let len: i32 = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.jsonb_array_length(e) \
+         FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'ar') AS e"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert_eq!(
+        len, 2,
+        "the array has two elements, so its length through a path query is 2"
+    );
+
+    Ok(())
+}
+
+/// Expanding the same array must yield its elements — and exactly once each.
+///
+/// Without the aggregation this happens to pass for the wrong reason: the path
+/// query returns two single-entry rows and each expands to one element, so the
+/// double flattening cancels out. Counting cannot cancel that way, which is why
+/// `jsonb_array_length` above is the test that fails. This one guards the
+/// coincidence, so a fix that aggregates does not start double-expanding.
+#[sqlx::test]
+async fn v3_jsonb_array_elements_through_path_query(pool: PgPool) -> anyhow::Result<()> {
+    let d = document_with_array_field();
+
+    let sels: Vec<String> = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.selector(el) \
+         FROM eql_v3.jsonb_path_query('{d}'::public.eql_v3_json_search::jsonb, 'ar') AS e, \
+              LATERAL eql_v3.jsonb_array_elements(e) AS el \
+         ORDER BY 1"
+    ))
+    .fetch_all(&pool)
+    .await?;
+    assert_eq!(
+        sels,
+        vec!["ar".to_string(), "ar".to_string()],
+        "expanding the array yields its two elements, once each"
+    );
+
+    Ok(())
+}
+
+// ============================================================================
 // D11 — Index engagement (validity, not preference): enable_seqscan=off +
 //       node-type-aware assert_index_scan_uses on the 10-row fixture.
 // ============================================================================
