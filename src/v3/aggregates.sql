@@ -12,9 +12,10 @@
 --! two different ciphertexts. So you cannot group rows by comparing the stored
 --! ciphertext. Instead you group by the column's *equality term*,
 --! `eql_v3.eq_term(col)` — a deterministic keyed hash that is identical for equal
---! plaintexts. Counting how many rows share each encrypted value looks like this:
+--! plaintexts. Counting how many rows share each encrypted value looks like this
+--! (the term itself is opaque, so there is no reason to select it):
 --!
---!   SELECT eql_v3.eq_term(email), count(*)
+--!   SELECT count(*)
 --!   FROM users
 --!   GROUP BY eql_v3.eq_term(email);
 --!

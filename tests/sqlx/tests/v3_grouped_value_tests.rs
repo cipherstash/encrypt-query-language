@@ -9,9 +9,9 @@
 //! `grouped_value` returns one representative value per group and satisfies the
 //! GROUP BY rule.
 //!
-//! These tests pin the aggregate's semantics over plain `jsonb` (a value passes
-//! through unchanged, so no real ciphertext is needed to exercise the grouping
-//! contract):
+//! `grouped_value` returns its input unchanged — it never inspects, decrypts, or
+//! compares the value — so it has nothing to do with encryption, and plain
+//! `jsonb` literals fully exercise it. These tests pin its semantics:
 //!
 //!   * `first_non_null_per_group` — with an explicit intra-aggregate ORDER BY the
 //!     result is the first non-null value; NULLs are skipped.
