@@ -1,0 +1,5 @@
+---
+'@cipherstash/eql': minor
+---
+
+**`eql_v3.grouped_value(jsonb)` lets you project an encrypted column while grouping by its equality term.** Grouping encrypted rows by equality requires `GROUP BY eql_v3.eq_term(col)` (the deterministic HMAC term — the ciphertext envelope itself is not equality-comparable), but PostgreSQL then rejects a bare `SELECT col` with "column must appear in the GROUP BY clause or be used in an aggregate function", because it cannot prove the column is constant within each term group. Wrapping the column in `eql_v3.grouped_value(col)` returns one representative encrypted value per group and satisfies the rule — e.g. `SELECT eql_v3.grouped_value(encrypted_foo), count(*) FROM t GROUP BY eql_v3.eq_term(encrypted_foo)`. It accepts any eql_v3 encrypted-domain value (all are jsonb-backed domains), returns it unchanged (no decryption or comparison), and is `PARALLEL SAFE` with a combine function, matching the `min`/`max` aggregate shape. Why: this re-creates the `grouped_value` aggregate that the eql_v2 surface provided and that was dropped in 3.0.0 with no eql_v3 equivalent until now.
