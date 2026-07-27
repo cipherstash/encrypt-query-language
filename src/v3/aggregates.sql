@@ -1,37 +1,60 @@
 -- REQUIRE: src/v3/schema.sql
 
 --! @file v3/aggregates.sql
---! @brief Schema-generic aggregates over the eql_v3 encrypted-domain surface.
+--! @brief Aggregates for grouping and deduplicating encrypted values.
 --!
---! Re-creates the eql_v2 `grouped_value` aggregate on the self-contained eql_v3
---! surface. Unlike the per-type `min`/`max` aggregates (generated into
---! src/v3/scalars/<T>/ from the catalog, one per ORD-term domain), this one is
---! hand-written and generic: every eql_v3 encrypted-domain column type is a
---! jsonb-backed domain, so a single aggregate over `jsonb` accepts any of them
---! (a domain value implicitly casts to its base type) and returns a value
---! unchanged. There is nothing type-specific to generate.
+--! Provides `eql_v3.grouped_value` — the aggregate you need to run a `GROUP BY`
+--! over an encrypted column and still get the encrypted value back.
 --!
---! ## Why this aggregate exists
+--! ## Grouping encrypted values
 --!
---! To group rows by an encrypted value you must `GROUP BY` its equality index
---! term — `eql_v3.eq_term(col)` (the HMAC) — because the ciphertext envelope
---! itself is not equality-comparable and two encryptions of the same plaintext
---! produce different ciphertexts. But once you group by the term, you cannot
---! also project the encrypted column directly:
+--! Encryption in EQL is non-deterministic: encrypting the same value twice gives
+--! two different ciphertexts. So you cannot group rows by comparing the stored
+--! ciphertext. Instead you group by the column's *equality term*,
+--! `eql_v3.eq_term(col)` — a deterministic keyed hash that is identical for equal
+--! plaintexts. Counting how many rows share each encrypted value looks like this:
 --!
---!   SELECT encrypted_foo, ...
---!   FROM some_table
---!   GROUP BY eql_v3.eq_term(encrypted_foo);
---!   -- ERROR: column "encrypted_foo" must appear in the GROUP BY clause or be
---!   --        used in an aggregate function
+--!   SELECT eql_v3.eq_term(email), count(*)
+--!   FROM users
+--!   GROUP BY eql_v3.eq_term(email);
 --!
---! PostgreSQL tracks functional dependency only through a table's primary key,
---! so it cannot prove that `encrypted_foo` is constant within each
---! `eql_v3.eq_term(encrypted_foo)` group (it is, since the HMAC is deterministic
---! in the plaintext) and refuses to project it. `grouped_value` is the
---! aggregate that resolves this: wrap the encrypted column in it to return one
---! representative encrypted value per group, satisfying the GROUP BY rule
---! without decrypting or comparing ciphertext.
+--! The equality term is opaque, though — you usually want the encrypted value
+--! itself back so your application can decrypt it. Adding the column to the
+--! SELECT list is rejected:
+--!
+--!   SELECT email, count(*)                        -- email is not in GROUP BY
+--!   FROM users
+--!   GROUP BY eql_v3.eq_term(email);
+--!   -- ERROR: column "email" must appear in the GROUP BY clause or be used in
+--!   --        an aggregate function
+--!
+--! Every row in a group is an encryption of the same plaintext, so any one of
+--! them represents the group. `eql_v3.grouped_value` is the aggregate that hands
+--! one back:
+--!
+--!   SELECT eql_v3.grouped_value(email) AS email, count(*)
+--!   FROM users
+--!   GROUP BY eql_v3.eq_term(email);
+--!
+--! ## Deduplicating without an aggregate
+--!
+--! If you just want the distinct encrypted values (no per-group aggregate like
+--! `count`), you do not need `grouped_value` — use `DISTINCT ON` on the equality
+--! term, which lets you project the column directly:
+--!
+--!   SELECT DISTINCT ON (eql_v3.eq_term(email)) email
+--!   FROM users
+--!   ORDER BY eql_v3.eq_term(email);
+--!
+--! Deduplicate on `eql_v3.eq_term(col)`, never on the column itself: a plain
+--! `SELECT DISTINCT email` compares the raw ciphertext, so two encryptions of the
+--! same value are NOT collapsed.
+--!
+--! @note @internal Hand-written rather than catalog-generated: `grouped_value` is
+--!   generic over every encrypted-domain type — each is a jsonb-backed domain, so
+--!   a single aggregate over `jsonb` accepts them all and returns the value
+--!   unchanged — unlike the per-type `min`/`max` aggregates. Re-creates the
+--!   eql_v2 aggregate of the same name.
 
 --! @brief State transition function for the grouped_value aggregate.
 --! @internal
@@ -64,18 +87,14 @@ $$;
 
 --! @brief Return a representative (first non-null) encrypted value per group.
 --!
---! Aggregate that returns the first non-null value encountered within a
---! `GROUP BY` group. Its primary use is projecting an encrypted column while
---! grouping by that column's equality term: `GROUP BY eql_v3.eq_term(col)`
---! groups rows by encrypted equality, but PostgreSQL will not let you also
---! `SELECT col` directly (it cannot prove `col` is constant within each group).
---! Wrapping the column in `grouped_value` returns one representative encrypted
---! value per group and satisfies the GROUP BY rule. Also useful for
---! deduplication. Accepts any eql_v3 encrypted-domain value (each is a
---! jsonb-backed domain) and returns it unchanged — it performs no decryption or
---! comparison. `PARALLEL SAFE` with a combine function so partial/parallel
---! aggregation is available on large `GROUP BY` workloads, matching the shape of
---! the generated `min`/`max` aggregates.
+--! Returns the first non-null value encountered within a `GROUP BY` group. Its
+--! primary use is projecting an encrypted column while grouping by that column's
+--! equality term (`GROUP BY eql_v3.eq_term(col)`), where PostgreSQL will not let
+--! you `SELECT col` directly — see the file header for the worked example.
+--! Accepts any eql_v3 encrypted-domain value (each is a jsonb-backed domain) and
+--! returns it unchanged, performing no decryption or comparison. `PARALLEL SAFE`
+--! with a combine function, so it works under partial/parallel aggregation on
+--! large `GROUP BY` workloads.
 --!
 --! @param input jsonb Encrypted values to aggregate.
 --! @return jsonb The first non-null value in the group.

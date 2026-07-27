@@ -21,6 +21,9 @@
 //!   * `grouped_value_makes_group_by_term_projection_valid` — the fix: the same
 //!     shape with `grouped_value(col)` succeeds and returns a representative
 //!     member of each group.
+//!   * `distinct_on_eq_term_is_the_non_aggregate_alternative` — the `DISTINCT`
+//!     counterpart: `DISTINCT ON (eql_v3.eq_term(col))` deduplicates without an
+//!     aggregate, so `grouped_value` is not involved there.
 
 use anyhow::Result;
 use sqlx::{PgPool, Row};
@@ -127,5 +130,43 @@ async fn grouped_value_makes_group_by_term_projection_valid(pool: PgPool) -> Res
             "representative is a whole row payload, unchanged"
         );
     }
+    Ok(())
+}
+
+/// The `DISTINCT` counterpart, for the question "is DISTINCT the same
+/// mechanism?": it is related but NOT the same. `DISTINCT ON` / `DISTINCT` have
+/// no projection restriction — you can select the column directly — so
+/// `grouped_value` is neither needed nor involved here. To deduplicate encrypted
+/// values you still key on the equality term (`eql_v3.eq_term`), never the raw
+/// ciphertext, because encryption is non-deterministic. This pins the recommended
+/// no-aggregate dedup shape.
+#[sqlx::test]
+async fn distinct_on_eq_term_is_the_non_aggregate_alternative(pool: PgPool) -> Result<()> {
+    // Same data as the GROUP BY test: two groups keyed by `payload -> 't'`.
+    // DISTINCT ON projects the bare column with no aggregate and no grouping
+    // error, returning one representative row per group.
+    let reps: Vec<serde_json::Value> = sqlx::query_scalar(
+        r#"
+        SELECT DISTINCT ON (payload -> 't') payload
+        FROM (VALUES
+          ('{"t":"A","c":"a1"}'::jsonb),
+          ('{"t":"A","c":"a2"}'::jsonb),
+          ('{"t":"B","c":"b1"}'::jsonb)
+        ) AS t(payload)
+        ORDER BY (payload -> 't')
+        "#,
+    )
+    .fetch_all(&pool)
+    .await?;
+
+    let group_keys: Vec<Option<&str>> = reps
+        .iter()
+        .map(|p| p.get("t").and_then(|v| v.as_str()))
+        .collect();
+    assert_eq!(
+        group_keys,
+        vec![Some("A"), Some("B")],
+        "DISTINCT ON (term) yields one representative row per group, column projected directly"
+    );
     Ok(())
 }
