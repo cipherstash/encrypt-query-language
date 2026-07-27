@@ -220,8 +220,8 @@ pub enum FnEntry {
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
         call_b: String, // e.g. eql_v3.eq_term(b::public.eql_v3_integer_eq)
         // True only for the `@@` bloom-match wrapper: appends the empty-needle
-        // guard to the body so an empty needle bloom does not match every row
-        // (CIP-3606). See `Operator::needs_empty_bloom_guard`.
+        // guard to the body so an empty needle bloom does not match every row.
+        // See `Operator::needs_empty_bloom_guard`.
         empty_bloom_guard: bool,
     },
     Unsupported {

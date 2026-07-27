@@ -66,7 +66,7 @@ pub mod v3_text_empty;
 // The empty-bloom fuzzy-match fixture (`"pq"`, `"aardvark"`). Not a CATALOG
 // scalar — `eql-domains::TEXT_FIXTURES` has no sub-trigram value, so no catalog
 // value produces an empty bloom (`bf: []`) — so it is hand-written and
-// registered here directly (like the other `v3_` fixtures). Gives the CIP-3606
+// registered here directly (like the other `v3_` fixtures). Gives the
 // empty-needle guard in `eql_v3.matches` a generated real-ciphertext home.
 pub mod v3_text_empty_bloom;
 

@@ -78,7 +78,7 @@ async fn generate_all() -> anyhow::Result<()> {
     // scalar — `eql-domains::TEXT_FIXTURES` carries no sub-trigram string (min 3
     // chars), so no catalog value yields an empty bloom (`bf: []`) — so it rides
     // the same pipeline as a hand-written `FixtureSpec<String>`. Gives the
-    // CIP-3606 empty-needle guard in `eql_v3.matches` a generated real-ciphertext
+    // empty-needle guard in `eql_v3.matches` a generated real-ciphertext
     // home.
     eprintln!("Generating fixture v3_text_empty_bloom (empty bloom filter)...");
     eql_tests::fixtures::v3_text_empty_bloom::generate().await?;

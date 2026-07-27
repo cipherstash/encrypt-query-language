@@ -1537,7 +1537,7 @@ mod tests {
         // reduces to bloom array-containment `@>` on the extracted terms (so a
         // functional GIN index on `eql_v3.match_term(col)` engages) guarded by an
         // empty-needle clause: an empty needle bloom (`{}`) must match only a
-        // value whose own bloom is also empty, never every row (CIP-3606). The
+        // value whose own bloom is also empty, never every row. The
         // top-level `@>` conjunct is preserved so the GIN index still engages;
         // in the normal non-empty-needle case the guard folds to a constant TRUE
         // and drops out.

@@ -400,7 +400,7 @@ impl Operator {
         }
     }
 
-    /// Whether the wrapper body must carry the empty-needle guard (CIP-3606).
+    /// Whether the wrapper body must carry the empty-needle guard.
     ///
     /// True only for `@@`, whose body is bloom array-containment (`@>`). Bare
     /// `match_term(a) @> match_term(b)` is vacuously TRUE whenever the needle

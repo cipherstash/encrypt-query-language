@@ -8,7 +8,7 @@
 //! empty bloom (`bf: []`) — the only value that does — so this bespoke fixture
 //! is the one place a real-ciphertext empty-`bf` payload lives.
 //!
-//! Its purpose is to prove the CIP-3606 guard in `eql_v3.matches`: an empty
+//! Its purpose is to prove the empty-needle guard in `eql_v3.matches`: an empty
 //! needle bloom must match only a value whose own bloom is also empty (the
 //! `LIKE ''` shape), never every row. See
 //! `tests/encrypted_domain/text/text_match.rs` (the `empty_bloom_*` tests).

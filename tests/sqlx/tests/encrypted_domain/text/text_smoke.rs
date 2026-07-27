@@ -65,7 +65,7 @@ async fn empty_bloom_needle_uses_like_semantics(pool: PgPool) -> anyhow::Result<
     // A value too short to tokenize (e.g. the empty string) yields an empty bloom
     // filter (`bf: []`). An empty NEEDLE follows `LIKE ''` semantics, NOT
     // empty-set containment: it matches only a value whose own bloom is also
-    // empty, never every row (CIP-3606). Uses literal payloads so the assertion
+    // empty, never every row. Uses literal payloads so the assertion
     // is deterministic; the real-ciphertext counterparts (a `bf: []` from an
     // actual sub-trigram encryption) live in `text_match::empty_*`.
     const NON_EMPTY: &str =
