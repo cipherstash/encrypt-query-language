@@ -219,6 +219,10 @@ pub enum FnEntry {
         args: [SqlParam; 2],
         call_a: String, // e.g. eql_v3.eq_term(a)   (embeds extract_arg cast logic)
         call_b: String, // e.g. eql_v3.eq_term(b::public.eql_v3_integer_eq)
+        // True only for the `@@` bloom-match wrapper: appends the empty-needle
+        // guard to the body so an empty needle bloom does not match every row.
+        // See `Operator::needs_empty_bloom_guard`.
+        empty_bloom_guard: bool,
     },
     Unsupported {
         operator_lit: String,  // sql_str(op), escaped content for the RAISE literal
@@ -280,6 +284,7 @@ pub fn wrapper_entry(
         ],
         call_a: extract_arg(arg_a, extractor, dom, "a"),
         call_b: extract_arg(arg_b, extractor, dom, "b"),
+        empty_bloom_guard: op.needs_empty_bloom_guard(),
     }
 }
 

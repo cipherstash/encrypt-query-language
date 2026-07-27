@@ -1538,11 +1538,31 @@ mod tests {
         let fns = render_functions_file(s.name, domain(s, "match"));
         // The supported `@@` overloads are `eql_v3.matches` wrappers whose body
         // reduces to bloom array-containment `@>` on the extracted terms (so a
-        // functional GIN index on `eql_v3.match_term(col)` engages).
+        // functional GIN index on `eql_v3.match_term(col)` engages) guarded by an
+        // empty-needle clause: an empty needle bloom (`{}`) must match only a
+        // value whose own bloom is also empty, never every row. The
+        // top-level `@>` conjunct is preserved so the GIN index still engages;
+        // in the normal non-empty-needle case the guard folds to a constant TRUE
+        // and drops out.
         assert!(fns.contains(
             "CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_match, b public.eql_v3_text_match)"
         ));
-        assert!(fns.contains("SELECT eql_v3.match_term(a) @> eql_v3.match_term(b)"));
+        assert!(fns.contains(
+            "SELECT eql_v3.match_term(a) @> eql_v3.match_term(b) \
+             AND (cardinality(eql_v3.match_term(b)) > 0 OR cardinality(eql_v3.match_term(a)) = 0)"
+        ));
+        // The guarded match wrapper is NOT STRICT: a STRICT SQL function with a
+        // non-strict body (the guard's AND/OR) would stop inlining, losing the
+        // functional GIN index. Its body propagates NULL on its own. The bare
+        // (non-guarded) wrappers keep STRICT.
+        assert!(fns.contains(
+            "CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_match, b public.eql_v3_text_match)\n\
+             RETURNS boolean LANGUAGE sql IMMUTABLE PARALLEL SAFE\n"
+        ));
+        assert!(!fns.contains(
+            "CREATE FUNCTION eql_v3.matches(a public.eql_v3_text_match, b public.eql_v3_text_match)\n\
+             RETURNS boolean LANGUAGE sql IMMUTABLE STRICT PARALLEL SAFE\n"
+        ));
         assert!(!fns.contains("eql_v3.contains("));
         assert!(!fns.contains("eql_v3.contained_by("));
         // `@>` / `<@` are now blockers on the match domain.

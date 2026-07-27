@@ -399,6 +399,35 @@ impl Operator {
             | OpSymbol::Concat => self.symbol.as_str(),
         }
     }
+
+    /// Whether the wrapper body must carry the empty-needle guard.
+    ///
+    /// True only for `@@`, whose body is bloom array-containment (`@>`). Bare
+    /// `match_term(a) @> match_term(b)` is vacuously TRUE whenever the needle
+    /// bloom `b` is empty (`{}` is `@>` by everything), so a query term with no
+    /// n-gram tokens would match every row. The wrapper renderer appends
+    /// `AND (cardinality(match_term(b)) > 0 OR cardinality(match_term(a)) = 0)`,
+    /// giving `LIKE`-shaped semantics: an empty needle matches only a value whose
+    /// own bloom is also empty. The top-level `@>` conjunct is preserved so the
+    /// functional GIN index on `match_term(col)` still engages; for a non-empty
+    /// needle the guard folds to a constant `TRUE` and drops out at plan time.
+    ///
+    /// Every other operator's body is a single comparison with no such
+    /// degenerate-empty case, so this is exhaustively `Match`-only.
+    ///
+    /// The guarded wrapper is rendered **without `STRICT`** (the bare wrappers
+    /// keep it). PostgreSQL refuses to inline a `STRICT` SQL function whose body
+    /// contains non-strict constructs, and the guard introduces top-level
+    /// `AND`/`OR` (both non-strict: `false AND NULL` is `false`, `true OR NULL`
+    /// is `true`). A `STRICT` guarded wrapper would therefore stop inlining, and
+    /// `col @@ needle` would no longer fold to `match_term(col) @> match_term(
+    /// needle)` — losing the functional GIN index. The body propagates `NULL`
+    /// on a `NULL` operand on its own (`NULL @> y` is `NULL`, and the guard's
+    /// `OR`/`AND` carry that `NULL` through), so dropping `STRICT` preserves the
+    /// wrapper's NULL semantics while restoring inlinability.
+    pub fn needs_empty_bloom_guard(&self) -> bool {
+        matches!(self.symbol, OpSymbol::Match)
+    }
 }
 
 /// The native-jsonb operator symbols that every encrypted domain blocks, in
