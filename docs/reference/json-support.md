@@ -45,10 +45,14 @@ Always give the operand a known type:
 -- ✅ correct — typed operand resolves to the eql_v3 operator
 WHERE doc @> $1::eql_v3.query_json
 WHERE doc -> 'age_selector'::text > $1::eql_v3.query_integer_ord
-WHERE doc -> $1            -- a text parameter (the CipherStash Proxy interface)
+WHERE doc -> $1::text > $2::eql_v3.query_integer_ord   -- selector bound as a text
+                                                       -- parameter (the CipherStash
+                                                       -- Proxy interface)
 
--- ⚠ wrong — bare untyped literal resolves to native jsonb -> text, returns NULL
-WHERE doc -> 'email'
+-- ⚠ wrong — the bare untyped selector resolves to native jsonb -> text, so the
+-- extraction is a plain root-key lookup (NULL) and the comparison falls through
+-- to native jsonb semantics instead of the encrypted operator
+WHERE doc -> 'email' > $1::eql_v3.query_integer_ord
 ```
 
 (Note there is no entry-level `=` — exact field equality goes through containment; see [Grouping data](#grouping-data) for why, and the range example above for what extracted entries *do* support.)
