@@ -183,15 +183,17 @@ $$;
 --!   encryption of the same plaintext, so any one represents the group) and it
 --!   matches the eql_v2 original.
 --!
---! @example
---! -- Group encrypted rows by encrypted equality and project the encrypted
---! -- column. GROUP BY eql_v3.eq_term(...) groups by the HMAC equality term;
---! -- grouped_value(...) returns a representative ciphertext for each group so
---! -- PostgreSQL does not reject the bare column reference.
+--! Group encrypted rows by encrypted equality and project the encrypted
+--! column. GROUP BY eql_v3.eq_term(...) groups by the HMAC equality term;
+--! grouped_value(...) returns a representative ciphertext for each group so
+--! PostgreSQL does not reject the bare column reference.
+--!
+--! @code{.sql}
 --! SELECT eql_v3.grouped_value(encrypted_foo) AS encrypted_foo,
 --!        count(*)
 --! FROM some_table
 --! GROUP BY eql_v3.eq_term(encrypted_foo);
+--! @endcode
 --!
 --! @see eql_v3_internal.grouped_value_sfunc
 --! @see eql_v3.eq_term
@@ -670,13 +672,12 @@ CREATE CAST (public.eql_v3_json_search AS eql_v3.query_json)
 --!                                type picker, which the schema split exists to
 --!                                prevent. Move it to `eql_v3_internal`.
 --!
---! @example
---! ```
+--! @code{.sql}
 --! SELECT severity, category, object_name, message
 --!   FROM eql_v3.lints()
 --!  WHERE severity = 'error'
 --!  ORDER BY category, object_name;
---! ```
+--! @endcode
 --!
 --! @return SETOF record (severity text, category text, object_name text, message text)
 CREATE OR REPLACE FUNCTION eql_v3.lints()
@@ -59436,7 +59437,7 @@ DROP FUNCTION IF EXISTS eql_v3.version();
 --! @brief EQL version reporting (self-contained eql_v3 surface)
 --!
 --! This file is auto-generated from src/v3/version.template during build.
---! The 3.0.3 placeholder is replaced with the actual release
+--! The 3.0.4 placeholder is replaced with the actual release
 --! version (bare semver, e.g. "3.0.0") supplied via `mise run build --version`,
 --! or "DEV" for development builds.
 
@@ -59455,14 +59456,14 @@ CREATE FUNCTION eql_v3.version()
   RETURNS text
   IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT '3.0.3';
+  SELECT '3.0.4';
 $$ LANGUAGE SQL;
 
 --! @brief Schema-level version marker for obj_description() discoverability
 --!
 --! Mirrors eql_v3.version() as a comment on the schema so the installed
 --! version can also be read via obj_description('eql_v3'::regnamespace).
-COMMENT ON SCHEMA eql_v3 IS '3.0.3';
+COMMENT ON SCHEMA eql_v3 IS '3.0.4';
 --! @file pin_search_path_v3.sql
 --! @brief Post-install: pin search_path on every eql_v3.* function.
 --!
