@@ -78,8 +78,18 @@ def _capabilities_from_ops(ops):
         caps.append("equality")
     if any(o in ops for o in ("<", "<=", ">", ">=")):
         caps.append("order")
-    if any(o in ops for o in ("@>", "<@")):
+    # Text fuzzy match is `@@`. It was spelled `@>` / `<@` until EQL 3.0.1
+    # renamed it; testing the old operators here meant NO domain could be
+    # assigned `match` any more. `text_match` (whose only operator is `@@`)
+    # matched no branch at all and fell through to the `storage` default,
+    # describing the fuzzy-match domain as storage-only, and `text_search`
+    # silently lost `match` from its capability list.
+    if "@@" in ops:
         caps.append("match")
+    # Containment on encrypted JSON keeps `@>` / `<@`; it is a distinct
+    # capability from text fuzzy match, not a spelling of it.
+    if any(o in ops for o in ("@>", "<@")):
+        caps.append("containment")
     return caps or ["storage"]
 
 
@@ -117,22 +127,30 @@ def load_domains(catalog_path: Path) -> list:
                 "termFunctions": _term_functions(dom.get("terms", [])),
             })
 
-    # SteVec (jsonb) family: hand-written SQL, catalog inventory only. The
-    # column-type domains (`json`, `jsonb_entry`) live in `public`; the
-    # containment needle (`query_jsonb`) is a query operand, never a column
-    # type, and lives in `eql_v3`. Extractor functions are eql_v3.
+    # The json family: hand-written SQL, catalog inventory only. The column-type
+    # domains (`eql_v3_json`, `eql_v3_json_search`, `eql_v3_json_entry`) live in
+    # `public`; the containment needle (`query_json`) is a query operand, never a
+    # column type, and lives in `eql_v3`. Extractor functions are eql_v3.
+    #
+    # The family is mixed. Its bare `public.eql_v3_json` is a storage-only scalar
+    # domain — it stores and decrypts, and carries no query surface — so it must
+    # not inherit the SteVec `json` capability that the searchable document,
+    # entry, and needle domains carry.
     for entry in catalog.get("stevec", []):
         schema = "eql_v3" if entry["full_name"].startswith("query_") else "public"
-        domains.append({
+        is_scalar = entry.get("scalar", False)
+        domain = {
             "name": f"{schema}.{entry['typname']}",
             "type": "jsonb",
             "variant": "",
             "base": "jsonb",
-            "shape": "stevec",
-            "capabilities": ["json"],
+            "capabilities": ["storage"] if is_scalar else ["json"],
             "supportedOperators": [],
             "termFunctions": _term_functions(entry.get("terms", [])),
-        })
+        }
+        if not is_scalar:
+            domain["shape"] = "stevec"
+        domains.append(domain)
 
     domains.sort(key=lambda d: (d["type"], d["name"]))
     return domains

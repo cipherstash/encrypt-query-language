@@ -106,15 +106,17 @@ $$;
 --!   encryption of the same plaintext, so any one represents the group) and it
 --!   matches the eql_v2 original.
 --!
---! @example
---! -- Group encrypted rows by encrypted equality and project the encrypted
---! -- column. GROUP BY eql_v3.eq_term(...) groups by the HMAC equality term;
---! -- grouped_value(...) returns a representative ciphertext for each group so
---! -- PostgreSQL does not reject the bare column reference.
+--! Group encrypted rows by encrypted equality and project the encrypted
+--! column. GROUP BY eql_v3.eq_term(...) groups by the HMAC equality term;
+--! grouped_value(...) returns a representative ciphertext for each group so
+--! PostgreSQL does not reject the bare column reference.
+--!
+--! @code{.sql}
 --! SELECT eql_v3.grouped_value(encrypted_foo) AS encrypted_foo,
 --!        count(*)
 --! FROM some_table
 --! GROUP BY eql_v3.eq_term(encrypted_foo);
+--! @endcode
 --!
 --! @see eql_v3_internal.grouped_value_sfunc
 --! @see eql_v3.eq_term
