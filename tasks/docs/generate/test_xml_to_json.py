@@ -20,15 +20,21 @@ _spec.loader.exec_module(_mod)
 build_manifest = _mod.build_manifest
 load_domains = _mod.load_domains
 
-# Shape of `eql-codegen dump-catalog` output.
+# Shape of `eql-codegen dump-catalog` output. Domain names come from `typname`
+# (the installed pg_type name), never from string-building the family name.
 CATALOG_JSON = """{
   "types": [
     { "token": "text", "is_eq_only": false, "domains": [
-      { "segment": "storage", "suffix": "", "supported_ops": [], "terms": [] },
-      { "segment": "eq", "suffix": "_eq", "supported_ops": ["=", "<>"],
+      { "segment": "storage", "suffix": "", "typname": "eql_v3_text",
+        "supported_ops": [], "terms": [] },
+      { "segment": "eq", "suffix": "_eq", "typname": "eql_v3_text_eq",
+        "supported_ops": ["=", "<>"],
         "terms": [{"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"}] },
-      { "segment": "search", "suffix": "_search",
-        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@>", "<@"],
+      { "segment": "match", "suffix": "_match", "typname": "eql_v3_text_match",
+        "supported_ops": ["@@"],
+        "terms": [{"key": "bf", "extractor": "match_term", "ctor": "bloom_filter"}] },
+      { "segment": "search", "suffix": "_search", "typname": "eql_v3_text_search",
+        "supported_ops": ["=", "<>", "<", "<=", ">", ">=", "@@"],
         "terms": [
           {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
           {"key": "bf", "extractor": "match_term", "ctor": "bloom_filter"}
@@ -36,12 +42,15 @@ CATALOG_JSON = """{
     ]}
   ],
   "stevec": [
-    { "full_name": "json", "name": "json", "terms": [] },
-    { "full_name": "jsonb_entry", "name": "entry", "terms": [
-      {"key": "hm", "extractor": "eq_term", "ctor": "hmac_256"},
-      {"key": "op", "extractor": "ord_term", "ctor": "ope_cllw"}
-    ] },
-    { "full_name": "query_jsonb", "name": "query", "terms": [] }
+    { "full_name": "json", "typname": "eql_v3_json", "name": "",
+      "terms": [], "scalar": true },
+    { "full_name": "json_search", "typname": "eql_v3_json_search",
+      "name": "json", "terms": [], "scalar": false },
+    { "full_name": "json_entry", "typname": "eql_v3_json_entry", "name": "entry",
+      "terms": [{"key": "op", "extractor": "ord_term", "ctor": "ope_cllw"}],
+      "scalar": false },
+    { "full_name": "query_json", "typname": "query_json", "name": "query",
+      "terms": [], "scalar": false }
   ]
 }"""
 
@@ -120,16 +129,27 @@ def test_load_domains():
     assert by_name["public.eql_v3_text_eq"]["capabilities"] == ["equality"]
     assert by_name["public.eql_v3_text_eq"]["supportedOperators"] == ["=", "<>"]
     assert by_name["public.eql_v3_text_eq"]["termFunctions"] == ["eql_v3.eq_term"]
+    # Fuzzy match is `@@`. A domain whose only operator is `@@` must report the
+    # `match` capability — reading it off the pre-3.0.1 `@>`/`<@` spelling left
+    # text_match describing itself as storage-only.
+    assert by_name["public.eql_v3_text_match"]["supportedOperators"] == ["@@"]
+    assert by_name["public.eql_v3_text_match"]["capabilities"] == ["match"]
     # text_search carries all three capabilities, derived from its operators.
     assert by_name["public.eql_v3_text_search"]["capabilities"] == ["equality", "order", "match"]
-    # SteVec (jsonb) domains come from the `stevec` section. Term extractors are
-    # hardcoded on `jsonb_entry` (the sv element type) ONLY — hm -> eq_term,
-    # op -> ord_term; the `json` container and `query_jsonb` carry none.
-    assert by_name["public.eql_v3_json"]["termFunctions"] == []
-    assert by_name["eql_v3.query_jsonb"]["termFunctions"] == []
-    assert by_name["public.eql_v3_jsonb_entry"]["capabilities"] == ["json"]
-    assert by_name["public.eql_v3_jsonb_entry"]["shape"] == "stevec"
-    assert by_name["public.eql_v3_jsonb_entry"]["termFunctions"] == ["eql_v3.eq_term", "eql_v3.ord_term"]
+    # json-family domains come from the `stevec` section. Term extractors are
+    # hardcoded on `json_entry` (the sv element type) ONLY — op -> ord_term; the
+    # `json_search` document and `query_json` needle carry none.
+    assert by_name["eql_v3.query_json"]["termFunctions"] == []
+    assert by_name["public.eql_v3_json_search"]["capabilities"] == ["json"]
+    assert by_name["public.eql_v3_json_entry"]["capabilities"] == ["json"]
+    assert by_name["public.eql_v3_json_entry"]["shape"] == "stevec"
+    assert by_name["public.eql_v3_json_entry"]["termFunctions"] == ["eql_v3.ord_term"]
+    # The family's bare storage domain is scalar-shaped: it is present, is NOT a
+    # SteVec shape, and does not inherit the `json` query capability.
+    bare = by_name["public.eql_v3_json"]
+    assert bare["capabilities"] == ["storage"]
+    assert bare["termFunctions"] == []
+    assert "shape" not in bare
 
 
 if __name__ == "__main__":

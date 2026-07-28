@@ -199,6 +199,99 @@ def test_internal_schema_is_private():
 
     print("✓ Internal-schema private detection test passed")
 
+def test_returns_table_type_is_not_truncated():
+    """A set-returning `RETURNS TABLE (...)` yields `TABLE`, not a fragment.
+
+    Doxygen reads the column list as a C++ argument list and truncates it at the
+    first comma, so argsstring arrives as `() RETURNS TABLE(severity text`.
+    Matching to the next space published "TABLE(severity" as the return type of
+    eql_v3.lints(). The column list cannot be recovered from the XML — the
+    truncation is at the comma, not a line break — but @return spells it out, so
+    the type must at least stop cleanly at the paren.
+    """
+    from xml.etree import ElementTree as ET
+
+    process_function = _load_process_function()
+
+    lints = process_function(ET.fromstring('''
+    <memberdef kind="function">
+        <name>lints</name>
+        <type>CREATE OR REPLACE FUNCTION eql_v3</type>
+        <argsstring>() RETURNS TABLE(severity text</argsstring>
+        <briefdescription><para>EQL lint results.</para></briefdescription>
+        <detaileddescription><para>
+            <simplesect kind="return"><para>SETOF record (severity text, category text)</para></simplesect>
+        </para></detaileddescription>
+    </memberdef>
+    '''))
+    assert lints is not None, "lints should be extracted"
+    assert lints["return_type"] == "`TABLE`", (
+        f'expected a clean `TABLE`, got {lints["return_type"]!r}'
+    )
+
+    # Ordinary scalar return types are untouched by the paren stop.
+    scalar = process_function(ET.fromstring('''
+    <memberdef kind="function">
+        <name>eq_term</name>
+        <type>CREATE FUNCTION eql_v3</type>
+        <argsstring>(val jsonb) RETURNS bytea</argsstring>
+        <briefdescription><para>Extract a term.</para></briefdescription>
+        <detaileddescription></detaileddescription>
+    </memberdef>
+    '''))
+    assert scalar["return_type"] == "`bytea`", scalar["return_type"]
+
+    print("✓ RETURNS TABLE return-type test passed")
+
+def test_filter_preserves_line_numbering():
+    """The Doxygen input filter emits one output line per input line.
+
+    Doxygen reports source positions against the FILTERED stream, so a
+    transform that drops rows silently shifts every symbol after it. Skipping
+    CREATE AGGREGATE bodies without padding moved max_sfunc from line 41 to 36.
+    """
+    import subprocess
+    import tempfile
+
+    sql = '''--! @brief State function.
+CREATE FUNCTION eql_v3_internal.min_sfunc(state jsonb, value jsonb)
+RETURNS jsonb
+LANGUAGE sql AS $$
+  SELECT 1
+$$;
+
+--! @brief min aggregate.
+CREATE AGGREGATE eql_v3.min(public.eql_v3_bigint_ord) (
+  sfunc = eql_v3_internal.min_sfunc,
+  stype = public.eql_v3_bigint_ord,
+  parallel = safe
+);
+
+--! @brief Trailing function whose line number must not shift.
+CREATE FUNCTION eql_v3.after(a jsonb) RETURNS jsonb
+LANGUAGE sql AS $$ SELECT a $$;
+'''
+    filter_script = Path(__file__).resolve().parents[1] / "doxygen-filter.sh"
+    with tempfile.TemporaryDirectory() as d:
+        path = Path(d) / "aggregates.sql"
+        path.write_text(sql)
+        out = subprocess.run(
+            [str(filter_script), str(path)], capture_output=True, text=True, check=True
+        ).stdout
+
+    assert out.count("\n") == sql.count("\n"), (
+        f"filter changed line count: {sql.count(chr(10))} in, {out.count(chr(10))} out"
+    )
+    # The declaration after the aggregate must still sit on its original line.
+    marker = "CREATE FUNCTION eql_v3.after"
+    src_line = next(i for i, l in enumerate(sql.splitlines()) if l.startswith(marker))
+    out_lines = out.splitlines()
+    assert out_lines[src_line].startswith(marker), (
+        f"line {src_line + 1} shifted, got: {out_lines[src_line]!r}"
+    )
+
+    print("✓ Filter line-numbering test passed")
+
 def test_schema_name_misparse_is_skipped():
     """Name-dropped CREATE FUNCTION mis-parses are skipped, operators are kept.
 
@@ -251,6 +344,8 @@ if __name__ == '__main__':
         test_param_name_type_swap()
         test_schema_qualified_type()
         test_internal_schema_is_private()
+        test_returns_table_type_is_not_truncated()
+        test_filter_preserves_line_numbering()
         test_schema_name_misparse_is_skipped()
 
         print("\n✅ All tests passed!")

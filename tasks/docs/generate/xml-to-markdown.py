@@ -37,6 +37,24 @@ def generate_anchor(signature):
     anchor = anchor.strip('-')
     return anchor
 
+def extract_code_text(element):
+    """Verbatim text of a <programlisting>, preserving significant whitespace.
+
+    Doxygen encodes each space inside a code block as an empty <sp/> element
+    and each source line as a <codeline>, so the text has to be reassembled
+    rather than read off. No clean_text here — that is what the caller applies
+    once, folding the line breaks into a single readable line.
+    """
+    parts = []
+    if element.text:
+        parts.append(element.text)
+    for child in element:
+        parts.append(' ' if child.tag == 'sp' else extract_code_text(child))
+        if child.tail:
+            parts.append(child.tail)
+    return ''.join(parts)
+
+
 def extract_para_text(element):
     """Extract text from para elements, including nested content"""
     if element is None:
@@ -54,6 +72,12 @@ def extract_para_text(element):
         elif child.tag == 'computeroutput':
             if child.text:
                 parts.append(child.text)
+        elif child.tag == 'programlisting':
+            # An @code block. Walk it verbatim rather than recursing: the
+            # generic path calls clean_text on every nested fragment, which
+            # strips the boundary spaces between <highlight> runs and welds the
+            # code together ("SELECTeql_v3.grouped_value(...)").
+            parts.append(extract_code_text(child))
         else:
             parts.append(extract_para_text(child))
 
@@ -177,6 +201,31 @@ def extract_description(desc_element):
 
     return '\n\n'.join(lines)
 
+def extract_aggregate_params(memberdef, param_docs):
+    """Parameters of a CREATE AGGREGATE, read from the declaration.
+
+    Doxygen's C++ parse of an aggregate's argument list is unreliable — a
+    schema-qualified type splits into a bogus name/type pair, and a bare one is
+    dropped — but <argsstring> keeps the list verbatim ("(public.eql_v3_json)").
+    Aggregate argument lists are positional and unnamed in SQL, so take the
+    types from there and the names/descriptions from the @param tags in order.
+    """
+    argsstring = memberdef.find('argsstring')
+    text = (argsstring.text or '').strip() if argsstring is not None else ''
+    if text.startswith('(') and text.endswith(')'):
+        text = text[1:-1]
+
+    params = []
+    for i, arg_type in enumerate([a.strip() for a in text.split(',') if a.strip()]):
+        doc = param_docs[i] if i < len(param_docs) else None
+        params.append({
+            'name': doc['name'] if doc else '',
+            'type': arg_type,
+            'description': doc['description'] if doc else '',
+        })
+    return params
+
+
 def process_function(memberdef):
     """Extract function documentation from memberdef element"""
     name = memberdef.find('name')
@@ -229,6 +278,16 @@ def process_function(memberdef):
     type_elem = memberdef.find('type')
     type_text = extract_para_text(type_elem) if type_elem is not None else ''
     is_private = func_name.startswith('_') or 'eql_v3_internal' in type_text
+
+    # CREATE AGGREGATE has no C++ analogue. Once the Doxygen input filter has
+    # stripped the definition body the name and argument list survive, but the
+    # C++ parse still cannot tell a SQL argument TYPE from a parameter NAME
+    # (`(public.eql_v3_bigint_ord)` arrives as a parameter *named* `public.`),
+    # and it leaves "CREATE AGGREGATE <schema>" sitting in <type> where a return
+    # type belongs. Both are unambiguous in the source, so for aggregates read
+    # the argument types off the declaration and the return type off @return
+    # rather than trusting the C++ parse.
+    is_aggregate = type_text.upper().startswith('CREATE AGGREGATE')
 
     # Extract descriptions
     brief = extract_description(memberdef.find('briefdescription'))
@@ -290,6 +349,9 @@ def process_function(memberdef):
                 }
                 params.append(param_info)
 
+    if is_aggregate:
+        params = extract_aggregate_params(memberdef, param_docs)
+
     # Extract simplesects (return, note, warning, see, etc.)
     simplesects = extract_simplesects(detailed_elem)
 
@@ -302,8 +364,17 @@ def process_function(memberdef):
     return_type_text = ''
 
     if argsstring is not None and argsstring.text:
-        # Look for RETURNS keyword in argsstring
-        returns_match = re.search(r'RETURNS\s+([^\s]+)', argsstring.text)
+        # Look for RETURNS keyword in argsstring.
+        #
+        # Stop at "(" as well as whitespace. A set-returning `RETURNS TABLE (col
+        # type, ...)` reaches Doxygen as a C++ argument list, which it truncates
+        # at the first comma — `() RETURNS TABLE(severity text` — so matching to
+        # the next space published the fragment "TABLE(severity" as the return
+        # type. The column list is unrecoverable from the XML (joining the
+        # declaration onto one line does not help; the truncation is at the
+        # comma, not the line break), but it is spelled out in full by the
+        # @return tag that lands in `return_desc`.
+        returns_match = re.search(r'RETURNS\s+([^\s(]+)', argsstring.text)
         if returns_match:
             return_type_text = returns_match.group(1)
             # Debug: Check if already has backticks from XML
@@ -312,6 +383,12 @@ def process_function(memberdef):
                 pass
             # Debug print
             #print(f"DEBUG: Extracted from argsstring: {return_type_text}")
+
+    # An aggregate declares no RETURNS clause, and its <type> holds
+    # "CREATE AGGREGATE <schema>" rather than a type. @return carries it.
+    if is_aggregate and not return_type_text:
+        return_desc = simplesects.get('return', '').strip()
+        return_type_text = return_desc.split()[0] if return_desc else ''
 
     # Fallback to type element if not found in argsstring
     if not return_type_text:

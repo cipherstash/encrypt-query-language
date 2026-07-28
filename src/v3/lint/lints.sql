@@ -64,13 +64,12 @@
 --!                                type picker, which the schema split exists to
 --!                                prevent. Move it to `eql_v3_internal`.
 --!
---! @example
---! ```
+--! @code{.sql}
 --! SELECT severity, category, object_name, message
 --!   FROM eql_v3.lints()
 --!  WHERE severity = 'error'
 --!  ORDER BY category, object_name;
---! ```
+--! @endcode
 --!
 --! @return SETOF record (severity text, category text, object_name text, message text)
 CREATE OR REPLACE FUNCTION eql_v3.lints()
