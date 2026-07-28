@@ -364,8 +364,17 @@ def process_function(memberdef):
     return_type_text = ''
 
     if argsstring is not None and argsstring.text:
-        # Look for RETURNS keyword in argsstring
-        returns_match = re.search(r'RETURNS\s+([^\s]+)', argsstring.text)
+        # Look for RETURNS keyword in argsstring.
+        #
+        # Stop at "(" as well as whitespace. A set-returning `RETURNS TABLE (col
+        # type, ...)` reaches Doxygen as a C++ argument list, which it truncates
+        # at the first comma — `() RETURNS TABLE(severity text` — so matching to
+        # the next space published the fragment "TABLE(severity" as the return
+        # type. The column list is unrecoverable from the XML (joining the
+        # declaration onto one line does not help; the truncation is at the
+        # comma, not the line break), but it is spelled out in full by the
+        # @return tag that lands in `return_desc`.
+        returns_match = re.search(r'RETURNS\s+([^\s(]+)', argsstring.text)
         if returns_match:
             return_type_text = returns_match.group(1)
             # Debug: Check if already has backticks from XML

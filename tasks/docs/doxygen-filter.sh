@@ -61,7 +61,11 @@ awk '
       next
     }
   }
-  inagg { if (index($0, ");")) inagg = 0; next }
+  # A blank line per skipped body row, never nothing: Doxygen reports positions
+  # in the FILTERED stream, so dropping the rows outright shifts every symbol
+  # after an aggregate (max_sfunc at source line 41 was reported as 36). The
+  # dollar-quoted body stripper below keeps the 1:1 line mapping the same way.
+  inagg { print ""; if (index($0, ");")) inagg = 0; next }
   {
     out = ""
     s = $0
