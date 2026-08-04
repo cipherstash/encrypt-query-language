@@ -1,5 +1,5 @@
 //! e2e suite: property tests for the **empty-bloom needle guard** in
-//! `eql_v3.matches` (CIP-3665, follow-up to PR #421).
+//! `eql_v3.matches` (follow-up to PR #421).
 //!
 //! The guard (the `empty_bloom_guard` flag in
 //! `crates/eql-codegen/templates/functions/wrapper.sql.j2`) fixes the

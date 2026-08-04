@@ -83,8 +83,8 @@ every ordered scalar (smallint/integer/bigint/date/timestamp/numeric/text) via t
 (no ordered domain) and is the only scalar excluded.
 
 The e2e suite also holds [`empty_bloom_guard.rs`](./empty_bloom_guard.rs): the
-property tests for the empty-bloom needle guard in `eql_v3.matches` (CIP-3665,
-follow-up to PR #421). Sub-trigram plaintexts (the inputs whose blooms are
+property tests for the empty-bloom needle guard in `eql_v3.matches`
+(follow-up to PR #421). Sub-trigram plaintexts (the inputs whose blooms are
 empty) exist in no generated fixture — `eql-domains::TEXT_FIXTURES` has none —
 so the suite generates its own (including `""`, the canonical `LIKE ''` needle)
 and batch-encrypts them with the `match` index each case. It pins, over every
