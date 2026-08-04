@@ -527,7 +527,7 @@ async fn v3_jsonb_single_entry_containment_is_blocked(pool: PgPool) -> anyhow::R
 /// and docs/reference/database-indexes.md as building blocks for hand-rolled
 /// GIN index expressions over the raw extracted `jsonb[]` array) are
 /// unreachable from the typed `@>`/`<@` operators — those bind to
-/// `eql_v3.ste_vec_contains` instead (see operators.sql) — and previously had
+/// `eql_v3.jsonb_document_contains` instead (see operators.sql) — and previously had
 /// only structural (inlinability-allowlist) coverage, never a behavioral
 /// assertion. Mirrors `v3_jsonb_containment_self_and_subset` but drives the
 /// raw-`jsonb` overload directly, and cross-checks agreement with the typed
@@ -566,7 +566,7 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     );
 
     // The raw helper must agree with the typed `@>` operator (which binds to
-    // eql_v3.ste_vec_contains, not this function) on the same well-formed inputs.
+    // eql_v3.jsonb_document_contains, not this function) on the same well-formed inputs.
     let typed: bool = sqlx::query_scalar(&format!(
         "SELECT '{full}'::public.eql_v3_json_search @> '{subset}'::public.eql_v3_json_search"
     ))
