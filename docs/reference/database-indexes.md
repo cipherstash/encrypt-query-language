@@ -189,6 +189,38 @@ Why the raw column does not scale: `GROUP BY col` uses the entire encrypted payl
 
 Pick the extractor the domain actually has: `eq_term` exists only on the `hm`-carrying domains. On a numeric-and-time `_ord` / `_ord_ope` / `_ord_ore` column, group on the ordering extractor instead — `GROUP BY eql_v3.ord_term(col)` (or `ord_term_ore(col)`). The ordering term is injective for those types, so it is an exact grouping key, and the column's ordering btree covers it.
 
+#### `SELECT DISTINCT` is keyed on `eq_term`
+
+`SELECT DISTINCT` on an encrypted column has the same scaling problem as `GROUP BY` on the raw column, plus a correctness one: the raw jsonb payload includes the randomised ciphertext `c`, so two rows holding identical plaintext never compare equal on the raw column and `DISTINCT` never collapses them. [CipherStash Proxy](https://github.com/cipherstash/proxy) rewrites `DISTINCT` on an encrypted column to key on its equality term instead:
+
+```sql
+-- as written
+SELECT DISTINCT enc FROM t;
+
+-- as rewritten by Proxy
+SELECT DISTINCT ON (eql_v3.eq_term(enc)) enc FROM t;
+```
+
+Because dedup is equality-based, this requires the column's domain to carry an equality term. A storage-only domain with no `eq_term` overload — `public.eql_v3_boolean`, which ships no `_eq` / `_ord` variant (see [SQL support](./sql-support.md)) — cannot be deduplicated this way; `DISTINCT` on it is a capability error rather than a silent fallback to comparing raw ciphertext.
+
+#### `SELECT DISTINCT … ORDER BY` additionally requires `ord_term`
+
+Ordering an encrypted column under `DISTINCT` needs `eql_v3.ord_term(col)` too. PostgreSQL requires every `ORDER BY` expression under `DISTINCT ON` to appear in the select list, so Proxy pushes the query into a subquery that projects the ordering term, then applies `ORDER BY` in a non-`DISTINCT` outer query around it:
+
+```sql
+-- as written
+SELECT DISTINCT enc FROM t ORDER BY enc;
+
+-- as rewritten by Proxy (conceptually — column names/aliases are preserved)
+SELECT enc FROM (
+  SELECT DISTINCT ON (eql_v3.eq_term(enc)) enc, eql_v3.ord_term(enc) AS order_term
+    FROM t
+) sub
+ORDER BY order_term;
+```
+
+The ordering term (`order_term` above) is never returned to the client. This rewrite happens entirely in Proxy — EQL SQL only supplies the `eq_term` / `ord_term` extractors it relies on.
+
 ### Field-level ordering index (ste_vec elements)
 
 Entry-to-entry `=` / `<>` and exact `GROUP BY` / `DISTINCT` on extracted
