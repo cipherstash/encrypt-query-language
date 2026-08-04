@@ -35,3 +35,7 @@ mod cross_ciphertext;
 // e2e suite: oracle over freshly generated + batch-encrypted values.
 #[cfg(feature = "proptest-e2e")]
 mod e2e_oracle;
+// e2e suite: the empty-bloom needle guard in `eql_v3.matches` over freshly
+// generated (incl. sub-trigram) plaintexts — CIP-3665, follow-up to PR #421.
+#[cfg(feature = "proptest-e2e")]
+mod empty_bloom_guard;

@@ -82,6 +82,21 @@ every ordered scalar (smallint/integer/bigint/date/timestamp/numeric/text) via t
 (their plaintexts have no usable bounded `Arbitrary`). `bool` is storage-only
 (no ordered domain) and is the only scalar excluded.
 
+The e2e suite also holds [`empty_bloom_guard.rs`](./empty_bloom_guard.rs): the
+property tests for the empty-bloom needle guard in `eql_v3.matches` (CIP-3665,
+follow-up to PR #421). Sub-trigram plaintexts (the inputs whose blooms are
+empty) exist in no generated fixture — `eql-domains::TEXT_FIXTURES` has none —
+so the suite generates its own (including `""`, the canonical `LIKE ''` needle)
+and batch-encrypts them with the `match` index each case. It pins, over every
+ordered pair: the guard's empty/non-empty truth table (an empty needle matches
+a value iff that value's bloom is also empty; cross-emptiness never matches),
+`@@` ≡ `eql_v3.matches` (and its `(domain, jsonb)` overload), the deterministic
+bloom hits (equal plaintexts across independent ciphertexts, substring
+needles), and the premise that sub-trigram plaintexts really extract empty
+blooms. The example-based counterpart lives in
+`tests/encrypted_domain/text/text_match.rs` (`empty_*`, over the
+`v3_text_empty_bloom` fixture).
+
 Defence in depth over the fixture suite: the fixtures are encrypted once at
 `test:sqlx:prep`, so they pin behaviour against a *frozen* ciphertext snapshot;
 the e2e suite re-encrypts on **every run**, so it catches a live crypto-path
