@@ -114,6 +114,8 @@ CREATE INDEX ON users USING gin   (eql_v3.match_term(name_match));
 
 > The full per-domain operator / wrapper / blocker surface (and the `public.<T>` / `_eq` / `_ord` / `_ord_ope` / `_ord_ore` domain types themselves) is documented in [SQL support](./sql-support.md#encrypted-domain-scalar-types-publict) and the [scalar encrypted-domain type reference](./adding-a-scalar-encrypted-domain-type.md).
 
+> **`eq_term` / `ord_term` also back `SELECT DISTINCT`.** [CipherStash Proxy](https://github.com/cipherstash/proxy) keys `DISTINCT` on an encrypted column by `eq_term` (dedup by plaintext equality, not raw ciphertext) and, when combined with `ORDER BY` on an encrypted column, additionally requires `ord_term`. A domain with no `eq_term` (e.g. the storage-only `public.eql_v3_boolean`) cannot be deduplicated. See [`GROUP BY` / `DISTINCT`](./database-indexes.md#group-by--distinct) for the rewrite Proxy performs.
+
 The `public.eql_v3_json_search` document type extracts its entry ordering term
 with `eql_v3.ord_term(public.eql_v3_json_entry)`. The low-level
 `eql_v3.ope_term(public.eql_v3_json_entry)` exposes the same lossy `op` bytes for
