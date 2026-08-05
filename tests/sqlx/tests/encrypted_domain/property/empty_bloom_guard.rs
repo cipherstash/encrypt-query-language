@@ -272,15 +272,22 @@ fn batch_strategy() -> impl Strategy<Value = Vec<String>> {
 /// - `"aardvark"` — the non-empty control from the example tests;
 /// - a duplicate of the batch's first value — the equal-plaintext /
 ///   distinct-ciphertext cell always fires;
-/// - a 3-char prefix of the first full-length value (when one exists) — the
-///   substring-needle deterministic hit always fires.
+/// - a 3-char prefix of the first full-length value — the substring-needle
+///   deterministic hit always fires. The fixed seeds (which include the
+///   full-length `"aardvark"`) are appended *before* the prefix is selected, so
+///   even a batch of only sub-trigram generated values still yields a
+///   full-length value to prefix.
 fn seeded(mut values: Vec<String>) -> Vec<String> {
     let dup = values[0].clone();
+    // Append the fixed seeds before selecting `prefix`: `"aardvark"` guarantees
+    // a value at/above the trigram floor exists, so `prefix` is never `None`
+    // (an all-sub-trigram generated batch would otherwise skip the
+    // substring-needle pair the doc above promises always fires).
+    values.extend(["", "a", "pq", "aardvark"].iter().map(|s| s.to_string()));
     let prefix = values
         .iter()
         .find(|v| v.chars().count() >= TRIGRAM_FLOOR)
         .map(|v| v.chars().take(TRIGRAM_FLOOR).collect::<String>());
-    values.extend(["", "a", "pq", "aardvark"].iter().map(|s| s.to_string()));
     values.push(dup);
     values.extend(prefix);
     values
