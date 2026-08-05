@@ -130,6 +130,8 @@ run = """
 set -euo pipefail
 echo "Running e2e property suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e e2e_oracle
+echo "Running empty-bloom guard property suite (fresh ZeroKMS encryption)..."
+cargo test --features proptest-e2e empty_bloom_guard
 echo "Running float special-value suite (fresh ZeroKMS encryption)..."
 cargo test --features proptest-e2e float_special
 echo "Running scalar query-operand conformance suite (fresh ZeroKMS encryption)..."
