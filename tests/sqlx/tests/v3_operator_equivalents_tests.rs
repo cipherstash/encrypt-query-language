@@ -163,7 +163,7 @@ async fn core_public_function_equivalents_exist_in_eql_v3(pool: PgPool) -> Resul
         "jsonb_contains",
         "jsonb_contained_by",
         "jsonb_array",
-        "ste_vec_contains",
+        "jsonb_document_contains",
     ];
 
     let present: Vec<String> = sqlx::query_scalar(

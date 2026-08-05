@@ -119,7 +119,7 @@ needs `USAGE` on it anyway. The exact requirement is path-dependent:
 | Equality (`=` / `eql_v3.eq`) | ✅ | ✅ | — |
 | Ordering (`<` `<=` `>` `>=` / `eql_v3.lt`…) | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
 | `MIN` / `MAX` aggregates | ✅ | ✅ | only on `_ord_ore` / `text_search_ore` |
-| jsonb containment read (`@>` `<@` / `ste_vec_contains`) | ✅ | — | — |
+| jsonb containment read (`@>` `<@` / `jsonb_document_contains`) | ✅ | — | — |
 | Cast/write raw JSON → `public.eql_v3_json_search` or a scalar domain (`public.eql_v3_integer`…) | — | — | — |
 | Cast a query operand → `eql_v3.query_<name>` / `eql_v3.query_json` | ✅ | — | — |
 
@@ -149,7 +149,7 @@ Why the internal grant is needed even though you only call public objects:
   `eql_v3.query_*` operand domains needs `USAGE` on `eql_v3` only because the
   domains themselves live there.)
 
-The hand-written jsonb containment **read** path (`eql_v3.ste_vec_contains` and
+The hand-written jsonb containment **read** path (`eql_v3.jsonb_document_contains` and
 the `@>` / `<@` operators over it) stays within `eql_v3` / `public` — the array
 variant is `plpgsql` (never inlined) and the typed variant inlines only `eql_v3`
 calls — so it runs under the public `eql_v3` grant alone.
@@ -174,7 +174,7 @@ in `eql_v3`**:
 | `<>` | `eql_v3.neq(a, b)` |
 | `<` `<=` `>` `>=` | `eql_v3.lt` / `lte` / `gt` / `gte(a, b)` |
 | `@@` (text match) | `eql_v3.matches(a, b)` |
-| `@>` `<@` (jsonb documents) | `eql_v3.jsonb_contains` / `jsonb_contained_by(a, b)`, and the typed `eql_v3.ste_vec_contains` |
+| `@>` `<@` (jsonb documents) | `eql_v3.jsonb_contains` / `jsonb_contained_by(a, b)`, and the typed `eql_v3.jsonb_document_contains` |
 | `MIN` / `MAX` | `eql_v3.min` / `eql_v3.max` aggregates |
 
 This invariant is enforced by

@@ -211,7 +211,7 @@ separate equality-indexed scalar column when server-side grouping is required.
 ### Core functions
 
 - **`eql_v3.ste_vec(val jsonb) RETURNS jsonb[]`** — extracts the ste_vec index array from an encrypted payload.
-- **`eql_v3.ste_vec_contains(a public.eql_v3_json_search, b public.eql_v3_json_search) RETURNS boolean`** — true if every selector in `b` is present in `a` (selector-subset containment); backs the `@>` operator.
+- **`eql_v3.jsonb_document_contains(a public.eql_v3_json_search, b public.eql_v3_json_search) RETURNS boolean`** — true if every selector in `b` is present in `a` (selector-subset containment); backs the `@>` operator.
 - **`eql_v3.jsonb_contains(a jsonb, b jsonb)` / `eql_v3.jsonb_contained_by(a jsonb, b jsonb)`** — function-form containment entrypoints for platforms that cannot type an operator call (Supabase PostgREST RPC, for example); same result as `@>` / `<@` (a parity test pins this).
 - **`eql_v3.jsonb_array(val jsonb) RETURNS jsonb[]`** — function-form array accessor for the same platforms.
 - **`eql_v3.to_ste_vec_query(val public.eql_v3_json_search) RETURNS eql_v3.query_json`** — the GIN-indexable query shape `@>` inlines to.

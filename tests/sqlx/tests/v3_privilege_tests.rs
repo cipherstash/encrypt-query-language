@@ -10,7 +10,7 @@
 //! public schema is not enough. These tests make that contract executable.
 //!
 //! Not every path crosses the boundary, and the tests below pin the difference:
-//! the hand-written jsonb (SteVec) `ste_vec_contains` read path is `plpgsql`
+//! the hand-written jsonb (SteVec) `jsonb_document_contains` read path is `plpgsql`
 //! (never inlined) and runs under the public grant alone. Casting raw jsonb to
 //! `public.eql_v3_json_search` also stays outside `eql_v3_internal`: the domain CHECK calls
 //! public validators so application table columns can survive EQL schema
@@ -60,10 +60,10 @@ const ORD_ORE_QUERY: &str =
 const AGG_QUERY: &str = "SELECT eql_v3.min(payload::public.eql_v3_integer_ord) \
      FROM fixtures.eql_v3_integer";
 
-/// A real jsonb (SteVec) containment READ path. `eql_v3.ste_vec_contains` is
+/// A real jsonb (SteVec) containment READ path. `eql_v3.jsonb_document_contains` is
 /// `plpgsql` (never inlined), so — unlike the scalar operators — it runs under
 /// the public `eql_v3` grant alone. Self-containment makes the result true.
-const JSONB_READ_QUERY: &str = "SELECT eql_v3.ste_vec_contains(payload, payload) \
+const JSONB_READ_QUERY: &str = "SELECT eql_v3.jsonb_document_contains(payload, payload) \
      FROM fixtures.v3_ste_vec LIMIT 1";
 
 /// A real jsonb WRITE path: casting raw jsonb to the `public.eql_v3_json_search` domain fires

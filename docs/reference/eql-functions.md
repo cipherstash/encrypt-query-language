@@ -75,7 +75,7 @@ eql_v3.gte(a, b)  -- >=
 eql_v3.matches(a, b)        -- @@  (bloom fuzzy match, on text_match / text_search / text_search_ore)
 ```
 
-JSON document containment has its own function forms (`eql_v3.jsonb_contains` / `jsonb_contained_by` / `ste_vec_contains`) — see [EQL with JSON and JSONB](./json-support.md).
+JSON document containment has its own function forms (`eql_v3.jsonb_contains` / `jsonb_contained_by` / `jsonb_document_contains`) — see [EQL with JSON and JSONB](./json-support.md).
 
 **Example:**
 
@@ -127,7 +127,7 @@ See [json-support.md](./json-support.md).
 
 ## Encrypted JSON (`public.eql_v3_json_search`)
 
-The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements`, `eql_v3.to_ste_vec_query`, `eql_v3.ste_vec_contains`, the envelope accessors `eql_v3.meta_data` / `eql_v3.ciphertext` / `eql_v3.selector`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**. (`eql_v3.jsonb_array_elements_text` was removed in 3.0 — a bare-ciphertext stream is no longer independently decryptable; use `eql_v3.jsonb_array_elements`.)
+The full encrypted-JSONB function surface — containment, `->` / `->>`, `eql_v3.jsonb_path_query` / `_first` / `_exists`, `eql_v3.jsonb_array_length` / `_elements`, `eql_v3.to_ste_vec_query`, `eql_v3.jsonb_document_contains`, the envelope accessors `eql_v3.meta_data` / `eql_v3.ciphertext` / `eql_v3.selector`, and the GIN helpers — is documented in **[EQL with JSON and JSONB](./json-support.md)**. (`eql_v3.jsonb_array_elements_text` was removed in 3.0 — a bare-ciphertext stream is no longer independently decryptable; use `eql_v3.jsonb_array_elements`.)
 
 ---
 

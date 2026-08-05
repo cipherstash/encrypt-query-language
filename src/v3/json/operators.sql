@@ -131,12 +131,12 @@ CREATE OPERATOR ->> (
 --! @param a public.eql_v3_json_search Container.
 --! @param b public.eql_v3_json_search Contained value.
 --! @return boolean True if a contains b.
---! @see eql_v3.ste_vec_contains
+--! @see eql_v3.jsonb_document_contains
 CREATE FUNCTION eql_v3."@>"(a public.eql_v3_json_search, b public.eql_v3_json_search)
 RETURNS boolean
 LANGUAGE SQL IMMUTABLE STRICT PARALLEL SAFE
 AS $$
-  SELECT eql_v3.ste_vec_contains(a, b)
+  SELECT eql_v3.jsonb_document_contains(a, b)
 $$;
 
 CREATE OPERATOR @>(
