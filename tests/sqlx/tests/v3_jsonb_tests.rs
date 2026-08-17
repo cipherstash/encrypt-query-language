@@ -577,6 +577,29 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
         "jsonb_contains must agree with the typed @> operator"
     );
 
+    let legacy_raw: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.ste_vec_contains(\
+           eql_v3.jsonb_array('{full}'::jsonb), \
+           (eql_v3.jsonb_array('{subset}'::jsonb))[1])"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    let legacy_typed: bool = sqlx::query_scalar(&format!(
+        "SELECT eql_v3.ste_vec_contains(\
+           '{full}'::public.eql_v3_json_search, \
+           '{subset}'::public.eql_v3_json_search)"
+    ))
+    .fetch_one(&pool)
+    .await?;
+    assert!(
+        legacy_raw,
+        "legacy raw ste_vec_contains alias must remain callable"
+    );
+    assert_eq!(
+        legacy_typed, typed,
+        "legacy typed ste_vec_contains alias must agree with jsonb containment"
+    );
+
     // Ordering terms are not equality terms. All containment entry points
     // normalize to selector-only matching, so two entries with the same value
     // selector match even when one carries a different `op`.
