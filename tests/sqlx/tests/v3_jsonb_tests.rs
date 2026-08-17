@@ -577,29 +577,6 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
         "jsonb_contains must agree with the typed @> operator"
     );
 
-    let legacy_raw: bool = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.ste_vec_contains(\
-           eql_v3.jsonb_array('{full}'::jsonb), \
-           (eql_v3.jsonb_array('{subset}'::jsonb))[1])"
-    ))
-    .fetch_one(&pool)
-    .await?;
-    let legacy_typed: bool = sqlx::query_scalar(&format!(
-        "SELECT eql_v3.ste_vec_contains(\
-           '{full}'::public.eql_v3_json_search, \
-           '{subset}'::public.eql_v3_json_search)"
-    ))
-    .fetch_one(&pool)
-    .await?;
-    assert!(
-        legacy_raw,
-        "legacy raw ste_vec_contains alias must remain callable"
-    );
-    assert_eq!(
-        legacy_typed, typed,
-        "legacy typed ste_vec_contains alias must agree with jsonb containment"
-    );
-
     // Ordering terms are not equality terms. All containment entry points
     // normalize to selector-only matching, so two entries with the same value
     // selector match even when one carries a different `op`.
@@ -621,6 +598,36 @@ async fn v3_jsonb_raw_helpers_contains_and_contained_by(pool: PgPool) -> anyhow:
     .fetch_one(&pool)
     .await?;
     assert!(raw_ignores_op && document_ignores_op && query_ignores_op);
+
+    Ok(())
+}
+
+/// Both deprecated `ste_vec_contains` overloads remain callable over a real
+/// CipherStash-generated SteVec payload and agree with their replacement.
+#[sqlx::test(fixtures(path = "../fixtures", scripts("v3_ste_vec")))]
+async fn v3_jsonb_legacy_ste_vec_contains_aliases(pool: PgPool) -> anyhow::Result<()> {
+    let (legacy_raw, current_raw, legacy_typed, current_typed): (bool, bool, bool, bool) =
+        sqlx::query_as(
+            "SELECT \
+               eql_v3.ste_vec_contains(\
+                 eql_v3.ste_vec(payload::jsonb), \
+                 (eql_v3.ste_vec(payload::jsonb))[1]), \
+               eql_v3.jsonb_document_contains(\
+                 eql_v3.ste_vec(payload::jsonb), \
+                 (eql_v3.ste_vec(payload::jsonb))[1]), \
+               eql_v3.ste_vec_contains(payload, payload), \
+               eql_v3.jsonb_document_contains(payload, payload) \
+             FROM fixtures.v3_ste_vec \
+             ORDER BY id \
+             LIMIT 1",
+        )
+        .fetch_one(&pool)
+        .await?;
+
+    assert!(legacy_raw, "legacy raw alias must find a real sv entry");
+    assert_eq!(legacy_raw, current_raw);
+    assert!(legacy_typed, "legacy typed alias must contain itself");
+    assert_eq!(legacy_typed, current_typed);
 
     Ok(())
 }
