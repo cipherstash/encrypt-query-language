@@ -1,5 +1,8 @@
 # Encrypt Query Language (EQL)
 
+> [!IMPORTANT]
+> **This repository has moved.** EQL now lives inside [`cipherstash/stack`](https://github.com/cipherstash/stack), at `packages/eql`. This repo is no longer actively developed — please open issues and pull requests in `cipherstash/stack` instead.
+
 [![Test EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml/badge.svg?branch=main)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/test-eql.yml)
 [![Release EQL](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/cipherstash/encrypt-query-language/actions/workflows/release.yml)
 
